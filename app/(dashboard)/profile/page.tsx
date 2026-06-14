@@ -1,0 +1,71 @@
+import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
+import { User } from 'lucide-react'
+import { formatDate } from '@/lib/utils'
+import { logout } from '@/lib/actions/auth'
+
+export default async function ProfilePage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile) redirect('/login')
+
+  return (
+    <div className="space-y-6 max-w-2xl">
+      <div className="flex items-center gap-3">
+        <User className="w-6 h-6 text-slate-700" />
+        <h1 className="text-2xl font-bold text-slate-900">Mon profil</h1>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+        <div className="flex items-center gap-4 mb-6">
+          <div className="w-16 h-16 rounded-2xl bg-blue-100 flex items-center justify-center">
+            <span className="text-blue-700 font-bold text-2xl">{profile.full_name.charAt(0).toUpperCase()}</span>
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-slate-900">{profile.full_name}</h2>
+            <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
+              profile.role === 'gerant' ? 'bg-purple-100 text-purple-700' :
+              profile.role === 'associe' ? 'bg-blue-100 text-blue-700' :
+              'bg-slate-100 text-slate-600'
+            }`}>
+              {profile.role}
+            </span>
+          </div>
+        </div>
+
+        <dl className="space-y-3">
+          <div className="flex justify-between py-2 border-b border-slate-50">
+            <dt className="text-sm text-slate-500">Email</dt>
+            <dd className="text-sm font-medium text-slate-900">{user.email}</dd>
+          </div>
+          <div className="flex justify-between py-2 border-b border-slate-50">
+            <dt className="text-sm text-slate-500">Téléphone</dt>
+            <dd className="text-sm font-medium text-slate-900">{profile.phone ?? '—'}</dd>
+          </div>
+          <div className="flex justify-between py-2 border-b border-slate-50">
+            <dt className="text-sm text-slate-500">Rôle</dt>
+            <dd className="text-sm font-medium text-slate-900 capitalize">{profile.role}</dd>
+          </div>
+          <div className="flex justify-between py-2">
+            <dt className="text-sm text-slate-500">Membre depuis</dt>
+            <dd className="text-sm font-medium text-slate-900">{formatDate(profile.created_at)}</dd>
+          </div>
+        </dl>
+      </div>
+
+      <form action={logout}>
+        <button type="submit" className="px-6 py-3 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl font-medium transition-colors text-sm">
+          Se déconnecter
+        </button>
+      </form>
+    </div>
+  )
+}

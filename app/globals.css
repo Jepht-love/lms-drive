@@ -1,26 +1,78 @@
 @import "tailwindcss";
 
+html, body {
+  overscroll-behavior: none;
+}
+
+/* Support iPhone safe area (encoche bas d'écran) */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 8px);
+}
+
+/* ─── LMS Drive — Design System Optimum ─── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Surfaces */
+  --bg:            #FFFFFF;
+  --bg-secondary:  #F8F9FA;
+  --bg-tertiary:   #F1F1F1;
+
+  /* Text */
+  --text-primary:  #111111;
+  --text-secondary:#6B7280;
+  --text-disabled: #9CA3AF;
+
+  /* Borders */
+  --border:        #E5E7EB;
+
+  /* Accent — NOIR logo LMS Drive */
+  --accent:        #111111;
+
+  /* Status fonctionnel */
+  --green:         #16A34A;
+  --orange:        #D97706;
+  --red:           #DC2626;
+  --blue:          #2563EB;
+  --badge-red:     #EF4444;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: var(--bg);
+  --color-foreground: var(--text-primary);
+  --font-sans: var(--font-inter);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+* { box-sizing: border-box; }
+
+html { height: 100%; }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  height: 100%;
+  background: #FFFFFF;
+  color: #111111;
+  font-size: 15px;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Touch targets iPad */
+button, a, [role="button"] { min-height: 44px; }
+
+/* Scrollbar slim */
+::-webkit-scrollbar        { width: 4px; height: 4px; }
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  { background: #E5E7EB; border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: #D1D5DB; }
+
+/* Skeleton shimmer animation */
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
+
+/* Cards cliquables — hover lift */
+.card-interactive {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.card-interactive:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
 }

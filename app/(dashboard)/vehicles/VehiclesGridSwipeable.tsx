@@ -1,0 +1,99 @@
+'use client'
+
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import SwipeableRow from '@/components/SwipeableRow'
+import { AnimatedList, AnimatedListItem } from '@/components/AnimatedList'
+import type { Vehicle } from '@/types/database'
+
+const STATUS_CONFIG: Record<string, { label: string; dot: string; badge: string }> = {
+  disponible:        { label: 'Disponible',      dot: 'bg-green-500',  badge: 'bg-green-50 text-green-700 border-green-100' },
+  loue:              { label: 'Loué',            dot: 'bg-blue-500',   badge: 'bg-blue-50 text-blue-700 border-blue-100' },
+  reserve:           { label: 'Réservé',         dot: 'bg-yellow-500', badge: 'bg-yellow-50 text-yellow-700 border-yellow-100' },
+  maintenance:       { label: 'Maintenance',     dot: 'bg-orange-400', badge: 'bg-orange-50 text-orange-700 border-orange-100' },
+  hors_service:      { label: 'Hors service',    dot: 'bg-red-500',    badge: 'bg-red-50 text-red-700 border-red-100' },
+  en_verification:   { label: 'Vérification',    dot: 'bg-yellow-400', badge: 'bg-yellow-50 text-yellow-700 border-yellow-100' },
+  immobilise:        { label: 'Immobilisé',      dot: 'bg-red-400',    badge: 'bg-red-50 text-red-700 border-red-100' },
+  mis_a_disposition: { label: 'Chez partenaire', dot: 'bg-purple-400', badge: 'bg-purple-50 text-purple-700 border-purple-100' },
+}
+
+export default function VehiclesGridSwipeable({ vehicles }: { vehicles: Vehicle[] }) {
+  const router = useRouter()
+
+  return (
+    <AnimatedList className="grid sm:grid-cols-2 gap-3">
+      {vehicles.map(v => {
+        const cfg = STATUS_CONFIG[v.status] ?? STATUS_CONFIG.hors_service
+        const in30days = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+        const alerts: string[] = []
+        if (v.insurance_expiry && new Date(v.insurance_expiry) <= in30days) alerts.push('Assurance')
+        if (v.ct_date && new Date(v.ct_date) <= in30days) alerts.push('CT')
+        if (v.next_service_km && v.current_km && (v.next_service_km - v.current_km) <= 1000) alerts.push('Révision')
+
+        return (
+          <AnimatedListItem key={v.id}>
+            <SwipeableRow
+              actions={[
+                { label: 'Statut', color: '#D97706', onClick: () => router.push(`/vehicles/${v.id}?action=status`) },
+                { label: 'Détail', color: '#374151', onClick: () => router.push(`/vehicles/${v.id}`) },
+              ]}
+            >
+              <Link href={`/vehicles/${v.id}`} className="block bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all overflow-hidden group active:scale-[.99]">
+                <div className="p-4">
+                  <div className="flex items-start justify-between gap-2 mb-3">
+                    <div className="min-w-0">
+                      <h3 className="font-extrabold text-gray-900 text-base leading-tight">{v.brand} {v.model}</h3>
+                      {v.version && <p className="text-xs text-gray-400 mt-0.5 truncate">{v.version}</p>}
+                    </div>
+                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border flex-shrink-0 flex items-center gap-1.5 ${cfg.badge}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
+                      {cfg.label}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 mb-3 flex-wrap">
+                    <span className="bg-[#111111] text-white text-xs font-mono font-bold px-2.5 py-1 rounded-lg tracking-wider">{v.plate}</span>
+                    {v.color && <span className="text-xs text-gray-400">{v.color}</span>}
+                    {v.year && <span className="text-xs text-gray-400 ml-auto">{v.year}</span>}
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+                    {v.current_km != null && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-gray-400">Km</span>
+                        <span className="text-xs font-bold text-gray-700">{v.current_km.toLocaleString('fr-FR')}</span>
+                      </div>
+                    )}
+                    {v.daily_price != null && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-gray-400">Jour</span>
+                        <span className="text-xs font-bold text-gray-700">{v.daily_price}€</span>
+                      </div>
+                    )}
+                    {v.fuel_type && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-gray-400">Carbu.</span>
+                        <span className="text-xs font-bold text-gray-700 capitalize">{v.fuel_type}</span>
+                      </div>
+                    )}
+                    {v.deposit_amount != null && (
+                      <div className="flex items-center justify-between col-span-2">
+                        <span className="text-xs text-gray-400">Caution</span>
+                        <span className="text-xs font-bold text-gray-700">{v.deposit_amount.toLocaleString('fr-FR')}€</span>
+                      </div>
+                    )}
+                  </div>
+                  {alerts.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      {alerts.map(a => (
+                        <span key={a} className="text-xs bg-orange-50 text-orange-600 border border-orange-100 px-2 py-0.5 rounded-lg font-semibold">⚠ {a}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </Link>
+            </SwipeableRow>
+          </AnimatedListItem>
+        )
+      })}
+    </AnimatedList>
+  )
+}

@@ -1,0 +1,98 @@
+import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
+import { Settings, Users, Shield, FileClock, Building2 } from 'lucide-react'
+import { formatDateTime } from '@/lib/utils'
+import { getAgencySettings } from '@/lib/contracts/agency'
+import AgencySettingsForm from './AgencySettingsForm'
+
+export default async function SettingsPage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user?.id)
+    .single()
+
+  // Gerant only
+  if (profile?.role !== 'gerant') redirect('/')
+
+  const [{ data: profiles }, { data: auditLogs }] = await Promise.all([
+    supabase.from('profiles').select('*').order('created_at'),
+    supabase.from('audit_logs').select('*, user:profiles(full_name)').order('created_at', { ascending: false }).limit(30),
+  ])
+
+  const agency = await getAgencySettings(supabase)
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-3">
+        <Settings className="w-6 h-6 text-slate-700" />
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Paramètres</h1>
+          <p className="text-slate-500 mt-0.5">Administration — Gérant uniquement</p>
+        </div>
+      </div>
+
+      {/* Informations agence */}
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+        <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2">
+          <Building2 className="w-4 h-4" /> Informations agence
+        </h3>
+        <AgencySettingsForm settings={agency} />
+      </div>
+
+      {/* Team */}
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+        <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2">
+          <Users className="w-4 h-4" /> Équipe ({profiles?.length ?? 0})
+        </h3>
+        <div className="space-y-2">
+          {profiles?.map(p => (
+            <div key={p.id} className="flex items-center gap-3 p-3 rounded-xl bg-slate-50">
+              <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center">
+                <span className="text-blue-700 font-bold text-sm">{p.full_name.charAt(0).toUpperCase()}</span>
+              </div>
+              <div className="flex-1">
+                <p className="font-medium text-slate-900 text-sm">{p.full_name}</p>
+                {p.phone && <p className="text-xs text-slate-400">{p.phone}</p>}
+              </div>
+              <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
+                p.role === 'gerant' ? 'bg-purple-100 text-purple-700' :
+                p.role === 'associe' ? 'bg-blue-100 text-blue-700' :
+                'bg-slate-100 text-slate-600'
+              }`}>
+                {p.role}
+              </span>
+              {!p.is_active && <span className="text-xs text-red-500">Inactif</span>}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Audit log */}
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+        <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2">
+          <FileClock className="w-4 h-4" /> Journal d'audit (30 dernières actions)
+        </h3>
+        <div className="space-y-1.5 max-h-96 overflow-y-auto">
+          {auditLogs?.length === 0 ? (
+            <p className="text-sm text-slate-400">Aucune action enregistrée</p>
+          ) : (
+            auditLogs?.map(log => (
+              <div key={log.id} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-50 text-sm">
+                <Shield className="w-3.5 h-3.5 text-slate-300 flex-shrink-0" />
+                <span className="font-mono text-xs text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded">{log.action}</span>
+                <span className="text-slate-500 text-xs flex-1 truncate">
+                  {(log.user as any)?.full_name ?? 'Système'} · {log.entity_type}
+                </span>
+                <span className="text-xs text-slate-300 flex-shrink-0">{formatDateTime(log.created_at)}</span>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}

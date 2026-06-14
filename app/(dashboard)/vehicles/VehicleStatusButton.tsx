@@ -1,0 +1,46 @@
+'use client'
+
+import { useState } from 'react'
+import { updateVehicleStatus } from '@/lib/actions/vehicles'
+import { getVehicleStatusColor, getVehicleStatusLabel } from '@/lib/utils'
+import type { VehicleStatus } from '@/types/database'
+
+const STATUSES: VehicleStatus[] = ['disponible', 'reserve', 'maintenance', 'hors_service']
+
+export default function VehicleStatusButton({ vehicleId, currentStatus }: {
+  vehicleId: string
+  currentStatus: VehicleStatus
+}) {
+  const [status, setStatus] = useState<VehicleStatus>(currentStatus)
+  const [loading, setLoading] = useState(false)
+
+  async function handleChange(newStatus: VehicleStatus) {
+    if (newStatus === status) return
+    setLoading(true)
+    const result = await updateVehicleStatus(vehicleId, newStatus)
+    if (!result?.error) setStatus(newStatus)
+    setLoading(false)
+  }
+
+  return (
+    <div className="space-y-2">
+      <p className="text-xs text-slate-500 mb-2">Changer le statut manuellement :</p>
+      {STATUSES.map(s => (
+        <button
+          key={s}
+          onClick={() => handleChange(s)}
+          disabled={loading || s === status}
+          className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl border text-sm font-medium transition-all disabled:opacity-50 ${
+            s === status
+              ? getVehicleStatusColor(s) + ' cursor-default'
+              : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+          }`}
+        >
+          <span className="capitalize">{getVehicleStatusLabel(s)}</span>
+          {s === status && <span className="text-xs">● Actuel</span>}
+        </button>
+      ))}
+      {loading && <p className="text-xs text-slate-400 text-center">Mise à jour...</p>}
+    </div>
+  )
+}

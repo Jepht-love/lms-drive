@@ -1,0 +1,37 @@
+{
+  "name": "LMS Drive",
+  "short_name": "LMS Drive",
+  "description": "Gestion de location de véhicules",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#111111",
+  "orientation": "any",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Nouvelle réservation",
+      "url": "/reservations/new",
+      "description": "Créer une réservation"
+    },
+    {
+      "name": "Calendrier",
+      "url": "/calendar",
+      "description": "Vue planning flotte"
+    }
+  ]
+}
