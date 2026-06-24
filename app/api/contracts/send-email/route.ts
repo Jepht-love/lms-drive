@@ -7,10 +7,9 @@ import { buildContractPdfData } from '@/lib/pdf/build-contract-data'
 import { createElement, type ReactElement } from 'react'
 import { logEmail } from '@/lib/email/log'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
-
 export async function POST(request: NextRequest) {
   try {
+    const resend = new Resend(process.env.RESEND_API_KEY)
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
