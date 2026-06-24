@@ -59,7 +59,7 @@ export default function ReservationStatusButtons({
             className="w-full py-2.5 px-3 rounded-xl text-sm font-semibold bg-green-600 text-white hover:bg-green-700 flex items-center justify-center gap-2 transition-all"
           >
             <ClipboardList className="w-4 h-4" />
-            Démarrer + EDL départ
+            Démarrer + état des lieux départ
           </button>
           <button
             onClick={() => handleChange('annulee')}
@@ -79,7 +79,7 @@ export default function ReservationStatusButtons({
             className="w-full py-2.5 px-3 rounded-xl text-sm font-semibold bg-green-600 text-white hover:bg-green-700 flex items-center justify-center gap-2 transition-all"
           >
             <ClipboardList className="w-4 h-4" />
-            Démarrer + EDL départ
+            Démarrer + état des lieux départ
           </button>
           <button
             onClick={() => handleChange('annulee')}
@@ -98,7 +98,7 @@ export default function ReservationStatusButtons({
           className="w-full py-2.5 px-3 rounded-xl text-sm font-semibold bg-slate-800 text-white hover:bg-slate-900 flex items-center justify-center gap-2 transition-all"
         >
           <ClipboardList className="w-4 h-4" />
-          EDL Retour — rendre le véhicule
+          État des lieux retour — rendre le véhicule
         </button>
       )}
 
@@ -107,14 +107,14 @@ export default function ReservationStatusButtons({
         <>
           <div className="flex items-start gap-2 px-3 py-2 bg-orange-50 rounded-xl border border-orange-200 text-orange-700">
             <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-            <p className="text-xs">Retard constaté. Faites l'EDL de retour dès que le véhicule est rendu.</p>
+            <p className="text-xs">Retard constaté. Faites l'état des lieux de retour dès que le véhicule est rendu.</p>
           </div>
           <button
             onClick={() => router.push(`/inspections/arrival/${contractId}`)}
             className="w-full py-2.5 px-3 rounded-xl text-sm font-semibold bg-slate-800 text-white hover:bg-slate-900 flex items-center justify-center gap-2 transition-all"
           >
             <ClipboardList className="w-4 h-4" />
-            EDL Retour — rendre le véhicule
+            État des lieux retour — rendre le véhicule
           </button>
         </>
       )}

@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
+import BackButton from '@/components/ui/BackButton'
 import { getCategoryLabel } from '@/lib/accounting/categories'
 import AccountingCharts from './AccountingCharts'
 
@@ -16,7 +17,7 @@ export default async function ChartsPage() {
   const year = new Date().getFullYear()
   const { data: txs } = await supabase
     .from('financial_transactions')
-    .select('date, type, category, amount, vehicle_id, vehicles(plate)')
+    .select('date, type, category, amount, vehicle_id, vehicles(brand, model)')
     .gte('date', `${year}-01-01`).lte('date', `${year}-12-31`)
 
   const all = txs ?? []
@@ -37,7 +38,7 @@ export default async function ChartsPage() {
   for (const t of all) {
     if (!t.vehicle_id) continue
     const v = Array.isArray(t.vehicles) ? t.vehicles[0] : t.vehicles
-    const e = vehMap.get(t.vehicle_id) ?? { name: v?.plate ?? '—', revenue: 0, expenses: 0 }
+    const e = vehMap.get(t.vehicle_id) ?? { name: v ? `${v.brand} ${v.model}` : '—', revenue: 0, expenses: 0 }
     if (t.type === 'recette') e.revenue += t.amount ?? 0
     else e.expenses += t.amount ?? 0
     vehMap.set(t.vehicle_id, e)
@@ -46,9 +47,9 @@ export default async function ChartsPage() {
 
   return (
     <div className="space-y-4">
-      <Link href="/accounting" className="inline-flex items-center gap-1.5 text-sm text-gray-400 font-medium hover:text-gray-700 transition-colors">
+      <BackButton fallbackHref="/accounting" className="inline-flex items-center gap-1.5 text-sm text-gray-400 font-medium hover:text-gray-700 transition-colors">
         <ArrowLeft className="w-4 h-4" /> Comptabilité
-      </Link>
+      </BackButton>
       <div>
         <h1 className="text-xl font-black text-gray-900">Graphiques</h1>
         <p className="text-sm text-gray-400 mt-0.5">Année {year}</p>

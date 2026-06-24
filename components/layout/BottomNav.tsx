@@ -5,27 +5,33 @@ import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  HomeIcon, TruckIcon, CalendarIcon, BellIcon, Squares2X2Icon,
+  HomeIcon, TruckIcon, CalendarDaysIcon, BellIcon, Squares2X2Icon,
   ClipboardDocumentListIcon,
 } from '@heroicons/react/24/outline'
 import {
-  HomeIcon as HomeSolid, TruckIcon as TruckSolid, CalendarIcon as CalendarSolid,
+  HomeIcon as HomeSolid, TruckIcon as TruckSolid,
+  CalendarDaysIcon as CalendarDaysSolid,
   BellIcon as BellSolid, Squares2X2Icon as Squares2X2Solid,
   ClipboardDocumentListIcon as ClipboardSolid,
 } from '@heroicons/react/24/solid'
 
 const TABS = [
-  { label: 'Accueil',   href: '/',             Icon: HomeIcon,                   ActiveIcon: HomeSolid },
-  { label: 'Véhicules', href: '/vehicles',     Icon: TruckIcon,                  ActiveIcon: TruckSolid },
-  { label: 'Resas',     href: '/reservations', Icon: ClipboardDocumentListIcon,  ActiveIcon: ClipboardSolid },
-  { label: 'Agenda',    href: '/calendar',     Icon: CalendarIcon,               ActiveIcon: CalendarSolid },
-  { label: 'Alertes',   href: '/alerts',       Icon: BellIcon,                   ActiveIcon: BellSolid, badge: true },
-  { label: 'Menu',      href: '/menu',         Icon: Squares2X2Icon,             ActiveIcon: Squares2X2Solid },
+  { label: 'Accueil',   href: '/',             tabKey: 'dashboard',    Icon: HomeIcon,                   ActiveIcon: HomeSolid },
+  { label: 'Véhicules', href: '/vehicles',     tabKey: 'vehicles',     Icon: TruckIcon,                  ActiveIcon: TruckSolid },
+  { label: 'Resas',     href: '/reservations', tabKey: 'reservations', Icon: ClipboardDocumentListIcon,  ActiveIcon: ClipboardSolid },
+  { label: 'Calendrier',href: '/calendrier',   tabKey: 'calendrier',   Icon: CalendarDaysIcon,           ActiveIcon: CalendarDaysSolid },
+  { label: 'Alertes',   href: '/alerts',       tabKey: null,           Icon: BellIcon,                   ActiveIcon: BellSolid, badge: true },
+  { label: 'Menu',      href: '/menu',         tabKey: null,           Icon: Squares2X2Icon,             ActiveIcon: Squares2X2Solid },
 ]
 
-export default function BottomNav({ alertCount: initial = 0 }: { alertCount?: number }) {
+export default function BottomNav({ alertCount: initial = 0, allowedTabs }: { alertCount?: number; allowedTabs?: string[] | null }) {
   const pathname = usePathname()
   const [alertCount, setAlertCount] = useState(initial)
+
+  // Membre restreint : on masque les onglets non autorisés (Alertes/Menu restent).
+  const visibleTabs = (!allowedTabs || allowedTabs.length === 0)
+    ? TABS
+    : TABS.filter(t => !t.tabKey || allowedTabs.includes(t.tabKey))
 
   useEffect(() => {
     fetch('/api/alerts/count')
@@ -38,7 +44,7 @@ export default function BottomNav({ alertCount: initial = 0 }: { alertCount?: nu
     <nav className="shrink-0 bg-[#111111]" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
       {/* Items de navigation */}
       <div className="flex items-center h-[60px] px-1">
-        {TABS.map(({ label, href, Icon, ActiveIcon, badge }) => {
+        {visibleTabs.map(({ label, href, Icon, ActiveIcon, badge }) => {
           const isActive = pathname === href || (href !== '/' && pathname.startsWith(href))
           return (
             <Link

@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
+import BackButton from '@/components/ui/BackButton'
 import { formatDateTime, formatPrice, formatDate } from '@/lib/utils'
 import ContractSigningPanel from './ContractSigningPanel'
 import DeleteButton from '@/components/ui/DeleteButton'
@@ -26,9 +27,9 @@ export default async function ContractPage({ params }: { params: Promise<{ id: s
   return (
     <div className="space-y-6">
       <div className="flex items-start gap-4">
-        <Link href="/contracts" className="p-2 rounded-xl hover:bg-slate-100 transition-colors mt-1">
+        <BackButton fallbackHref="/contracts" className="p-2 rounded-xl hover:bg-slate-100 transition-colors mt-1">
           <ArrowLeft className="w-5 h-5 text-slate-600" />
-        </Link>
+        </BackButton>
         <div className="flex-1">
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-2xl font-bold text-slate-900">{contract.contract_number}</h1>
@@ -91,7 +92,7 @@ export default async function ContractPage({ params }: { params: Promise<{ id: s
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Véhicule</p>
               <p className="font-bold text-slate-900">{vehicle?.brand} {vehicle?.model} {vehicle?.version}</p>
               <div className="flex items-center gap-3 mt-1">
-                <span className="bg-slate-900 text-white text-xs font-mono px-2 py-0.5 rounded">{vehicle?.plate}</span>
+                <span className="bg-slate-100 text-slate-500 text-[10px] font-mono px-2 py-0.5 rounded">{vehicle?.plate}</span>
                 {vehicle?.color && <span className="text-xs text-slate-500">{vehicle?.color}</span>}
                 {vehicle?.vin && <span className="text-xs text-slate-400">VIN: {vehicle?.vin}</span>}
               </div>

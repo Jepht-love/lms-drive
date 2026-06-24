@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Plus } from 'lucide-react'
+import BackButton from '@/components/ui/BackButton'
 import { formatPrice } from '@/lib/utils'
 import type { MaintenanceRecord } from '@/lib/maintenance'
 import MaintenanceHistory from './MaintenanceHistory'
@@ -37,17 +38,17 @@ export default async function VehicleMaintenancePage({
     <div className="space-y-4">
 
       {/* Retour */}
-      <Link href="/maintenance" className="inline-flex items-center gap-1.5 text-sm text-gray-400 font-medium hover:text-gray-700 transition-colors">
+      <BackButton fallbackHref="/maintenance" className="inline-flex items-center gap-1.5 text-sm text-gray-400 font-medium hover:text-gray-700 transition-colors">
         <ArrowLeft className="w-4 h-4" /> Entretien
-      </Link>
+      </BackButton>
 
       {/* En-tête véhicule */}
       <div className="bg-[#111111] rounded-2xl p-5">
         <div className="flex items-center gap-3">
-          <span className="bg-white/15 border border-white/20 text-white text-sm font-mono font-bold px-2.5 py-1 rounded-lg tracking-wider">
+          <h1 className="text-white text-lg font-extrabold">{vehicle.brand} {vehicle.model}</h1>
+          <span className="text-white/50 text-xs font-mono mt-0.5">
             {vehicle.plate}
           </span>
-          <h1 className="text-white text-lg font-extrabold">{vehicle.brand} {vehicle.model}</h1>
         </div>
         <div className="grid grid-cols-3 gap-3 mt-5">
           <div className="bg-white/10 rounded-xl p-3 text-center">

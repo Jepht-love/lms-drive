@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { formatPrice } from '@/lib/utils'
 import { Banknote, CreditCard, ArrowLeftRight, FileText, Check, Loader2 } from 'lucide-react'
 
 type PaymentStatus = 'en_attente' | 'paye' | 'partiel' | 'impaye'
@@ -134,6 +135,14 @@ export default function PaymentEditor({ reservationId, totalPrice, currentStatus
           />
         </div>
       </div>
+
+      {/* Reste à payer */}
+      {Number(amount) > 0 && Number(amount) < totalPrice && (
+        <div className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-orange-50 border border-orange-100">
+          <span className="text-sm font-semibold text-orange-700">Reste à payer</span>
+          <span className="text-base font-bold text-orange-700">{formatPrice(totalPrice - Number(amount))}</span>
+        </div>
+      )}
 
       <button
         onClick={handleSave}

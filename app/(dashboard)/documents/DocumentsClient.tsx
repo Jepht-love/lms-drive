@@ -49,6 +49,7 @@ interface Props {
   clients:   Client[]
   partners:  Partner[]
   userRole:  string
+  visibleCategories?: string[]
 }
 
 function fileExt(doc: Document) {
@@ -66,7 +67,10 @@ function ExpiryBadge({ date }: { date: string }) {
   )
 }
 
-export default function DocumentsClient({ documents, vehicles, clients, partners, userRole }: Props) {
+export default function DocumentsClient({ documents, vehicles, clients, partners, userRole, visibleCategories }: Props) {
+  const allCatIds = ['entreprise', 'vehicule', 'client', 'partenaire']
+  const visibleCats = visibleCategories ?? allCatIds
+  const categoryTabs = ['all', ...visibleCats] as ('all' | DocumentCategory)[]
   const [category,    setCategory]    = useState<'all' | DocumentCategory>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [showUpload,  setShowUpload]  = useState(false)
@@ -197,7 +201,7 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
 
       {/* Tabs catégorie */}
       <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-        {(['all', 'entreprise', 'vehicule', 'client', 'partenaire'] as const).map(cat => (
+        {categoryTabs.map(cat => (
           <button
             key={cat}
             onClick={() => setCategory(cat)}
@@ -308,7 +312,7 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
               className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px] mb-3"
             >
               <option value="">Catégorie...</option>
-              {DOCUMENT_CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+              {DOCUMENT_CATEGORIES.filter(c => visibleCats.includes(c.id)).map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
             </select>
 
             {uploadCat && (
@@ -327,7 +331,7 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
             {uploadCat === 'vehicule' && (
               <select value={entityId} onChange={e => setEntityId(e.target.value)} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px] mb-3">
                 <option value="">Véhicule concerné (optionnel)...</option>
-                {vehicles.map(v => <option key={v.id} value={v.id}>{v.plate} · {v.brand} {v.model}</option>)}
+                {vehicles.map(v => <option key={v.id} value={v.id}>{v.brand} {v.model} · {v.plate}</option>)}
               </select>
             )}
             {uploadCat === 'client' && (

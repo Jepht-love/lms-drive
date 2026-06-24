@@ -8,20 +8,21 @@ import {
   Car, Users, Calendar, FileText, ClipboardList,
   AlertTriangle, Navigation, BarChart3, Settings,
   LogOut, Bell, Menu, X,
+  type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { logout } from '@/lib/actions/auth'
 import type { Profile } from '@/types/database'
 
 const navItems = [
-  { href: '/',               label: 'Dashboard',    icon: BarChart3 },
-  { href: '/calendar',       label: 'Calendrier',   icon: Calendar },
-  { href: '/reservations',   label: 'Réservations', icon: ClipboardList },
-  { href: '/clients',        label: 'Clients',      icon: Users },
-  { href: '/vehicles',       label: 'Véhicules',    icon: Car },
-  { href: '/contracts',      label: 'Contrats',     icon: FileText },
-  { href: '/incidents',      label: 'Incidents',    icon: AlertTriangle },
-  { href: '/internal-trips', label: 'Déplacements', icon: Navigation },
+  { key: 'dashboard',      href: '/',               label: 'Dashboard',    icon: BarChart3 },
+  { key: 'calendar',       href: '/calendar',       label: 'Calendrier',   icon: Calendar },
+  { key: 'reservations',   href: '/reservations',   label: 'Réservations', icon: ClipboardList },
+  { key: 'clients',        href: '/clients',        label: 'Clients',      icon: Users },
+  { key: 'vehicles',       href: '/vehicles',       label: 'Véhicules',    icon: Car },
+  { key: 'contracts',      href: '/contracts',      label: 'Contrats',     icon: FileText },
+  { key: 'incidents',      href: '/incidents',      label: 'Incidents',    icon: AlertTriangle },
+  { key: 'internal-trips', href: '/internal-trips', label: 'Déplacements', icon: Navigation },
 ]
 
 const managerItems = [
@@ -35,7 +36,14 @@ export default function Sidebar({ profile, unreadCount = 0 }: SidebarProps) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const isManager = profile.role === 'gerant' || profile.role === 'associe'
 
-  const NavLink = ({ href, label, icon: Icon }: { href: string; label: string; icon: React.ElementType }) => {
+  // Permissions par onglet : un employé ne voit que ses onglets autorisés.
+  // allowed_tabs null/vide → accès complet (rétro-compatible avec l'existant).
+  const allowed = profile.allowed_tabs
+  const visibleNav = (isManager || !allowed || allowed.length === 0)
+    ? navItems
+    : navItems.filter(item => allowed.includes(item.key))
+
+  const NavLink = ({ href, label, icon: Icon }: { href: string; label: string; icon: LucideIcon }) => {
     const active = pathname === href || (href !== '/' && pathname.startsWith(href))
     return (
       <Link
@@ -80,7 +88,7 @@ export default function Sidebar({ profile, unreadCount = 0 }: SidebarProps) {
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto sidebar-scroll">
-        {navItems.map(item => <NavLink key={item.href} {...item} />)}
+        {visibleNav.map(item => <NavLink key={item.href} href={item.href} label={item.label} icon={item.icon} />)}
         {isManager && (
           <>
             <div className="my-3 mx-2" style={{ height: '1px', background: '#1E1E1E' }} />

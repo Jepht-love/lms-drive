@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, UserCheck, UserCog, AlertTriangle } from 'lucide-react'
+import BackButton from '@/components/ui/BackButton'
 import { createClient } from '@/lib/supabase/client'
 import { INFRACTION_TYPES } from '@/lib/incidents'
 import { lookupDriver, createInfraction } from '@/lib/actions/incidents'
@@ -21,6 +22,8 @@ export default function NewInfractionPage() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([])
   const [vehicleId, setVehicleId] = useState('')
   const [date, setDate] = useState('')
+  const [time, setTime] = useState('')
+  const [type, setType] = useState('exces_vitesse')
   const [driver, setDriver] = useState<Driver | null>(null)
   const [driverLoading, setDriverLoading] = useState(false)
   const [pending, startTransition] = useTransition()
@@ -35,11 +38,11 @@ export default function NewInfractionPage() {
   useEffect(() => {
     if (!vehicleId || !date) { setDriver(null); return }
     setDriverLoading(true)
-    lookupDriver(vehicleId, date)
+    lookupDriver(vehicleId, date, time || undefined)
       .then(r => setDriver(r as Driver | null))
       .catch(() => setDriver(null))
       .finally(() => setDriverLoading(false))
-  }, [vehicleId, date])
+  }, [vehicleId, date, time])
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -63,9 +66,9 @@ export default function NewInfractionPage() {
 
   return (
     <div className="space-y-4 pb-4">
-      <Link href="/incidents/infractions" className="inline-flex items-center gap-1.5 text-sm text-gray-400 font-medium hover:text-gray-700">
+      <BackButton fallbackHref="/incidents/infractions" className="inline-flex items-center gap-1.5 text-sm text-gray-400 font-medium hover:text-gray-700">
         <ArrowLeft className="w-4 h-4" /> Retour
-      </Link>
+      </BackButton>
       <h1 className="text-xl font-black text-gray-900">Déclarer une infraction</h1>
 
       <form onSubmit={onSubmit} className="space-y-4">
@@ -76,13 +79,18 @@ export default function NewInfractionPage() {
               <select id="vehicle_id" name="vehicle_id" required className={input}
                 value={vehicleId} onChange={e => setVehicleId(e.target.value)}>
                 <option value="">Sélectionner…</option>
-                {vehicles.map(v => <option key={v.id} value={v.id}>{v.plate} · {v.brand} {v.model}</option>)}
+                {vehicles.map(v => <option key={v.id} value={v.id}>{v.brand} {v.model} · {v.plate}</option>)}
               </select>
             </div>
             <div>
               <label className={label} htmlFor="infraction_date">Date de l'infraction</label>
               <input id="infraction_date" name="infraction_date" type="date" required className={input}
                 value={date} onChange={e => setDate(e.target.value)} />
+            </div>
+            <div>
+              <label className={label} htmlFor="infraction_time">Heure de l'infraction</label>
+              <input id="infraction_time" name="infraction_time" type="time" className={input}
+                value={time} onChange={e => setTime(e.target.value)} />
             </div>
           </div>
 
@@ -103,10 +111,12 @@ export default function NewInfractionPage() {
 
           <div>
             <label className={label} htmlFor="type">Type d'infraction</label>
-            <select id="type" name="type" defaultValue="exces_vitesse" className={input}>
+            <select id="type" name="type" className={input}
+              value={type} onChange={e => setType(e.target.value)}>
               {INFRACTION_TYPES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
             </select>
           </div>
+
 
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -128,8 +138,12 @@ export default function NewInfractionPage() {
           </div>
 
           <div>
-            <label className={label} htmlFor="notes">Notes</label>
-            <textarea id="notes" name="notes" rows={3} placeholder="Notes complémentaires…" className={`${input} resize-none`} />
+            <label className={label} htmlFor="notes">
+              {type === 'autre' ? 'Précisez le type d\'infraction *' : 'Notes'}
+            </label>
+            <textarea id="notes" name="notes" rows={3} required={type === 'autre'}
+              placeholder={type === 'autre' ? 'Quel est cet « autre » type d\'infraction ?' : 'Notes complémentaires…'}
+              className={`${input} resize-none ${type === 'autre' ? 'border-amber-200 bg-amber-50' : ''}`} />
           </div>
         </div>
 

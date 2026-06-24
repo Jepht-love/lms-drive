@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { differenceInDays } from 'date-fns'
 
 export interface AppAlert {
@@ -10,18 +10,21 @@ export interface AppAlert {
   href: string
   date?: string
   urgent: boolean
+  vehicleId?: string
+  reservationId?: string
 }
 
-/** Format véhicule uniforme : « plaque · marque modèle » (tolère marque/modèle absents) */
+/** Format véhicule uniforme : « marque modèle · plaque » (tolère marque/modèle absents) */
 function vLabel(v: any): string {
   if (!v) return '—'
   const bm = [v?.brand, v?.model].filter(Boolean).join(' ').trim()
   const plate = v?.plate ?? '—'
-  return bm ? `${plate} · ${bm}` : plate
+  return bm ? `${bm} · ${plate}` : plate
 }
 
-export async function fetchAllAlerts(): Promise<AppAlert[]> {
-  const supabase = await createClient()
+export async function fetchAllAlerts(
+  supabase: ReturnType<typeof createAdminClient>,
+): Promise<AppAlert[]> {
   const now = new Date()
   const alerts: AppAlert[] = []
 
@@ -29,7 +32,7 @@ export async function fetchAllAlerts(): Promise<AppAlert[]> {
   const { data: contracts } = await supabase
     .from('contracts')
     .select(`id, created_at,
-      reservations(id, vehicles(plate, brand, model), clients(first_name, last_name))`)
+      reservations(id, vehicle_id, vehicles(plate, brand, model), clients(first_name, last_name))`)
     .eq('status', 'a_signer')
 
   contracts?.forEach(c => {
@@ -45,13 +48,15 @@ export async function fetchAllAlerts(): Promise<AppAlert[]> {
       sublabel: `${vLabel(v)} · ${cl?.first_name ?? ''} ${cl?.last_name ?? ''}`.trim(),
       href: `/contracts/${c.id}`,
       date: c.created_at,
+      vehicleId: r?.vehicle_id ?? undefined,
+      reservationId: r?.id ?? undefined,
     })
   })
 
   // ── 2. Retours en retard ────────────────────────────────────────────────────
   const { data: lates } = await supabase
     .from('reservations')
-    .select('id, end_datetime, vehicles(plate, brand, model), clients(first_name, last_name)')
+    .select('id, vehicle_id, end_datetime, vehicles(plate, brand, model), clients(first_name, last_name)')
     .eq('status', 'en_retard')
     .order('end_datetime', { ascending: true })
 
@@ -70,6 +75,8 @@ export async function fetchAllAlerts(): Promise<AppAlert[]> {
       sublabel: `${vLabel(v)} · ${(c as any)?.first_name ?? ''} ${(c as any)?.last_name ?? ''} · ${lateHours}h de retard`,
       href: `/reservations/${r.id}`,
       date: r.end_datetime,
+      vehicleId: r.vehicle_id,
+      reservationId: r.id,
     })
   })
 
@@ -92,6 +99,7 @@ export async function fetchAllAlerts(): Promise<AppAlert[]> {
           sublabel: `${vLabel(v)} · ${days < 0 ? `expiré il y a ${Math.abs(days)}j` : `dans ${days}j`}`,
           href: `/vehicles/${v.id}`,
           date: v.ct_date,
+          vehicleId: v.id,
         })
       }
     }
@@ -108,6 +116,7 @@ export async function fetchAllAlerts(): Promise<AppAlert[]> {
           sublabel: `${vLabel(v)} · ${days < 0 ? `expirée il y a ${Math.abs(days)}j` : `dans ${days}j`}`,
           href: `/vehicles/${v.id}`,
           date: v.insurance_expiry,
+          vehicleId: v.id,
         })
       }
     }
@@ -124,21 +133,28 @@ export async function fetchAllAlerts(): Promise<AppAlert[]> {
           sublabel: `${vLabel(v)} · dans ${days} jour${days > 1 ? 's' : ''}`,
           href: `/vehicles/${v.id}`,
           date: v.next_service_date,
+          vehicleId: v.id,
         })
       }
     }
 
     if (v.next_service_km != null && v.current_km != null) {
       const kmLeft = v.next_service_km - v.current_km
+      // Alertes graduées : à surveiller dès 500 km, urgent à 200 km, puis dépassé.
       if (kmLeft <= 500) {
+        const overdue  = kmLeft <= 0
+        const imminent = kmLeft <= 200
         alerts.push({
           id: `km-${v.id}`,
-          category: kmLeft <= 100 ? 'important' : 'info',
-          urgent: false,
+          category: overdue ? 'urgent' : 'important',
+          urgent: imminent,
           type: 'revision',
-          label: 'ENTRETIEN KILOMÉTRIQUE',
-          sublabel: `${vLabel(v)} · ${kmLeft > 0 ? `encore ${kmLeft.toLocaleString('fr-FR')} km` : 'seuil dépassé'}`,
+          label: overdue ? 'ENTRETIEN DÉPASSÉ' : imminent ? 'ENTRETIEN IMMINENT' : 'ENTRETIEN À PRÉVOIR',
+          sublabel: `${vLabel(v)} · ${overdue
+            ? `dépassé de ${Math.abs(kmLeft).toLocaleString('fr-FR')} km`
+            : `encore ${kmLeft.toLocaleString('fr-FR')} km`}`,
           href: `/vehicles/${v.id}`,
+          vehicleId: v.id,
         })
       }
     }
@@ -147,7 +163,7 @@ export async function fetchAllAlerts(): Promise<AppAlert[]> {
   // ── 4. Tâches en retard ─────────────────────────────────────────────────────
   const { data: overdueTasks } = await supabase
     .from('tasks')
-    .select(`id, title, type, due_datetime,
+    .select(`id, title, type, due_datetime, vehicle_id,
       vehicles(plate, brand, model),
       profiles!tasks_assigned_to_fkey(full_name)`)
     .eq('status', 'a_faire')
@@ -157,15 +173,17 @@ export async function fetchAllAlerts(): Promise<AppAlert[]> {
   overdueTasks?.forEach(t => {
     const v = Array.isArray(t.vehicles)  ? t.vehicles[0]  : t.vehicles
     const a = Array.isArray(t.profiles)  ? t.profiles[0]  : t.profiles
+    const lateHours = Math.round((now.getTime() - new Date(t.due_datetime).getTime()) / 3600000)
     alerts.push({
       id: `task-${t.id}`,
       category: 'important',
       urgent: false,
       type: 'tache',
       label: 'TÂCHE EN RETARD',
-      sublabel: `${t.title}${(v as any)?.plate ? ` · ${vLabel(v)}` : ''}${(a as any)?.full_name ? ` · ${(a as any).full_name}` : ''}`,
-      href: `/tasks/${t.id}`,
+      sublabel: `${t.title}${(v as any)?.plate ? ` · ${vLabel(v)}` : ''}${(a as any)?.full_name ? ` · ${(a as any).full_name}` : ''} · ${lateHours}h de retard`,
+      href: `/calendar/tasks/${t.id}`,
       date: t.due_datetime,
+      vehicleId: t.vehicle_id ?? undefined,
     })
   })
 
@@ -173,7 +191,7 @@ export async function fetchAllAlerts(): Promise<AppAlert[]> {
   const in24h = new Date(now.getTime() + 24 * 3600 * 1000)
   const { data: upcomingDeparts } = await supabase
     .from('reservations')
-    .select('id, start_datetime, vehicles(plate, brand, model, last_wash_date)')
+    .select('id, vehicle_id, start_datetime, vehicles(plate, brand, model, last_wash_date)')
     .eq('status', 'confirmee')
     .gte('start_datetime', now.toISOString())
     .lte('start_datetime', in24h.toISOString())
@@ -198,6 +216,8 @@ export async function fetchAllAlerts(): Promise<AppAlert[]> {
         sublabel: `${vLabel(v)} · départ dans ${hoursLeft}h`,
         href: `/reservations/${r.id}`,
         date: r.start_datetime,
+        vehicleId: r.vehicle_id,
+        reservationId: r.id,
       })
     }
   })
@@ -206,7 +226,7 @@ export async function fetchAllAlerts(): Promise<AppAlert[]> {
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 3600 * 1000)
   const { data: infractions } = await supabase
     .from('infractions')
-    .select('id, infraction_date, type, vehicles(plate, brand, model)')
+    .select('id, vehicle_id, infraction_date, type, vehicles(plate, brand, model)')
     .not('status', 'in', '("regle","cloture")')
     .lt('infraction_date', thirtyDaysAgo.toISOString().split('T')[0])
 
@@ -222,13 +242,14 @@ export async function fetchAllAlerts(): Promise<AppAlert[]> {
       sublabel: `${vLabel(v)} · ${inf.type} · il y a ${days}j`,
       href: `/incidents/infractions/${inf.id}`,
       date: inf.infraction_date,
+      vehicleId: inf.vehicle_id ?? undefined,
     })
   })
 
   // ── 7. Sinistres en cours ──────────────────────────────────────────────────
   const { data: accidents } = await supabase
     .from('accidents')
-    .select('id, accident_date, vehicles(plate, brand, model)')
+    .select('id, vehicle_id, accident_date, vehicles(plate, brand, model)')
     .not('status', 'eq', 'cloture')
     .order('accident_date', { ascending: false })
 
@@ -243,6 +264,7 @@ export async function fetchAllAlerts(): Promise<AppAlert[]> {
       sublabel: `${vLabel(v)} · ${new Date(acc.accident_date).toLocaleDateString('fr-FR')}`,
       href: `/incidents/accidents/${acc.id}`,
       date: acc.accident_date,
+      vehicleId: acc.vehicle_id ?? undefined,
     })
   })
 

@@ -1,10 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Trash2 } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import { revalidatePath } from 'next/cache'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
+import DeleteButton from '@/components/ui/DeleteButton'
+import BackButton from '@/components/ui/BackButton'
 
 const TYPES: Record<string, string> = {
   lavage: 'Lavage', preparation: 'Préparation',
@@ -65,16 +67,11 @@ export default async function TaskDetailPage({ params }: { params: Promise<{ id:
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
-        <Link href="/calendar/tasks" className="p-2 hover:bg-white rounded-xl transition-colors min-h-[auto]">
+        <BackButton fallbackHref="/calendar/tasks" className="p-2 hover:bg-white rounded-xl transition-colors min-h-[auto]">
           <ArrowLeft className="w-5 h-5 text-gray-600" />
-        </Link>
+        </BackButton>
         <h1 className="text-xl font-black text-gray-900 flex-1 truncate">{task.title}</h1>
-        <form action={deleteWithId}>
-          <button type="submit" className="p-2 hover:bg-red-50 rounded-xl transition-colors min-h-[auto]"
-            onClick={e => { if (!confirm('Supprimer cette tâche ?')) e.preventDefault() }}>
-            <Trash2 className="w-4 h-4 text-red-400" />
-          </button>
-        </form>
+        <DeleteButton onConfirm={deleteWithId} confirmMessage="Supprimer cette tâche ?" />
       </div>
 
       {/* Détails */}
@@ -92,7 +89,10 @@ export default async function TaskDetailPage({ params }: { params: Promise<{ id:
           {vehicle && (
             <div>
               <p className={label}>Véhicule</p>
-              <p className={field}>{vehicle.plate} · {vehicle.brand} {vehicle.model}</p>
+              <p className={field}>
+                {vehicle.brand} {vehicle.model}
+                <span className="text-gray-400 font-mono text-xs"> · {vehicle.plate}</span>
+              </p>
             </div>
           )}
           {assignee && (

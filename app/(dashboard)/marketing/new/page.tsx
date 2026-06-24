@@ -9,6 +9,7 @@ export default function NewCampaignPage() {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState('')
+  const [channel, setChannel] = useState('')
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -43,13 +44,22 @@ export default function NewCampaignPage() {
           </div>
           <div>
             <label className={label}>Canal *</label>
-            <select name="channel" required className={input}>
+            <select name="channel" required className={input}
+              value={channel} onChange={e => setChannel(e.target.value)}>
               <option value="">Sélectionner un canal...</option>
               {MARKETING_CHANNELS.map(c => (
                 <option key={c.id} value={c.id}>{c.label}</option>
               ))}
             </select>
           </div>
+          {channel === 'autre' && (
+            <div>
+              <label className={label}>Précisez le canal *</label>
+              <textarea name="observations" rows={2} required
+                placeholder="Quel est ce canal de diffusion ?"
+                className={`${input} resize-none border-amber-200 bg-amber-50`} />
+            </div>
+          )}
           <div>
             <label className={label}>Responsable</label>
             <input name="responsible" placeholder="Prénom Nom" className={input} />

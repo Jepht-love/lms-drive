@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
+import BackButton from '@/components/ui/BackButton'
 import InspectionFlow from '@/components/inspection/InspectionFlow'
 
 export default async function ArrivalInspectionPage({ params }: { params: Promise<{ contractId: string }> }) {
@@ -34,7 +35,7 @@ export default async function ArrivalInspectionPage({ params }: { params: Promis
   // Relevé de bord au départ (km + carburant) pour comparer à l'aller-retour
   const { data: departureInspection } = await supabase
     .from('inspections')
-    .select('km_reading, fuel_level')
+    .select('km_reading, fuel_range_km, damaged_zones')
     .eq('contract_id', contractId)
     .eq('type', 'depart')
     .limit(1)
@@ -43,13 +44,13 @@ export default async function ArrivalInspectionPage({ params }: { params: Promis
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Link href={`/contracts/${contractId}`} className="p-2 rounded-xl hover:bg-slate-100">
+        <BackButton fallbackHref={`/contracts/${contractId}`} className="p-2 rounded-xl hover:bg-slate-100">
           <ArrowLeft className="w-5 h-5 text-slate-600" />
-        </Link>
+        </BackButton>
         <div>
           <h1 className="text-2xl font-bold text-slate-900">État des lieux de retour</h1>
           <p className="text-slate-500">
-            {vehicle?.plate} — {vehicle?.brand} {vehicle?.model} · {client?.first_name} {client?.last_name}
+            {vehicle?.brand} {vehicle?.model} — {vehicle?.plate} · {client?.first_name} {client?.last_name}
           </p>
         </div>
       </div>
@@ -62,7 +63,8 @@ export default async function ArrivalInspectionPage({ params }: { params: Promis
         vehicleCategory={vehicle?.category ?? 'citadine'}
         reservationEndDatetime={reservation?.end_datetime ?? undefined}
         kmAtDeparture={departureInspection?.km_reading ?? vehicle?.current_km ?? 0}
-        fuelAtDeparture={departureInspection?.fuel_level ?? undefined}
+        fuelRangeAtDeparture={departureInspection?.fuel_range_km ?? undefined}
+        previousDamagedZones={(departureInspection?.damaged_zones as { id: string; label: string; severity: string }[] | null) ?? []}
         kmIncluded={reservation?.km_included ?? 200}
         extraKmPrice={reservation?.extra_km_price ?? 2}
       />

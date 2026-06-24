@@ -1,247 +1,330 @@
 'use client'
 
-import type { DamageEntry } from './inspection-types'
+import { useReducer, useRef, useState, useEffect } from 'react'
+import { ArrowLeft, Camera, X, Plus } from 'lucide-react'
+import { compressImageToBase64 } from '@/lib/utils'
+import {
+  type DamageEntry,
+  type DamageSeverity,
+  DAMAGE_TYPES,
+  GRAVITES,
+  damageTypeLabel,
+  graviteLabel,
+} from './inspection-types'
 
-// ─── Types ───────────────────────────────────────────────────────────────────
-type Zone2D = {
-  id: string
-  label: string
-  view: 'front' | 'rear' | 'left' | 'right'
-  x: number; y: number; w: number; h: number
-  rx?: number
-  shape?: 'ellipse'
+// ─── Schéma EDL interactif — blueprint + zoom sur la partie cliquée ───────────
+// Zones + fond partagés avec le PDF du contrat (source unique : ./edl-zones)
+import { EDL_IMG as IMG, EDL_SRC as SRC, EDL_ZONES as ZONES, zoneBox, type Zone2D } from './edl-zones'
+
+const SEV: Record<DamageSeverity, { fill: string; stroke: string }> = {
+  rayure:    { fill: '#eab308', stroke: '#ca8a04' },
+  attention: { fill: '#f97316', stroke: '#ea580c' },
+  dommage:   { fill: '#ef4444', stroke: '#dc2626' },
+}
+const SEV_RANK: Record<DamageSeverity, number> = { rayure: 0, attention: 1, dommage: 2 }
+
+function worstSeverity(entries: DamageEntry[]): DamageSeverity | null {
+  if (!entries.length) return null
+  return entries.reduce<DamageSeverity>((acc, e) => (SEV_RANK[e.severity] > SEV_RANK[acc] ? e.severity : acc), 'rayure')
 }
 
-// ─── Zones per view (coordinates are absolute in 420×260 SVG) ───────────────
-// Front quadrant:  x 0–210, y 0–130
-// Rear quadrant:   x 210–420, y 0–130
-// Left quadrant:   x 0–210, y 130–260
-// Right quadrant:  x 210–420, y 130–260
-
-const ZONES: Zone2D[] = [
-  // ── VUE AVANT ──────────────────────────────────────────────────────────────
-  { id: 'capot',            label: 'Capot',       view: 'front', x: 58,  y: 14,  w: 94,  h: 26 },
-  { id: 'pare-brise',       label: 'Pare-brise',  view: 'front', x: 62,  y: 40,  w: 86,  h: 22 },
-  { id: 'phare-gauche',     label: 'Ph.G',        view: 'front', x: 14,  y: 62,  w: 34,  h: 16, rx: 4 },
-  { id: 'phare-droit',      label: 'Ph.D',        view: 'front', x: 162, y: 62,  w: 34,  h: 16, rx: 4 },
-  { id: 'aile-avant-gauche',label: 'Aile AV G',   view: 'front', x: 8,   y: 36,  w: 50,  h: 42 },
-  { id: 'aile-avant-droite',label: 'Aile AV D',   view: 'front', x: 152, y: 36,  w: 50,  h: 42 },
-  { id: 'pare-chocs-avant', label: 'PC Avant',    view: 'front', x: 20,  y: 80,  w: 170, h: 24, rx: 6 },
-
-  // ── VUE ARRIÈRE ──────────────────────────────────────────────────────────
-  { id: 'lunette-arriere',    label: 'Lunette',     view: 'rear', x: 272, y: 40,  w: 86,  h: 22 },
-  { id: 'coffre',             label: 'Coffre',      view: 'rear', x: 268, y: 14,  w: 94,  h: 26 },
-  { id: 'feu-arriere-gauche', label: 'Feu G',       view: 'rear', x: 224, y: 62,  w: 34,  h: 16, rx: 4 },
-  { id: 'feu-arriere-droit',  label: 'Feu D',       view: 'rear', x: 372, y: 62,  w: 34,  h: 16, rx: 4 },
-  { id: 'aile-arriere-gauche',label: 'Aile AR G',   view: 'rear', x: 218, y: 36,  w: 50,  h: 42 },
-  { id: 'aile-arriere-droite',label: 'Aile AR D',   view: 'rear', x: 362, y: 36,  w: 50,  h: 42 },
-  { id: 'pare-chocs-arriere', label: 'PC Arrière',  view: 'rear', x: 230, y: 80,  w: 170, h: 24, rx: 6 },
-
-  // ── PROFIL GAUCHE ─────────────────────────────────────────────────────────
-  { id: 'toit',               label: 'Toit',        view: 'left', x: 50,  y: 138, w: 116, h: 20 },
-  { id: 'porte-avant-gauche', label: 'Porte AV G',  view: 'left', x: 34,  y: 158, w: 62,  h: 38 },
-  { id: 'porte-arriere-gauche',label:'Porte AR G',  view: 'left', x: 98,  y: 158, w: 62,  h: 38 },
-  { id: 'retroviseur-gauche', label: 'Rétro G',     view: 'left', x: 28,  y: 154, w: 16,  h: 12, rx: 3 },
-  { id: 'bas-de-caisse-gauche',label:'Bas caisse G',view: 'left', x: 34,  y: 196, w: 148, h: 10, rx: 3 },
-  { id: 'jante-av-gauche',    label: 'Jante AV G',  view: 'left', x: 26,  y: 206, w: 34,  h: 34, shape: 'ellipse', rx: 17 },
-  { id: 'jante-ar-gauche',    label: 'Jante AR G',  view: 'left', x: 150, y: 206, w: 34,  h: 34, shape: 'ellipse', rx: 17 },
-
-  // ── PROFIL DROIT ─────────────────────────────────────────────────────────
-  { id: 'porte-avant-droite', label: 'Porte AV D',  view: 'right', x: 244, y: 158, w: 62,  h: 38 },
-  { id: 'porte-arriere-droite',label:'Porte AR D',  view: 'right', x: 308, y: 158, w: 62,  h: 38 },
-  { id: 'retroviseur-droit',  label: 'Rétro D',     view: 'right', x: 366, y: 154, w: 16,  h: 12, rx: 3 },
-  { id: 'bas-de-caisse-droite',label:'Bas caisse D',view: 'right', x: 244, y: 196, w: 148, h: 10, rx: 3 },
-  { id: 'jante-av-droite',    label: 'Jante AV D',  view: 'right', x: 236, y: 206, w: 34,  h: 34, shape: 'ellipse', rx: 17 },
-  { id: 'jante-ar-droite',    label: 'Jante AR D',  view: 'right', x: 360, y: 206, w: 34,  h: 34, shape: 'ellipse', rx: 17 },
-]
-
-// ─── Car body SVG paths ──────────────────────────────────────────────────────
-function CarFront({ ox, oy }: { ox: number; oy: number }) {
-  const x = (v: number) => ox + v
-  const y = (v: number) => oy + v
-  return (
-    <g fill="none" stroke="#94a3b8" strokeWidth="1.5">
-      {/* cabin */}
-      <path d={`M${x(62)},${y(40)} L${x(55)},${y(8)} L${x(155)},${y(8)} L${x(148)},${y(40)} Z`} />
-      {/* body */}
-      <rect x={x(8)} y={y(36)} width={194} height={74} rx={6} />
-      {/* windshield divider */}
-      <line x1={x(105)} y1={y(40)} x2={x(105)} y2={y(62)} strokeDasharray="3,3" strokeWidth="1" />
-      {/* bonnet line */}
-      <line x1={x(8)} y1={y(62)} x2={x(212)} y2={y(62)} strokeWidth="1" />
-      {/* grille */}
-      <rect x={x(72)} y={y(64)} width={66} height={16} rx={3} fill="#e2e8f0" stroke="#94a3b8" strokeWidth="1" />
-      {/* plate */}
-      <rect x={x(82)} y={y(87)} width={46} height={9} rx={2} fill="#e2e8f0" stroke="#94a3b8" strokeWidth="1" />
-    </g>
-  )
-}
-
-function CarRear({ ox, oy }: { ox: number; oy: number }) {
-  const x = (v: number) => ox + v
-  const y = (v: number) => oy + v
-  return (
-    <g fill="none" stroke="#94a3b8" strokeWidth="1.5">
-      <path d={`M${x(62)},${y(40)} L${x(55)},${y(8)} L${x(155)},${y(8)} L${x(148)},${y(40)} Z`} />
-      <rect x={x(8)} y={y(36)} width={194} height={74} rx={6} />
-      <line x1={x(105)} y1={y(40)} x2={x(105)} y2={y(62)} strokeDasharray="3,3" strokeWidth="1" />
-      <line x1={x(8)} y1={y(62)} x2={x(212)} y2={y(62)} strokeWidth="1" />
-      {/* rear badge */}
-      <rect x={x(88)} y={y(14)} width={34} height={8} rx={2} fill="#e2e8f0" stroke="#94a3b8" strokeWidth="1" />
-      {/* plate */}
-      <rect x={x(72)} y={y(87)} width={66} height={9} rx={2} fill="#e2e8f0" stroke="#94a3b8" strokeWidth="1" />
-    </g>
-  )
-}
-
-function CarSide({ ox, oy, flip }: { ox: number; oy: number; flip?: boolean }) {
-  const sx = flip ? -1 : 1
-  const tx = flip ? ox + 210 : ox
-  return (
-    <g transform={`translate(${tx},${oy}) scale(${sx},1)`} fill="none" stroke="#94a3b8" strokeWidth="1.5">
-      {/* roof */}
-      <path d="M34,28 Q42,10 72,10 L138,10 Q168,10 174,28 Z" />
-      {/* body sides */}
-      <path d="M10,28 L34,28 L34,95 L10,95 Q8,95 6,90 L6,50 Q6,28 10,28 Z" />
-      <path d="M174,28 L198,28 Q202,28 204,50 L204,90 Q202,95 200,95 L174,95 Z" />
-      {/* body bottom */}
-      <rect x={6} y={28} width={198} height={70} rx={4} />
-      {/* door separator */}
-      <line x1={105} y1={28} x2={105} y2={98} strokeWidth="1" />
-      {/* window line */}
-      <line x1={34} y1={28} x2={174} y2={28} strokeWidth="1" />
-      {/* sill */}
-      <rect x={34} y={95} width={142} height={6} rx={2} fill="#e2e8f0" stroke="#94a3b8" strokeWidth="1" />
-      {/* front wheel arch */}
-      <path d="M10,100 Q43,100 43,118 Q43,136 10,136" fill="#f1f5f9" stroke="#94a3b8" strokeWidth="1.5" />
-      {/* rear wheel arch */}
-      <path d="M167,100 Q200,100 200,118 Q200,136 167,136" fill="#f1f5f9" stroke="#94a3b8" strokeWidth="1.5" />
-    </g>
-  )
-}
-
-// ─── Main component ──────────────────────────────────────────────────────────
 interface Props {
   damages: Record<string, DamageEntry[]>
-  onZoneClick: (id: string) => void
+  onDamageAdd: (zoneId: string, entry: DamageEntry) => void
+  onDamageRemove: (zoneId: string, index: number) => void
   readonly?: boolean
 }
 
-const VIEW_LABELS: Record<string, string> = {
-  front: 'Vue avant',
-  rear:  'Vue arrière',
-  left:  'Profil gauche',
-  right: 'Profil droit',
-}
+export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, readonly }: Props) {
+  const [selected, setSelected] = useState<string | null>(null)
+  const [showZones, setShowZones] = useState(false)
+  // Formulaire de saisie
+  const [dtype, setDtype] = useState<string>(DAMAGE_TYPES[0].id)
+  const [gravite, setGravite] = useState<DamageSeverity>('rayure')
+  const [comment, setComment] = useState('')
+  const [pending, setPending] = useState<string[]>([])
+  const fileRef = useRef<HTMLInputElement>(null)
 
-const VIEW_OFFSETS: Record<string, { ox: number; oy: number }> = {
-  front: { ox: 0,   oy: 0   },
-  rear:  { ox: 210, oy: 0   },
-  left:  { ox: 0,   oy: 130 },
-  right: { ox: 210, oy: 130 },
-}
+  // viewBox animé
+  const vb = useRef({ x: 0, y: 0, w: IMG, h: IMG })
+  const raf = useRef<number | undefined>(undefined)
+  const [, force] = useReducer((c: number) => c + 1, 0)
 
-export default function VehicleMap2D({ damages, onZoneClick, readonly }: Props) {
-  function damageCount(id: string) {
-    return (damages[id] ?? []).length
+  useEffect(() => () => { if (raf.current) cancelAnimationFrame(raf.current) }, [])
+
+  function animateTo(tx: number, ty: number, tw: number, th: number) {
+    if (raf.current) cancelAnimationFrame(raf.current)
+    const s = { ...vb.current }
+    const t0 = performance.now()
+    const dur = 380
+    const step = (now: number) => {
+      const k = Math.min(1, (now - t0) / dur)
+      const e = 1 - Math.pow(1 - k, 3) // easeOutCubic
+      vb.current = {
+        x: s.x + (tx - s.x) * e,
+        y: s.y + (ty - s.y) * e,
+        w: s.w + (tw - s.w) * e,
+        h: s.h + (th - s.h) * e,
+      }
+      force()
+      if (k < 1) raf.current = requestAnimationFrame(step)
+    }
+    raf.current = requestAnimationFrame(step)
   }
 
-  function zoneColor(id: string) {
-    const n = damageCount(id)
-    if (n === 0) return { fill: '#f8fafc', stroke: '#cbd5e1', text: '#94a3b8' }
-    if (n === 1) return { fill: '#fef9c3', stroke: '#eab308', text: '#713f12' }
-    return { fill: '#fee2e2', stroke: '#ef4444', text: '#991b1b' }
+  function focusZone(z: Zone2D) {
+    const pad = 1.9, MIN = 340
+    const box = zoneBox(z)
+    let side = Math.max(box.w, box.h) * pad
+    side = Math.max(MIN, Math.min(side, IMG))
+    const cx = box.x + box.w / 2, cy = box.y + box.h / 2
+    const x = Math.max(0, Math.min(cx - side / 2, IMG - side))
+    const y = Math.max(0, Math.min(cy - side / 2, IMG - side))
+    animateTo(x, y, side, side)
   }
+
+  function resetForm() {
+    setDtype(DAMAGE_TYPES[0].id)
+    setGravite('rayure')
+    setComment('')
+    setPending([])
+  }
+
+  function selectZone(z: Zone2D) {
+    resetForm()
+    setSelected(z.id)
+    focusZone(z)
+  }
+
+  function overview() {
+    setSelected(null)
+    animateTo(0, 0, IMG, IMG)
+  }
+
+  async function onPhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0]
+    if (!f) return
+    const b64 = await compressImageToBase64(f)
+    setPending(p => [...p, b64])
+    e.target.value = ''
+  }
+
+  function addDamage() {
+    if (!selected) return
+    onDamageAdd(selected, { severity: gravite, type: dtype, comment: comment.trim(), photos: pending })
+    resetForm()
+  }
+
+  const zone = selected ? ZONES.find(z => z.id === selected) ?? null : null
+  const existing = selected ? (damages[selected] ?? []) : []
 
   return (
-    <div className="w-full max-w-[460px] mx-auto bg-white rounded-xl overflow-hidden">
-      {/* View labels */}
-      <div className="grid grid-cols-2 text-center">
-        {(['front', 'rear', 'left', 'right'] as const).map(v => (
-          <div key={v} className="py-1 border-b border-r last:border-r-0 border-gray-100">
-            <span className="text-[9px] font-bold uppercase tracking-widest text-gray-400">
-              {VIEW_LABELS[v]}
-            </span>
-          </div>
-        ))}
+    <div className="w-full max-w-[520px] mx-auto bg-white rounded-xl overflow-hidden">
+      {/* Schéma */}
+      <div className="relative">
+        {/* Barre haute */}
+        <div className="absolute top-2 left-2 right-2 z-10 flex items-center justify-between pointer-events-none">
+          {selected ? (
+            <button
+              type="button"
+              onClick={overview}
+              className="pointer-events-auto flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide px-2.5 py-1.5 rounded-lg bg-gray-900 text-white shadow"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" /> Vue d'ensemble
+            </button>
+          ) : <span />}
+          {!readonly && !selected && (
+            <button
+              type="button"
+              onClick={() => setShowZones(s => !s)}
+              className={`pointer-events-auto text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded-lg border transition-colors ${
+                showZones ? 'bg-gray-900 text-white border-gray-900' : 'bg-white/80 text-gray-500 border-gray-200'
+              }`}
+            >
+              Zones
+            </button>
+          )}
+        </div>
+
+        <svg
+          viewBox={`${vb.current.x} ${vb.current.y} ${vb.current.w} ${vb.current.h}`}
+          className="w-full"
+          style={{ display: 'block', maxHeight: '64vh' }}
+        >
+          <image href={SRC} x={0} y={0} width={IMG} height={IMG} />
+
+          {ZONES.map((z, zi) => {
+            const entries = damages[z.id] ?? []
+            const n = entries.length
+            const sev = worstSeverity(entries)
+            const isSel = selected === z.id
+            const box = zoneBox(z)
+            const cx = box.x + box.w / 2, cy = box.y + box.h / 2
+
+            let fill = '#000000', fillOpacity = 0, stroke = 'transparent', dash: string | undefined
+            if (n > 0 && sev) { fill = SEV[sev].fill; fillOpacity = 0.4; stroke = SEV[sev].stroke }
+            else if (isSel) { fill = '#3b82f6'; fillOpacity = 0.18; stroke = '#3b82f6' }
+            else if (showZones) { fill = '#64748b'; fillOpacity = 0.06; stroke = '#94a3b8'; dash = '6,4' }
+
+            return (
+              <g key={`${z.id}-${zi}`} onClick={() => selectZone(z)} style={{ cursor: readonly && n === 0 ? 'default' : 'pointer' }}>
+                {z.points ? (
+                  <polygon points={z.points.map(p => p.join(',')).join(' ')} fill={fill} fillOpacity={fillOpacity} stroke={stroke} strokeWidth={isSel ? 4 : 3} strokeDasharray={dash} strokeLinejoin="round" />
+                ) : z.shape === 'ellipse' ? (
+                  <ellipse cx={cx} cy={cy} rx={box.w / 2} ry={box.h / 2} fill={fill} fillOpacity={fillOpacity} stroke={stroke} strokeWidth={isSel ? 4 : 3} strokeDasharray={dash} />
+                ) : (
+                  <rect x={box.x} y={box.y} width={box.w} height={box.h} rx={z.rx ?? 8} fill={fill} fillOpacity={fillOpacity} stroke={stroke} strokeWidth={isSel ? 4 : 3} strokeDasharray={dash} />
+                )}
+                {showZones && n === 0 && (
+                  <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle" fontSize={15} fontWeight={700} fill="#475569" style={{ pointerEvents: 'none', userSelect: 'none' }}>
+                    {z.label}
+                  </text>
+                )}
+                {n > 0 && (
+                  <>
+                    <circle cx={box.x + box.w - 6} cy={box.y + 6} r={14} fill={SEV[sev!].stroke} />
+                    <text x={box.x + box.w - 6} y={box.y + 6} textAnchor="middle" dominantBaseline="middle" fontSize={16} fontWeight={800} fill="white" style={{ pointerEvents: 'none', userSelect: 'none' }}>
+                      {n}
+                    </text>
+                  </>
+                )}
+              </g>
+            )
+          })}
+        </svg>
+
+        {!selected && !readonly && (
+          <p className="text-center text-[11px] text-gray-400 pb-2">
+            Touchez une partie du véhicule pour zoomer et constater un dommage
+          </p>
+        )}
       </div>
 
-      <svg
-        viewBox="0 0 420 260"
-        className="w-full"
-        style={{ display: 'block', maxHeight: '62vh' }}
-      >
-        {/* Quadrant dividers */}
-        <line x1={210} y1={0} x2={210} y2={260} stroke="#e2e8f0" strokeWidth="1" />
-        <line x1={0} y1={130} x2={420} y2={130} stroke="#e2e8f0" strokeWidth="1" />
+      {/* Panneau de saisie (zone sélectionnée) */}
+      {zone && !readonly && (
+        <div className="border-t border-gray-100 p-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-extrabold text-gray-900">{zone.label}</h3>
+            {existing.length > 0 && (
+              <span className="text-[11px] font-bold text-gray-400">{existing.length} dommage{existing.length > 1 ? 's' : ''}</span>
+            )}
+          </div>
 
-        {/* Car bodies */}
-        <CarFront ox={0}   oy={0}   />
-        <CarRear  ox={210} oy={0}   />
-        <CarSide  ox={0}   oy={130} />
-        <CarSide  ox={210} oy={130} flip />
+          {/* Dommages existants */}
+          {existing.length > 0 && (
+            <div className="space-y-2">
+              {existing.map((e, i) => {
+                const g = GRAVITES.find(g => g.id === e.severity)
+                return (
+                  <div key={i} className="flex items-start gap-2 p-2.5 rounded-xl bg-gray-50">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {e.type && <span className="text-[11px] font-semibold text-gray-800">{damageTypeLabel(e.type)}</span>}
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold border ${g?.chip ?? ''}`}>{graviteLabel(e.severity)}</span>
+                      </div>
+                      {e.comment && <p className="text-[11px] text-gray-500 mt-0.5 leading-snug">{e.comment}</p>}
+                      {e.photos.length > 0 && (
+                        <div className="flex gap-1.5 mt-1.5">
+                          {e.photos.map((p, pi) => (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img key={pi} src={p} alt="" className="w-10 h-10 rounded-lg object-cover border border-gray-200" />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <button onClick={() => onDamageRemove(selected!, i)} className="p-1.5 hover:bg-red-50 rounded-lg flex-shrink-0">
+                      <X className="w-4 h-4 text-gray-400 hover:text-red-500" />
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          )}
 
-        {/* Interactive zones */}
-        {ZONES.map(z => {
-          const col = zoneColor(z.id)
-          const n   = damageCount(z.id)
-          const cx  = z.x + z.w / 2
-          const cy  = z.y + z.h / 2
-
-          return (
-            <g key={z.id}>
-              {z.shape === 'ellipse' ? (
-                <ellipse
-                  cx={cx} cy={cy}
-                  rx={z.w / 2} ry={z.h / 2}
-                  fill={col.fill} stroke={col.stroke} strokeWidth={n > 0 ? 1.5 : 1}
-                  style={{ cursor: readonly ? 'default' : 'pointer', opacity: 0.85 }}
-                  onClick={() => !readonly && onZoneClick(z.id)}
-                />
-              ) : (
-                <rect
-                  x={z.x} y={z.y} width={z.w} height={z.h} rx={z.rx ?? 3}
-                  fill={col.fill} stroke={col.stroke} strokeWidth={n > 0 ? 1.5 : 1}
-                  style={{ cursor: readonly ? 'default' : 'pointer', opacity: 0.85 }}
-                  onClick={() => !readonly && onZoneClick(z.id)}
-                />
-              )}
-
-              {/* Zone label */}
-              <text
-                x={cx} y={cy + 1}
-                textAnchor="middle" dominantBaseline="middle"
-                fontSize={z.w < 36 ? 5 : 6}
-                fontWeight="600"
-                fill={col.text}
-                style={{ pointerEvents: 'none', userSelect: 'none' }}
-              >
-                {z.label}
-              </text>
-
-              {/* Damage badge */}
-              {n > 0 && (
-                <>
-                  <circle cx={z.x + z.w - 4} cy={z.y + 4} r={5} fill="#ef4444" />
-                  <text
-                    x={z.x + z.w - 4} y={z.y + 4}
-                    textAnchor="middle" dominantBaseline="middle"
-                    fontSize={5} fontWeight="700" fill="white"
-                    style={{ pointerEvents: 'none', userSelect: 'none' }}
+          {/* Formulaire nouveau dommage */}
+          <div className="space-y-3">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Type de dommage</p>
+              <div className="flex flex-wrap gap-1.5">
+                {DAMAGE_TYPES.map(t => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setDtype(t.id)}
+                    className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                      dtype === t.id ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                    }`}
                   >
-                    {n}
-                  </text>
-                </>
-              )}
-            </g>
-          )
-        })}
-      </svg>
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-      {!readonly && (
-        <p className="text-center text-[10px] text-gray-400 pb-2">
-          Appuyez sur une zone pour signaler un dommage
-        </p>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Gravité</p>
+              <div className="grid grid-cols-3 gap-2">
+                {GRAVITES.map(g => (
+                  <button
+                    key={g.id}
+                    type="button"
+                    onClick={() => setGravite(g.id)}
+                    className={`py-2 rounded-xl text-sm font-semibold border transition-colors ${
+                      gravite === g.id ? g.active : 'bg-white text-gray-600 border-gray-200'
+                    }`}
+                  >
+                    {g.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Photos</p>
+              <div className="flex items-center gap-2 flex-wrap">
+                {pending.map((p, i) => (
+                  <div key={i} className="relative">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={p} alt="" className="w-14 h-14 rounded-xl object-cover border border-gray-200" />
+                    <button
+                      type="button"
+                      onClick={() => setPending(arr => arr.filter((_, j) => j !== i))}
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-gray-900 text-white flex items-center justify-center"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => fileRef.current?.click()}
+                  className="w-14 h-14 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center text-gray-400 hover:border-gray-400"
+                >
+                  <Camera className="w-5 h-5" />
+                </button>
+              </div>
+              <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={onPhoto} />
+            </div>
+
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Commentaire</p>
+              <textarea
+                value={comment}
+                onChange={e => setComment(e.target.value)}
+                rows={2}
+                placeholder="Détails du dommage…"
+                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 text-sm resize-none"
+              />
+            </div>
+
+            <button
+              onClick={addDamage}
+              className="w-full py-3 bg-[#111111] text-white rounded-2xl text-sm font-bold flex items-center justify-center gap-2 active:scale-[.99]"
+            >
+              <Plus className="w-4 h-4" /> Ajouter le dommage
+            </button>
+          </div>
+        </div>
       )}
     </div>
   )

@@ -1,7 +1,7 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
 export type UserRole = 'gerant' | 'associe' | 'employe'
-export type VehicleStatus = 'disponible' | 'loue' | 'reserve' | 'maintenance' | 'hors_service' | 'en_verification' | 'immobilise' | 'mis_a_disposition'
+export type VehicleStatus = 'disponible' | 'loue' | 'reserve' | 'maintenance' | 'hors_service' | 'en_verification' | 'immobilise' | 'mis_a_disposition' | 'a_reparer'
 export type VehicleFuelType = 'essence' | 'diesel' | 'hybride' | 'electrique'
 export type VehicleCategory = 'citadine' | 'suv' | 'sportif'
 export type VehicleTransmission = 'manuelle' | 'automatique'
@@ -21,8 +21,22 @@ export interface Profile {
   role: UserRole
   phone: string | null
   is_active: boolean
+  allowed_tabs: string[] | null   // onglets autorisés (employé) ; null = accès complet
+  allowed_doc_categories: string[] | null  // catégories documents visibles ; null = toutes
+  can_view_fleet: boolean | null  // voir le bloc Flotte du dashboard ; défaut true
   created_at: string
   updated_at: string
+}
+
+/** Dégradation active signalée sur un véhicule (stockée dans vehicles.maintenance_flags). */
+export interface MaintenanceFlag {
+  id: string
+  category: string          // zone/type de problème (carrosserie, pneus, vitrage…)
+  label: string             // libellé lisible : « Pare-choc AV — dommage »
+  severity: 'rayure' | 'dommage' | 'attention'
+  source: 'inspection' | 'manuel'
+  source_id: string | null  // id de l'inspection d'origine, le cas échéant
+  created_at: string
 }
 
 export interface Vehicle {
@@ -40,6 +54,9 @@ export interface Vehicle {
   doors: number
   transmission: VehicleTransmission | null
   fiscal_power: number | null
+  engine_power: number | null
+  rental_start_date: string | null
+  current_fuel_range_km: number | null
   current_km: number
   status: VehicleStatus
   // Legacy price columns (used by ReservationForm + PDF)
@@ -67,8 +84,12 @@ export interface Vehicle {
   next_service_km: number | null
   next_service_date: string | null
   reference_photos: string[]
+  maintenance_flags: MaintenanceFlag[]
   notes: string | null
   is_active: boolean
+  // Véhicule partenaire temporaire (opération inter-agences entrante)
+  is_external: boolean
+  partner_agency_id: string | null
   created_at: string
   updated_at: string
 }
@@ -92,12 +113,14 @@ export interface Client {
   id_doc_back_path: string | null
   license_front_path: string | null
   license_back_path: string | null
+  proof_of_address_path: string | null
   usual_payment_method: PaymentMethod | null
   usual_deposit: number | null
   status: ClientStatus
   blacklist_reason: string | null
   internal_notes: string | null
   rating: number | null
+  discount_percent: number | null
   acquisition_channel: string | null
   created_by: string | null
   created_at: string
@@ -143,7 +166,9 @@ export interface Reservation {
 export interface Contract {
   id: string
   contract_number: string
-  reservation_id: string
+  reservation_id: string | null
+  inter_agency_rental_id: string | null
+  doc_type: 'location' | 'convention_ia'
   status: ContractStatus
   client_signature_svg: string | null
   agent_signature_svg: string | null
@@ -173,7 +198,8 @@ export interface Inspection {
   vehicle_id: string
   type: InspectionType
   km_reading: number
-  fuel_level: number
+  fuel_level: number | null
+  fuel_range_km: number | null
   exterior_cleanliness: number | null
   interior_cleanliness: number | null
   damaged_zones: DamagedZone[]

@@ -1,13 +1,17 @@
 import { fetchAllAlerts } from '@/lib/utils/alerts'
+import { syncAlertsToCalendar } from '@/lib/calendar/syncAlerts'
+import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import {
   AlertTriangle, Clock, FileText, Wrench,
-  ShieldAlert, ChevronRight, Bell,
+  ShieldAlert, ChevronRight, Bell, ArrowLeft,
 } from 'lucide-react'
 import type { AppAlert } from '@/lib/utils/alerts'
 import { AnimatedList, AnimatedListItem } from '@/components/AnimatedList'
+import BackButton from '@/components/ui/BackButton'
 
 function AlertIcon({ type }: { type: string }) {
   const cls = 'w-5 h-5'
@@ -68,7 +72,11 @@ function AlertGroup({
 }
 
 export default async function NotificationsPage() {
-  const alerts    = await fetchAllAlerts()
+  const supabase = await createClient()
+  const alerts    = await fetchAllAlerts(supabase)
+  // Reflète les alertes urgentes/importantes sur le calendrier (rattrapage
+  // paresseux à chaque visite, même mécanisme que le cron de /api/notifications).
+  await syncAlertsToCalendar(createAdminClient(), alerts)
   const urgent    = alerts.filter(a => a.category === 'urgent')
   const important = alerts.filter(a => a.category === 'important')
   const info      = alerts.filter(a => a.category === 'info')
@@ -78,6 +86,9 @@ export default async function NotificationsPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-3">
+          <BackButton fallbackHref="/" className="p-2 rounded-xl hover:bg-gray-100 transition-colors -ml-2">
+            <ArrowLeft className="w-5 h-5 text-gray-600" />
+          </BackButton>
           <Bell className="w-5 h-5 text-gray-400" />
           <h1 className="text-xl font-black text-gray-900">Alertes</h1>
         </div>

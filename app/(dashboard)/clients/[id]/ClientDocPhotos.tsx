@@ -9,6 +9,7 @@ interface Props {
   idBackUrl: string | null
   licFrontUrl: string | null
   licBackUrl: string | null
+  addressUrl?: string | null
 }
 
 const DOCS = [
@@ -16,14 +17,16 @@ const DOCS = [
   { key: 'idBack',   label: "CNI / Passeport — Verso" },
   { key: 'licFront', label: "Permis de conduire — Recto" },
   { key: 'licBack',  label: "Permis de conduire — Verso" },
+  { key: 'address',  label: "Justificatif de domicile" },
 ] as const
 
-export default function ClientDocPhotos({ idFrontUrl, idBackUrl, licFrontUrl, licBackUrl }: Props) {
+export default function ClientDocPhotos({ idFrontUrl, idBackUrl, licFrontUrl, licBackUrl, addressUrl }: Props) {
   const urls: Record<string, string | null> = {
     idFront: idFrontUrl,
     idBack: idBackUrl,
     licFront: licFrontUrl,
     licBack: licBackUrl,
+    address: addressUrl ?? null,
   }
 
   const available = DOCS.filter(d => urls[d.key])

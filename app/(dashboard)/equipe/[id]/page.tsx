@@ -7,6 +7,9 @@ import {
   ArrowLeft, Phone, Mail, Calendar, Briefcase,
   ChevronRight, Plus, CheckCircle2, Clock,
 } from 'lucide-react'
+import BackButton from '@/components/ui/BackButton'
+import MemberTabsEditor from './MemberTabsEditor'
+import MemberActiveToggle from './MemberActiveToggle'
 
 const ROLE_CONFIG: Record<string, { label: string; bg: string; text: string }> = {
   gerant:      { label: 'Gérant',      bg: 'bg-black',    text: 'text-white' },
@@ -53,6 +56,26 @@ export default async function MemberProfilePage({
 
   if (!member) redirect('/equipe')
 
+  // Permissions par onglet — requête séparée tolérante à l'absence de la colonne
+  // (avant migration 017 : memberPerm = null → considéré comme accès complet).
+  const { data: memberPerm } = await supabase
+    .from('profiles')
+    .select('allowed_tabs')
+    .eq('id', id)
+    .maybeSingle()
+  const memberTabs = (memberPerm as { allowed_tabs?: string[] | null } | null)?.allowed_tabs ?? null
+  const memberRestricted = member.role === 'employe' || member.role === 'prestataire'
+
+  // Permissions fines (catégories documents + bloc flotte) — requête séparée
+  // tolérante à l'absence des colonnes avant la migration 020.
+  const { data: memberPerm2 } = await supabase
+    .from('profiles')
+    .select('allowed_doc_categories, can_view_fleet')
+    .eq('id', id)
+    .maybeSingle()
+  const memberDocCats = (memberPerm2 as { allowed_doc_categories?: string[] | null } | null)?.allowed_doc_categories ?? null
+  const memberCanViewFleet = (memberPerm2 as { can_view_fleet?: boolean | null } | null)?.can_view_fleet ?? true
+
   const now      = new Date()
   const today    = startOfDay(now)
   const in14Days = addDays(today, 14)
@@ -62,7 +85,7 @@ export default async function MemberProfilePage({
     .from('tasks')
     .select(`
       id, title, type, status, due_datetime,
-      vehicles ( plate )
+      vehicles ( plate, brand, model )
     `)
     .eq('assigned_to', id)
     .in('status', ['a_faire', 'en_cours'])
@@ -99,9 +122,9 @@ export default async function MemberProfilePage({
 
       {/* Retour */}
       <div className="flex items-center gap-3">
-        <Link href="/equipe" className="w-9 h-9 bg-white rounded-2xl border border-gray-100 shadow-sm flex items-center justify-center">
+        <BackButton fallbackHref="/equipe" className="w-9 h-9 bg-white rounded-2xl border border-gray-100 shadow-sm flex items-center justify-center">
           <ArrowLeft className="w-4 h-4 text-gray-600" />
-        </Link>
+        </BackButton>
         <h1 className="text-lg font-black text-gray-900">Profil membre</h1>
       </div>
 
@@ -196,7 +219,7 @@ export default async function MemberProfilePage({
             )}
           </div>
           <Link
-            href={`/tasks/new?assigned_to=${id}`}
+            href={`/calendar/tasks/new?assigned_to=${id}`}
             className="flex items-center gap-1 text-[11px] text-gray-400 font-medium hover:text-gray-700 transition-colors"
           >
             <Plus className="w-3.5 h-3.5" /> ASSIGNER
@@ -208,7 +231,7 @@ export default async function MemberProfilePage({
             <CheckCircle2 className="w-8 h-8 text-gray-200 mx-auto mb-2" />
             <p className="text-sm text-gray-400 font-medium">Aucune tâche à venir</p>
             <Link
-              href={`/tasks/new?assigned_to=${id}`}
+              href={`/calendar/tasks/new?assigned_to=${id}`}
               className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-black underline underline-offset-2"
             >
               <Plus className="w-3.5 h-3.5" /> Assigner une tâche
@@ -220,7 +243,7 @@ export default async function MemberProfilePage({
               const tv = Array.isArray((task as any).vehicles) ? (task as any).vehicles[0] : (task as any).vehicles
               const isToday = isSameDay(new Date(task.due_datetime), today)
               return (
-                <Link key={task.id} href={`/tasks/${task.id}`}>
+                <Link key={task.id} href={`/calendar/tasks/${task.id}`}>
                   <div className="flex items-center gap-3 px-4 py-3.5 hover:bg-gray-50 transition-colors">
                     <div className="flex flex-col items-center flex-shrink-0 w-12 text-center">
                       <span className={`text-[10px] font-bold capitalize ${isToday ? 'text-black' : 'text-gray-400'}`}>
@@ -233,7 +256,10 @@ export default async function MemberProfilePage({
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-bold text-gray-900 truncate">{task.title}</p>
                       {(tv as any)?.plate && (
-                        <p className="text-xs text-gray-400 mt-0.5">{(tv as any).plate}</p>
+                        <p className="text-xs text-gray-400 mt-0.5 truncate">
+                          {(tv as any).brand} {(tv as any).model}
+                          <span className="font-mono"> · {(tv as any).plate}</span>
+                        </p>
                       )}
                     </div>
                     <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-full flex-shrink-0 ${STATUS_BADGE[task.status] ?? 'bg-gray-100 text-gray-600'}`}>
@@ -247,6 +273,17 @@ export default async function MemberProfilePage({
         )}
       </section>
 
+      {/* Permissions par onglet (membre restreint) */}
+      {isManager && memberRestricted && (
+        <MemberTabsEditor
+          memberId={id}
+          role={member.role}
+          initialTabs={memberTabs}
+          initialDocCategories={memberDocCats}
+          initialCanViewFleet={memberCanViewFleet}
+        />
+      )}
+
       {/* Actions gérant */}
       {isManager && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm divide-y divide-gray-50">
@@ -257,13 +294,14 @@ export default async function MemberProfilePage({
               <ChevronRight className="w-4 h-4 text-gray-200" />
             </div>
           </Link>
-          <button className="w-full flex items-center gap-3 px-4 py-4 hover:bg-gray-50 transition-colors text-left">
-            <Clock className="w-4 h-4 text-gray-400" />
-            <span className="flex-1 text-sm font-semibold text-gray-700">
-              {member.is_active ? 'Désactiver le compte' : 'Réactiver le compte'}
-            </span>
-            <ChevronRight className="w-4 h-4 text-gray-200" />
-          </button>
+          <div className="flex items-center gap-3 px-4 py-4">
+            <Clock className="w-4 h-4 text-gray-400 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-gray-700">Compte actif</p>
+              <p className="text-xs text-gray-400">Un compte inactif ne peut plus se connecter.</p>
+            </div>
+            <MemberActiveToggle memberId={id} initialActive={member.is_active} />
+          </div>
         </div>
       )}
 

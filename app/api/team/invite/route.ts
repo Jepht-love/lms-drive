@@ -14,11 +14,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
   }
 
-  const { email, full_name, role, phone, color, hire_date } = await req.json()
+  const { email, full_name, role, phone, color, hire_date, allowed_tabs, allowed_doc_categories, can_view_fleet } = await req.json()
 
   if (!email || !full_name || !role) {
     return NextResponse.json({ error: 'Champs requis manquants' }, { status: 400 })
   }
+
+  // Permissions : seulement pour un membre restreint (employé/prestataire) ;
+  // gérants/associés = accès complet.
+  const restricted = role === 'employe' || role === 'prestataire'
+  const allowedTabs    = restricted && Array.isArray(allowed_tabs) ? allowed_tabs : null
+  const allowedDocCats = restricted && Array.isArray(allowed_doc_categories) ? allowed_doc_categories : null
+  const canViewFleet   = restricted ? can_view_fleet !== false : true
 
   const admin = createAdminClient()
 
@@ -38,6 +45,19 @@ export async function POST(req: Request) {
     color: color || '#6366f1',
     hire_date: hire_date || null,
   }, { onConflict: 'id' })
+
+  // Permissions par onglet — best-effort : tolère l'absence de la colonne tant que
+  // la migration 017 n'est pas exécutée (n'empêche pas la création du membre).
+  try {
+    await admin.from('profiles').update({ allowed_tabs: allowedTabs }).eq('id', data.user.id)
+  } catch { /* colonne allowed_tabs absente — ignoré */ }
+
+  // Permissions fines (catégories documents + bloc flotte) — best-effort (migration 020).
+  try {
+    await admin.from('profiles')
+      .update({ allowed_doc_categories: allowedDocCats, can_view_fleet: canViewFleet })
+      .eq('id', data.user.id)
+  } catch { /* colonnes absentes — ignoré */ }
 
   return NextResponse.json({ success: true, userId: data.user.id })
 }

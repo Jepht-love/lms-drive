@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { syncTripToCalendar } from '@/lib/calendar/syncInternalTrip'
 
 export async function startTrip(formData: FormData) {
   const supabase = await createClient()
@@ -22,6 +23,8 @@ export async function startTrip(formData: FormData) {
   const { data, error } = await supabase.from('internal_trips').insert(payload).select('id').single()
   if (error) return { error: error.message }
 
+  await syncTripToCalendar(data.id)
+
   await supabase.from('audit_logs').insert({
     user_id: user.id,
     action: 'internal_trip_started',
@@ -31,6 +34,7 @@ export async function startTrip(formData: FormData) {
   })
 
   revalidatePath('/internal-trips')
+  revalidatePath('/calendrier')
   return { success: true }
 }
 
@@ -63,6 +67,8 @@ export async function endTrip(tripId: string, formData: FormData) {
   // Update vehicle km
   await supabase.from('vehicles').update({ current_km: kmEnd }).eq('id', trip.vehicle_id)
 
+  await syncTripToCalendar(tripId)
+
   await supabase.from('audit_logs').insert({
     user_id: user.id,
     action: 'internal_trip_ended',
@@ -72,5 +78,6 @@ export async function endTrip(tripId: string, formData: FormData) {
   })
 
   revalidatePath('/internal-trips')
+  revalidatePath('/calendrier')
   return { success: true }
 }

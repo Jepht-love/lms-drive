@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { ArrowLeft, Plus, ChevronRight, FileWarning } from 'lucide-react'
+import BackButton from '@/components/ui/BackButton'
 import { formatPrice, formatDate } from '@/lib/utils'
 import { INFRACTION_STATUS, infractionTypeLabel } from '@/lib/incidents'
 import VehicleFilter from '@/components/incidents/VehicleFilter'
@@ -37,9 +38,9 @@ export default async function InfractionsPage({
 
   return (
     <div className="space-y-4">
-      <Link href="/incidents" className="inline-flex items-center gap-1.5 text-sm text-gray-400 font-medium hover:text-gray-700 transition-colors">
+      <BackButton fallbackHref="/incidents" className="inline-flex items-center gap-1.5 text-sm text-gray-400 font-medium hover:text-gray-700 transition-colors">
         <ArrowLeft className="w-4 h-4" /> Incidents
-      </Link>
+      </BackButton>
 
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-black text-gray-900">Infractions</h1>
@@ -78,7 +79,8 @@ export default async function InfractionsPage({
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${st.bg} ${st.text}`}>{st.label}</span>
-                        <span className="text-sm font-black text-gray-900">{v?.plate ?? '—'}</span>
+                        <span className="text-sm font-black text-gray-900">{v ? `${v.brand} ${v.model}` : '—'}</span>
+                        {v?.plate && <span className="text-xs font-mono text-gray-400">{v.plate}</span>}
                       </div>
                       <p className="text-sm text-gray-700">{infractionTypeLabel(inf.type)}</p>
                       <p className="text-xs text-gray-400 mt-0.5">

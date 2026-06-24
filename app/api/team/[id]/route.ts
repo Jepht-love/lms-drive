@@ -26,8 +26,34 @@ export async function PATCH(
   }
 
   const admin = createAdminClient()
-  const { error } = await admin.from('profiles').update(update).eq('id', id)
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+  if (Object.keys(update).length > 0) {
+    const { error } = await admin.from('profiles').update(update).eq('id', id)
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+  }
+
+  // Permissions par onglet — best-effort (tolère l'absence de la colonne avant migration 017).
+  if ('allowed_tabs' in body) {
+    const effectiveRole = (body.role ?? null) as string | null
+    const restricted = effectiveRole !== 'gerant' && effectiveRole !== 'associe'
+    const tabs = restricted && Array.isArray(body.allowed_tabs) ? body.allowed_tabs : null
+    try {
+      await admin.from('profiles').update({ allowed_tabs: tabs }).eq('id', id)
+    } catch { /* colonne absente — ignoré */ }
+  }
+
+  // Permissions fines — best-effort (colonnes optionnelles, migration 020).
+  const finePerms: Record<string, unknown> = {}
+  if ('allowed_doc_categories' in body) {
+    finePerms.allowed_doc_categories = Array.isArray(body.allowed_doc_categories) ? body.allowed_doc_categories : null
+  }
+  if ('can_view_fleet' in body) {
+    finePerms.can_view_fleet = body.can_view_fleet !== false
+  }
+  if (Object.keys(finePerms).length > 0) {
+    try {
+      await admin.from('profiles').update(finePerms).eq('id', id)
+    } catch { /* colonnes absentes — ignoré */ }
+  }
 
   return NextResponse.json({ success: true })
 }

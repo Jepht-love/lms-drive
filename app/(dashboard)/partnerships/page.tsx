@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { Plus, ChevronRight, Building2, Repeat } from 'lucide-react'
 import { formatPrice, formatDate } from '@/lib/utils'
 import { OPERATION_STATUS } from '@/lib/partnerships'
+import { differenceInCalendarDays } from 'date-fns'
 
 export default async function PartnershipsPage({
   searchParams,
@@ -15,7 +16,7 @@ export default async function PartnershipsPage({
 
   const { data: ops } = await supabase
     .from('inter_agency_rentals')
-    .select('*, partner_agencies(name), vehicles(plate, brand, model)')
+    .select('*, partner_agencies(name), vehicles(plate, brand, model, daily_price)')
     .eq('direction', direction)
     .order('start_date', { ascending: false })
 
@@ -78,10 +79,10 @@ export default async function PartnershipsPage({
                     </div>
                   </div>
 
-                  {op.direction === 'in' && (
+                  {op.direction === 'in' || (op.client_price ?? 0) > 0 ? (
                     <div className="grid grid-cols-3 gap-2 pt-3 border-t border-gray-50">
                       <div className="text-center">
-                        <p className="text-[10px] text-gray-400 uppercase tracking-wide">Coût</p>
+                        <p className="text-[10px] text-gray-400 uppercase tracking-wide">{op.direction === 'in' ? 'Coût' : 'Revenu'}</p>
                         <p className="text-sm font-black text-gray-900">{formatPrice(op.rental_cost)}</p>
                       </div>
                       <div className="text-center">
@@ -93,7 +94,29 @@ export default async function PartnershipsPage({
                         <p className={`text-sm font-black ${op.margin >= 0 ? 'text-green-600' : 'text-red-500'}`}>{formatPrice(op.margin)}</p>
                       </div>
                     </div>
-                  )}
+                  ) : (() => {
+                    const days = Math.max(1, differenceInCalendarDays(
+                      new Date(op.end_date_actual ?? op.end_date_expected), new Date(op.start_date),
+                    ))
+                    const reference = (v?.daily_price ?? 0) * days
+                    const margin = op.rental_cost - reference
+                    return (
+                      <div className="grid grid-cols-3 gap-2 pt-3 border-t border-gray-50">
+                        <div className="text-center">
+                          <p className="text-[10px] text-gray-400 uppercase tracking-wide">Revenu</p>
+                          <p className="text-sm font-black text-gray-900">{formatPrice(op.rental_cost)}</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-[10px] text-gray-400 uppercase tracking-wide">Tarif normal</p>
+                          <p className="text-sm font-black text-gray-900">{formatPrice(reference)}</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-[10px] text-gray-400 uppercase tracking-wide">Écart</p>
+                          <p className={`text-sm font-black ${margin >= 0 ? 'text-green-600' : 'text-red-500'}`}>{formatPrice(margin)}</p>
+                        </div>
+                      </div>
+                    )
+                  })()}
                 </div>
               </Link>
             )

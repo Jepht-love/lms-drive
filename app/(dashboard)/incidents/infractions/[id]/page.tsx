@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
+import BackButton from '@/components/ui/BackButton'
 import { formatPrice, formatDate } from '@/lib/utils'
 import { INFRACTION_STATUS, infractionTypeLabel } from '@/lib/incidents'
 import InfractionActions from './InfractionActions'
@@ -46,9 +47,9 @@ export default async function InfractionDetailPage({
 
   return (
     <div className="space-y-4">
-      <Link href="/incidents/infractions" className="inline-flex items-center gap-1.5 text-sm text-gray-400 font-medium hover:text-gray-700 transition-colors">
+      <BackButton fallbackHref="/incidents/infractions" className="inline-flex items-center gap-1.5 text-sm text-gray-400 font-medium hover:text-gray-700 transition-colors">
         <ArrowLeft className="w-4 h-4" /> Infractions
-      </Link>
+      </BackButton>
 
       {/* Hero */}
       <div className="bg-[#111111] rounded-2xl p-5">
@@ -56,7 +57,7 @@ export default async function InfractionDetailPage({
           <div>
             <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${st.bg} ${st.text}`}>{st.label}</span>
             <h1 className="text-white text-lg font-extrabold mt-2">{infractionTypeLabel(inf.type)}</h1>
-            <p className="text-white/50 text-sm mt-0.5">{v?.plate} · {v?.brand} {v?.model}</p>
+            <p className="text-white/50 text-sm mt-0.5">{v?.brand} {v?.model} · {v?.plate}</p>
           </div>
           <div className="text-right">
             <p className="text-white text-2xl font-black">{formatPrice(total)}</p>
@@ -70,7 +71,9 @@ export default async function InfractionDetailPage({
 
       {/* Détails */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-        <Row label="Date infraction">{formatDate(inf.infraction_date)}</Row>
+        <Row label="Date infraction">
+          {formatDate(inf.infraction_date)}{inf.infraction_time ? ` à ${inf.infraction_time.slice(0, 5)}` : ''}
+        </Row>
         <Row label="Responsable">
           {c ? `${c.first_name} ${c.last_name}` : internalName ? `${internalName} (interne)` : 'Utilisation interne'}
         </Row>

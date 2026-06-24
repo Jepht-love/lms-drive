@@ -1,0 +1,33 @@
+-- Migration 039 — Garde-fou anti-doublon sur calendar_events
+-- Exécuter dans : Supabase Dashboard > SQL Editor (APRÈS 038)
+--
+-- Renforcement préventif, pas le correctif d'un bug confirmé : le cas
+-- "Retour — Ford fiesta Beige" qui a motivé l'investigation s'est révélé être
+-- un événement légitime (réservation réellement clôturée le jour même), pas
+-- un doublon. Mais le gap de code qui a déclenché cette enquête reste réel :
+-- upsertEvent (lib/calendar/syncRental.ts) cherche l'événement existant via
+-- .maybeSingle() sur (reservation_id, event_type) — sans contrainte unique en
+-- base, si un doublon apparaissait un jour pour cette paire (race condition,
+-- reprise manuelle de données...), .maybeSingle() échouerait silencieusement
+-- et le code réinsérerait un événement au lieu de mettre à jour l'ancien, qui
+-- resterait alors figé à sa date d'origine indéfiniment. Cette contrainte rend
+-- ce scénario structurellement impossible, qu'il se soit déjà produit ou non.
+--
+-- ÉTAPE 1 — Lecture seule : repérer les doublons existants avant de poser la
+-- contrainte (sinon le CREATE UNIQUE INDEX plus bas échouera) :
+--
+--   SELECT reservation_id, event_type, count(*), array_agg(id) AS ids
+--   FROM calendar_events
+--   WHERE reservation_id IS NOT NULL
+--   GROUP BY reservation_id, event_type
+--   HAVING count(*) > 1;
+--
+-- Si cette requête renvoie des lignes : pour chaque groupe, garder l'événement
+-- le plus récent (max(created_at) si la colonne existe, sinon max(id)) et
+-- supprimer les autres avant de relancer l'ÉTAPE 2. Ne pas deviner ici —
+-- vérifier sur quelle ligne correspond à la réservation réellement active.
+--
+-- ÉTAPE 2 — Une fois les doublons éventuels nettoyés :
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_calendar_events_reservation_type
+  ON calendar_events(reservation_id, event_type) WHERE reservation_id IS NOT NULL;

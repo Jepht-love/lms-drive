@@ -2,9 +2,11 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, CheckCircle2 } from 'lucide-react'
+import BackButton from '@/components/ui/BackButton'
 import { formatPrice } from '@/lib/utils'
 import { getCategoryLabel } from '@/lib/accounting/categories'
 import CloseButton from '../CloseButton'
+import AccountingTransactions from '../../AccountingTransactions'
 
 const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre']
 
@@ -26,20 +28,28 @@ export default async function MonthlyClosingPage() {
   ])
 
   const all = txs ?? []
-  const rev = all.filter(t => t.type === 'recette').reduce((s, t) => s + (t.amount ?? 0), 0)
-  const exp = all.filter(t => t.type === 'depense').reduce((s, t) => s + (t.amount ?? 0), 0)
-  const net = rev - exp
   const isClosed = closing?.is_closed
 
+  // Transparence : une ligne marquée transparente est déduite du bilan affiché
+  // ici et des exports (déjà le cas pour export/pdf et export/excel) — sans
+  // quoi le bilan envoyé au comptable ne correspondrait pas à ce qui est vu ici.
+  const visible = all.filter(t => !t.is_transparent)
+  const hidden = all.filter(t => t.is_transparent)
+  const hiddenAmount = hidden.reduce((s, t) => s + (t.amount ?? 0), 0)
+
+  const rev = visible.filter(t => t.type === 'recette').reduce((s, t) => s + (t.amount ?? 0), 0)
+  const exp = visible.filter(t => t.type === 'depense').reduce((s, t) => s + (t.amount ?? 0), 0)
+  const net = rev - exp
+
   const byCat = new Map<string, { count: number; amount: number; type: string }>()
-  for (const t of all) {
+  for (const t of visible) {
     const e = byCat.get(t.category) ?? { count: 0, amount: 0, type: t.type }
     e.count++; e.amount += t.amount ?? 0
     byCat.set(t.category, e)
   }
 
   const byVeh = new Map<string, { name: string; plate: string; revenue: number; expenses: number }>()
-  for (const t of all) {
+  for (const t of visible) {
     if (!t.vehicle_id) continue
     const v = Array.isArray(t.vehicles) ? t.vehicles[0] : t.vehicles
     const e = byVeh.get(t.vehicle_id) ?? { name: v ? `${v.brand} ${v.model}` : '—', plate: v?.plate ?? '', revenue: 0, expenses: 0 }
@@ -50,9 +60,9 @@ export default async function MonthlyClosingPage() {
 
   return (
     <div className="space-y-4">
-      <Link href="/accounting" className="inline-flex items-center gap-1.5 text-sm text-gray-400 font-medium hover:text-gray-700 transition-colors">
+      <BackButton fallbackHref="/accounting" className="inline-flex items-center gap-1.5 text-sm text-gray-400 font-medium hover:text-gray-700 transition-colors">
         <ArrowLeft className="w-4 h-4" /> Comptabilité
-      </Link>
+      </BackButton>
 
       <div>
         <h1 className="text-xl font-black text-gray-900">Clôture mensuelle</h1>
@@ -79,6 +89,12 @@ export default async function MonthlyClosingPage() {
           <p className={`text-base font-black ${net >= 0 ? 'text-white' : 'text-red-500'}`}>{formatPrice(net)}</p>
         </div>
       </div>
+
+      {hidden.length > 0 && (
+        <p className="text-[11px] text-gray-400 text-center">
+          {hidden.length} ligne{hidden.length > 1 ? 's' : ''} transparente{hidden.length > 1 ? 's' : ''} exclue{hidden.length > 1 ? 's' : ''} du bilan ci-dessus · {formatPrice(hiddenAmount)}
+        </p>
+      )}
 
       {/* Par catégorie */}
       {byCat.size > 0 && (
@@ -139,6 +155,16 @@ export default async function MonthlyClosingPage() {
           📈 Graphiques
         </Link>
       </div>
+
+      {/* Mouvements — marquer une ligne transparente la déduit du bilan et des exports ci-dessus */}
+      {!isClosed && all.length > 0 && (
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 px-1">
+            Mouvements du mois
+          </p>
+          <AccountingTransactions transactions={all} />
+        </div>
+      )}
 
       {!isClosed && <CloseButton mode="monthly" month={month} year={year} />}
     </div>

@@ -5,6 +5,7 @@ import { formatDate, formatPrice } from '@/lib/utils'
 import { getChannelLabel, CAMPAIGN_STATUSES, calcROI, calcCAC } from '@/lib/marketing/channels'
 import CloseForm from './CloseForm'
 import StatusActions from './StatusActions'
+import KpiEditor from './KpiEditor'
 
 export default async function CampaignDetailPage({
   params,
@@ -88,6 +89,15 @@ export default async function CampaignDetailPage({
           </div>
         )}
       </div>
+
+      {/* Saisie ROI / KPI — éditable sur toute campagne */}
+      <KpiEditor
+        campaignId={c.id}
+        prospects={c.prospects_count}
+        reservations={c.reservations_count}
+        revenue={c.revenue_generated}
+        observations={c.observations}
+      />
 
       {/* Actions statut */}
       <StatusActions campaignId={c.id} currentStatus={c.status} />

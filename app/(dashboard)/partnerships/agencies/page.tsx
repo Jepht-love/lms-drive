@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { ArrowLeft, Plus, Building2, Phone } from 'lucide-react'
+import BackButton from '@/components/ui/BackButton'
 
 export default async function AgenciesPage() {
   const supabase = await createClient()
@@ -15,9 +16,9 @@ export default async function AgenciesPage() {
 
   return (
     <div className="space-y-4">
-      <Link href="/partnerships" className="inline-flex items-center gap-1.5 text-sm text-gray-400 font-medium hover:text-gray-700 transition-colors">
+      <BackButton fallbackHref="/partnerships" className="inline-flex items-center gap-1.5 text-sm text-gray-400 font-medium hover:text-gray-700 transition-colors">
         <ArrowLeft className="w-4 h-4" /> Partenariats
-      </Link>
+      </BackButton>
 
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-black text-gray-900">Agences partenaires</h1>

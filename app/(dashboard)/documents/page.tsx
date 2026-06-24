@@ -15,6 +15,18 @@ export default async function DocumentsPage() {
     .single()
 
   const userRole = profile?.role ?? 'employe'
+  const isManager = userRole === 'gerant' || userRole === 'associe'
+
+  // Catégories de documents visibles par ce membre (permissions migration 020,
+  // tolérant à l'absence de la colonne → toutes les catégories).
+  const { data: docPerm } = await supabase
+    .from('profiles')
+    .select('allowed_doc_categories')
+    .eq('id', user.id)
+    .maybeSingle()
+  const allowedDocCats = (docPerm as { allowed_doc_categories?: string[] | null } | null)?.allowed_doc_categories ?? null
+  const ALL_CATS = ['entreprise', 'vehicule', 'client', 'partenaire']
+  const visibleCategories = isManager || !allowedDocCats ? ALL_CATS : allowedDocCats
 
   const [{ data: documents }, { data: vehicles }, { data: clients }, { data: partners }] = await Promise.all([
     supabase
@@ -37,13 +49,16 @@ export default async function DocumentsPage() {
       .order('name'),
   ])
 
+  const visibleDocuments = (documents ?? []).filter(d => visibleCategories.includes(d.category))
+
   return (
     <DocumentsClient
-      documents={documents ?? []}
+      documents={visibleDocuments}
       vehicles={vehicles ?? []}
       clients={clients ?? []}
       partners={partners ?? []}
       userRole={userRole}
+      visibleCategories={visibleCategories}
     />
   )
 }

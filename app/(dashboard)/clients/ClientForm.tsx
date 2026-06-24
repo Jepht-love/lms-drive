@@ -115,6 +115,7 @@ export default function ClientForm({ action, client: c }: ClientFormProps) {
           <PhotoUpload label="CNI / Pièce d'identité (verso)" name="id_doc_back" existingUrl={c?.id_doc_back_path} />
           <PhotoUpload label="Permis de conduire (recto)" name="license_front" existingUrl={c?.license_front_path} />
           <PhotoUpload label="Permis de conduire (verso)" name="license_back" existingUrl={c?.license_back_path} />
+          <PhotoUpload label="Justificatif de domicile" name="proof_of_address" existingUrl={c?.proof_of_address_path} />
         </div>
         <p className="text-xs text-slate-400 mt-2 flex items-center gap-1.5">
           <Upload className="w-3 h-3" />
@@ -133,6 +134,7 @@ export default function ClientForm({ action, client: c }: ClientFormProps) {
             labels={{ especes: 'Espèces', virement: 'Virement', cb: 'Carte bancaire', cheque: 'Chèque' }}
           />
           <Field label="Caution habituelle (€)" name="usual_deposit" type="number" defaultValue={c?.usual_deposit?.toString() ?? ''} step="0.01" />
+          <Field label="Remise fidélité (%)" name="discount_percent" type="number" defaultValue={c?.discount_percent?.toString() ?? ''} step="1" placeholder="0" />
           <Field label="Canal d'acquisition" name="acquisition_channel" defaultValue={c?.acquisition_channel ?? ''} placeholder="Bouche à oreille, Internet…" />
         </div>
         <div className="mt-4">

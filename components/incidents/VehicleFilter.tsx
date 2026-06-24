@@ -25,7 +25,7 @@ export default function VehicleFilter({ vehicles }: { vehicles: Vehicle[] }) {
     >
       <option value="">Tous les véhicules</option>
       {vehicles.map(v => (
-        <option key={v.id} value={v.id}>{v.plate} · {v.brand} {v.model}</option>
+        <option key={v.id} value={v.id}>{v.brand} {v.model} · {v.plate}</option>
       ))}
     </select>
   )

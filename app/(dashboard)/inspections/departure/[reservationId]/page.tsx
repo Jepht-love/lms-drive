@@ -2,8 +2,11 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
+import BackButton from '@/components/ui/BackButton'
 import InspectionFlow from '@/components/inspection/InspectionFlow'
 import { generateContractNumber } from '@/lib/utils'
+import { syncReservationToCalendar } from '@/lib/calendar/syncRental'
+import { recomputeVehicleStatus } from '@/lib/vehicles/vehicleStatus'
 
 export default async function DepartureInspectionPage({ params }: { params: Promise<{ reservationId: string }> }) {
   const { reservationId } = await params
@@ -41,10 +44,14 @@ export default async function DepartureInspectionPage({ params }: { params: Prom
       .single()
     contract = newContract
 
-    // Passer la réservation en_cours
+    // Passer la réservation en_cours — mutation directe (pas l'action updateReservationStatus,
+    // qui appelle revalidatePath : interdit pendant le rendu d'une page, Next.js plante).
     await supabase.from('reservations').update({ status: 'en_cours' }).eq('id', reservationId)
-    // Mettre le véhicule en loué
-    await supabase.from('vehicles').update({ status: 'loue' }).eq('id', (reservation.vehicle as any)?.id)
+    // Sans ce sync, l'événement "Départ" reste figé en statut a_faire dans calendar_events :
+    // toujours visible comme tâche en attente sur le calendrier alors que le dashboard,
+    // qui relit reservations.status à chaque rendu, l'exclut déjà de "Tâches du jour".
+    await syncReservationToCalendar(reservationId)
+    await recomputeVehicleStatus(supabase, (reservation.vehicle as any)?.id)
   }
 
   if (!contract) notFound()
@@ -55,12 +62,12 @@ export default async function DepartureInspectionPage({ params }: { params: Prom
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Link href={`/reservations/${reservationId}`} className="p-2 rounded-xl hover:bg-slate-100">
+        <BackButton fallbackHref={`/reservations/${reservationId}`} className="p-2 rounded-xl hover:bg-slate-100">
           <ArrowLeft className="w-5 h-5 text-slate-600" />
-        </Link>
+        </BackButton>
         <div>
           <h1 className="text-2xl font-bold text-slate-900">État des lieux de départ</h1>
-          <p className="text-slate-500">{vehicle?.plate} — {vehicle?.brand} {vehicle?.model} · {client?.first_name} {client?.last_name}</p>
+          <p className="text-slate-500">{vehicle?.brand} {vehicle?.model} — {vehicle?.plate} · {client?.first_name} {client?.last_name}</p>
         </div>
       </div>
       <InspectionFlow

@@ -63,8 +63,8 @@ export default function IncidentsClient({ incidents, vehicles }: { incidents: In
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1.5">
-                    <span className="font-bold text-slate-900 text-sm">{i.vehicle?.plate}</span>
-                    <span className="text-xs text-slate-400">{i.vehicle?.brand} {i.vehicle?.model}</span>
+                    <span className="font-bold text-slate-900 text-sm">{i.vehicle?.brand} {i.vehicle?.model}</span>
+                    <span className="text-xs font-mono text-slate-400">{i.vehicle?.plate}</span>
                   </div>
                   <p className="text-sm text-slate-700">{i.description}</p>
                   <p className="text-xs text-slate-400 mt-1.5">{formatDate(i.created_at)}</p>
@@ -88,7 +88,7 @@ export default function IncidentsClient({ incidents, vehicles }: { incidents: In
             <label className="block text-sm font-medium text-slate-700 mb-1.5">Véhicule *</label>
             <select name="vehicle_id" required className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white">
               <option value="">— Choisir —</option>
-              {vehicles.map(v => <option key={v.id} value={v.id}>{v.plate} — {v.brand} {v.model}</option>)}
+              {vehicles.map(v => <option key={v.id} value={v.id}>{v.brand} {v.model} — {v.plate}</option>)}
             </select>
           </div>
           <div>

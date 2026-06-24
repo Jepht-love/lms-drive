@@ -13,6 +13,7 @@ import { createClient } from '@/lib/supabase/client'
 import { formatDate } from '@/lib/utils'
 import Link from 'next/link'
 import { ArrowLeft, Plus } from 'lucide-react'
+import BackButton from '@/components/ui/BackButton'
 
 const COLUMNS = [
   { id: 'a_faire',  label: 'À faire',   color: '#9CA3AF' },
@@ -102,9 +103,9 @@ export default function TasksKanban() {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
-        <Link href="/calendar" className="p-2 hover:bg-white rounded-xl transition-colors min-h-[auto]">
+        <BackButton fallbackHref="/calendar" className="p-2 hover:bg-white rounded-xl transition-colors min-h-[auto]">
           <ArrowLeft className="w-5 h-5 text-gray-600" />
-        </Link>
+        </BackButton>
         <div>
           <h1 className="text-xl font-black text-gray-900">Tâches</h1>
           <p className="text-sm text-gray-400">Suivi par statut</p>

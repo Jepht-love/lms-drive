@@ -5,16 +5,20 @@ import {
   ArrowLeft, FileText, Car, User, CalendarDays, Clock,
   CreditCard, Shield, AlertTriangle, ChevronRight, Phone,
 } from 'lucide-react'
+import BackButton from '@/components/ui/BackButton'
 import { formatDateTime, formatPrice } from '@/lib/utils'
 import ReservationStatusButtons from '../ReservationStatusButtons'
 import DepositStatusEditor from '../DepositStatusEditor'
 import DepositInfoEditor from '../DepositInfoEditor'
+import DepositSettlement from '../DepositSettlement'
 import PaymentEditor from '../PaymentEditor'
 import EditDatesPanel from '../EditDatesPanel'
+import ProlongReservation from '../ProlongReservation'
 import WorkflowStepper from '../WorkflowStepper'
+import InvoiceCard from '../InvoiceCard'
 import DeleteButton from '@/components/ui/DeleteButton'
 import { deleteReservation } from '@/lib/actions/delete'
-import { updateReservationStatus } from '@/lib/actions/reservations'
+import { syncReservationToCalendar } from '@/lib/calendar/syncRental'
 import type { ReservationStatus, PaymentStatus, PaymentMethod } from '@/types/database'
 import { format, differenceInDays } from 'date-fns'
 import { fr } from 'date-fns/locale'
@@ -76,11 +80,13 @@ export default async function ReservationPage({
 
   if (!reservation) notFound()
 
-  // Détection auto retards
+  // Détection auto retards — mutation directe (pas l'action updateReservationStatus,
+  // qui appelle revalidatePath : interdit pendant le rendu d'une page, Next.js plante).
   if (reservation.status === 'en_cours') {
     const now = new Date()
     if (new Date(reservation.end_datetime) < now) {
-      await updateReservationStatus(id, 'en_retard')
+      await supabase.from('reservations').update({ status: 'en_retard' }).eq('id', id)
+      await syncReservationToCalendar(id)
       reservation.status = 'en_retard'
     }
   }
@@ -109,6 +115,14 @@ export default async function ReservationPage({
   }))
 
   const contractClosed = contract?.status === 'cloture'
+
+  const { data: invoice } = contractClosed && contract
+    ? await supabase
+        .from('invoices')
+        .select('id, invoice_number, line_items, total_amount, sent_at')
+        .eq('contract_id', contract.id)
+        .maybeSingle()
+    : { data: null }
   const cfg = STATUS_CONFIG[reservation.status] ?? STATUS_CONFIG.option
 
   const v = reservation.vehicle as any
@@ -126,9 +140,9 @@ export default async function ReservationPage({
 
       {/* ─── Bouton retour ─── */}
       <div className="flex items-center gap-3">
-        <Link href="/reservations" className="p-2 rounded-xl hover:bg-gray-100 transition-colors">
+        <BackButton fallbackHref="/reservations" className="p-2 rounded-xl hover:bg-gray-100 transition-colors">
           <ArrowLeft className="w-5 h-5 text-gray-600" />
-        </Link>
+        </BackButton>
         <span className="text-sm text-gray-400 font-mono">{reservation.reservation_number}</span>
         <div className="ml-auto">
           <DeleteButton
@@ -142,10 +156,25 @@ export default async function ReservationPage({
 
       {/* ─── Hero statut ─── */}
       <div className={`rounded-2xl p-5 ${cfg.hero}`}>
-        <div className="flex items-center justify-between mb-4">
-          <span className={`text-xs px-3 py-1 rounded-full font-bold ${cfg.badge}`}>
-            {cfg.label}
-          </span>
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-y-2">
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className={`text-xs px-3 py-1 rounded-full font-bold ${cfg.badge}`}>
+              {cfg.label}
+            </span>
+            {['en_cours', 'en_retard', 'confirmee'].includes(reservation.status) && (
+              <ProlongReservation
+                reservationId={id}
+                contractId={contract?.id}
+                startDatetime={reservation.start_datetime}
+                endDatetime={reservation.end_datetime}
+                dailyPrice={reservation.daily_price}
+                weeklyPrice={(reservation.vehicle as any)?.weekly_price ?? null}
+                currentTotal={reservation.total_price}
+                kmIncludedDaily={reservation.km_included}
+                reservationStatus={reservation.status}
+              />
+            )}
+          </div>
           {isLate && (
             <span className="flex items-center gap-1.5 text-xs text-red-200">
               <AlertTriangle className="w-3.5 h-3.5" /> Retour dépassé
@@ -160,8 +189,10 @@ export default async function ReservationPage({
               <Car className="w-3.5 h-3.5" />
               <span className="text-xs font-semibold">Véhicule</span>
             </div>
-            <div className="font-mono font-extrabold text-white text-base">{v?.plate}</div>
-            <div className="text-white/70 text-xs mt-0.5">{v?.brand} {v?.model}</div>
+            <div className="font-extrabold text-white text-base">
+              {v?.brand} {v?.model}{v?.color ? ` · ${v.color}` : ''}
+            </div>
+            <div className="font-mono text-white/50 text-xs mt-0.5">{v?.plate}</div>
           </Link>
           <Link href={`/clients/${c?.id}`} className="bg-white/10 rounded-xl p-3 hover:bg-white/20 transition-colors">
             <div className="flex items-center gap-1.5 text-white/60 mb-1">
@@ -214,6 +245,9 @@ export default async function ReservationPage({
         reservationStatus={reservation.status}
         inspections={inspectionInfos}
       />
+
+      {/* ─── Facture de restitution (frais complémentaires) ─── */}
+      {invoice && <InvoiceCard invoice={invoice as any} />}
 
       {/* ─── Actions statut ─── */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
@@ -336,6 +370,12 @@ export default async function ReservationPage({
               contractClosed={contractClosed}
             />
           </div>
+          <DepositSettlement
+            reservationId={id}
+            depositAmount={reservation.deposit_amount}
+            depositDeducted={reservation.deposit_deducted ?? 0}
+            status={reservation.deposit_status ?? 'en_attente'}
+          />
         </div>
       )}
 

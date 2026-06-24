@@ -10,6 +10,8 @@ import DeleteButton from '@/components/ui/DeleteButton'
 import { deleteClient } from '@/lib/actions/delete'
 import ClientDocPhotos from './ClientDocPhotos'
 import ClientNotesEditor from './ClientNotesEditor'
+import ClientStatusActions from './ClientStatusActions'
+import BackButton from '@/components/ui/BackButton'
 
 // ─── Helpers visuels ──────────────────────────────────────────────────────────
 
@@ -76,10 +78,25 @@ export default async function ClientPage({
   const { data: reservations } = await supabase
     .from('reservations')
     .select(
-      'id, reservation_number, status, start_datetime, end_datetime, total_price, daily_price, payment_status, deposit_status, vehicle:vehicles(plate, brand, model)'
+      'id, reservation_number, status, start_datetime, end_datetime, total_price, daily_price, payment_status, deposit_status, deposit_deducted, late_minutes, vehicle:vehicles(plate, brand, model)'
     )
     .eq('client_id', id)
     .order('start_datetime', { ascending: false })
+
+  // ── Historique & incidents (amendes + sinistres) ──
+  // Tables en RLS gérant/associé → un employé verra simplement des listes vides.
+  const [{ data: infractions }, { data: accidents }] = await Promise.all([
+    supabase
+      .from('infractions')
+      .select('id, infraction_date, type, amount, status, vehicle:vehicles(plate, brand, model)')
+      .eq('client_id', id)
+      .order('infraction_date', { ascending: false }),
+    supabase
+      .from('accidents')
+      .select('id, accident_date, description, status, repair_cost, deposit_retained, vehicle:vehicles(plate, brand, model)')
+      .eq('client_id', id)
+      .order('accident_date', { ascending: false }),
+  ])
 
   // Signed URLs documents
   async function getSignedUrl(path: string | null | undefined): Promise<string | null> {
@@ -90,11 +107,12 @@ export default async function ClientPage({
     return data?.signedUrl ?? null
   }
 
-  const [idFrontUrl, idBackUrl, licFrontUrl, licBackUrl] = await Promise.all([
+  const [idFrontUrl, idBackUrl, licFrontUrl, licBackUrl, addressUrl] = await Promise.all([
     getSignedUrl(client.id_doc_front_path),
     getSignedUrl(client.id_doc_back_path),
     getSignedUrl(client.license_front_path),
     getSignedUrl(client.license_back_path),
+    getSignedUrl(client.proof_of_address_path),
   ])
 
   // ── Indicateurs financiers ──
@@ -106,8 +124,18 @@ export default async function ClientPage({
   // Impayés : réservations terminées non soldées
   const impayes    = completed.filter(r => r.payment_status && r.payment_status !== 'paye')
   const impayesCA  = impayes.reduce((s, r) => s + (r.total_price ?? 0), 0)
-  // Caution retenue : réservations avec dépôt retenu
-  const cautionsRetenues = (reservations ?? []).filter((r: any) => r.deposit_status === 'retenue').length
+  // Caution retenue : saisie partielle ou totale du dépôt
+  const cautionsRetenues = (reservations ?? []).filter(
+    (r: any) => r.deposit_status === 'saisie_partielle' || r.deposit_status === 'saisie_totale'
+  )
+  const cautionRetenueTotal = cautionsRetenues.reduce((s, r: any) => s + (r.deposit_deducted ?? 0), 0)
+  // Litiges & retards
+  const litiges = (reservations ?? []).filter((r: any) => r.deposit_status === 'litigieuse')
+  const retards = (reservations ?? []).filter((r: any) => r.status === 'en_retard' || (r.late_minutes ?? 0) > 0)
+  const totalAmendes = (infractions ?? []).reduce((s, i: any) => s + (i.amount ?? 0), 0)
+  const incidentsCount =
+    (infractions?.length ?? 0) + (accidents?.length ?? 0) +
+    cautionsRetenues.length + litiges.length + retards.length
 
   const initials = `${client.first_name.charAt(0)}${client.last_name.charAt(0)}`.toUpperCase()
 
@@ -116,6 +144,8 @@ export default async function ClientPage({
 
   return (
     <div className="space-y-4">
+
+      <BackButton fallbackHref="/clients" />
 
       {/* ─── Hero client ─── */}
       <div className={`rounded-2xl p-5 ${
@@ -190,6 +220,12 @@ export default async function ClientPage({
         </div>
       </div>
 
+      {/* ─── Statut client (VIP / Blacklist) ─── */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+        <SectionLabel>Statut client</SectionLabel>
+        <ClientStatusActions clientId={id} status={client.status} />
+      </div>
+
       {/* ─── Alerte blacklist ─── */}
       {isBlackliste && client.blacklist_reason && (
         <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-start gap-3">
@@ -239,6 +275,84 @@ export default async function ClientPage({
           <span className="text-sm font-black text-red-700">{formatPrice(impayesCA)}</span>
         </div>
       )}
+
+      {/* ─── Historique & incidents ─── */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+        <div className="flex items-center justify-between mb-3">
+          <SectionLabel>Historique &amp; incidents</SectionLabel>
+          {incidentsCount > 0 && (
+            <span className="text-[10px] font-black bg-red-50 text-red-600 px-2 py-0.5 rounded-full">
+              {incidentsCount}
+            </span>
+          )}
+        </div>
+
+        {/* Compteurs */}
+        <div className="grid grid-cols-3 gap-2 mb-3">
+          {[
+            { label: 'Amendes', value: infractions?.length ?? 0, sub: totalAmendes > 0 ? formatPrice(totalAmendes) : null },
+            { label: 'Sinistres', value: accidents?.length ?? 0, sub: null },
+            { label: 'Retards', value: retards.length, sub: null },
+            { label: 'Caut. ret.', value: cautionsRetenues.length, sub: cautionRetenueTotal > 0 ? formatPrice(cautionRetenueTotal) : null },
+            { label: 'Litiges', value: litiges.length, sub: null },
+            { label: 'Impayés', value: impayes.length, sub: impayesCA > 0 ? formatPrice(impayesCA) : null },
+          ].map(s => (
+            <div key={s.label} className={`rounded-xl p-2.5 text-center ${s.value > 0 ? 'bg-red-50' : 'bg-gray-50'}`}>
+              <p className={`text-lg font-black ${s.value > 0 ? 'text-red-600' : 'text-gray-300'}`}>{s.value}</p>
+              <p className="text-[9px] font-bold uppercase tracking-wide text-gray-400 mt-0.5">{s.label}</p>
+              {s.sub && <p className="text-[9px] font-semibold text-red-400 mt-0.5">{s.sub}</p>}
+            </div>
+          ))}
+        </div>
+
+        {/* Détail amendes + sinistres */}
+        {(infractions?.length ?? 0) === 0 && (accidents?.length ?? 0) === 0 ? (
+          <p className="text-xs text-gray-400 text-center py-2">Aucune amende ni sinistre enregistré</p>
+        ) : (
+          <div className="space-y-1.5">
+            {infractions?.map((inf: any) => {
+              const v = Array.isArray(inf.vehicle) ? inf.vehicle[0] : inf.vehicle
+              return (
+                <Link key={inf.id} href={`/incidents/infractions/${inf.id}`}
+                  className="flex items-center gap-3 p-2.5 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
+                  <AlertTriangle className="w-4 h-4 text-orange-500 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-gray-900 truncate">Amende · {inf.type}</p>
+                    <p className="text-xs text-gray-400">
+                      {formatDate(inf.infraction_date)}{v?.brand ? ` · ${v.brand} ${v.model}` : ''}
+                      {v?.plate && <span className="text-gray-300 font-mono"> · {v.plate}</span>}
+                    </p>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    {inf.amount > 0 && <p className="text-sm font-bold text-gray-700">{formatPrice(inf.amount)}</p>}
+                    <p className="text-[10px] font-bold uppercase text-gray-400">{inf.status}</p>
+                  </div>
+                </Link>
+              )
+            })}
+            {accidents?.map((acc: any) => {
+              const v = Array.isArray(acc.vehicle) ? acc.vehicle[0] : acc.vehicle
+              return (
+                <Link key={acc.id} href={`/incidents/sinistres/${acc.id}`}
+                  className="flex items-center gap-3 p-2.5 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
+                  <Car className="w-4 h-4 text-red-500 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-gray-900 truncate">Sinistre · {acc.description}</p>
+                    <p className="text-xs text-gray-400">
+                      {formatDate(acc.accident_date)}{v?.brand ? ` · ${v.brand} ${v.model}` : ''}
+                      {v?.plate && <span className="text-gray-300 font-mono"> · {v.plate}</span>}
+                    </p>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    {acc.repair_cost > 0 && <p className="text-sm font-bold text-gray-700">{formatPrice(acc.repair_cost)}</p>}
+                    <p className="text-[10px] font-bold uppercase text-gray-400">{acc.status}</p>
+                  </div>
+                </Link>
+              )
+            })}
+          </div>
+        )}
+      </div>
 
       {/* ─── Action principale ─── */}
       <Link
@@ -313,13 +427,14 @@ export default async function ClientPage({
             </InfoRow>
           )}
         </div>
-        {(idFrontUrl || idBackUrl || licFrontUrl || licBackUrl) && (
+        {(idFrontUrl || idBackUrl || licFrontUrl || licBackUrl || addressUrl) && (
           <div className="mt-3">
             <ClientDocPhotos
               idFrontUrl={idFrontUrl}
               idBackUrl={idBackUrl}
               licFrontUrl={licFrontUrl}
               licBackUrl={licBackUrl}
+              addressUrl={addressUrl}
             />
           </div>
         )}
@@ -339,6 +454,11 @@ export default async function ClientPage({
           )}
           {client.usual_deposit && (
             <InfoRow label="Caution habituelle">{formatPrice(client.usual_deposit)}</InfoRow>
+          )}
+          {(client.discount_percent ?? 0) > 0 && (
+            <InfoRow label="Remise fidélité">
+              <span className="text-green-600 font-bold">−{client.discount_percent}%</span>
+            </InfoRow>
           )}
           {completed.length > 0 && (
             <InfoRow label="CA moyen / location">{formatPrice(avgCA)}</InfoRow>
@@ -371,7 +491,7 @@ export default async function ClientPage({
               const v = (r as any).vehicle
               const startDate  = new Date(r.start_datetime)
               const endDate    = new Date(r.end_datetime)
-              const hasIssue   = (r as any).deposit_status === 'retenue'
+              const hasIssue   = ['saisie_partielle', 'saisie_totale', 'litigieuse'].includes((r as any).deposit_status)
               const isUnpaid   = r.payment_status && r.payment_status !== 'paye' && r.status === 'terminee'
               return (
                 <Link
@@ -391,8 +511,8 @@ export default async function ClientPage({
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-bold text-gray-900 flex items-center gap-2 flex-wrap">
-                      <span className="font-mono">{(v as any)?.plate}</span>
-                      <span className="font-normal text-gray-500">{(v as any)?.brand} {(v as any)?.model}</span>
+                      <span>{(v as any)?.brand} {(v as any)?.model}</span>
+                      <span className="font-mono text-xs font-normal text-gray-400">{(v as any)?.plate}</span>
                     </div>
                     <div className="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
                       <CalendarDays className="w-3 h-3" />

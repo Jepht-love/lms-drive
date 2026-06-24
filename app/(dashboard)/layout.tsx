@@ -19,7 +19,20 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   if (!profile) return <ClientRedirect to="/login" />
 
-  const alerts     = await fetchAllAlerts()
+  // Permissions par onglet — requête séparée tolérante à l'absence de la colonne.
+  // Appliquée seulement aux membres restreints (les managers voient tout).
+  const restricted = profile.role === 'employe' || profile.role === 'prestataire'
+  let allowedTabs: string[] | null = null
+  if (restricted) {
+    const { data: perm } = await supabase
+      .from('profiles')
+      .select('allowed_tabs')
+      .eq('id', user.id)
+      .maybeSingle()
+    allowedTabs = (perm as { allowed_tabs?: string[] | null } | null)?.allowed_tabs ?? null
+  }
+
+  const alerts     = await fetchAllAlerts(supabase)
   const alertCount = alerts.length
 
   return (
@@ -45,7 +58,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             {children}
           </div>
         </main>
-        <BottomNav alertCount={alertCount} />
+        <BottomNav alertCount={alertCount} allowedTabs={allowedTabs} />
       </div>
     </ToastProvider>
   )

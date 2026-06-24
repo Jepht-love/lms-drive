@@ -3,12 +3,12 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { formatRelative } from '@/lib/utils'
-import { Bell, Clock, AlertTriangle, Wrench, FileText, CheckCheck } from 'lucide-react'
+import { Bell, Clock, AlertTriangle, Wrench, FileText, CheckCheck, type LucideIcon } from 'lucide-react'
 import Link from 'next/link'
 import type { Notification } from '@/types/database'
 import { useToast } from '@/components/Toast'
 
-const ICONS: Record<string, React.ElementType> = {
+const ICONS: Record<string, LucideIcon> = {
   departure_soon: Clock,
   return_late: AlertTriangle,
   maintenance_due: Wrench,

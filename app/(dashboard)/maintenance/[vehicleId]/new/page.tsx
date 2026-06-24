@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
+import BackButton from '@/components/ui/BackButton'
 import { MAINTENANCE_TYPES } from '@/lib/maintenance'
 import { createMaintenanceRecord } from '@/lib/actions/maintenance'
 
@@ -12,6 +13,7 @@ export default function NewMaintenancePage() {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  const [type, setType] = useState('revision')
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -31,9 +33,9 @@ export default function NewMaintenancePage() {
   return (
     <div className="space-y-4 pb-4">
 
-      <Link href={`/maintenance/${vehicleId}`} className="inline-flex items-center gap-1.5 text-sm text-gray-400 font-medium hover:text-gray-700 transition-colors">
+      <BackButton fallbackHref={`/maintenance/${vehicleId}`} className="inline-flex items-center gap-1.5 text-sm text-gray-400 font-medium hover:text-gray-700 transition-colors">
         <ArrowLeft className="w-4 h-4" /> Retour
-      </Link>
+      </BackButton>
 
       <h1 className="text-xl font-black text-gray-900">Nouvelle intervention</h1>
 
@@ -44,7 +46,8 @@ export default function NewMaintenancePage() {
           {/* Type */}
           <div>
             <label className={labelCls} htmlFor="type">Type</label>
-            <select id="type" name="type" defaultValue="revision" className={inputCls} required>
+            <select id="type" name="type" className={inputCls} required
+              value={type} onChange={e => setType(e.target.value)}>
               {MAINTENANCE_TYPES.map(t => (
                 <option key={t.key} value={t.key}>{t.label}</option>
               ))}
@@ -83,8 +86,12 @@ export default function NewMaintenancePage() {
 
           {/* Notes */}
           <div>
-            <label className={labelCls} htmlFor="notes">Notes</label>
-            <textarea id="notes" name="notes" rows={3} placeholder="Notes complémentaires…" className={`${inputCls} resize-none`} />
+            <label className={labelCls} htmlFor="notes">
+              {type === 'autre' ? "Précisez le type d'intervention *" : 'Notes'}
+            </label>
+            <textarea id="notes" name="notes" rows={3} required={type === 'autre'}
+              placeholder={type === 'autre' ? 'Quel est ce type d\'intervention ?' : 'Notes complémentaires…'}
+              className={`${inputCls} resize-none ${type === 'autre' ? 'border-amber-200 bg-amber-50' : ''}`} />
           </div>
         </div>
 

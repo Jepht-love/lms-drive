@@ -49,7 +49,7 @@ export default function WorkflowStepper({
       num: 1,
       icon: <CalendarCheck className="w-4 h-4" />,
       label: 'Contrat établi',
-      sublabel: step1Done ? `N° ${contractId?.slice(-6).toUpperCase()}` : 'Démarrez l\'EDL de départ',
+      sublabel: step1Done ? `N° ${contractId?.slice(-6).toUpperCase()}` : 'Démarrez l\'état des lieux de départ',
       done: step1Done,
       active: !step1Done,
       resetAction: null as ((() => Promise<void>) | null),
@@ -58,7 +58,7 @@ export default function WorkflowStepper({
     {
       num: 2,
       icon: <ClipboardList className="w-4 h-4" />,
-      label: 'EDL Départ signé',
+      label: 'État des lieux de départ signé',
       sublabel: step2Done
         ? `Signé${depInsp?.signedAt ? ' · ' + new Date(depInsp.signedAt).toLocaleDateString('fr-FR') : ''}${depInsp?.damages ? ` · ${depInsp.damages} dommage(s)` : ' · Aucun dommage'}`
         : step1Done ? 'En attente de l\'état des lieux' : 'Créer le contrat en premier',
@@ -66,34 +66,34 @@ export default function WorkflowStepper({
       active: step1Done && !step2Done,
       locked: !step1Done,
       resetAction: (!step4Done && step2Done && resetDep) ? resetDep : null,
-      resetLabel: 'Corriger l\'EDL départ',
+      resetLabel: 'Corriger l\'état des lieux de départ',
       action: step1Done && !step2Done ? (
         <Link
           href={`/inspections/departure/${reservationId}`}
           className="text-xs text-blue-600 hover:underline font-medium mt-1 block"
         >
-          Faire l'EDL départ →
+          Faire l'état des lieux de départ →
         </Link>
       ) : null,
     },
     {
       num: 3,
       icon: <ClipboardList className="w-4 h-4" />,
-      label: 'EDL Retour signé',
+      label: 'État des lieux de retour signé',
       sublabel: step3Done
         ? `Signé${arrInsp?.signedAt ? ' · ' + new Date(arrInsp.signedAt).toLocaleDateString('fr-FR') : ''}${arrInsp?.damages ? ` · ${arrInsp.damages} dommage(s)` : ' · Aucun dommage'}`
-        : step2Done ? 'En attente du retour véhicule' : 'Après EDL départ',
+        : step2Done ? 'En attente du retour véhicule' : 'Après l\'état des lieux de départ',
       done: step3Done,
       active: step2Done && !step3Done,
       locked: !step2Done,
       resetAction: (!step4Done && step3Done && resetArr) ? resetArr : null,
-      resetLabel: 'Corriger l\'EDL retour',
+      resetLabel: 'Corriger l\'état des lieux de retour',
       action: step2Done && !step3Done && contractId ? (
         <Link
           href={`/inspections/arrival/${contractId}`}
           className="text-xs text-purple-600 hover:underline font-medium mt-1 block"
         >
-          Faire l'EDL retour →
+          Faire l'état des lieux de retour →
         </Link>
       ) : null,
     },
@@ -104,8 +104,8 @@ export default function WorkflowStepper({
       sublabel: step4Done
         ? 'Contrat clôturé — caution libérable'
         : canValidate
-          ? 'Les 2 EDL sont signés — vous pouvez valider'
-          : 'Requiert les 2 EDL signés',
+          ? 'Les 2 états des lieux sont signés — vous pouvez valider'
+          : 'Requiert les 2 états des lieux signés',
       done: step4Done,
       active: canValidate,
       locked: !canValidate && !step4Done,

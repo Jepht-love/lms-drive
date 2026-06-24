@@ -3,6 +3,8 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { removeReservationFromCalendar } from '@/lib/calendar/syncRental'
+import { recomputeVehicleStatus } from '@/lib/vehicles/vehicleStatus'
 
 export async function deleteVehicle(id: string) {
   const supabase = await createClient()
@@ -44,8 +46,15 @@ export async function deleteReservation(id: string) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non authentifié' }
 
+  const { data: reservation } = await supabase
+    .from('reservations').select('vehicle_id').eq('id', id).single()
+
+  await removeReservationFromCalendar(id)
+
   const { error } = await supabase.from('reservations').delete().eq('id', id)
   if (error) return { error: error.message }
+
+  if (reservation) await recomputeVehicleStatus(supabase, reservation.vehicle_id)
 
   await supabase.from('audit_logs').insert({
     user_id: user.id, action: 'reservation_deleted',
@@ -53,6 +62,7 @@ export async function deleteReservation(id: string) {
   })
 
   revalidatePath('/reservations')
+  revalidatePath('/vehicles')
   redirect('/reservations')
 }
 

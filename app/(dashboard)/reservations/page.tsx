@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import { Plus, ClipboardList } from 'lucide-react'
+import { Plus, ClipboardList, Search } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 import DeleteReservationButton from './DeleteReservationButton'
 import { format } from 'date-fns'
@@ -21,9 +21,9 @@ const STATUS_CONFIG: Record<string, { label: string; bar: string; badge: string 
 export default async function ReservationsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; vehicle?: string }>
+  searchParams: Promise<{ status?: string; vehicle?: string; q?: string }>
 }) {
-  const { status, vehicle } = await searchParams
+  const { status, vehicle, q } = await searchParams
   const supabase = await createClient()
 
   // Mise à jour auto des retards
@@ -53,10 +53,24 @@ export default async function ReservationsPage({
   if (status)  query = query.eq('status', status)
   if (vehicle) query = query.eq('vehicle_id', vehicle)
 
-  const { data: reservations } = await query
+  const { data: rawReservations } = await query
+
+  // Recherche texte (n° réservation, véhicule, client) — filtrée en JS pour
+  // couvrir les colonnes jointes sans complexifier la requête PostgREST.
+  const needle = q?.trim().toLowerCase()
+  const reservations = needle
+    ? (rawReservations ?? []).filter(r => {
+        const v = r.vehicle as any
+        const c = r.client as any
+        const haystack = [
+          r.reservation_number, v?.plate, v?.brand, v?.model, c?.first_name, c?.last_name, c?.phone,
+        ].filter(Boolean).join(' ').toLowerCase()
+        return haystack.includes(needle)
+      })
+    : (rawReservations ?? [])
 
   const statuses = ['option', 'confirmee', 'en_cours', 'en_retard', 'terminee', 'annulee']
-  const total = reservations?.length ?? 0
+  const total = reservations.length
 
   return (
     <div className="space-y-4">
@@ -82,6 +96,20 @@ export default async function ReservationsPage({
           Nouvelle
         </Link>
       </div>
+
+      {/* Recherche */}
+      <form method="get" className="relative">
+        {status && <input type="hidden" name="status" value={status} />}
+        {vehicle && <input type="hidden" name="vehicle" value={vehicle} />}
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <input
+          name="q"
+          type="search"
+          defaultValue={q}
+          placeholder="Rechercher par n°, véhicule, client…"
+          className="w-full bg-white border border-gray-100 shadow-sm rounded-xl pl-10 pr-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-black/10"
+        />
+      </form>
 
       {/* Filtres statut — scroll horizontal */}
       <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
@@ -119,7 +147,9 @@ export default async function ReservationsPage({
       {total === 0 ? (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 text-center">
           <ClipboardList className="w-12 h-12 text-gray-200 mx-auto mb-4" />
-          <p className="text-gray-400 font-medium text-sm">Aucune réservation</p>
+          <p className="text-gray-400 font-medium text-sm">
+            {needle ? `Aucun résultat pour « ${q} »` : 'Aucune réservation'}
+          </p>
           <Link
             href="/reservations/new"
             className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-black underline underline-offset-2"
@@ -129,7 +159,7 @@ export default async function ReservationsPage({
         </div>
       ) : (
         <AnimatedList className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden divide-y divide-gray-50">
-          {reservations!.map(r => {
+          {reservations.map(r => {
             const cfg = STATUS_CONFIG[r.status] ?? STATUS_CONFIG.option
             const v   = r.vehicle as any
             const c   = r.client as any
@@ -150,11 +180,11 @@ export default async function ReservationsPage({
                   <div className="flex-1 min-w-0">
                     {/* Ligne 1 : plaque + véhicule + badge */}
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-mono font-extrabold text-gray-900 text-sm">
-                        {v?.plate}
+                      <span className="font-extrabold text-gray-900 text-sm">
+                        {v?.brand} {v?.model}{v?.color ? ` · ${v.color}` : ''}
                       </span>
-                      <span className="text-gray-500 text-sm">
-                        {v?.brand} {v?.model}
+                      <span className="font-mono text-gray-400 text-xs">
+                        {v?.plate}
                       </span>
                       <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${cfg.badge}`}>
                         {cfg.label}

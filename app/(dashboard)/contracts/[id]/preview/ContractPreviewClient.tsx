@@ -165,7 +165,7 @@ export default function ContractPreviewClient({ contract, reservation, vehicle, 
             <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-2">Véhicule loué</p>
             <p className="font-bold text-lg">{vehicle?.brand} {vehicle?.model} {vehicle?.version}</p>
             <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-              <span className="bg-white text-slate-900 font-mono text-sm font-bold px-2.5 py-0.5 rounded">{vehicle?.plate}</span>
+              <span className="bg-slate-700 text-slate-300 font-mono text-xs font-normal px-2 py-0.5 rounded">{vehicle?.plate}</span>
               {vehicle?.color && <span className="text-slate-300 text-sm">{vehicle?.color}</span>}
               {vehicle?.category && (
                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${

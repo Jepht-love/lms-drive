@@ -1,10 +1,11 @@
 import {
   Document, Page, Text, View, StyleSheet, Image,
-  Svg, G, Rect, Circle,
+  Svg, Polygon, Ellipse,
 } from '@react-pdf/renderer'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { getLegalArticles, getFeesTable, VIDEO_CLAUSE } from '@/lib/contracts/legal-articles'
+import { EDL_ZONES, zoneBox, EDL_IMG } from '@/components/vehicle-schema/edl-zones'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -18,7 +19,7 @@ export interface DamagedZone {
 export interface InspectionPDFData {
   type: 'depart' | 'arrivee'
   kmReading: number
-  fuelLevel: number
+  fuelRangeKm: number
   exteriorCleanliness: number
   interiorCleanliness: number
   damagedZones: DamagedZone[]
@@ -56,10 +57,12 @@ export interface ContractData {
   lateMinutes?: number
   extraKmCount?: number
   extraKmAmount?: number
+  prolongations?: { date: string; additionalDays: number; addedAmount: number }[]
   clientSignature?: string
   agentSignature?: string
   signedAt?: string
   inspections?: InspectionPDFData[]
+  edlSchemaImage?: string   // data URL du fond schéma EDL (vehicle-blueprint-v2.png)
   clientDocs?: { url: string; label: string }[]
   agency?: {
     companyName: string
@@ -189,73 +192,32 @@ const ZONE_COLORS: Record<string, { fill: string; stroke: string }> = {
   attention: { fill: '#fff7ed', stroke: '#ea580c' },
 }
 
-function getZoneColor(id: string, damages: DamagedZone[]) {
-  const z = damages.find(d => d.id === id)
-  return z ? ZONE_COLORS[z.severity] : ZONE_COLORS.ok
-}
-
-function VehicleSchemaSVG({ damages }: { damages: DamagedZone[] }) {
-  function Zone({ id, x, y, w, h, rx: rx2 = 3 }: { id: string; x: number; y: number; w: number; h: number; rx?: number }) {
-    const c = getZoneColor(id, damages)
-    const hasDamage = damages.some(d => d.id === id)
-    return (
-      <G>
-        <Rect x={x} y={y} width={w} height={h} rx={rx2} ry={rx2} fill={c.fill} stroke={c.stroke} strokeWidth={1.5} />
-        {hasDamage && <Circle cx={x + w - 4} cy={y + 4} r={3} fill={c.stroke} />}
-      </G>
-    )
-  }
-
+/**
+ * Schéma EDL « réel » : le même fond détouré que l'app (vehicle-blueprint-v2.png)
+ * surchargé des polygones de zones endommagées (mêmes coordonnées que VehicleMap2D,
+ * via le module partagé edl-zones). Les zones saines restent transparentes.
+ */
+function VehicleSchemaImage({ damages, bgImage, size = 250 }: { damages: DamagedZone[]; bgImage?: string; size?: number }) {
+  const damagedIds = new Set(damages.map(d => d.id))
+  const sevById = new Map(damages.map(d => [d.id, d.severity]))
   return (
-    <Svg viewBox="0 0 400 330" style={{ width: 210, height: 174 }}>
-      {/* Corps de la voiture */}
-      <Rect x={140} y={10} width={120} height={310} rx={20} ry={20} fill="#f1f5f9" stroke="#94a3b8" strokeWidth={1.5} />
-
-      {/* Zones AVANT (haut) */}
-      <Zone id="pare-chocs-avant"   x={145} y={5}   w={110} h={20} rx={4} />
-      <Zone id="phare-gauche"       x={145} y={27}  w={28}  h={18} rx={3} />
-      <Zone id="phare-droit"        x={227} y={27}  w={28}  h={18} rx={3} />
-      <Zone id="calandre"           x={175} y={27}  w={50}  h={18} rx={3} />
-      <Zone id="capot"              x={150} y={47}  w={100} h={52} rx={4} />
-      <Zone id="pare-brise"         x={155} y={101} w={90}  h={12} rx={2} />
-
-      {/* Zones CÔTÉ GAUCHE */}
-      <Zone id="aile-avant-gauche"  x={62}  y={48}  w={76}  h={36} rx={4} />
-      <Zone id="porte-avant-gauche" x={57}  y={88}  w={81}  h={52} rx={3} />
-      <Zone id="porte-arriere-gauche" x={57} y={142} w={81} h={52} rx={3} />
-      <Zone id="aile-arriere-gauche" x={62} y={196} w={76}  h={36} rx={4} />
-      <Zone id="bas-de-caisse-gauche" x={58} y={132} w={80} h={8}  rx={2} />
-
-      {/* Zones CÔTÉ DROIT */}
-      <Zone id="aile-avant-droite"  x={262} y={48}  w={76}  h={36} rx={4} />
-      <Zone id="porte-avant-droite" x={262} y={88}  w={81}  h={52} rx={3} />
-      <Zone id="porte-arriere-droite" x={262} y={142} w={81} h={52} rx={3} />
-      <Zone id="aile-arriere-droite" x={262} y={196} w={76} h={36} rx={4} />
-      <Zone id="bas-de-caisse-droite" x={262} y={132} w={80} h={8}  rx={2} />
-
-      {/* Zones TOIT */}
-      <Zone id="toit"               x={150} y={115} w={100} h={110} rx={4} />
-
-      {/* Zones ARRIÈRE (bas) */}
-      <Zone id="lunette-arriere"    x={155} y={227} w={90}  h={12} rx={2} />
-      <Zone id="coffre"             x={150} y={241} w={100} h={44} rx={4} />
-      <Zone id="feu-arriere-gauche" x={145} y={287} w={28}  h={18} rx={3} />
-      <Zone id="feu-arriere-droit"  x={227} y={287} w={28}  h={18} rx={3} />
-      <Zone id="pare-chocs-arriere" x={145} y={307} w={110} h={18} rx={4} />
-
-      {/* Roues */}
-      <Zone id="jante-av-gauche"    x={62}  y={122} w={52}  h={26} rx={13} />
-      <Zone id="jante-av-droite"    x={286} y={122} w={52}  h={26} rx={13} />
-      <Zone id="jante-ar-gauche"    x={62}  y={182} w={52}  h={26} rx={13} />
-      <Zone id="jante-ar-droite"    x={286} y={182} w={52}  h={26} rx={13} />
-
-      {/* Rétroviseurs */}
-      <Zone id="retroviseur-gauche" x={128} y={100} w={10}  h={18} rx={2} />
-      <Zone id="retroviseur-droit"  x={262} y={100} w={10}  h={18} rx={2} />
-
-      {/* Indicateur avant */}
-      <Rect x={183} y={0} width={34} height={5} fill="#334155" rx={2} ry={2} />
-    </Svg>
+    <View style={{ width: size, height: size, position: 'relative' }}>
+      {bgImage && <Image src={bgImage} style={{ position: 'absolute', top: 0, left: 0, width: size, height: size }} />}
+      <Svg viewBox={`0 0 ${EDL_IMG} ${EDL_IMG}`} style={{ width: size, height: size }}>
+        {EDL_ZONES.map((z, i) => {
+          if (!damagedIds.has(z.id)) return null
+          const c = ZONE_COLORS[sevById.get(z.id) ?? 'attention'] ?? ZONE_COLORS.attention
+          if (z.shape === 'ellipse') {
+            const b = zoneBox(z)
+            return <Ellipse key={i} cx={b.x + b.w / 2} cy={b.y + b.h / 2} rx={b.w / 2} ry={b.h / 2} fill={c.fill} fillOpacity={0.55} stroke={c.stroke} strokeWidth={4} />
+          }
+          if (z.points) {
+            return <Polygon key={i} points={z.points.map(p => p.join(',')).join(' ')} fill={c.fill} fillOpacity={0.55} stroke={c.stroke} strokeWidth={4} />
+          }
+          return null
+        })}
+      </Svg>
+    </View>
   )
 }
 
@@ -315,7 +277,7 @@ function DamageTable({ zones }: { zones: DamagedZone[] }) {
 
 // ─── EDL Page ─────────────────────────────────────────────────────────────────
 
-function InspectionPage({ insp, contractNumber, clientName, vehiclePlate, vehicleModel, companyName, logoUrl }: {
+function InspectionPage({ insp, contractNumber, clientName, vehiclePlate, vehicleModel, companyName, logoUrl, edlImage }: {
   insp: InspectionPDFData
   contractNumber: string
   clientName: string
@@ -323,6 +285,7 @@ function InspectionPage({ insp, contractNumber, clientName, vehiclePlate, vehicl
   vehicleModel: string
   companyName: string
   logoUrl?: string | null
+  edlImage?: string
 }) {
   const isDepart = insp.type === 'depart'
   const titleColor = isDepart ? '#2563eb' : '#7c3aed'
@@ -335,7 +298,7 @@ function InspectionPage({ insp, contractNumber, clientName, vehiclePlate, vehicl
             État des lieux de {isDepart ? 'DÉPART' : 'RETOUR'}
           </Text>
           <Text style={s.edlSubtitle}>
-            {vehiclePlate} — {vehicleModel} · Client : {clientName}
+            {vehicleModel} — {vehiclePlate} · Client : {clientName}
           </Text>
         </View>
         <View style={{ textAlign: 'right' }}>
@@ -354,8 +317,8 @@ function InspectionPage({ insp, contractNumber, clientName, vehiclePlate, vehicl
           <Text style={s.metricLabel}>Kilométrage</Text>
         </View>
         <View style={s.metricBox}>
-          <Text style={s.metricValue}>{insp.fuelLevel}%</Text>
-          <Text style={s.metricLabel}>Carburant</Text>
+          <Text style={s.metricValue}>{insp.fuelRangeKm} km</Text>
+          <Text style={s.metricLabel}>Autonomie carburant</Text>
         </View>
         <View style={s.metricBox}>
           <Text style={s.metricValue}>{stars(insp.exteriorCleanliness)}</Text>
@@ -374,10 +337,9 @@ function InspectionPage({ insp, contractNumber, clientName, vehiclePlate, vehicl
       </View>
 
       <Text style={s.sectionTitle}>Schéma du véhicule & dommages constatés</Text>
-      <View style={{ flexDirection: 'row', gap: 16, marginBottom: 12 }}>
+      <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
         <View>
-          <VehicleSchemaSVG damages={insp.damagedZones} />
-          <Text style={{ fontSize: 7, color: '#64748b', textAlign: 'center', marginTop: 2 }}>↑ AVANT</Text>
+          <VehicleSchemaImage damages={insp.damagedZones} bgImage={edlImage} size={250} />
           <SchemaLegend />
         </View>
         <View style={{ flex: 1 }}>
@@ -417,7 +379,7 @@ function InspectionPage({ insp, contractNumber, clientName, vehiclePlate, vehicl
       </View>
 
       <Text style={{ fontSize: 7, color: '#cbd5e1', textAlign: 'center', marginTop: 20 }}>
-        {contractNumber} — EDL {isDepart ? 'départ' : 'retour'} — LMS Drive
+        {contractNumber} — État des lieux {isDepart ? 'départ' : 'retour'} — LMS Drive
       </Text>
     </Page>
   )
@@ -428,6 +390,7 @@ function InspectionPage({ insp, contractNumber, clientName, vehiclePlate, vehicl
 export function ContractPDF({ data }: { data: ContractData }) {
   const depInsp = data.inspections?.find(i => i.type === 'depart')
   const arrInsp = data.inspections?.find(i => i.type === 'arrivee')
+  const hasReturnSig = !!arrInsp?.clientSignature
 
   const isSport = data.vehicleCategory === 'sportif'
   const fees = getFeesTable(data.vehicleCategory ?? 'citadine', data.isSmartFortwo)
@@ -516,7 +479,7 @@ export function ContractPDF({ data }: { data: ContractData }) {
             )}
             <View style={s.row}>
               <Text style={s.label}>Immatriculation</Text>
-              <Text style={[s.value, { fontFamily: 'Courier-Bold' }]}>{data.vehiclePlate}</Text>
+              <Text style={[s.value, { fontFamily: 'Courier', fontSize: 8, color: '#64748b' }]}>{data.vehiclePlate}</Text>
             </View>
             {data.vehicleColor && (
               <View style={s.row}><Text style={s.label}>Couleur</Text><Text style={s.value}>{data.vehicleColor}</Text></View>
@@ -558,6 +521,27 @@ export function ContractPDF({ data }: { data: ContractData }) {
             <Text style={s.totalLabel}>Total TTC</Text>
             <Text style={s.totalValue}>{fmtMoney(data.totalPrice)}</Text>
           </View>
+
+          {/* Prolongation(s) — mise à jour du prix sans nouvelle signature */}
+          {(data.prolongations?.length ?? 0) > 0 && (
+            <View style={{ backgroundColor: '#eff6ff', borderRadius: 4, padding: 8, marginTop: 4 }}>
+              <Text style={[s.sectionTitle, { color: '#1d4ed8', borderBottom: '1px solid #bfdbfe' }]}>
+                Prolongation(s) du contrat
+              </Text>
+              {data.prolongations!.map((p, i) => (
+                <View key={i} style={s.row}>
+                  <Text style={s.label}>
+                    {p.date} · +{p.additionalDays} jour{p.additionalDays > 1 ? 's' : ''}
+                  </Text>
+                  <Text style={[s.value, { color: '#1d4ed8' }]}>+{fmtMoney(p.addedAmount)}</Text>
+                </View>
+              ))}
+              <View style={[s.row, { marginTop: 4, paddingTop: 4, borderTop: '1px solid #bfdbfe' }]}>
+                <Text style={[s.label, { fontFamily: 'Helvetica-Bold' }]}>Nouveau total après prolongation</Text>
+                <Text style={[s.value, { fontFamily: 'Helvetica-Bold', color: '#1d4ed8' }]}>{fmtMoney(data.totalPrice)}</Text>
+              </View>
+            </View>
+          )}
         </View>
 
         {/* Caution */}
@@ -605,9 +589,9 @@ export function ContractPDF({ data }: { data: ContractData }) {
             <View style={{ flexDirection: 'row', gap: 8 }}>
               {depInsp && (
                 <View style={{ flex: 1, backgroundColor: '#eff6ff', borderRadius: 3, padding: 6 }}>
-                  <Text style={{ fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#2563eb', marginBottom: 3 }}>EDL DÉPART</Text>
+                  <Text style={{ fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#2563eb', marginBottom: 3 }}>ÉTAT DES LIEUX DÉPART</Text>
                   <Text style={{ fontSize: 8 }}>KM : {depInsp.kmReading.toLocaleString('fr-FR')}</Text>
-                  <Text style={{ fontSize: 8 }}>Carburant : {depInsp.fuelLevel}%</Text>
+                  <Text style={{ fontSize: 8 }}>Carburant : {depInsp.fuelRangeKm} km</Text>
                   <Text style={{ fontSize: 8, color: depInsp.damagedZones.length > 0 ? '#ea580c' : '#16a34a' }}>
                     {depInsp.damagedZones.length > 0 ? `${depInsp.damagedZones.length} dommage(s) constaté(s)` : '✓ Aucun dommage'}
                   </Text>
@@ -615,9 +599,9 @@ export function ContractPDF({ data }: { data: ContractData }) {
               )}
               {arrInsp && (
                 <View style={{ flex: 1, backgroundColor: '#f5f3ff', borderRadius: 3, padding: 6 }}>
-                  <Text style={{ fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#7c3aed', marginBottom: 3 }}>EDL RETOUR</Text>
+                  <Text style={{ fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#7c3aed', marginBottom: 3 }}>ÉTAT DES LIEUX RETOUR</Text>
                   <Text style={{ fontSize: 8 }}>KM : {arrInsp.kmReading.toLocaleString('fr-FR')}</Text>
-                  <Text style={{ fontSize: 8 }}>Carburant : {arrInsp.fuelLevel}%</Text>
+                  <Text style={{ fontSize: 8 }}>Carburant : {arrInsp.fuelRangeKm} km</Text>
                   <Text style={{ fontSize: 8, color: arrInsp.damagedZones.length > 0 ? '#ea580c' : '#16a34a' }}>
                     {arrInsp.damagedZones.length > 0 ? `${arrInsp.damagedZones.length} dommage(s) constaté(s)` : '✓ Aucun dommage'}
                   </Text>
@@ -625,7 +609,7 @@ export function ContractPDF({ data }: { data: ContractData }) {
               )}
               {!arrInsp && (
                 <View style={{ flex: 1, backgroundColor: '#fefce8', borderRadius: 3, padding: 6 }}>
-                  <Text style={{ fontSize: 8, color: '#92400e' }}>EDL RETOUR — En attente</Text>
+                  <Text style={{ fontSize: 8, color: '#92400e' }}>ÉTAT DES LIEUX RETOUR — En attente</Text>
                 </View>
               )}
             </View>
@@ -681,16 +665,23 @@ export function ContractPDF({ data }: { data: ContractData }) {
           </Text>
         </View>
 
-        {/* ══ Signatures contrat ══ */}
+        {/* ══ Signatures contrat — départ + retour ══ */}
         <View style={s.signaturesRow}>
-          <View style={s.sigBox}>
-            <Text style={s.sigLabel}>Signature du locataire</Text>
+          <View style={[s.sigBox, hasReturnSig ? { width: '31%' } : {}]}>
+            <Text style={s.sigLabel}>Signature locataire — Départ</Text>
             {data.clientSignature
               ? <Image src={data.clientSignature} style={s.sigImage} />
               : <View style={{ height: 55 }} />}
             {data.signedAt && <Text style={s.sigDate}>Le {fmtDT(data.signedAt)}</Text>}
           </View>
-          <View style={s.sigBox}>
+          {hasReturnSig && (
+            <View style={[s.sigBox, { width: '31%' }]}>
+              <Text style={s.sigLabel}>Signature locataire — Retour</Text>
+              <Image src={arrInsp!.clientSignature!} style={s.sigImage} />
+              {arrInsp?.signedAt && <Text style={s.sigDate}>Le {fmtDT(arrInsp.signedAt)}</Text>}
+            </View>
+          )}
+          <View style={[s.sigBox, hasReturnSig ? { width: '31%' } : {}]}>
             <Text style={s.sigLabel}>Cachet & Visa agence</Text>
             <AgencyStamp logoUrl={logoUrl} companyName={companyName} />
             {data.signedAt && <Text style={s.sigDate}>Le {fmtDT(data.signedAt)}</Text>}
@@ -712,6 +703,7 @@ export function ContractPDF({ data }: { data: ContractData }) {
           vehicleModel={`${data.vehicleBrand} ${data.vehicleModel}`}
           companyName={companyName}
           logoUrl={logoUrl}
+          edlImage={data.edlSchemaImage}
         />
       )}
       {arrInsp && (
@@ -723,6 +715,7 @@ export function ContractPDF({ data }: { data: ContractData }) {
           vehicleModel={`${data.vehicleBrand} ${data.vehicleModel}`}
           companyName={companyName}
           logoUrl={logoUrl}
+          edlImage={data.edlSchemaImage}
         />
       )}
 

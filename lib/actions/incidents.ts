@@ -3,11 +3,12 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { findDriverAtDate } from '@/lib/utils/findDriverAtDate'
+import { logEmail } from '@/lib/email/log'
 
 // Appelé depuis le formulaire client quand véhicule + date sont renseignés
-export async function lookupDriver(vehicleId: string, date: string) {
+export async function lookupDriver(vehicleId: string, date: string, time?: string) {
   if (!vehicleId || !date) return null
-  return findDriverAtDate(vehicleId, date)
+  return findDriverAtDate(vehicleId, date, time)
 }
 
 const num = (fd: FormData, k: string) => {
@@ -34,6 +35,7 @@ export async function createInfraction(formData: FormData) {
   const payload = {
     vehicle_id:       vehicleId,
     infraction_date:  infractionDate,
+    infraction_time:  str(formData, 'infraction_time'),
     type:             str(formData, 'type') || 'autre',
     amount:           num(formData, 'amount'),
     points_lost:      int(formData, 'points_lost'),
@@ -85,7 +87,7 @@ export async function transmitInfractionToClient(id: string) {
 
   const { data: inf } = await supabase
     .from('infractions')
-    .select('*, clients(first_name, last_name, email), vehicles(plate, brand, model)')
+    .select('*, clients(id, first_name, last_name, email), vehicles(plate, brand, model)')
     .eq('id', id).single()
   if (!inf) return { error: 'Infraction introuvable' }
 
@@ -99,10 +101,10 @@ export async function transmitInfractionToClient(id: string) {
     await resend.emails.send({
       from: process.env.RESEND_FROM ?? 'LMS Drive <onboarding@resend.dev>',
       to: client.email,
-      subject: `Avis de contravention — véhicule ${v?.plate ?? ''}`,
+      subject: `Avis de contravention — véhicule ${v?.brand ?? ''} ${v?.model ?? ''} (${v?.plate ?? ''})`,
       html: `<p>Bonjour ${client.first_name},</p>
         <p>Une infraction a été constatée le <b>${inf.infraction_date}</b> avec le véhicule
-        <b>${v?.plate} (${v?.brand} ${v?.model})</b> que vous aviez en location.</p>
+        <b>${v?.brand} ${v?.model} (${v?.plate})</b> que vous aviez en location.</p>
         <p>Montant de l'amende : <b>${inf.amount} €</b>${inf.admin_fees ? ` (+ ${inf.admin_fees} € de frais de dossier)` : ''}.</p>
         ${inf.document_url ? `<p><a href="${inf.document_url}">Consulter l'avis de contravention</a></p>` : ''}
         <p>Merci de procéder à la régularisation.</p>
@@ -115,6 +117,16 @@ export async function transmitInfractionToClient(id: string) {
   await supabase.from('infractions')
     .update({ status: 'transmis_client', transmission_date: new Date().toISOString().slice(0, 10) })
     .eq('id', id)
+  await logEmail({
+    type: 'avis_infraction',
+    recipient: client.email,
+    subject: `Avis de contravention — véhicule ${v?.brand ?? ''} ${v?.model ?? ''} (${v?.plate ?? ''})`,
+    status: 'envoye',
+    referenceType: 'infraction',
+    referenceId: id,
+    clientId: client.id,
+    sentBy: user.id,
+  })
   revalidatePath(`/incidents/infractions/${id}`)
   return { success: true }
 }

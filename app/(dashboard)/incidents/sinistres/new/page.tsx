@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, UserCheck, UserCog, AlertTriangle } from 'lucide-react'
+import BackButton from '@/components/ui/BackButton'
 import { createClient } from '@/lib/supabase/client'
 import { lookupDriver, createAccident } from '@/lib/actions/incidents'
 
@@ -62,9 +63,9 @@ export default function NewSinistrePage() {
 
   return (
     <div className="space-y-4 pb-4">
-      <Link href="/incidents/sinistres" className="inline-flex items-center gap-1.5 text-sm text-gray-400 font-medium hover:text-gray-700">
+      <BackButton fallbackHref="/incidents/sinistres" className="inline-flex items-center gap-1.5 text-sm text-gray-400 font-medium hover:text-gray-700">
         <ArrowLeft className="w-4 h-4" /> Retour
-      </Link>
+      </BackButton>
       <h1 className="text-xl font-black text-gray-900">Déclarer un sinistre</h1>
 
       <form onSubmit={onSubmit} className="space-y-4">
@@ -75,7 +76,7 @@ export default function NewSinistrePage() {
               <select id="vehicle_id" name="vehicle_id" required className={input}
                 value={vehicleId} onChange={e => setVehicleId(e.target.value)}>
                 <option value="">Sélectionner…</option>
-                {vehicles.map(v => <option key={v.id} value={v.id}>{v.plate} · {v.brand} {v.model}</option>)}
+                {vehicles.map(v => <option key={v.id} value={v.id}>{v.brand} {v.model} · {v.plate}</option>)}
               </select>
             </div>
             <div>

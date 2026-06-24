@@ -15,8 +15,9 @@ export async function createCampaign(formData: FormData) {
     responsible: (formData.get('responsible') as string)?.trim() || null,
     start_date:  formData.get('start_date') as string,
     end_date:    (formData.get('end_date') as string) || null,
-    budget:      parseFloat(formData.get('budget') as string) || 0,
-    status:      'planifiee',
+    budget:       parseFloat(formData.get('budget') as string) || 0,
+    observations: (formData.get('observations') as string)?.trim() || null,
+    status:       'planifiee',
   })
 
   if (error) return { error: error.message }

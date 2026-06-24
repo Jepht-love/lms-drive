@@ -36,10 +36,10 @@ export default async function AnalyticsPage() {
     { data: reservations },
     { data: topClients },
   ] = await Promise.all([
-    supabase.from('clients').select('id, birth_date, status, rating, acquisition_channel'),
+    supabase.from('clients').select('id, birth_date, status, rating, acquisition_channel, city'),
     supabase
       .from('reservations')
-      .select('vehicle_id, client_id, start_datetime, vehicles(plate, brand, model)')
+      .select('vehicle_id, client_id, start_datetime, end_datetime, total_price, vehicles(plate, brand, model)')
       .eq('status', 'terminee'),
     supabase
       .from('clients')
@@ -68,7 +68,7 @@ export default async function AnalyticsPage() {
     if (!v || !r.vehicle_id) return
     const key = r.vehicle_id
     if (!vehicleCounts.has(key)) {
-      vehicleCounts.set(key, { label: `${v.plate} · ${v.brand} ${v.model}`, count: 0 })
+      vehicleCounts.set(key, { label: `${v.brand} ${v.model} · ${v.plate}`, count: 0 })
     }
     vehicleCounts.get(key)!.count++
   })
@@ -121,6 +121,29 @@ export default async function AnalyticsPage() {
     count: allCounts.filter(n => n >= t.min && (t.max == null || n <= t.max)).length,
   }))
   const totalScored = tierCounts.reduce((s, t) => s + t.count, 0)
+
+  // C7 — Secteurs géographiques les plus rentables (clients.city existait déjà
+  // en base mais n'était interrogé nulle part dans le profil clientèle)
+  const cityByClient = new Map((clients ?? []).map(c => [c.id, c.city]))
+  const cityRevenue = new Map<string, { count: number; revenue: number }>()
+  reservations?.forEach(r => {
+    const city = cityByClient.get(r.client_id)
+    if (!city) return
+    const e = cityRevenue.get(city) ?? { count: 0, revenue: 0 }
+    e.count++; e.revenue += r.total_price ?? 0
+    cityRevenue.set(city, e)
+  })
+  const topCities = [...cityRevenue.entries()].sort((a, b) => b[1].revenue - a[1].revenue).slice(0, 5)
+
+  // C8 — Habitudes de consommation : durée moyenne de location, fréquence par client
+  const durations = (reservations ?? []).map(r =>
+    Math.max(1, Math.round((new Date(r.end_datetime).getTime() - new Date(r.start_datetime).getTime()) / 86400000)),
+  )
+  const avgDuration = durations.length > 0 ? durations.reduce((s, d) => s + d, 0) / durations.length : 0
+  const clientsWithRental = clientResCounts.size
+  const avgRentalsPerClient = clientsWithRental > 0
+    ? [...clientResCounts.values()].reduce((s, n) => s + n, 0) / clientsWithRental
+    : 0
 
   return (
     <div className="space-y-4">
@@ -239,6 +262,40 @@ export default async function AnalyticsPage() {
           </div>
         )}
         <p className="text-[10px] text-gray-400 mt-2">{totalScored} clients avec au moins 1 location</p>
+      </div>
+
+      {/* C7 — Secteurs géographiques les plus rentables */}
+      {topCities.length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-4">Secteurs géographiques rentables</p>
+          <div className="space-y-2">
+            {topCities.map(([city, e], i) => (
+              <div key={city} className="flex items-center gap-3">
+                <span className="text-[13px] font-black text-gray-300 w-6 flex-shrink-0">{i + 1}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] font-medium text-[#111111] truncate">{city}</p>
+                  <p className="text-[11px] text-gray-400">{e.count} location{e.count > 1 ? 's' : ''}</p>
+                </div>
+                <span className="text-[13px] font-black text-[#111111] flex-shrink-0">{formatPrice(e.revenue)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* C8 — Habitudes de consommation */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+        <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-4">Habitudes de consommation</p>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-gray-50 rounded-xl p-3 text-center">
+            <p className="text-[20px] font-black text-[#111111]">{avgDuration.toFixed(1)}</p>
+            <p className="text-[10px] text-gray-400 mt-0.5">jour{avgDuration >= 2 ? 's' : ''} / location en moyenne</p>
+          </div>
+          <div className="bg-gray-50 rounded-xl p-3 text-center">
+            <p className="text-[20px] font-black text-[#111111]">{avgRentalsPerClient.toFixed(1)}</p>
+            <p className="text-[10px] text-gray-400 mt-0.5">location{avgRentalsPerClient >= 2 ? 's' : ''} / client en moyenne</p>
+          </div>
+        </div>
       </div>
     </div>
   )

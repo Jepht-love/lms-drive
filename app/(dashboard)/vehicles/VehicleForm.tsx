@@ -43,6 +43,7 @@ export default function VehicleForm({ action, vehicle }: VehicleFormProps) {
           <Field label="Places" name="seats" type="number" defaultValue={v?.seats?.toString() ?? '5'} min="1" max="9" />
           <Field label="Portes" name="doors" type="number" defaultValue={v?.doors?.toString() ?? '5'} min="2" max="6" />
           <Field label="Puissance fiscale (CV)" name="fiscal_power" type="number" defaultValue={v?.fiscal_power?.toString() ?? ''} />
+          <Field label="Puissance moteur (ch)" name="engine_power" type="number" defaultValue={v?.engine_power?.toString() ?? ''} />
           <Field label="KM actuels" name="current_km" type="number" defaultValue={v?.current_km?.toString() ?? '0'} min="0" />
         </div>
       </Section>
@@ -55,6 +56,7 @@ export default function VehicleForm({ action, vehicle }: VehicleFormProps) {
           <Field label="Caution (€)" name="deposit_amount" type="number" defaultValue={v?.deposit_amount?.toString() ?? ''} placeholder="500" step="0.01" />
           <Field label="KM inclus/jour" name="km_included_daily" type="number" defaultValue={v?.km_included_daily?.toString() ?? ''} placeholder="200" />
           <Field label="Supplément KM (€/km)" name="extra_km_price" type="number" defaultValue={v?.extra_km_price?.toString() ?? ''} placeholder="0.15" step="0.01" />
+          <Field label="Date de mise en location" name="rental_start_date" type="date" defaultValue={v?.rental_start_date ?? ''} />
         </div>
       </Section>
 

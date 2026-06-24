@@ -1,9 +1,40 @@
 export type VehicleView = 'top' | 'front' | 'rear' | 'left' | 'right'
 
+export type DamageSeverity = 'rayure' | 'dommage' | 'attention'
+
 export interface DamageEntry {
-  severity: 'rayure' | 'dommage' | 'attention'
+  severity: DamageSeverity   // = gravité (voir GRAVITES) — pilote couleurs + flags maintenance
+  type?: string              // type de dommage (voir DAMAGE_TYPES)
   comment: string
   photos: string[]
+}
+
+// Types de dommage proposés à la saisie
+export const DAMAGE_TYPES: { id: string; label: string }[] = [
+  { id: 'rayure',          label: 'Rayure' },
+  { id: 'rayure_profonde', label: 'Rayure profonde' },
+  { id: 'bosse',           label: 'Bosse / Enfoncement' },
+  { id: 'impact',          label: 'Impact / Éclat' },
+  { id: 'fissure',         label: 'Fissure' },
+  { id: 'casse',           label: 'Élément cassé' },
+  { id: 'manquant',        label: 'Manquant' },
+  { id: 'salissure',       label: 'Salissure' },
+]
+
+export function damageTypeLabel(id?: string): string {
+  if (!id) return ''
+  return DAMAGE_TYPES.find(t => t.id === id)?.label ?? id
+}
+
+// Gravité — réutilise les valeurs `severity` historiques comme identifiants
+export const GRAVITES: { id: DamageSeverity; label: string; dot: string; chip: string; active: string }[] = [
+  { id: 'rayure',    label: 'Léger',     dot: 'bg-yellow-400', chip: 'bg-yellow-50 text-yellow-700 border-yellow-200', active: 'bg-yellow-400 text-yellow-900 border-yellow-400' },
+  { id: 'attention', label: 'Moyen',     dot: 'bg-orange-500', chip: 'bg-orange-50 text-orange-700 border-orange-200', active: 'bg-orange-500 text-white border-orange-500' },
+  { id: 'dommage',   label: 'Important', dot: 'bg-red-600',    chip: 'bg-red-50 text-red-700 border-red-200',          active: 'bg-red-600 text-white border-red-600' },
+]
+
+export function graviteLabel(severity: DamageSeverity): string {
+  return GRAVITES.find(g => g.id === severity)?.label ?? severity
 }
 
 export type DamageZone = {
@@ -41,11 +72,13 @@ export const VEHICLE_ZONES: DamageZone[] = [
   { id: 'vitre-avant-gauche',   label: 'Vitre avant gauche',    views: ['left'] },
   { id: 'porte-arriere-gauche', label: 'Porte arrière gauche',  views: ['left'] },
   { id: 'vitre-arriere-gauche', label: 'Vitre arrière gauche',  views: ['left'] },
+  { id: 'vitre-laterale-gauche', label: 'Vitre arrière latérale gauche', views: ['left'] },
   { id: 'bas-de-caisse-gauche', label: 'Bas de caisse gauche',  views: ['left'] },
   { id: 'porte-avant-droite',   label: 'Porte avant droite',    views: ['right'] },
   { id: 'vitre-avant-droite',   label: 'Vitre avant droite',    views: ['right'] },
   { id: 'porte-arriere-droite', label: 'Porte arrière droite',  views: ['right'] },
   { id: 'vitre-arriere-droite', label: 'Vitre arrière droite',  views: ['right'] },
+  { id: 'vitre-laterale-droite', label: 'Vitre arrière latérale droite', views: ['right'] },
   { id: 'bas-de-caisse-droite', label: 'Bas de caisse droite',  views: ['right'] },
 ]
 

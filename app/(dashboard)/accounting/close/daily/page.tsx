@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, CheckCircle2 } from 'lucide-react'
+import BackButton from '@/components/ui/BackButton'
 import { formatPrice, formatDate } from '@/lib/utils'
 import CloseButton from '../CloseButton'
 
@@ -24,9 +25,9 @@ export default async function DailyClosingPage() {
 
   return (
     <div className="space-y-4">
-      <Link href="/accounting" className="inline-flex items-center gap-1.5 text-sm text-gray-400 font-medium hover:text-gray-700 transition-colors">
+      <BackButton fallbackHref="/accounting" className="inline-flex items-center gap-1.5 text-sm text-gray-400 font-medium hover:text-gray-700 transition-colors">
         <ArrowLeft className="w-4 h-4" /> Comptabilité
-      </Link>
+      </BackButton>
 
       <div>
         <h1 className="text-xl font-black text-gray-900">Clôture du jour</h1>

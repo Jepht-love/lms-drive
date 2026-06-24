@@ -20,6 +20,29 @@ async function uploadClientDoc(
   return error ? null : path
 }
 
+// Remise % (0–100). Renvoie null si champ vide/invalide → pas de mise à jour.
+function parseDiscount(raw: FormDataEntryValue | null): number | null {
+  const v = (raw as string)?.trim()
+  if (!v) return null
+  const n = parseFloat(v.replace(',', '.'))
+  if (!Number.isFinite(n)) return null
+  return Math.min(100, Math.max(0, n))
+}
+
+// Mise à jour best-effort de la remise — séparée du payload principal pour rester
+// tolérante à l'absence de la colonne discount_percent avant la migration 019.
+async function applyDiscount(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  clientId: string,
+  raw: FormDataEntryValue | null,
+) {
+  const discount = parseDiscount(raw)
+  if (discount == null) return
+  try {
+    await supabase.from('clients').update({ discount_percent: discount }).eq('id', clientId)
+  } catch { /* colonne absente avant migration → ignoré */ }
+}
+
 function buildBasePayload(formData: FormData) {
   return {
     first_name: formData.get('first_name') as string,
@@ -52,7 +75,7 @@ export async function createClientAction(formData: FormData) {
   if (error) return { error: error.message }
 
   // Upload photos documents
-  const photoSlots = ['id_doc_front', 'id_doc_back', 'license_front', 'license_back'] as const
+  const photoSlots = ['id_doc_front', 'id_doc_back', 'license_front', 'license_back', 'proof_of_address'] as const
   const paths: Record<string, string | null> = {}
   for (const slot of photoSlots) {
     const file = formData.get(slot) as File | null
@@ -64,6 +87,8 @@ export async function createClientAction(formData: FormData) {
   if (Object.keys(photoPaths).length > 0) {
     await supabase.from('clients').update(photoPaths).eq('id', data.id)
   }
+
+  await applyDiscount(supabase, data.id, formData.get('discount_percent'))
 
   await supabase.from('audit_logs').insert({
     user_id: user.id,
@@ -85,7 +110,7 @@ export async function updateClientAction(id: string, formData: FormData) {
   const payload = buildBasePayload(formData)
 
   // Upload photos documents si fournies
-  const photoSlots = ['id_doc_front', 'id_doc_back', 'license_front', 'license_back'] as const
+  const photoSlots = ['id_doc_front', 'id_doc_back', 'license_front', 'license_back', 'proof_of_address'] as const
   const paths: Record<string, string | null> = {}
   for (const slot of photoSlots) {
     const file = formData.get(slot) as File | null
@@ -96,6 +121,8 @@ export async function updateClientAction(id: string, formData: FormData) {
 
   const { error } = await supabase.from('clients').update({ ...payload, ...paths }).eq('id', id)
   if (error) return { error: error.message }
+
+  await applyDiscount(supabase, id, formData.get('discount_percent'))
 
   await supabase.from('audit_logs').insert({
     user_id: user.id,
@@ -140,5 +167,6 @@ export async function updateClientStatus(id: string, status: ClientStatus, black
   })
 
   revalidatePath(`/clients/${id}`)
+  revalidatePath('/clients')
   return { success: true }
 }

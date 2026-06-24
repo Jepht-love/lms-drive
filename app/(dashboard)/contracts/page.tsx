@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import { FileText, ChevronRight, CheckCircle2, Clock, Lock } from 'lucide-react'
+import { FileText, ChevronRight, CheckCircle2, Clock, Lock, Search } from 'lucide-react'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 
@@ -16,9 +16,9 @@ const STATUS_CONFIG: Record<string, { label: string; bar: string; badge: string;
 export default async function ContractsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>
+  searchParams: Promise<{ status?: string; q?: string }>
 }) {
-  const { status } = await searchParams
+  const { status, q } = await searchParams
   const supabase = await createClient()
 
   // Compteurs
@@ -39,7 +39,20 @@ export default async function ContractsPage({
 
   if (status) query = query.eq('status', status)
 
-  const { data: contracts } = await query
+  const { data: rawContracts } = await query
+
+  const needle = q?.trim().toLowerCase()
+  const contracts = needle
+    ? (rawContracts ?? []).filter(c => {
+        const r = c.reservation as any
+        const v = r?.vehicle
+        const cl = r?.client
+        const haystack = [
+          c.contract_number, v?.plate, v?.brand, v?.model, cl?.first_name, cl?.last_name,
+        ].filter(Boolean).join(' ').toLowerCase()
+        return haystack.includes(needle)
+      })
+    : (rawContracts ?? [])
 
   const total   = allContracts?.length ?? 0
   const aSigner = counts['a_signer'] ?? 0
@@ -57,6 +70,19 @@ export default async function ContractsPage({
           )}
         </p>
       </div>
+
+      {/* Recherche */}
+      <form method="get" className="relative">
+        {status && <input type="hidden" name="status" value={status} />}
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <input
+          name="q"
+          type="search"
+          defaultValue={q}
+          placeholder="Rechercher par n°, véhicule, client…"
+          className="w-full bg-white border border-gray-100 shadow-sm rounded-xl pl-10 pr-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-black/10"
+        />
+      </form>
 
       {/* Filtres */}
       <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
@@ -89,7 +115,9 @@ export default async function ContractsPage({
       {!contracts || contracts.length === 0 ? (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 text-center">
           <FileText className="w-12 h-12 text-gray-200 mx-auto mb-4" />
-          <p className="text-gray-400 font-medium text-sm">Aucun contrat</p>
+          <p className="text-gray-400 font-medium text-sm">
+            {needle ? `Aucun résultat pour « ${q} »` : 'Aucun contrat'}
+          </p>
         </div>
       ) : (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden divide-y divide-gray-50">
@@ -124,8 +152,8 @@ export default async function ContractsPage({
                       )}
                     </div>
                     <p className="font-bold text-gray-900 text-sm">
-                      <span className="font-mono">{r?.vehicle?.plate}</span>
-                      <span className="font-normal text-gray-500 ml-1.5">{r?.vehicle?.brand} {r?.vehicle?.model}</span>
+                      <span>{r?.vehicle?.brand} {r?.vehicle?.model}</span>
+                      <span className="font-mono font-normal text-gray-400 text-xs ml-1.5">{r?.vehicle?.plate}</span>
                     </p>
                     <p className="text-xs text-gray-500 mt-0.5">
                       {r?.client?.first_name} {r?.client?.last_name}

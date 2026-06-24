@@ -2,9 +2,13 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { Plus } from 'lucide-react'
+import { format } from 'date-fns'
+import { fr } from 'date-fns/locale'
 import SwipeableRow from '@/components/SwipeableRow'
 import { AnimatedList, AnimatedListItem } from '@/components/AnimatedList'
 import type { Vehicle } from '@/types/database'
+import { NEED_BADGE, type NeedBadge } from '@/lib/maintenance-health'
 
 const STATUS_CONFIG: Record<string, { label: string; dot: string; badge: string }> = {
   disponible:        { label: 'Disponible',      dot: 'bg-green-500',  badge: 'bg-green-50 text-green-700 border-green-100' },
@@ -15,35 +19,49 @@ const STATUS_CONFIG: Record<string, { label: string; dot: string; badge: string 
   en_verification:   { label: 'Vérification',    dot: 'bg-yellow-400', badge: 'bg-yellow-50 text-yellow-700 border-yellow-100' },
   immobilise:        { label: 'Immobilisé',      dot: 'bg-red-400',    badge: 'bg-red-50 text-red-700 border-red-100' },
   mis_a_disposition: { label: 'Chez partenaire', dot: 'bg-purple-400', badge: 'bg-purple-50 text-purple-700 border-purple-100' },
+  a_reparer:         { label: 'À réparer',       dot: 'bg-red-600',    badge: 'bg-red-50 text-red-700 border-red-100' },
 }
 
-export default function VehiclesGridSwipeable({ vehicles }: { vehicles: Vehicle[] }) {
+export default function VehiclesGridSwipeable({
+  vehicles,
+  needsByVehicle = {},
+  returnDateByVehicle = {},
+}: {
+  vehicles: Vehicle[]
+  needsByVehicle?: Record<string, NeedBadge[]>
+  returnDateByVehicle?: Record<string, string>
+}) {
   const router = useRouter()
 
   return (
-    <AnimatedList className="grid sm:grid-cols-2 gap-3">
+    <AnimatedList className="grid sm:grid-cols-2 gap-3 items-start">
       {vehicles.map(v => {
         const cfg = STATUS_CONFIG[v.status] ?? STATUS_CONFIG.hors_service
-        const in30days = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-        const alerts: string[] = []
-        if (v.insurance_expiry && new Date(v.insurance_expiry) <= in30days) alerts.push('Assurance')
-        if (v.ct_date && new Date(v.ct_date) <= in30days) alerts.push('CT')
-        if (v.next_service_km && v.current_km && (v.next_service_km - v.current_km) <= 1000) alerts.push('Révision')
+        const badges = needsByVehicle[v.id] ?? []
 
         return (
           <AnimatedListItem key={v.id}>
             <SwipeableRow
               actions={[
+                ...(v.status === 'disponible'
+                  ? [{ label: 'Réserver', color: '#16A34A', onClick: () => router.push(`/reservations/new?vehicle=${v.id}`) }]
+                  : []),
+                ...(['loue', 'reserve'].includes(v.status)
+                  ? [{ label: 'Réserver après', color: '#2563EB', onClick: () => router.push(`/reservations/new?vehicle=${v.id}`) }]
+                  : []),
                 { label: 'Statut', color: '#D97706', onClick: () => router.push(`/vehicles/${v.id}?action=status`) },
                 { label: 'Détail', color: '#374151', onClick: () => router.push(`/vehicles/${v.id}`) },
               ]}
             >
-              <Link href={`/vehicles/${v.id}`} className="block bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all overflow-hidden group active:scale-[.99]">
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all overflow-hidden">
+              <Link href={`/vehicles/${v.id}`} className="block group active:scale-[.99]">
                 <div className="p-4">
                   <div className="flex items-start justify-between gap-2 mb-3">
                     <div className="min-w-0">
                       <h3 className="font-extrabold text-gray-900 text-base leading-tight">{v.brand} {v.model}</h3>
-                      {v.version && <p className="text-xs text-gray-400 mt-0.5 truncate">{v.version}</p>}
+                      {v.is_external
+                        ? <span className="inline-block mt-1 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-purple-50 text-purple-600">Partenaire</span>
+                        : v.version && <p className="text-xs text-gray-400 mt-0.5 truncate">{v.version}</p>}
                     </div>
                     <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border flex-shrink-0 flex items-center gap-1.5 ${cfg.badge}`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
@@ -51,7 +69,7 @@ export default function VehiclesGridSwipeable({ vehicles }: { vehicles: Vehicle[
                     </span>
                   </div>
                   <div className="flex items-center gap-2 mb-3 flex-wrap">
-                    <span className="bg-[#111111] text-white text-xs font-mono font-bold px-2.5 py-1 rounded-lg tracking-wider">{v.plate}</span>
+                    <span className="bg-gray-100 text-gray-400 text-[11px] font-mono font-medium px-2 py-0.5 rounded-md tracking-wider">{v.plate}</span>
                     {v.color && <span className="text-xs text-gray-400">{v.color}</span>}
                     {v.year && <span className="text-xs text-gray-400 ml-auto">{v.year}</span>}
                   </div>
@@ -81,15 +99,43 @@ export default function VehiclesGridSwipeable({ vehicles }: { vehicles: Vehicle[
                       </div>
                     )}
                   </div>
-                  {alerts.length > 0 && (
+                  {badges.length > 0 && (
                     <div className="mt-3 flex flex-wrap gap-1.5">
-                      {alerts.map(a => (
-                        <span key={a} className="text-xs bg-orange-50 text-orange-600 border border-orange-100 px-2 py-0.5 rounded-lg font-semibold">⚠ {a}</span>
+                      {badges.map(b => (
+                        <span key={b.key} className={`text-xs px-2 py-0.5 rounded-lg font-semibold border ${NEED_BADGE[b.severity]}`}>
+                          {b.key === 'degradation'
+                            ? `Dégradé${b.count > 1 ? ` (${b.count})` : ''}`
+                            : `${b.label} · ${b.detail}`}
+                        </span>
                       ))}
                     </div>
                   )}
                 </div>
               </Link>
+              {v.status === 'disponible' && (
+                <Link
+                  href={`/reservations/new?vehicle=${v.id}`}
+                  className="flex items-center justify-center gap-2 border-t border-gray-50 py-3 text-sm font-bold text-green-700 bg-green-50/40 hover:bg-green-50 transition-colors active:scale-[.99]"
+                >
+                  <Plus className="w-4 h-4" /> Réserver
+                </Link>
+              )}
+              {['loue', 'reserve'].includes(v.status) && (
+                <div className="border-t border-gray-50">
+                  {returnDateByVehicle[v.id] && (
+                    <p className="text-center text-xs text-gray-400 pt-2">
+                      Retour le {format(new Date(returnDateByVehicle[v.id]), "d MMM 'à' HH:mm", { locale: fr })}
+                    </p>
+                  )}
+                  <Link
+                    href={`/reservations/new?vehicle=${v.id}`}
+                    className="flex items-center justify-center gap-2 py-3 text-sm font-bold text-blue-700 bg-blue-50/40 hover:bg-blue-50 transition-colors active:scale-[.99]"
+                  >
+                    <Plus className="w-4 h-4" /> Réserver après
+                  </Link>
+                </div>
+              )}
+              </div>
             </SwipeableRow>
           </AnimatedListItem>
         )

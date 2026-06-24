@@ -5,26 +5,33 @@ import { useRouter } from 'next/navigation'
 import VehicleInspectionMap from '@/components/vehicle-schema/VehicleInspectionMap'
 import SignatureCanvas from '@/components/signature/SignatureCanvas'
 import { MANDATORY_PHOTOS } from '@/components/vehicle-schema/zones'
-import { VEHICLE_ZONES as NEW_ZONES, type DamageEntry } from '@/components/vehicle-schema/inspection-types'
-import FuelGauge from '@/components/FuelGauge'
+import { VEHICLE_ZONES as NEW_ZONES, graviteLabel, type DamageEntry } from '@/components/vehicle-schema/inspection-types'
 import { createClient } from '@/lib/supabase/client'
 import { compressImageToBase64 } from '@/lib/utils'
 import { calculateLateFee, calculateExtraKm } from '@/lib/calculations/fees'
-import { Camera, CheckCircle2, AlertTriangle, X, ChevronRight, Clock, Gauge } from 'lucide-react'
+import { reportVehicleIssues } from '@/lib/actions/vehicle-issues'
+import { buildDamageFlag } from '@/lib/maintenance-health'
+import { Camera, CheckCircle2, AlertTriangle, X, ChevronRight, ChevronLeft, Clock, Gauge, Fuel } from 'lucide-react'
 
 interface Props {
   type: 'depart' | 'arrivee'
   contractId: string
   vehicleId: string
   vehicleKm: number
-  reservationId: string
+  // Optionnel : absent pour une convention inter-agences (EDL sans réservation
+  // ni client). Dans ce cas on ne touche pas à `reservations` et on masque le
+  // bloc d'envoi du contrat de restitution au locataire.
+  reservationId?: string
+  // Où renvoyer le bouton "Retour" sur l'écran final (défaut : la réservation).
+  doneHref?: string
   // Props EDL retour uniquement
   vehicleCategory?: string
   reservationEndDatetime?: string
   kmAtDeparture?: number
-  fuelAtDeparture?: number
+  fuelRangeAtDeparture?: number
   kmIncluded?: number
   extraKmPrice?: number
+  previousDamagedZones?: { id: string; label: string; severity: string }[]
 }
 
 type Step = 'info' | 'schema' | 'photos' | 'signatures' | 'done'
@@ -36,25 +43,58 @@ interface ComputedFees {
   extraKmAmount: number
 }
 
+const CLEANLINESS_LEVELS = [
+  { value: 1, label: 'Sale', bg: 'bg-red-500' },
+  { value: 2, label: 'Moyen', bg: 'bg-orange-500' },
+  { value: 3, label: 'Normal', bg: 'bg-blue-500' },
+  { value: 4, label: 'Propre', bg: 'bg-green-500' },
+  { value: 5, label: 'Très propre', bg: 'bg-green-800' },
+] as const
+
+function CleanlinessPicker({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-slate-700 mb-2">
+        {label} : <strong>{CLEANLINESS_LEVELS.find(l => l.value === value)?.label}</strong>
+      </label>
+      <div className="flex gap-1.5">
+        {CLEANLINESS_LEVELS.map(l => (
+          <button
+            key={l.value}
+            type="button"
+            onClick={() => onChange(l.value)}
+            aria-label={l.label}
+            className={`flex-1 h-10 rounded-lg transition-all ${l.bg} ${
+              value === l.value ? 'ring-2 ring-offset-2 ring-slate-900 scale-105' : 'opacity-35'
+            }`}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function InspectionFlow({
   type,
   contractId,
   vehicleId,
   vehicleKm,
   reservationId,
+  doneHref,
   vehicleCategory = 'citadine',
   reservationEndDatetime,
   kmAtDeparture,
-  fuelAtDeparture,
+  fuelRangeAtDeparture,
   kmIncluded = 200,
   extraKmPrice = 2,
+  previousDamagedZones = [],
 }: Props) {
   const router = useRouter()
   const supabase = createClient()
 
   const [step, setStep] = useState<Step>('info')
   const [kmReading, setKmReading] = useState(vehicleKm)
-  const [fuelLevel, setFuelLevel] = useState(4) // 0-8 segments
+  const [fuelRangeKm, setFuelRangeKm] = useState(0)
   const [exteriorCleanliness, setExteriorCleanliness] = useState(3)
   const [interiorCleanliness, setInteriorCleanliness] = useState(3)
   const [damages, setDamages] = useState<Record<string, DamageEntry[]>>({})
@@ -66,11 +106,44 @@ export default function InspectionFlow({
   const [computedFees, setComputedFees] = useState<ComputedFees | null>(null)
   const photoInputRef = useRef<HTMLInputElement>(null)
   const [currentPhotoType, setCurrentPhotoType] = useState<string | null>(null)
+  const [emailState, setEmailState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
+  const [emailMsg, setEmailMsg] = useState<string | null>(null)
+
+  // EDL retour terminé : régénère le contrat complet (départ + retour) et l'envoie au client
+  async function finalizeAndEmail() {
+    setEmailState('sending'); setEmailMsg(null)
+    try {
+      // Persiste le PDF final (contrat + 2 EDL) dans la bibliothèque documentaire
+      await fetch('/api/contracts/generate-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contractId }),
+      })
+      const res = await fetch('/api/contracts/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contractId }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || data?.error) throw new Error(data?.error ?? "Échec de l'envoi")
+      setEmailState('sent')
+    } catch (e: any) {
+      setEmailState('error'); setEmailMsg(e?.message ?? 'Erreur lors de l\'envoi')
+    }
+  }
 
   const photoCount = Object.keys(photos).length
   const mandatoryCompleted = photoCount >= 3
   const damageCount = Object.values(damages).flat().length
   const damagedZoneCount = Object.values(damages).filter(e => e.length > 0).length
+
+  // Comparaison auto départ/retour : une zone déjà signalée au départ et
+  // retrouvée au retour n'est pas une nouvelle dégradation — distinction
+  // utile pour ne pas facturer un dommage préexistant ni rater un nouveau.
+  const previousZoneIds = new Set(previousDamagedZones.map(z => z.id))
+  const currentDamagedZoneIds = Object.entries(damages).filter(([, e]) => e.length > 0).map(([id]) => id)
+  const newDamageZoneIds = currentDamagedZoneIds.filter(id => !previousZoneIds.has(id))
+  const stillPresentZoneIds = currentDamagedZoneIds.filter(id => previousZoneIds.has(id))
 
   function handleDamageAdd(zoneId: string, entry: DamageEntry) {
     setDamages(prev => ({
@@ -115,7 +188,7 @@ export default function InspectionFlow({
           vehicle_id: vehicleId,
           type,
           km_reading: kmReading,
-          fuel_level: fuelLevel,
+          fuel_range_km: fuelRangeKm,
           exterior_cleanliness: exteriorCleanliness,
           interior_cleanliness: interiorCleanliness,
           damaged_zones: Object.entries(damages)
@@ -124,6 +197,7 @@ export default function InspectionFlow({
               id: zoneId,
               label: NEW_ZONES.find(z => z.id === zoneId)?.label ?? zoneId,
               severity: entry.severity,
+              type: entry.type ?? null,
               description: entry.comment,
               photos: entry.photos,
             }))),
@@ -136,7 +210,7 @@ export default function InspectionFlow({
         .select('id')
         .single()
 
-      if (inspErr || !inspection) throw new Error(inspErr?.message ?? 'Erreur création EDL')
+      if (inspErr || !inspection) throw new Error(inspErr?.message ?? 'Erreur création état des lieux')
 
       for (const [photoType, dataUrl] of Object.entries(photos)) {
         const base64 = dataUrl.split(',')[1]
@@ -154,10 +228,20 @@ export default function InspectionFlow({
         })
       }
 
-      await supabase.from('vehicles').update({ current_km: kmReading }).eq('id', vehicleId)
+      // Km monotone : n'avance jamais le compteur à la baisse (saisie erronée)
+      await supabase.from('vehicles')
+        .update({ current_km: kmReading })
+        .eq('id', vehicleId)
+        .lt('current_km', kmReading)
+
+      // Niveau carburant actuel — reporté sur la fiche véhicule à chaque EDL
+      // (départ ou retour), même unité que fuel_range_km sur l'inspection.
+      await supabase.from('vehicles')
+        .update({ current_fuel_range_km: fuelRangeKm })
+        .eq('id', vehicleId)
 
       if (type === 'depart') {
-        await supabase.from('reservations').update({ status: 'en_cours' }).eq('id', reservationId)
+        if (reservationId) await supabase.from('reservations').update({ status: 'en_cours' }).eq('id', reservationId)
       } else {
         // Calcul frais retard
         const now = new Date()
@@ -177,13 +261,24 @@ export default function InspectionFlow({
           extraKmPrice,
         )
 
-        await supabase.from('reservations').update({
+        if (reservationId) await supabase.from('reservations').update({
           status: 'terminee',
           late_minutes: lateMinutes,
           late_fee_amount: lateFeeAmount,
           extra_km_count: extraKmCount,
           extra_km_amount: extraKmAmount,
         }).eq('id', reservationId)
+
+        // Dégradations relevées au retour → drapeaux « Dégradé » sur le véhicule
+        // (badge visible, sans retirer le véhicule de la disponibilité)
+        const issues = Object.entries(damages)
+          .filter(([, entries]) => entries.length > 0)
+          .flatMap(([zoneId, entries]) => entries.map(e =>
+            buildDamageFlag(zoneId, NEW_ZONES.find(z => z.id === zoneId)?.label ?? zoneId, e.severity, inspection.id),
+          ))
+        if (issues.length > 0) {
+          await reportVehicleIssues(vehicleId, issues, inspection.id)
+        }
 
         setComputedFees({ lateMinutes, lateFeeAmount, extraKmCount, extraKmAmount })
       }
@@ -214,6 +309,12 @@ export default function InspectionFlow({
             État des lieux {type === 'depart' ? 'de départ' : 'de retour'} enregistré
           </h2>
           <p className="text-slate-500">KM : {kmReading.toLocaleString('fr-FR')} · {damagedZoneCount} zone(s) signalée(s)</p>
+          {type === 'arrivee' && previousDamagedZones.length > 0 && (
+            <p className="text-sm text-slate-400 mt-1">
+              dont {stillPresentZoneIds.length} déjà signalée(s) au départ
+              {newDamageZoneIds.length > 0 && <span className="text-red-500 font-semibold"> · {newDamageZoneIds.length} nouvelle(s)</span>}
+            </p>
+          )}
         </div>
 
         {/* Récap frais EDL retour */}
@@ -270,11 +371,42 @@ export default function InspectionFlow({
           </div>
         )}
 
+        {/* Contrat de restitution : contrat + EDL départ + EDL retour → envoi au locataire.
+            Masqué en mode convention inter-agences (pas de locataire/réservation). */}
+        {type === 'arrivee' && reservationId && (
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-3">
+            <div>
+              <h3 className="font-semibold text-slate-900">Contrat de restitution</h3>
+              <p className="text-sm text-slate-500 mt-0.5">
+                Le contrat complet (conditions + état des lieux de départ et de retour, signés) est prêt.
+                Faites-le relire et signer au locataire, puis envoyez-lui une copie par email.
+              </p>
+            </div>
+            {emailState === 'sent' ? (
+              <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 rounded-xl px-3 py-3">
+                <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
+                Contrat de restitution envoyé au locataire par email.
+              </div>
+            ) : (
+              <button
+                onClick={finalizeAndEmail}
+                disabled={emailState === 'sending'}
+                className="w-full py-3 bg-slate-900 text-white rounded-xl font-medium hover:bg-slate-800 transition-colors disabled:opacity-60"
+              >
+                {emailState === 'sending' ? 'Envoi du contrat…' : 'Envoyer le contrat de restitution au client'}
+              </button>
+            )}
+            {emailState === 'error' && (
+              <p className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{emailMsg}</p>
+            )}
+          </div>
+        )}
+
         <button
-          onClick={() => router.push(`/reservations/${reservationId}`)}
+          onClick={() => router.push(doneHref ?? (reservationId ? `/reservations/${reservationId}` : '/partnerships'))}
           className="w-full py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors"
         >
-          Retour à la réservation
+          {reservationId ? 'Retour à la réservation' : 'Retour à l\'opération'}
         </button>
       </div>
     )
@@ -346,25 +478,31 @@ export default function InspectionFlow({
 
               {/* Carburant */}
               <div className="bg-slate-800 rounded-xl p-3 space-y-2">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Carburant</p>
-                <p className="text-xl font-bold text-white text-center tracking-wide">{fuelLevel}/8</p>
-                <div className="flex justify-center">
-                  <FuelGauge level={fuelLevel} onChange={setFuelLevel} />
+                <div className="flex items-center gap-1.5">
+                  <Fuel className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Autonomie (km)</p>
                 </div>
+                <input
+                  type="number"
+                  value={fuelRangeKm}
+                  onChange={e => setFuelRangeKm(Number(e.target.value))}
+                  min={0}
+                  className="w-full bg-slate-700 text-white text-xl font-bold px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 text-center tracking-widest"
+                />
                 <p className="text-[10px] text-slate-500 text-center">
-                  {type === 'arrivee' && fuelAtDeparture != null ? (
-                    fuelLevel < fuelAtDeparture ? (
+                  {type === 'arrivee' && fuelRangeAtDeparture != null ? (
+                    fuelRangeKm < fuelRangeAtDeparture ? (
                       <>
-                        Départ : {fuelAtDeparture}/8
+                        Départ : {fuelRangeAtDeparture.toLocaleString('fr-FR')} km
                         <span className="ml-1 text-orange-400 font-semibold">
-                          (manque {fuelAtDeparture - fuelLevel}/8)
+                          (−{(fuelRangeAtDeparture - fuelRangeKm).toLocaleString('fr-FR')} km)
                         </span>
                       </>
                     ) : (
-                      <>Départ : {fuelAtDeparture}/8 · <span className="text-green-400">niveau OK</span></>
+                      <>Départ : {fuelRangeAtDeparture.toLocaleString('fr-FR')} km · <span className="text-green-400">niveau OK</span></>
                     )
                   ) : (
-                    <span>plein = 8/8</span>
+                    <span>relevé ordinateur de bord</span>
                   )}
                 </p>
               </div>
@@ -384,24 +522,8 @@ export default function InspectionFlow({
           </div>
 
           <div className="grid sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Propreté extérieure : <strong>{exteriorCleanliness}/5</strong>
-              </label>
-              <input type="range" min={1} max={5} value={exteriorCleanliness}
-                onChange={e => setExteriorCleanliness(Number(e.target.value))}
-                className="w-full h-3 rounded-full accent-blue-600"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Propreté intérieure : <strong>{interiorCleanliness}/5</strong>
-              </label>
-              <input type="range" min={1} max={5} value={interiorCleanliness}
-                onChange={e => setInteriorCleanliness(Number(e.target.value))}
-                className="w-full h-3 rounded-full accent-blue-600"
-              />
-            </div>
+            <CleanlinessPicker label="Propreté extérieure" value={exteriorCleanliness} onChange={setExteriorCleanliness} />
+            <CleanlinessPicker label="Propreté intérieure" value={interiorCleanliness} onChange={setInteriorCleanliness} />
           </div>
 
           <button
@@ -417,6 +539,22 @@ export default function InspectionFlow({
       {step === 'schema' && (
         <div className="space-y-4">
           <p className="text-sm text-slate-500 text-center">Appuyez sur une zone pour signaler un dommage</p>
+
+          {type === 'arrivee' && previousDamagedZones.length > 0 && (
+            <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4">
+              <h4 className="font-medium text-blue-800 mb-2 flex items-center gap-2 text-sm">
+                <AlertTriangle className="w-4 h-4 text-blue-500" />
+                Déjà signalé à l&apos;état des lieux de départ
+              </h4>
+              <div className="flex flex-wrap gap-1.5">
+                {previousDamagedZones.map(z => (
+                  <span key={z.id} className="text-xs px-2.5 py-1 rounded-full bg-white border border-blue-200 text-blue-700 font-medium">
+                    {z.label} · {graviteLabel(z.severity as DamageEntry['severity'])}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
 
           <VehicleInspectionMap
             damages={damages}
@@ -443,9 +581,14 @@ export default function InspectionFlow({
                             entries[0].severity === 'rayure'    ? 'bg-yellow-100 text-yellow-700' :
                             'bg-orange-100 text-orange-700'
                           }`}>
-                            {entries.length > 1 ? `${entries.length}×` : entries[0].severity}
+                            {entries.length > 1 ? `${entries.length}×` : graviteLabel(entries[0].severity)}
                           </span>
                           <span className="text-sm font-medium text-slate-800">{zone?.label ?? zoneId}</span>
+                          {type === 'arrivee' && (
+                            previousZoneIds.has(zoneId)
+                              ? <span className="ml-2 text-[10px] font-bold uppercase text-blue-500">déjà signalé au départ</span>
+                              : <span className="ml-2 text-[10px] font-bold uppercase text-red-500">nouveau</span>
+                          )}
                           {entries[0].comment && (
                             <p className="text-xs text-slate-400 mt-0.5 truncate">{entries[0].comment}</p>
                           )}
@@ -467,12 +610,20 @@ export default function InspectionFlow({
             </div>
           )}
 
-          <button
-            onClick={() => setStep('photos')}
-            className="w-full py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
-          >
-            Suivant : Photos ({photoCount} prise{photoCount > 1 ? 's' : ''}) <ChevronRight className="w-4 h-4" />
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setStep('info')}
+              className="px-5 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-semibold hover:bg-slate-50 transition-colors flex items-center justify-center gap-1.5"
+            >
+              <ChevronLeft className="w-4 h-4" /> Retour
+            </button>
+            <button
+              onClick={() => setStep('photos')}
+              className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+            >
+              Suivant : Photos ({photoCount} prise{photoCount > 1 ? 's' : ''}) <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       )}
 
@@ -532,13 +683,21 @@ export default function InspectionFlow({
             </p>
           )}
 
-          <button
-            onClick={() => setStep('signatures')}
-            disabled={!mandatoryCompleted}
-            className="w-full py-3 bg-blue-600 disabled:bg-slate-200 disabled:text-slate-400 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
-          >
-            Suivant : Signatures <ChevronRight className="w-4 h-4" />
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setStep('schema')}
+              className="px-5 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-semibold hover:bg-slate-50 transition-colors flex items-center justify-center gap-1.5"
+            >
+              <ChevronLeft className="w-4 h-4" /> Retour
+            </button>
+            <button
+              onClick={() => setStep('signatures')}
+              disabled={!mandatoryCompleted}
+              className="flex-1 py-3 bg-blue-600 disabled:bg-slate-200 disabled:text-slate-400 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+            >
+              Suivant : Signatures <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       )}
 
@@ -570,13 +729,22 @@ export default function InspectionFlow({
             </div>
           )}
 
-          <button
-            onClick={handleSubmit}
-            disabled={saving || !clientSig}
-            className="w-full py-3.5 bg-green-600 disabled:bg-slate-200 disabled:text-slate-400 text-white rounded-xl font-bold hover:bg-green-700 transition-colors"
-          >
-            {saving ? 'Enregistrement...' : '✓ Valider l\'état des lieux'}
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setStep('photos')}
+              disabled={saving}
+              className="px-5 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-semibold hover:bg-slate-50 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+            >
+              <ChevronLeft className="w-4 h-4" /> Retour
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={saving || !clientSig}
+              className="flex-1 py-3.5 bg-green-600 disabled:bg-slate-200 disabled:text-slate-400 text-white rounded-xl font-bold hover:bg-green-700 transition-colors"
+            >
+              {saving ? 'Enregistrement...' : '✓ Valider l\'état des lieux'}
+            </button>
+          </div>
         </div>
       )}
 

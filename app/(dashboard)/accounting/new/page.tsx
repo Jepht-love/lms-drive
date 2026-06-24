@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
+import BackButton from '@/components/ui/BackButton'
 import { createClient } from '@/lib/supabase/client'
 import { EXPENSE_CATEGORIES, REVENUE_CATEGORIES, PAYMENT_METHODS } from '@/lib/accounting/categories'
 import { createTransaction } from '@/lib/actions/accounting'
@@ -13,6 +14,7 @@ interface Vehicle { id: string; plate: string; brand: string; model: string }
 export default function NewTransactionPage() {
   const router = useRouter()
   const [type, setType] = useState<'recette' | 'depense'>('depense')
+  const [paymentMethod, setPaymentMethod] = useState('')
   const [vehicles, setVehicles] = useState<Vehicle[]>([])
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -43,9 +45,9 @@ export default function NewTransactionPage() {
 
   return (
     <div className="space-y-4 pb-4">
-      <Link href="/accounting" className="inline-flex items-center gap-1.5 text-sm text-gray-400 font-medium hover:text-gray-700">
+      <BackButton fallbackHref="/accounting" className="inline-flex items-center gap-1.5 text-sm text-gray-400 font-medium hover:text-gray-700">
         <ArrowLeft className="w-4 h-4" /> Retour
-      </Link>
+      </BackButton>
       <h1 className="text-xl font-black text-gray-900">Nouveau mouvement</h1>
 
       {/* Type */}
@@ -79,7 +81,8 @@ export default function NewTransactionPage() {
             </div>
             <div>
               <label className={label} htmlFor="payment_method">Mode de paiement</label>
-              <select id="payment_method" name="payment_method" className={input}>
+              <select id="payment_method" name="payment_method" className={input}
+                value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)}>
                 <option value="">—</option>
                 {PAYMENT_METHODS.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
               </select>
@@ -90,7 +93,7 @@ export default function NewTransactionPage() {
             <label className={label} htmlFor="vehicle_id">Véhicule concerné (optionnel)</label>
             <select id="vehicle_id" name="vehicle_id" className={input}>
               <option value="">Aucun</option>
-              {vehicles.map(v => <option key={v.id} value={v.id}>{v.plate} · {v.brand} {v.model}</option>)}
+              {vehicles.map(v => <option key={v.id} value={v.id}>{v.brand} {v.model} · {v.plate}</option>)}
             </select>
           </div>
 
@@ -105,8 +108,12 @@ export default function NewTransactionPage() {
               <input id="reference" name="reference" type="text" placeholder="N° facture…" className={input} />
             </div>
             <div>
-              <label className={label} htmlFor="notes">Notes</label>
-              <input id="notes" name="notes" type="text" className={input} />
+              <label className={label} htmlFor="notes">
+                {paymentMethod === 'autre' ? 'Précisez le mode de paiement *' : 'Notes'}
+              </label>
+              <input id="notes" name="notes" type="text" required={paymentMethod === 'autre'}
+                placeholder={paymentMethod === 'autre' ? 'Quel est ce mode de paiement ?' : undefined}
+                className={`${input} ${paymentMethod === 'autre' ? 'border-amber-200 bg-amber-50' : ''}`} />
             </div>
           </div>
         </div>

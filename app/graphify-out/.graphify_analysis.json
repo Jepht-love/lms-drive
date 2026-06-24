@@ -1,0 +1,382 @@
+{
+  "communities": {
+    "0": [
+      "dashboard_reservations_id_page_tsx_id_page",
+      "dashboard_reservations_id_page_tsx_id_page_inforow",
+      "dashboard_reservations_id_page_tsx_id_page_payment_labels",
+      "dashboard_reservations_id_page_tsx_id_page_sectionlabel",
+      "id_page_deposit_status_labels",
+      "id_page_reservationpage",
+      "id_page_status_config",
+      "reservations_depositinfoeditor",
+      "reservations_depositinfoeditor_depositinfoeditor",
+      "reservations_depositinfoeditor_method_labels",
+      "reservations_depositinfoeditor_props",
+      "reservations_depositstatuseditor",
+      "reservations_depositstatuseditor_deposit_statuses",
+      "reservations_depositstatuseditor_depositstatuseditor",
+      "reservations_paymenteditor",
+      "reservations_paymenteditor_payment_methods",
+      "reservations_paymenteditor_paymenteditor",
+      "reservations_paymenteditor_paymentmethodtype",
+      "reservations_paymenteditor_paymentstatus",
+      "reservations_paymenteditor_props",
+      "reservations_reservationstatusbuttons",
+      "reservations_reservationstatusbuttons_reservationstatusbuttons"
+    ],
+    "1": [
+      "clients_clientform",
+      "clients_clientform_clientform",
+      "clients_clientform_clientformprops",
+      "clients_clientform_doc_types",
+      "clients_clientform_field",
+      "clients_clientform_payment_methods",
+      "clients_clientform_photoupload",
+      "clients_clientform_section",
+      "clients_clientform_selectfield",
+      "dashboard_clients_id_edit_page_tsx_edit_page",
+      "dashboard_clients_new_page_tsx_new_page",
+      "edit_page_editclientpage",
+      "new_page_newclientpage"
+    ],
+    "2": [
+      "dashboard_vehicles_id_edit_page_tsx_edit_page",
+      "dashboard_vehicles_new_page_tsx_new_page",
+      "edit_page_editvehiclepage",
+      "new_page_newvehiclepage",
+      "vehicles_vehicleform",
+      "vehicles_vehicleform_categories",
+      "vehicles_vehicleform_field",
+      "vehicles_vehicleform_fuel_types",
+      "vehicles_vehicleform_section",
+      "vehicles_vehicleform_selectfield",
+      "vehicles_vehicleform_transmissions",
+      "vehicles_vehicleform_vehicleform",
+      "vehicles_vehicleform_vehicleformprops"
+    ],
+    "3": [
+      "alerts_page",
+      "alerts_page_alertgroup",
+      "alerts_page_alerticon",
+      "alerts_page_notificationspage",
+      "dashboard_page",
+      "dashboard_page_alertgroup",
+      "dashboard_page_dashboardpage",
+      "dashboard_page_getclient",
+      "dashboard_page_getvehicle",
+      "dashboard_page_task_status_badge",
+      "dashboard_page_task_status_label",
+      "dashboard_page_task_type_labels"
+    ],
+    "4": [
+      "dashboard_clients_id_page_tsx_id_page",
+      "dashboard_clients_id_page_tsx_id_page_inforow",
+      "dashboard_clients_id_page_tsx_id_page_payment_labels",
+      "dashboard_clients_id_page_tsx_id_page_sectionlabel",
+      "id_clientdocphotos",
+      "id_clientdocphotos_clientdocphotos",
+      "id_clientdocphotos_docs",
+      "id_clientdocphotos_props",
+      "id_page_clientpage",
+      "id_page_status_labels",
+      "id_page_status_res"
+    ],
+    "5": [
+      "calendar_page",
+      "calendar_page_all_hours",
+      "calendar_page_calendarpage",
+      "calendar_page_durpx",
+      "calendar_page_event_colors",
+      "calendar_page_fmthour",
+      "calendar_page_normalize",
+      "calendar_page_task_labels",
+      "calendar_page_topx"
+    ],
+    "6": [
+      "clients_page",
+      "clients_page_clientrow",
+      "clients_page_clientspage",
+      "clients_page_starrating",
+      "dashboard_equipe_id_page_tsx_id_page",
+      "id_page_memberprofilepage",
+      "id_page_role_config",
+      "id_page_status_badge",
+      "id_page_status_label"
+    ],
+    "7": [
+      "incidents_incidentsclient",
+      "incidents_incidentsclient_incident",
+      "incidents_incidentsclient_incidentsclient",
+      "incidents_incidentsclient_status_colors",
+      "incidents_incidentsclient_statuses",
+      "incidents_incidentsclient_vehicle",
+      "incidents_page",
+      "incidents_page_incidentspage"
+    ],
+    "8": [
+      "dashboard_reservations_new_page_tsx_new_page",
+      "new_page_newreservationpage",
+      "reservations_reservationform",
+      "reservations_reservationform_client",
+      "reservations_reservationform_props",
+      "reservations_reservationform_reservationform",
+      "reservations_reservationform_vehicle"
+    ],
+    "9": [
+      "dashboard_vehicles_id_page_tsx_id_page",
+      "id_page_infocard",
+      "id_page_infogrid",
+      "id_page_vehiclepage",
+      "vehicles_vehiclestatusbutton",
+      "vehicles_vehiclestatusbutton_statuses",
+      "vehicles_vehiclestatusbutton_vehiclestatusbutton"
+    ],
+    "10": [
+      "internal_trips_internaltripsclient",
+      "internal_trips_internaltripsclient_internaltripsclient",
+      "internal_trips_internaltripsclient_purposes",
+      "internal_trips_internaltripsclient_trip",
+      "internal_trips_internaltripsclient_vehicle",
+      "internal_trips_page",
+      "internal_trips_page_internaltripspage"
+    ],
+    "11": [
+      "reservations_validatecontractbutton",
+      "reservations_validatecontractbutton_validatecontractbutton",
+      "reservations_workflowstepper",
+      "reservations_workflowstepper_inspectioninfo",
+      "reservations_workflowstepper_props",
+      "reservations_workflowstepper_workflowstepper"
+    ],
+    "12": [
+      "alerts_notificationslist",
+      "alerts_notificationslist_colors",
+      "alerts_notificationslist_entitylink",
+      "alerts_notificationslist_icons",
+      "alerts_notificationslist_notificationslist"
+    ],
+    "13": [
+      "dashboard_contracts_id_page_tsx_id_page",
+      "id_contractsigningpanel",
+      "id_contractsigningpanel_contractsigningpanel",
+      "id_contractsigningpanel_props",
+      "id_page_contractpage"
+    ],
+    "14": [
+      "layout",
+      "layout_inter",
+      "layout_metadata",
+      "layout_rootlayout",
+      "layout_viewport"
+    ],
+    "15": [
+      "menu_page",
+      "menu_page_adminmodules",
+      "menu_page_menupage",
+      "menu_page_modules",
+      "menu_page_role_labels"
+    ],
+    "16": [
+      "reservations_deletereservationbutton",
+      "reservations_deletereservationbutton_deletereservationbutton",
+      "reservations_page",
+      "reservations_page_reservationspage",
+      "reservations_page_status_config"
+    ],
+    "17": [
+      "vehicles_page",
+      "vehicles_page_category_labels",
+      "vehicles_page_status_config",
+      "vehicles_page_vehiclecard",
+      "vehicles_page_vehiclespage"
+    ],
+    "18": [
+      "dashboard_equipe_new_page_tsx_new_page",
+      "new_page_colors",
+      "new_page_inviteteammemberpage",
+      "new_page_roles"
+    ],
+    "19": [
+      "equipe_page",
+      "equipe_page_equipepage",
+      "equipe_page_membercard",
+      "equipe_page_role_config"
+    ],
+    "20": [
+      "reservations_editdatespanel",
+      "reservations_editdatespanel_editdatespanel",
+      "reservations_editdatespanel_props",
+      "reservations_editdatespanel_toinputvalue"
+    ],
+    "21": [
+      "contracts_page",
+      "contracts_page_contractspage",
+      "contracts_page_status_config"
+    ],
+    "22": [
+      "dashboard_dashboardkpis",
+      "dashboard_dashboardkpis_dashboardkpis",
+      "dashboard_dashboardkpis_periods"
+    ],
+    "23": [
+      "generate_pdf_route",
+      "generate_pdf_route_fetchphotoasdataurl",
+      "generate_pdf_route_post"
+    ],
+    "24": [
+      "id_route",
+      "id_route_delete",
+      "id_route_patch"
+    ],
+    "25": [
+      "send_email_route",
+      "send_email_route_post",
+      "send_email_route_resend"
+    ],
+    "26": [
+      "auth_layout",
+      "auth_layout_authlayout"
+    ],
+    "27": [
+      "contractid_page",
+      "contractid_page_arrivalinspectionpage"
+    ],
+    "28": [
+      "count_route",
+      "count_route_get"
+    ],
+    "29": [
+      "dashboard_layout",
+      "dashboard_layout_dashboardlayout"
+    ],
+    "30": [
+      "health_route",
+      "health_route_get"
+    ],
+    "31": [
+      "invite_route",
+      "invite_route_post"
+    ],
+    "32": [
+      "login_page",
+      "login_page_loginpage"
+    ],
+    "33": [
+      "notifications_route",
+      "notifications_route_get"
+    ],
+    "34": [
+      "profile_page",
+      "profile_page_profilepage"
+    ],
+    "35": [
+      "reservationid_page",
+      "reservationid_page_departureinspectionpage"
+    ],
+    "36": [
+      "settings_page",
+      "settings_page_settingspage"
+    ],
+    "37": [
+      "sign_route",
+      "sign_route_post"
+    ]
+  },
+  "cohesion": {
+    "0": 0.09090909090909091,
+    "1": 0.15384615384615385,
+    "2": 0.15384615384615385,
+    "3": 0.16666666666666666,
+    "4": 0.18181818181818182,
+    "5": 0.2222222222222222,
+    "6": 0.2222222222222222,
+    "7": 0.25,
+    "8": 0.2857142857142857,
+    "9": 0.2857142857142857,
+    "10": 0.2857142857142857,
+    "11": 0.3333333333333333,
+    "12": 0.4,
+    "13": 0.4,
+    "14": 0.4,
+    "15": 0.4,
+    "16": 0.4,
+    "17": 0.4,
+    "18": 0.5,
+    "19": 0.5,
+    "20": 0.6666666666666666,
+    "21": 0.6666666666666666,
+    "22": 0.6666666666666666,
+    "23": 1.0,
+    "24": 0.6666666666666666,
+    "25": 0.6666666666666666,
+    "26": 1.0,
+    "27": 1.0,
+    "28": 1.0,
+    "29": 1.0,
+    "30": 1.0,
+    "31": 1.0,
+    "32": 1.0,
+    "33": 1.0,
+    "34": 1.0,
+    "35": 1.0,
+    "36": 1.0,
+    "37": 1.0
+  },
+  "gods": [
+    {
+      "id": "alerts_page_alertgroup",
+      "label": "AlertGroup()",
+      "degree": 2
+    },
+    {
+      "id": "id_page_status_badge",
+      "label": "STATUS_BADGE",
+      "degree": 2
+    },
+    {
+      "id": "reservations_editdatespanel_toinputvalue",
+      "label": "toInputValue()",
+      "degree": 2
+    },
+    {
+      "id": "reservations_editdatespanel_editdatespanel",
+      "label": "EditDatesPanel()",
+      "degree": 2
+    },
+    {
+      "id": "generate_pdf_route_fetchphotoasdataurl",
+      "label": "fetchPhotoAsDataUrl()",
+      "degree": 2
+    },
+    {
+      "id": "generate_pdf_route_post",
+      "label": "POST()",
+      "degree": 2
+    },
+    {
+      "id": "dashboard_dashboardkpis_periods",
+      "label": "PERIODS",
+      "degree": 1
+    },
+    {
+      "id": "alerts_notificationslist_icons",
+      "label": "ICONS",
+      "degree": 1
+    },
+    {
+      "id": "alerts_notificationslist_colors",
+      "label": "COLORS",
+      "degree": 1
+    },
+    {
+      "id": "calendar_page_all_hours",
+      "label": "ALL_HOURS",
+      "degree": 1
+    }
+  ],
+  "surprises": [],
+  "tokens": {
+    "input": 0,
+    "output": 0
+  }
+}

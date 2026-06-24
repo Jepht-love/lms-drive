@@ -4,14 +4,15 @@ import { redirect } from 'next/navigation'
 import {
   BarChart3, CalendarDays, ClipboardList, Users, Car,
   FileText, AlertTriangle, Navigation, Settings,
-  Bell, ChevronRight, LogOut, UsersRound, Wrench, Repeat, Wallet, Megaphone,
+  Bell, ChevronRight, LogOut, UsersRound, Wrench, Repeat, Wallet, Megaphone, FolderArchive, Mail,
 } from 'lucide-react'
 import { logout } from '@/lib/actions/auth'
+import { allowedHrefSet } from '@/lib/navigation/tabs'
 
 // ─── Modules principaux ───────────────────────────────────────────────────────
 const modules = [
   { href: '/',               label: 'Tableau de bord',  icon: BarChart3,     desc: 'Vue d\'ensemble & alertes' },
-  { href: '/calendar',       label: 'Calendrier',        icon: CalendarDays,  desc: 'Planning de la flotte' },
+  { href: '/calendrier',     label: 'Calendrier',        icon: CalendarDays,  desc: 'Planning de la flotte' },
   { href: '/reservations',   label: 'Réservations',      icon: ClipboardList, desc: 'Gérer les locations' },
   { href: '/clients',        label: 'Clients',            icon: Users,         desc: 'Base clients & dossiers' },
   { href: '/vehicles',       label: 'Véhicules',          icon: Car,           desc: 'Parc automobile' },
@@ -26,6 +27,8 @@ const adminModules = [
   { href: '/accounting', label: 'Comptabilité', icon: Wallet,     desc: 'Mouvements & clôtures' },
   { href: '/marketing',  label: 'Marketing',    icon: Megaphone,  desc: 'Campagnes & ROI' },
   { href: '/equipe',     label: 'Équipe',       icon: UsersRound, desc: 'Membres & attributions tâches' },
+  { href: '/documents',  label: 'Documents',    icon: FolderArchive, desc: 'Bibliothèque documentaire' },
+  { href: '/emails',     label: 'Emails',       icon: Mail,       desc: 'Historique des envois' },
   { href: '/settings',   label: 'Paramètres',   icon: Settings,   desc: 'Configuration de l\'agence' },
 ]
 
@@ -48,6 +51,14 @@ export default async function MenuPage() {
     .eq('id', user.id)
     .single()
 
+  // Permissions par onglet — colonne optionnelle : requête séparée tolérante à
+  // son absence (avant l'exécution de la migration 017, perm = null → accès complet).
+  const { data: perm } = await supabase
+    .from('profiles')
+    .select('allowed_tabs')
+    .eq('id', user.id)
+    .maybeSingle()
+
   const { count: unreadCount } = await supabase
     .from('notifications')
     .select('*', { count: 'exact', head: true })
@@ -55,6 +66,12 @@ export default async function MenuPage() {
     .eq('is_read', false)
 
   const isManager = profile?.role === 'gerant' || profile?.role === 'associe'
+
+  // Permissions par onglet : un employé ne voit que ses sections autorisées
+  // (allowed_tabs null/vide = accès complet). Les managers voient tout.
+  const allowed = (perm as { allowed_tabs?: string[] | null } | null)?.allowed_tabs
+  const allowedHrefs = allowedHrefSet(allowed)
+  const visibleModules = isManager ? modules : modules.filter(m => allowedHrefs.has(m.href))
 
   const initials = profile?.full_name
     ?.split(' ')
@@ -110,7 +127,7 @@ export default async function MenuPage() {
 
         {/* Modules principaux */}
         <div className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm">
-          {modules.map(({ href, label, icon: Icon, desc }, i) => (
+          {visibleModules.map(({ href, label, icon: Icon, desc }, i) => (
             <Link
               key={href}
               href={href}

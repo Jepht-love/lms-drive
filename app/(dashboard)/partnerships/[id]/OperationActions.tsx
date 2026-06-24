@@ -53,8 +53,8 @@ export default function OperationActions({ id, status }: { id: string; status: s
               <input id="return_km" name="return_km" type="number" min="0" className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2.5" inputMode="numeric" />
             </div>
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5" htmlFor="fuel_level_return">Carburant /8</label>
-              <input id="fuel_level_return" name="fuel_level_return" type="number" min="0" max="8" className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2.5" inputMode="numeric" />
+              <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5" htmlFor="fuel_level_return">Carburant (km)</label>
+              <input id="fuel_level_return" name="fuel_level_return" type="number" min="0" placeholder="Autonomie en km" className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2.5" inputMode="numeric" />
             </div>
           </div>
           <div className="flex gap-2">

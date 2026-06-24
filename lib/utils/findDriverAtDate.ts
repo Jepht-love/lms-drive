@@ -12,9 +12,12 @@ export interface DriverResult {
   internalUser?: { id: string; full_name: string } | null
 }
 
-export async function findDriverAtDate(vehicleId: string, date: string): Promise<DriverResult | null> {
+export async function findDriverAtDate(vehicleId: string, date: string, time?: string): Promise<DriverResult | null> {
   const supabase = await createClient()
-  const iso = new Date(date).toISOString()
+  // Avec l'heure : on vise le conducteur réellement en possession à cet
+  // instant précis (utile quand le véhicule change de main plusieurs fois le
+  // même jour). Sans heure : minuit, comportement historique inchangé.
+  const iso = new Date(time ? `${date}T${time}` : date).toISOString()
 
   // 1) Réservation client couvrant la date
   const { data: resa } = await supabase

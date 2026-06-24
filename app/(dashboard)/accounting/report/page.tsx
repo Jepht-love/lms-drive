@@ -26,9 +26,10 @@ const PERIODS = [
   { id: 'month', label: 'Ce mois' },
   { id: 'quarter', label: 'Trimestre' },
   { id: 'year', label: 'Année' },
+  { id: 'custom', label: 'Personnalisé' },
 ]
 
-function periodRange(period: string) {
+function periodRange(period: string): { from: string; to: string } {
   const now = new Date()
   const y = now.getFullYear()
   const m = now.getMonth()
@@ -44,6 +45,8 @@ function periodRange(period: string) {
 
 export default function AccountingReportPage() {
   const [period, setPeriod] = useState('month')
+  const [customFrom, setCustomFrom] = useState('')
+  const [customTo, setCustomTo] = useState('')
   const [source, setSource] = useState<VehicleSource>('all')
   const [rows, setRows] = useState<ReservationRow[]>([])
   const [excluded, setExcluded] = useState<Set<string>>(new Set())
@@ -51,10 +54,18 @@ export default function AccountingReportPage() {
   const [, startTransition] = useTransition()
   const supabase = createClient()
 
+  const isCustom = period === 'custom'
+  const customReady = isCustom && !!customFrom && !!customTo
+
   useEffect(() => {
+    if (isCustom && !customReady) {
+      setRows([])
+      setLoading(false)
+      return
+    }
     setLoading(true)
     setExcluded(new Set())
-    const { from, to } = periodRange(period)
+    const { from, to } = isCustom ? { from: customFrom, to: customTo } : periodRange(period)
 
     Promise.all([
       supabase
@@ -63,11 +74,14 @@ export default function AccountingReportPage() {
         .eq('status', 'terminee')
         .gte('start_datetime', from)
         .lte('start_datetime', to + 'T23:59:59'),
+      // Les deux sens comptent dans le CA inter-agences : sortante = montant reçu
+      // (rental_cost), entrante = prix facturé au client (client_price). Pas de
+      // filtre de statut — une opération compte dès qu'elle existe (créée en
+      // 'en_cours', clôturée bien plus tard) ; sinon le CA resterait à 0 jusqu'à
+      // la clôture manuelle, ce qui n'a aucun sens pour un rapport de période.
       supabase
         .from('inter_agency_rentals')
-        .select('id, start_date, end_date_expected, revenue_amount, partner_agencies(name), vehicles(plate, brand, model)')
-        .eq('direction', 'out')
-        .eq('status', 'completee')
+        .select('id, direction, start_date, end_date_expected, rental_cost, client_price, external_vehicle_description, partner_agencies(name), vehicles(plate, brand, model)')
         .gte('start_date', from)
         .lte('start_date', to),
     ]).then(([{ data: res }, { data: iar }]) => {
@@ -90,23 +104,25 @@ export default function AccountingReportPage() {
       const interRows: ReservationRow[] = (iar ?? []).map((r: any) => {
         const v = Array.isArray(r.vehicles) ? r.vehicles[0] : r.vehicles
         const p = Array.isArray(r.partner_agencies) ? r.partner_agencies[0] : r.partner_agencies
+        // Revenu selon le sens : sortante = reçu du partenaire, entrante = facturé au client.
+        const revenue = r.direction === 'out' ? (r.rental_cost ?? 0) : (r.client_price ?? 0)
         return {
           id: r.id,
           reservation_number: `IA-${r.id.slice(0, 8).toUpperCase()}`,
           start_datetime: r.start_date,
           end_datetime: r.end_date_expected ?? r.start_date,
-          total_price: r.revenue_amount ?? 0,
+          total_price: revenue,
           client_name: p?.name ?? 'Agence partenaire',
-          vehicle_plate: v?.plate ?? '—',
-          vehicle_brand: v?.brand ?? '',
+          vehicle_plate: v?.plate ?? (r.external_vehicle_description ? '' : '—'),
+          vehicle_brand: v?.brand ?? (r.external_vehicle_description ?? ''),
           vehicle_model: v?.model ?? '',
-          source: 'inter_agence',
+          source: 'inter_agence' as const,
         }
-      })
+      }).filter(r => r.total_price > 0)
       setRows([...ownRows, ...interRows].sort((a, b) => a.start_datetime.localeCompare(b.start_datetime)))
       setLoading(false)
     })
-  }, [period])
+  }, [period, customFrom, customTo])
 
   const visibleRows = useMemo(() => {
     if (source === 'all') return rows
@@ -139,18 +155,17 @@ export default function AccountingReportPage() {
 
   function handleExport() {
     const lines = [
-      ['N° Réservation', 'Date début', 'Date fin', 'Véhicule', 'Client/Agence', 'Source', 'Montant TTC'],
+      ['N° Réservation', 'Date début', 'Date fin', 'Véhicule', 'Client/Agence', 'Montant TTC'],
       ...includedRows.map(r => [
         r.reservation_number,
         formatDate(r.start_datetime),
         formatDate(r.end_datetime),
         `${r.vehicle_brand} ${r.vehicle_model} (${r.vehicle_plate})`,
         r.client_name,
-        r.source === 'propre' ? 'Véhicule propre' : 'Inter-agence',
         r.total_price.toFixed(2) + ' €',
       ]),
       [],
-      ['', '', '', '', '', 'TOTAL', totalCA.toFixed(2) + ' €'],
+      ['', '', '', '', 'TOTAL', totalCA.toFixed(2) + ' €'],
     ]
     const csv = lines.map(l => l.join(';')).join('\n')
     const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
@@ -198,6 +213,20 @@ export default function AccountingReportPage() {
           </button>
         ))}
       </div>
+
+      {isCustom && (
+        <div className="flex items-center gap-2 bg-white rounded-xl border border-gray-100 shadow-sm p-3">
+          <input
+            type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)}
+            className="flex-1 text-sm border border-gray-200 rounded-lg px-2 py-1.5 text-gray-900"
+          />
+          <span className="text-gray-400 text-xs">→</span>
+          <input
+            type="date" value={customTo} onChange={e => setCustomTo(e.target.value)}
+            className="flex-1 text-sm border border-gray-200 rounded-lg px-2 py-1.5 text-gray-900"
+          />
+        </div>
+      )}
 
       {/* Totaux */}
       <div className="grid grid-cols-3 gap-3">

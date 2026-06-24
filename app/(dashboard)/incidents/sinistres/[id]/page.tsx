@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
+import BackButton from '@/components/ui/BackButton'
 import { formatPrice, formatDate } from '@/lib/utils'
 import { SINISTRE_STATUS } from '@/lib/incidents'
 import SinistreActions from './SinistreActions'
@@ -44,14 +45,17 @@ export default async function SinistreDetailPage({
 
   return (
     <div className="space-y-4">
-      <Link href="/incidents/sinistres" className="inline-flex items-center gap-1.5 text-sm text-gray-400 font-medium hover:text-gray-700 transition-colors">
+      <BackButton fallbackHref="/incidents/sinistres" className="inline-flex items-center gap-1.5 text-sm text-gray-400 font-medium hover:text-gray-700 transition-colors">
         <ArrowLeft className="w-4 h-4" /> Sinistres
-      </Link>
+      </BackButton>
 
       {/* Hero */}
       <div className="bg-[#111111] rounded-2xl p-5">
         <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${st.bg} ${st.text}`}>{st.label}</span>
-        <h1 className="text-white text-lg font-extrabold mt-2">{v?.plate} · {v?.brand} {v?.model}</h1>
+        <h1 className="text-white text-lg font-extrabold mt-2">
+          {v?.brand} {v?.model}
+          <span className="text-white/40 text-xs font-mono font-normal ml-2">{v?.plate}</span>
+        </h1>
         <p className="text-white/60 text-sm mt-1 leading-relaxed">{acc.description}</p>
         <div className="grid grid-cols-3 gap-3 mt-4">
           <div className="bg-white/10 rounded-xl p-3 text-center">

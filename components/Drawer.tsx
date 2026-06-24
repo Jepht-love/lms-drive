@@ -26,7 +26,7 @@ export default function Drawer({ open, onClose, children, title }: DrawerProps) 
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl z-50 max-h-[65vh] overflow-y-auto"
+            className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl z-50 max-h-[28vh] overflow-y-auto"
           >
             <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mt-3 mb-1" />
             {title && (

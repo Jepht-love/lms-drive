@@ -21,7 +21,7 @@ export const DAMAGE_RATES: DamageRate[] = [
   { zone: 'Phare / feu cassé',                         rate: 300 },
   { zone: 'Intérieur taché (nettoyage)',               rate: 120 },
   { zone: 'Intérieur très sale / odeur de tabac',      rate: 250 },
-  { zone: 'Clé perdue',                                rate: 350 },
+  { zone: 'Perte clé véhicule',                        rate: 350 },
   { zone: 'Carburant incorrect (réservoir)',           rate: 400 },
 ]
 
