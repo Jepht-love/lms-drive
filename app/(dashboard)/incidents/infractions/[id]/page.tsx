@@ -79,11 +79,16 @@ export default async function InfractionDetailPage({
         </Row>
         {c?.email && <Row label="Email client">{c.email}</Row>}
         {c?.phone && <Row label="Téléphone">{c.phone}</Row>}
+        {inf.reference && <Row label="Référence">{inf.reference}</Row>}
         <Row label="Montant amende">{formatPrice(inf.amount)}</Row>
         {inf.points_lost > 0 && <Row label="Points retirés">{inf.points_lost}</Row>}
         {inf.reception_date && <Row label="Réception avis">{formatDate(inf.reception_date)}</Row>}
         {inf.transmission_date && <Row label="Transmis le">{formatDate(inf.transmission_date)}</Row>}
-        {inf.payment_date && <Row label="Réglé le">{formatDate(inf.payment_date)}</Row>}
+        {inf.payment_date && (
+          <Row label="Réglé le">
+            {formatDate(inf.payment_date)}{inf.paid_by ? ` · ${inf.paid_by === 'agence' ? 'par l\'agence' : 'par le client'}` : ''}
+          </Row>
+        )}
       </div>
 
       {inf.notes && (

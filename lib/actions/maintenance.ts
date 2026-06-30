@@ -101,6 +101,34 @@ export async function createMaintenanceRecord(formData: FormData) {
     }
   }
 
+  // Justificatif optionnel (facture garage, devis…) → rangé automatiquement dans
+  // Documents › Véhicule. Choix gérant : le document n'apparaît QUE si un fichier
+  // est réellement joint (la dépense, elle, va en compta au règlement).
+  const justificatif = formData.get('justificatif') as File | null
+  if (justificatif && justificatif.size > 0) {
+    const ext = justificatif.name.split('.').pop() || 'pdf'
+    const path = `vehicule/facture_entretien/${Date.now()}-${vehicleId}.${ext}`
+    const ab = await justificatif.arrayBuffer()
+    const { error: upErr } = await supabase.storage.from('documents').upload(path, ab, { contentType: justificatif.type })
+    if (!upErr) {
+      const { data: { publicUrl } } = supabase.storage.from('documents').getPublicUrl(path)
+      const { data: veh } = await supabase.from('vehicles').select('brand, model, plate').eq('id', vehicleId).single()
+      const vehLabel = veh ? `${veh.brand} ${veh.model}${veh.plate ? ` (${veh.plate})` : ''}` : ''
+      await supabase.from('documents').insert({
+        category: 'vehicule',
+        subcategory: 'facture_entretien',
+        name: `${maintenanceType(payload.type).label} — ${vehLabel} — ${payload.date}`,
+        file_url: publicUrl,
+        file_type: justificatif.type,
+        file_size: justificatif.size,
+        entity_id: vehicleId,
+        entity_type: 'vehicle',
+        is_auto_generated: false,
+        created_by: user.id,
+      })
+    }
+  }
+
   await supabase.from('audit_logs').insert({
     user_id: user.id,
     action: 'maintenance_created',
@@ -114,5 +142,74 @@ export async function createMaintenanceRecord(formData: FormData) {
   revalidatePath('/')
   revalidatePath('/calendrier')
   revalidatePath('/vehicles')
+  return { success: true }
+}
+
+// Catégorie comptable selon le type d'intervention (réparation vs entretien courant).
+function expenseCategoryFor(type: string): string {
+  if (['reparation', 'carrosserie', 'freins'].includes(type)) return 'reparations'
+  if (['revision', 'vidange', 'pneus', 'controle_technique'].includes(type)) return 'entretien'
+  if (type === 'lavage') return 'lavage'
+  if (type === 'carburant') return 'carburant'
+  return 'autres_depenses'
+}
+
+/**
+ * Marque une intervention comme payée et l'enregistre en comptabilité (choix
+ * gérant : la dépense n'est bookée qu'au règlement, pas à la saisie). Anti-doublon
+ * via `reference = maintenance:<id>` : un 2ᵉ clic ne recrée pas la transaction.
+ * Couvre aussi les réparations de sinistre, qui passent par `maintenance_records`.
+ */
+export async function markMaintenancePaid(recordId: string, method: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié' }
+
+  const { data: rec } = await supabase
+    .from('maintenance_records')
+    .select('id, vehicle_id, type, description, amount, date, paid_at')
+    .eq('id', recordId)
+    .single()
+  if (!rec) return { error: 'Intervention introuvable' }
+
+  const today = new Date().toISOString().slice(0, 10)
+  const { error } = await supabase
+    .from('maintenance_records')
+    .update({ paid_at: today, paid_method: method })
+    .eq('id', recordId)
+  if (error) return { error: error.message }
+
+  const amount = rec.amount ?? 0
+  const reference = `maintenance:${rec.id}`
+  if (amount > 0) {
+    const { data: dup } = await supabase
+      .from('financial_transactions').select('id').eq('reference', reference).maybeSingle()
+    if (!dup) {
+      const { label } = maintenanceType(rec.type)
+      await supabase.from('financial_transactions').insert({
+        date: today,
+        type: 'depense',
+        category: expenseCategoryFor(rec.type),
+        amount,
+        vehicle_id: rec.vehicle_id,
+        payment_method: method,
+        notes: `${label}${rec.description ? ` — ${rec.description}` : ''} (${rec.date})`,
+        reference,
+        created_by: user.id,
+      })
+    }
+  }
+
+  await supabase.from('audit_logs').insert({
+    user_id: user.id,
+    action: 'maintenance_paid',
+    entity_type: 'maintenance_records',
+    entity_id: rec.id,
+    metadata: { amount, method },
+  })
+
+  revalidatePath(`/maintenance/${rec.vehicle_id}`)
+  revalidatePath('/maintenance')
+  revalidatePath('/accounting')
   return { success: true }
 }

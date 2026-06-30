@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import BackButton from '@/components/ui/BackButton'
 import { createClient } from '@/lib/supabase/client'
-import { EXPENSE_CATEGORIES, REVENUE_CATEGORIES, PAYMENT_METHODS } from '@/lib/accounting/categories'
+import { REVENUE_CATEGORIES, PAYMENT_METHODS, expenseCategoriesByFamily } from '@/lib/accounting/categories'
 import { createTransaction } from '@/lib/actions/accounting'
 
 interface Vehicle { id: string; plate: string; brand: string; model: string }
@@ -25,7 +25,7 @@ export default function NewTransactionPage() {
       .then(({ data }) => setVehicles((data as Vehicle[]) ?? []))
   }, [])
 
-  const categories = type === 'recette' ? REVENUE_CATEGORIES : EXPENSE_CATEGORIES
+  const expenseGroups = expenseCategoriesByFamily()
   const today = new Date().toISOString().slice(0, 10)
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -67,8 +67,15 @@ export default function NewTransactionPage() {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className={label} htmlFor="category">Catégorie</label>
-              <select id="category" name="category" required className={input}>
-                {categories.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+              <select id="category" name="category" required className={input} defaultValue="">
+                <option value="" disabled>Choisir…</option>
+                {type === 'recette'
+                  ? REVENUE_CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)
+                  : expenseGroups.map(g => (
+                      <optgroup key={g.family.id} label={`${g.family.nature === 'fixe' ? '[Fixe] ' : '[Var.] '}${g.family.label}`}>
+                        {g.categories.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+                      </optgroup>
+                    ))}
               </select>
             </div>
             <div>

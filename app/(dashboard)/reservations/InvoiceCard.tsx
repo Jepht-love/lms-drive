@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Receipt, Plus, Trash2, Mail, Check, Loader2, AlertTriangle } from 'lucide-react'
+import { Receipt, Plus, Trash2, Mail, Check, Loader2, AlertTriangle, Eye } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 import { updateInvoiceLines, sendInvoice } from '@/lib/actions/invoices'
 import type { InvoiceLineItem } from '@/lib/pdf/invoice-template'
@@ -13,11 +13,14 @@ interface Invoice {
   line_items: InvoiceLineItem[]
   total_amount: number
   sent_at: string | null
+  payment_term_days?: number
+  due_date?: string | null
 }
 
 export default function InvoiceCard({ invoice }: { invoice: Invoice }) {
   const router = useRouter()
   const [lines, setLines] = useState<InvoiceLineItem[]>(invoice.line_items)
+  const [termDays, setTermDays] = useState(invoice.payment_term_days ?? 30)
   const [saving, startSaving] = useTransition()
   const [sending, startSending] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -49,7 +52,7 @@ export default function InvoiceCard({ invoice }: { invoice: Invoice }) {
   function onSave() {
     setError(null)
     startSaving(async () => {
-      const res = await updateInvoiceLines(invoice.id, lines)
+      const res = await updateInvoiceLines(invoice.id, lines, termDays)
       if (res?.error) setError(res.error)
       else { setDirty(false); router.refresh() }
     })
@@ -78,6 +81,7 @@ export default function InvoiceCard({ invoice }: { invoice: Invoice }) {
           <Check className="w-4 h-4 flex-shrink-0" />
           <p className="text-sm font-medium">
             {invoice.invoice_number} envoyée le {new Date(invoice.sent_at).toLocaleDateString('fr-FR')} — {formatPrice(invoice.total_amount)}
+            {invoice.due_date && <> · échéance {new Date(invoice.due_date).toLocaleDateString('fr-FR')}</>}
           </p>
         </div>
       </div>
@@ -128,6 +132,18 @@ export default function InvoiceCard({ invoice }: { invoice: Invoice }) {
         <Plus className="w-3.5 h-3.5" /> Ajouter une ligne (fourrière, lavage, carburant...)
       </button>
 
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-gray-500">Délai de règlement accordé au client</span>
+        <div className="flex items-center gap-1.5">
+          <input
+            type="number" min="1" step="1" value={termDays}
+            onChange={e => { setTermDays(Number(e.target.value)); setDirty(true) }}
+            className={`${input} w-16 text-center`}
+          />
+          <span className="text-xs text-gray-400">jours</span>
+        </div>
+      </div>
+
       <div className="flex items-center justify-between pt-2 border-t border-gray-100">
         <span className="text-sm font-bold text-gray-500">Total</span>
         <span className="text-lg font-extrabold text-gray-900">{formatPrice(total)}</span>
@@ -142,6 +158,15 @@ export default function InvoiceCard({ invoice }: { invoice: Invoice }) {
       {error && <p className="text-xs text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
 
       <div className="flex gap-2">
+        <a
+          href={`/api/invoices/${invoice.id}/preview`}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={e => { if (dirty) { e.preventDefault(); setError('Enregistre tes modifications avant de prévisualiser le PDF.') } }}
+          className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold border border-gray-200 ${dirty ? 'text-gray-300 cursor-not-allowed' : 'text-gray-700 hover:bg-gray-50'}`}
+        >
+          <Eye className="w-3.5 h-3.5" /> Prévisualiser
+        </a>
         {dirty && (
           <button onClick={onSave} disabled={saving}
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-50">

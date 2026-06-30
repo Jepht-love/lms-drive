@@ -23,6 +23,8 @@ type ReservationRow = {
 }
 
 const PERIODS = [
+  { id: 'day', label: 'Jour' },
+  { id: 'week', label: 'Semaine' },
   { id: 'month', label: 'Ce mois' },
   { id: 'quarter', label: 'Trimestre' },
   { id: 'year', label: 'Année' },
@@ -33,12 +35,22 @@ function periodRange(period: string): { from: string; to: string } {
   const now = new Date()
   const y = now.getFullYear()
   const m = now.getMonth()
+  const iso = (d: Date) => d.toISOString().slice(0, 10)
+  if (period === 'day') {
+    return { from: iso(now), to: iso(now) }
+  }
+  if (period === 'week') {
+    const day = (now.getDay() + 6) % 7 // lundi = 0
+    const monday = new Date(y, m, now.getDate() - day)
+    const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6)
+    return { from: iso(monday), to: iso(sunday) }
+  }
   if (period === 'month') {
-    return { from: new Date(y, m, 1).toISOString().slice(0, 10), to: new Date(y, m + 1, 0).toISOString().slice(0, 10) }
+    return { from: iso(new Date(y, m, 1)), to: iso(new Date(y, m + 1, 0)) }
   }
   if (period === 'quarter') {
     const q = Math.floor(m / 3)
-    return { from: new Date(y, q * 3, 1).toISOString().slice(0, 10), to: new Date(y, q * 3 + 3, 0).toISOString().slice(0, 10) }
+    return { from: iso(new Date(y, q * 3, 1)), to: iso(new Date(y, q * 3 + 3, 0)) }
   }
   return { from: `${y}-01-01`, to: `${y}-12-31` }
 }
@@ -56,6 +68,8 @@ export default function AccountingReportPage() {
 
   const isCustom = period === 'custom'
   const customReady = isCustom && !!customFrom && !!customTo
+  const range = isCustom ? { from: customFrom, to: customTo } : periodRange(period)
+  const exportReady = !isCustom || customReady
 
   useEffect(() => {
     if (isCustom && !customReady) {
@@ -190,13 +204,28 @@ export default function AccountingReportPage() {
           <h1 className="text-xl font-black text-gray-900">Rapport CA</h1>
           <p className="text-sm text-gray-400 mt-0.5">Sélectionnez les réservations à inclure</p>
         </div>
-        <button
-          onClick={handleExport}
-          disabled={includedRows.length === 0}
-          className="flex items-center gap-2 px-4 py-2.5 bg-[#111111] text-white rounded-xl font-semibold text-sm hover:bg-gray-800 transition-colors disabled:opacity-40 min-h-[auto] active:scale-[.97]"
-        >
-          <FileDown className="w-4 h-4" /> Exporter CSV
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleExport}
+            disabled={includedRows.length === 0}
+            className="flex items-center gap-1.5 px-3 py-2.5 bg-[#111111] text-white rounded-xl font-semibold text-xs hover:bg-gray-800 transition-colors disabled:opacity-40 min-h-[auto] active:scale-[.97]"
+          >
+            <FileDown className="w-4 h-4" /> CA (CSV)
+          </button>
+          {/* Bilan complet (écritures + recettes + dépenses + bénéfices) sur la période */}
+          {exportReady && (
+            <>
+              <a href={`/accounting/export/pdf?from=${range.from}&to=${range.to}`}
+                className="flex items-center gap-1.5 px-3 py-2.5 bg-white border border-gray-200 rounded-xl font-semibold text-xs text-gray-700 hover:bg-gray-50 min-h-[auto]">
+                📄 Bilan PDF
+              </a>
+              <a href={`/accounting/export/excel?from=${range.from}&to=${range.to}`}
+                className="flex items-center gap-1.5 px-3 py-2.5 bg-white border border-gray-200 rounded-xl font-semibold text-xs text-gray-700 hover:bg-gray-50 min-h-[auto]">
+                📊 Bilan Excel
+              </a>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Période */}

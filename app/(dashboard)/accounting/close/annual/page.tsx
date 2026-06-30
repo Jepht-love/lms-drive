@@ -5,6 +5,7 @@ import { ArrowLeft, CheckCircle2, AlertTriangle } from 'lucide-react'
 import BackButton from '@/components/ui/BackButton'
 import { formatPrice } from '@/lib/utils'
 import CloseButton from '../CloseButton'
+import ReopenClosingButton from '../ReopenClosingButton'
 import AccountingTransactions from '../../AccountingTransactions'
 
 const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre']
@@ -132,6 +133,8 @@ export default async function AnnualClosingPage({
           <CloseButton mode="annual" year={year} />
         )
       )}
+
+      {isClosed && <ReopenClosingButton mode="annual" year={year} />}
 
       {/* Mouvements — marquer une ligne transparente la déduit du bilan et des exports ci-dessus */}
       {!isClosed && all.length > 0 && (

@@ -180,8 +180,8 @@ export default function InternalTripsClient({ vehicles, trips, isManager, curren
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Niveau carburant (%)</label>
-            <input type="number" name="fuel_start" min="0" max="100" className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm" />
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">Autonomie carburant (km)</label>
+            <input type="number" name="fuel_start" min="0" placeholder="Autonomie en km" inputMode="numeric" className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm" />
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1.5">Notes</label>
@@ -204,8 +204,8 @@ export default function InternalTripsClient({ vehicles, trips, isManager, curren
             <input type="number" name="km_end" required min={endingTrip?.km_start} defaultValue={endingTrip?.km_start} className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm font-bold" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Niveau carburant (%)</label>
-            <input type="number" name="fuel_end" min="0" max="100" className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm" />
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">Autonomie carburant (km)</label>
+            <input type="number" name="fuel_end" min="0" placeholder="Autonomie en km" inputMode="numeric" className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>

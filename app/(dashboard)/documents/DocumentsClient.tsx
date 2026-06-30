@@ -6,6 +6,7 @@ import {
   EyeIcon,
   ArrowDownTrayIcon,
   EnvelopeIcon,
+  PrinterIcon,
   PlusIcon,
   PaperClipIcon,
   XMarkIcon,
@@ -43,6 +44,21 @@ type Vehicle  = { id: string; plate: string; brand: string; model: string }
 type Client   = { id: string; first_name: string; last_name: string }
 type Partner  = { id: string; name: string }
 
+export type ReservationDoc = {
+  id: string
+  reservation_number: string
+  status: string
+  start_datetime: string
+  end_datetime: string
+  client_name: string
+  vehicle_label: string
+  contract_number: string | null
+  contract_pdf_url: string | null
+  contract_status: string | null
+  invoice_number: string | null
+  invoice_pdf_url: string | null
+}
+
 interface Props {
   documents: Document[]
   vehicles:  Vehicle[]
@@ -50,7 +66,29 @@ interface Props {
   partners:  Partner[]
   userRole:  string
   visibleCategories?: string[]
+  reservationDocs: ReservationDoc[]
+  docSignedUrls: Record<string, string>
 }
+
+const RESA_STATUS_LABEL: Record<string, string> = {
+  option:    'Option',
+  confirmee: 'Confirmée',
+  en_cours:  'En cours',
+  terminee:  'Terminée',
+  annulee:   'Annulée',
+  en_retard: 'En retard',
+}
+
+const RESA_STATUS_COLOR: Record<string, string> = {
+  option:    'bg-gray-100 text-gray-500',
+  confirmee: 'bg-blue-100 text-blue-700',
+  en_cours:  'bg-amber-100 text-amber-700',
+  terminee:  'bg-green-100 text-green-700',
+  annulee:   'bg-red-100 text-red-500',
+  en_retard: 'bg-orange-100 text-orange-600',
+}
+
+type ActiveTab = 'all' | DocumentCategory | 'reservations'
 
 function fileExt(doc: Document) {
   return doc.file_type?.split('/')[1]?.substring(0, 3).toUpperCase() ?? 'DOC'
@@ -67,26 +105,27 @@ function ExpiryBadge({ date }: { date: string }) {
   )
 }
 
-export default function DocumentsClient({ documents, vehicles, clients, partners, userRole, visibleCategories }: Props) {
+function fmtDate(s: string) {
+  return new Date(s).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' })
+}
+
+export default function DocumentsClient({ documents, vehicles, clients, partners, userRole, visibleCategories, reservationDocs, docSignedUrls }: Props) {
   const allCatIds = ['entreprise', 'vehicule', 'client', 'partenaire']
   const visibleCats = visibleCategories ?? allCatIds
-  const categoryTabs = ['all', ...visibleCats] as ('all' | DocumentCategory)[]
-  const [category,    setCategory]    = useState<'all' | DocumentCategory>('all')
+  const [category,    setCategory]    = useState<ActiveTab>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [showUpload,  setShowUpload]  = useState(false)
   const [emailDoc,    setEmailDoc]    = useState<Document | null>(null)
   const [isPending,   startTransition] = useTransition()
 
-  // Upload form state
-  const [uploadCat,    setUploadCat]    = useState<DocumentCategory | ''>('')
-  const [uploadSub,    setUploadSub]    = useState('')
-  const [entityId,     setEntityId]     = useState('')
-  const [docName,      setDocName]      = useState('')
-  const [expiryDate,   setExpiryDate]   = useState('')
-  const [file,         setFile]         = useState<File | null>(null)
-  const [uploadError,  setUploadError]  = useState('')
+  const [uploadCat,   setUploadCat]   = useState<DocumentCategory | ''>('')
+  const [uploadSub,   setUploadSub]   = useState('')
+  const [entityId,    setEntityId]    = useState('')
+  const [docName,     setDocName]     = useState('')
+  const [expiryDate,  setExpiryDate]  = useState('')
+  const [file,        setFile]        = useState<File | null>(null)
+  const [uploadError, setUploadError] = useState('')
 
-  // Email form state
   const [recipientEmail, setRecipientEmail] = useState('')
   const [emailMessage,   setEmailMessage]   = useState('')
   const [emailError,     setEmailError]     = useState('')
@@ -98,7 +137,7 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
     const q = searchQuery.toLowerCase()
     return documents.filter(doc => {
       if (!canSeeSensitive && SENSITIVE_SUBCATEGORIES.includes(doc.subcategory)) return false
-      if (category !== 'all' && doc.category !== category) return false
+      if (category !== 'all' && category !== 'reservations' && doc.category !== category) return false
       if (!q) return true
       return (
         doc.name.toLowerCase().includes(q) ||
@@ -108,19 +147,28 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
     })
   }, [documents, category, searchQuery, canSeeSensitive])
 
-  // Group by subcategory
   const grouped = useMemo(() => {
     const map = new Map<string, Document[]>()
     for (const doc of filtered) {
-      const key = doc.subcategory
-      if (!map.has(key)) map.set(key, [])
-      map.get(key)!.push(doc)
+      if (!map.has(doc.subcategory)) map.set(doc.subcategory, [])
+      map.get(doc.subcategory)!.push(doc)
     }
     return map
   }, [filtered])
 
+  const filteredReservations = useMemo(() => {
+    if (!searchQuery) return reservationDocs
+    const q = searchQuery.toLowerCase()
+    return reservationDocs.filter(r =>
+      r.reservation_number.toLowerCase().includes(q) ||
+      r.client_name.toLowerCase().includes(q) ||
+      r.vehicle_label.toLowerCase().includes(q)
+    )
+  }, [reservationDocs, searchQuery])
+
   function getCategoryLabel(cat: string) {
     if (cat === 'all') return `Tous (${documents.filter(d => canSeeSensitive || !SENSITIVE_SUBCATEGORIES.includes(d.subcategory)).length})`
+    if (cat === 'reservations') return `Réservations (${reservationDocs.length})`
     const found = DOCUMENT_CATEGORIES.find(c => c.id === cat)
     if (!found) return cat
     const count = documents.filter(d => d.category === cat && (canSeeSensitive || !SENSITIVE_SUBCATEGORIES.includes(d.subcategory))).length
@@ -187,6 +235,9 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
     })
   }
 
+  const categoryTabs: ActiveTab[] = ['all', ...(visibleCats as ActiveTab[])]
+  if (canSeeSensitive) categoryTabs.push('reservations')
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -199,7 +250,7 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
         </button>
       </div>
 
-      {/* Tabs catégorie */}
+      {/* Onglets */}
       <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
         {categoryTabs.map(cat => (
           <button
@@ -221,212 +272,277 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
         <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
         <input
           type="search"
-          placeholder="Rechercher un document, un véhicule, un client..."
+          placeholder="Rechercher un document, une réservation, un client..."
           className="w-full pl-9 pr-4 py-3 bg-white rounded-2xl border border-gray-200 text-[13px] text-gray-700 placeholder-gray-400"
           value={searchQuery}
           onChange={e => setSearchQuery(e.target.value)}
         />
       </div>
 
-      {/* Liste groupée */}
-      {grouped.size === 0 ? (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
-            <span className="text-2xl">📁</span>
+      {/* ── Onglet Réservations ─────────────────────────────── */}
+      {category === 'reservations' ? (
+        filteredReservations.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 text-center">
+            <p className="text-[14px] font-medium text-gray-500">Aucune réservation</p>
           </div>
-          <p className="text-[14px] font-medium text-gray-500 mb-1">Aucun document</p>
-          <p className="text-[12px] text-gray-400">Ajoutez votre premier document via le bouton ci-dessus.</p>
-        </div>
-      ) : (
-        <AnimatedList className="space-y-3">
-        {Array.from(grouped.entries()).map(([sub, docs]) => (
-          <AnimatedListItem key={sub}>
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-            <div className="px-4 py-3 border-b border-gray-50">
-              <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400">{getSubLabel(sub)}</p>
-            </div>
-            <div className="divide-y divide-gray-50">
-              {docs.map(doc => (
-                <div key={doc.id} className="flex items-center gap-3 px-4 py-3">
-                  <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0">
-                    <span className="text-[10px] font-bold text-gray-500">{fileExt(doc)}</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-medium text-[#111111] truncate">{doc.name}</p>
-                    <p className="text-[11px] text-gray-400 flex flex-wrap items-center">
-                      {formatDate(doc.created_at)}
-                      {doc.expiry_date && <ExpiryBadge date={doc.expiry_date} />}
-                      {doc.is_auto_generated && (
-                        <span className="ml-2 text-blue-400">· Auto-généré</span>
-                      )}
+        ) : (
+          <div className="space-y-2">
+            {filteredReservations.map(r => (
+              <div key={r.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[13px] font-bold text-[#111111]">{r.reservation_number}</p>
+                    <p className="text-[11px] text-gray-500 truncate">{r.client_name}</p>
+                    <p className="text-[11px] text-gray-400 truncate">{r.vehicle_label}</p>
+                    <p className="text-[11px] text-gray-400">
+                      {fmtDate(r.start_datetime)} → {fmtDate(r.end_datetime)}
                     </p>
                   </div>
-                  <div className="flex items-center gap-1 flex-shrink-0">
+                  <span className={`flex-shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full ${RESA_STATUS_COLOR[r.status] ?? 'bg-gray-100 text-gray-500'}`}>
+                    {RESA_STATUS_LABEL[r.status] ?? r.status}
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {r.contract_pdf_url ? (
                     <a
-                      href={doc.file_url}
+                      href={r.contract_pdf_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100"
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-xl text-[11px] font-semibold text-gray-700 transition-colors"
                     >
-                      <EyeIcon className="w-4 h-4 text-gray-400" />
+                      <ArrowDownTrayIcon className="w-3.5 h-3.5" />
+                      Contrat {r.contract_number}
                     </a>
+                  ) : (
+                    <span className="text-[11px] text-gray-300 italic">
+                      {r.contract_number ? `${r.contract_number} — PDF non généré` : 'Aucun contrat'}
+                    </span>
+                  )}
+                  {r.invoice_pdf_url && (
                     <a
-                      href={doc.file_url}
-                      download
-                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100"
+                      href={r.invoice_pdf_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 rounded-xl text-[11px] font-semibold text-blue-700 transition-colors"
                     >
-                      <ArrowDownTrayIcon className="w-4 h-4 text-gray-400" />
+                      <ArrowDownTrayIcon className="w-3.5 h-3.5" />
+                      Facture {r.invoice_number}
                     </a>
-                    <button
-                      onClick={() => { setEmailDoc(doc); setEmailSent(false) }}
-                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100"
-                    >
-                      <EnvelopeIcon className="w-4 h-4 text-gray-400" />
-                    </button>
-                    {!doc.is_auto_generated && (
-                      <button
-                        onClick={() => handleDelete(doc)}
-                        disabled={isPending}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 disabled:opacity-40"
-                      >
-                        <TrashIcon className="w-4 h-4 text-red-400" />
-                      </button>
-                    )}
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )
+      ) : (
+        /* ── Onglets Documents ─────────────────────────────── */
+        grouped.size === 0 ? (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
+              <span className="text-2xl">📁</span>
+            </div>
+            <p className="text-[14px] font-medium text-gray-500 mb-1">Aucun document</p>
+            <p className="text-[12px] text-gray-400">Ajoutez votre premier document via le bouton ci-dessus.</p>
+          </div>
+        ) : (
+          <AnimatedList className="space-y-3">
+            {Array.from(grouped.entries()).map(([sub, docs]) => (
+              <AnimatedListItem key={sub}>
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                  <div className="px-4 py-3 border-b border-gray-50">
+                    <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400">{getSubLabel(sub)}</p>
+                  </div>
+                  <div className="divide-y divide-gray-50">
+                    {docs.map(doc => (
+                      <div key={doc.id} className="flex items-center gap-3 px-4 py-3">
+                        <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0">
+                          <span className="text-[10px] font-bold text-gray-500">{fileExt(doc)}</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[13px] font-medium text-[#111111] truncate">{doc.name}</p>
+                          <p className="text-[11px] text-gray-400 flex flex-wrap items-center">
+                            {formatDate(doc.created_at)}
+                            {doc.expiry_date && <ExpiryBadge date={doc.expiry_date} />}
+                            {doc.is_auto_generated && (
+                              <span className="ml-2 text-blue-400">· Auto-généré</span>
+                            )}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <a
+                            href={doc.file_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100"
+                          >
+                            <EyeIcon className="w-4 h-4 text-gray-400" />
+                          </a>
+                          <a
+                            href={doc.file_url}
+                            download
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100"
+                          >
+                            <ArrowDownTrayIcon className="w-4 h-4 text-gray-400" />
+                          </a>
+                          <button
+                            onClick={() => { setEmailDoc(doc); setEmailSent(false) }}
+                            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100"
+                          >
+                            <EnvelopeIcon className="w-4 h-4 text-gray-400" />
+                          </button>
+                          <button
+                            onClick={() => { const w = window.open(doc.file_url, '_blank'); w?.print() }}
+                            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100"
+                            title="Imprimer"
+                          >
+                            <PrinterIcon className="w-4 h-4 text-gray-400" />
+                          </button>
+                          {!doc.is_auto_generated && (
+                            <button
+                              onClick={() => handleDelete(doc)}
+                              disabled={isPending}
+                              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 disabled:opacity-40"
+                            >
+                              <TrashIcon className="w-4 h-4 text-red-400" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
-          </AnimatedListItem>
-        ))}
-        </AnimatedList>
+              </AnimatedListItem>
+            ))}
+          </AnimatedList>
+        )
       )}
 
       {/* ── Drawer Upload ─────────────────────────────────────── */}
       <Drawer open={showUpload} onClose={resetUpload} title="Ajouter un document">
         <div>
+          <select
+            value={uploadCat}
+            onChange={e => { setUploadCat(e.target.value as DocumentCategory | ''); setUploadSub(''); setEntityId('') }}
+            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px] mb-3"
+          >
+            <option value="">Catégorie...</option>
+            {DOCUMENT_CATEGORIES.filter(c => visibleCats.includes(c.id)).map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+          </select>
 
+          {uploadCat && (
             <select
-              value={uploadCat}
-              onChange={e => { setUploadCat(e.target.value as DocumentCategory | ''); setUploadSub(''); setEntityId('') }}
+              value={uploadSub}
+              onChange={e => setUploadSub(e.target.value)}
               className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px] mb-3"
             >
-              <option value="">Catégorie...</option>
-              {DOCUMENT_CATEGORIES.filter(c => visibleCats.includes(c.id)).map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+              <option value="">Sous-catégorie...</option>
+              {DOCUMENT_SUBCATEGORIES[uploadCat].map(s => (
+                <option key={s.id} value={s.id}>{s.label}</option>
+              ))}
             </select>
+          )}
 
-            {uploadCat && (
-              <select
-                value={uploadSub}
-                onChange={e => setUploadSub(e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px] mb-3"
-              >
-                <option value="">Sous-catégorie...</option>
-                {DOCUMENT_SUBCATEGORIES[uploadCat].map(s => (
-                  <option key={s.id} value={s.id}>{s.label}</option>
-                ))}
-              </select>
-            )}
+          {uploadCat === 'vehicule' && (
+            <select value={entityId} onChange={e => setEntityId(e.target.value)} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px] mb-3">
+              <option value="">Véhicule concerné (optionnel)...</option>
+              {vehicles.map(v => <option key={v.id} value={v.id}>{v.brand} {v.model} · {v.plate}</option>)}
+            </select>
+          )}
+          {uploadCat === 'client' && (
+            <select value={entityId} onChange={e => setEntityId(e.target.value)} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px] mb-3">
+              <option value="">Client concerné (optionnel)...</option>
+              {clients.map(c => <option key={c.id} value={c.id}>{c.first_name} {c.last_name}</option>)}
+            </select>
+          )}
+          {uploadCat === 'partenaire' && (
+            <select value={entityId} onChange={e => setEntityId(e.target.value)} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px] mb-3">
+              <option value="">Agence partenaire (optionnel)...</option>
+              {partners.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          )}
 
-            {uploadCat === 'vehicule' && (
-              <select value={entityId} onChange={e => setEntityId(e.target.value)} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px] mb-3">
-                <option value="">Véhicule concerné (optionnel)...</option>
-                {vehicles.map(v => <option key={v.id} value={v.id}>{v.brand} {v.model} · {v.plate}</option>)}
-              </select>
-            )}
-            {uploadCat === 'client' && (
-              <select value={entityId} onChange={e => setEntityId(e.target.value)} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px] mb-3">
-                <option value="">Client concerné (optionnel)...</option>
-                {clients.map(c => <option key={c.id} value={c.id}>{c.first_name} {c.last_name}</option>)}
-              </select>
-            )}
-            {uploadCat === 'partenaire' && (
-              <select value={entityId} onChange={e => setEntityId(e.target.value)} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px] mb-3">
-                <option value="">Agence partenaire (optionnel)...</option>
-                {partners.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
-            )}
+          <input
+            type="text"
+            placeholder="Nom du document..."
+            value={docName}
+            onChange={e => setDocName(e.target.value)}
+            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px] mb-3"
+          />
 
+          <div className="mb-3">
+            <label className="block text-[11px] font-medium text-gray-400 uppercase tracking-wide mb-1">Date d'expiration (optionnel)</label>
             <input
-              type="text"
-              placeholder="Nom du document..."
-              value={docName}
-              onChange={e => setDocName(e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px] mb-3"
+              type="date"
+              value={expiryDate}
+              onChange={e => setExpiryDate(e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px]"
             />
+          </div>
 
-            <div className="mb-3">
-              <label className="block text-[11px] font-medium text-gray-400 uppercase tracking-wide mb-1">Date d'expiration (optionnel)</label>
-              <input
-                type="date"
-                value={expiryDate}
-                onChange={e => setExpiryDate(e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px]"
-              />
-            </div>
+          <label className="flex items-center gap-3 border-2 border-dashed border-gray-300 rounded-xl px-4 py-4 cursor-pointer mb-4 hover:border-gray-400">
+            <PaperClipIcon className="w-5 h-5 text-gray-400 flex-shrink-0" />
+            <span className="text-[13px] text-gray-500 truncate">
+              {file ? file.name : 'Sélectionner un fichier (PDF, image...)'}
+            </span>
+            <input
+              type="file"
+              accept=".pdf,image/*,.doc,.docx"
+              className="hidden"
+              onChange={e => setFile(e.target.files?.[0] ?? null)}
+            />
+          </label>
 
-            <label className="flex items-center gap-3 border-2 border-dashed border-gray-300 rounded-xl px-4 py-4 cursor-pointer mb-4 hover:border-gray-400">
-              <PaperClipIcon className="w-5 h-5 text-gray-400 flex-shrink-0" />
-              <span className="text-[13px] text-gray-500 truncate">
-                {file ? file.name : 'Sélectionner un fichier (PDF, image...)'}
-              </span>
-              <input
-                type="file"
-                accept=".pdf,image/*,.doc,.docx"
-                className="hidden"
-                onChange={e => setFile(e.target.files?.[0] ?? null)}
-              />
-            </label>
+          {uploadError && <p className="text-[12px] text-red-500 mb-3">{uploadError}</p>}
 
-            {uploadError && <p className="text-[12px] text-red-500 mb-3">{uploadError}</p>}
-
-            <button
-              onClick={handleUpload}
-              disabled={!file || !docName || !uploadCat || !uploadSub || isPending}
-              className="w-full py-4 rounded-2xl bg-[#111111] text-white text-[14px] font-medium disabled:opacity-40 active:scale-[.97]"
-            >
-              {isPending ? 'Enregistrement...' : 'Enregistrer'}
-            </button>
+          <button
+            onClick={handleUpload}
+            disabled={!file || !docName || !uploadCat || !uploadSub || isPending}
+            className="w-full py-4 rounded-2xl bg-[#111111] text-white text-[14px] font-medium disabled:opacity-40 active:scale-[.97]"
+          >
+            {isPending ? 'Enregistrement...' : 'Enregistrer'}
+          </button>
         </div>
       </Drawer>
 
       {/* ── Drawer Email ──────────────────────────────────────── */}
       <Drawer open={!!emailDoc} onClose={resetEmail} title="Envoyer par email">
         <div>
-            <p className="text-[12px] text-gray-400 mb-4 truncate">{emailDoc?.name}</p>
+          <p className="text-[12px] text-gray-400 mb-4 truncate">{emailDoc?.name}</p>
 
-            {emailSent ? (
-              <div className="py-8 text-center">
-                <p className="text-[15px] font-semibold text-green-600 mb-1">Email envoyé ✓</p>
-                <p className="text-[12px] text-gray-400">Le document a été transmis à {recipientEmail}</p>
-                <button onClick={resetEmail} className="mt-4 text-[13px] text-gray-500 underline">Fermer</button>
-              </div>
-            ) : (
-              <>
-                <input
-                  type="email"
-                  placeholder="Adresse email destinataire..."
-                  value={recipientEmail}
-                  onChange={e => setRecipientEmail(e.target.value)}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px] mb-3"
-                />
-                <textarea
-                  placeholder="Message (optionnel)..."
-                  rows={3}
-                  value={emailMessage}
-                  onChange={e => setEmailMessage(e.target.value)}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px] mb-4 resize-none"
-                />
-                {emailError && <p className="text-[12px] text-red-500 mb-3">{emailError}</p>}
-                <button
-                  onClick={handleSendEmail}
-                  disabled={!recipientEmail || isPending}
-                  className="w-full py-4 rounded-2xl bg-[#111111] text-white text-[14px] font-medium disabled:opacity-40 active:scale-[.97]"
-                >
-                  {isPending ? 'Envoi...' : 'Envoyer'}
-                </button>
-              </>
-            )}
+          {emailSent ? (
+            <div className="py-8 text-center">
+              <p className="text-[15px] font-semibold text-green-600 mb-1">Email envoyé ✓</p>
+              <p className="text-[12px] text-gray-400">Le document a été transmis à {recipientEmail}</p>
+              <button onClick={resetEmail} className="mt-4 text-[13px] text-gray-500 underline">Fermer</button>
+            </div>
+          ) : (
+            <>
+              <input
+                type="email"
+                placeholder="Adresse email destinataire..."
+                value={recipientEmail}
+                onChange={e => setRecipientEmail(e.target.value)}
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px] mb-3"
+              />
+              <textarea
+                placeholder="Message (optionnel)..."
+                rows={3}
+                value={emailMessage}
+                onChange={e => setEmailMessage(e.target.value)}
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px] mb-4 resize-none"
+              />
+              {emailError && <p className="text-[12px] text-red-500 mb-3">{emailError}</p>}
+              <button
+                onClick={handleSendEmail}
+                disabled={!recipientEmail || isPending}
+                className="w-full py-4 rounded-2xl bg-[#111111] text-white text-[14px] font-medium disabled:opacity-40 active:scale-[.97]"
+              >
+                {isPending ? 'Envoi...' : 'Envoyer'}
+              </button>
+            </>
+          )}
         </div>
       </Drawer>
     </div>

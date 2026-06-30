@@ -44,6 +44,8 @@ export async function endTrip(tripId: string, formData: FormData) {
   if (!user) return { error: 'Non authentifié' }
 
   const kmEnd = Number(formData.get('km_end'))
+  const tolls = formData.get('tolls_amount') ? Number(formData.get('tolls_amount')) : 0
+  const expenses = formData.get('expenses_amount') ? Number(formData.get('expenses_amount')) : 0
 
   const { data: trip } = await supabase
     .from('internal_trips')
@@ -58,14 +60,35 @@ export async function endTrip(tripId: string, formData: FormData) {
     end_datetime: new Date().toISOString(),
     km_end: kmEnd,
     fuel_end: formData.get('fuel_end') ? Number(formData.get('fuel_end')) : null,
-    tolls_amount: formData.get('tolls_amount') ? Number(formData.get('tolls_amount')) : null,
-    expenses_amount: formData.get('expenses_amount') ? Number(formData.get('expenses_amount')) : null,
+    tolls_amount: tolls || null,
+    expenses_amount: expenses || null,
   }).eq('id', tripId)
 
   if (error) return { error: error.message }
 
   // Update vehicle km
   await supabase.from('vehicles').update({ current_km: kmEnd }).eq('id', trip.vehicle_id)
+
+  // Transmission auto en comptabilité : péages + frais du déplacement interne
+  // deviennent des charges (anti-doublon par `reference` si endTrip rejoué).
+  const today = new Date().toISOString().slice(0, 10)
+  const tollsRef = `trip-tolls:${tripId}`
+  const expRef = `trip-exp:${tripId}`
+  const { data: alreadyBooked } = await supabase
+    .from('financial_transactions').select('reference').in('reference', [tollsRef, expRef])
+  const booked = new Set((alreadyBooked ?? []).map(r => r.reference))
+  const charges = []
+  if (tolls > 0 && !booked.has(tollsRef)) {
+    charges.push({ date: today, type: 'depense', category: 'peages', amount: tolls,
+      vehicle_id: trip.vehicle_id, reference: tollsRef,
+      notes: 'Péages — déplacement interne', created_by: user.id })
+  }
+  if (expenses > 0 && !booked.has(expRef)) {
+    charges.push({ date: today, type: 'depense', category: 'deplacement_interne', amount: expenses,
+      vehicle_id: trip.vehicle_id, reference: expRef,
+      notes: 'Frais — déplacement interne', created_by: user.id })
+  }
+  if (charges.length) await supabase.from('financial_transactions').insert(charges)
 
   await syncTripToCalendar(tripId)
 

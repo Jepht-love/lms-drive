@@ -18,7 +18,7 @@ import {
 const TABS = [
   { label: 'Accueil',   href: '/',             tabKey: 'dashboard',    Icon: HomeIcon,                   ActiveIcon: HomeSolid },
   { label: 'Véhicules', href: '/vehicles',     tabKey: 'vehicles',     Icon: TruckIcon,                  ActiveIcon: TruckSolid },
-  { label: 'Resas',     href: '/reservations', tabKey: 'reservations', Icon: ClipboardDocumentListIcon,  ActiveIcon: ClipboardSolid },
+  { label: 'Réservations', href: '/reservations', tabKey: 'reservations', Icon: ClipboardDocumentListIcon,  ActiveIcon: ClipboardSolid },
   { label: 'Calendrier',href: '/calendrier',   tabKey: 'calendrier',   Icon: CalendarDaysIcon,           ActiveIcon: CalendarDaysSolid },
   { label: 'Alertes',   href: '/alerts',       tabKey: null,           Icon: BellIcon,                   ActiveIcon: BellSolid, badge: true },
   { label: 'Menu',      href: '/menu',         tabKey: null,           Icon: Squares2X2Icon,             ActiveIcon: Squares2X2Solid },

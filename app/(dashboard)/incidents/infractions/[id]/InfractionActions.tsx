@@ -46,18 +46,22 @@ export default function InfractionActions({
             <Send className="w-4 h-4" /> Transmettre au client (email)
           </button>
         )}
-        <div className="grid grid-cols-2 gap-2">
-          {canPay && (
-            <button onClick={() => run(() => markInfractionPaid(id), 'Marqué réglé ✓')} disabled={pending}
+        {canPay && (
+          <div className="grid grid-cols-2 gap-2">
+            <button onClick={() => run(() => markInfractionPaid(id, 'client'), 'Réglé par le client ✓')} disabled={pending}
               className={`${btn} bg-green-600 text-white hover:bg-green-700`}>
-              <CheckCircle2 className="w-4 h-4" /> Réglé
+              <CheckCircle2 className="w-4 h-4" /> Réglé (client)
             </button>
-          )}
-          <button onClick={() => run(() => closeInfraction(id), 'Clôturé ✓')} disabled={pending}
-            className={`${btn} bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 ${canPay ? '' : 'col-span-2'}`}>
-            <Lock className="w-4 h-4" /> Clôturer
-          </button>
-        </div>
+            <button onClick={() => run(() => markInfractionPaid(id, 'agence'), 'Réglé par l\'agence ✓')} disabled={pending}
+              className={`${btn} bg-green-700 text-white hover:bg-green-800`}>
+              <CheckCircle2 className="w-4 h-4" /> Réglé (agence)
+            </button>
+          </div>
+        )}
+        <button onClick={() => run(() => closeInfraction(id), 'Clôturé ✓')} disabled={pending}
+          className={`${btn} w-full bg-white border border-gray-200 text-gray-600 hover:bg-gray-50`}>
+          <Lock className="w-4 h-4" /> Clôturer
+        </button>
       </div>
       {error && <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2">{error}</p>}
       {msg && <p className="text-sm text-green-600 font-medium">{msg}</p>}

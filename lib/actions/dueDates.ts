@@ -35,6 +35,55 @@ export async function createDueDate(formData: FormData) {
 }
 
 /**
+ * Crée en une fois toutes les mensualités d'un échéancier récurrent (loyer
+ * véhicule, assurance...) — évite de répéter createDueDate manuellement pour
+ * chaque mois (ex. 36 fois pour un loyer sur 3 ans). Un mois fixe (+1 mois par
+ * échéance, jour conservé) — pas de fréquence hebdo/trimestrielle pour l'instant,
+ * tous les cas observés (loyers véhicules) sont mensuels.
+ */
+export async function createRecurringDueDates(formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié' }
+
+  const description = (formData.get('description') as string)?.trim()
+  const type = (formData.get('type') as string) || 'depense'
+  const category = (formData.get('category') as string)?.trim()
+  const amountRaw = (formData.get('amount') as string)?.trim()
+  const amount = amountRaw ? parseFloat(amountRaw.replace(',', '.')) : 0
+  const firstDate = (formData.get('due_date') as string)?.trim()
+  const count = parseInt((formData.get('installments') as string)?.trim() || '0', 10)
+  if (!description || !category || !(amount > 0) || !firstDate || !(count > 0)) {
+    return { error: 'Description, catégorie, montant (> 0), date et nombre de mensualités (> 0) requis' }
+  }
+  if (count > 120) return { error: 'Maximum 120 mensualités (10 ans) en une fois' }
+
+  const vehicleId = (formData.get('vehicle_id') as string)?.trim() || null
+  const notes = (formData.get('notes') as string)?.trim() || null
+
+  const rows = Array.from({ length: count }, (_, i) => {
+    const d = new Date(firstDate)
+    d.setMonth(d.getMonth() + i)
+    return {
+      description: `${description} (${i + 1}/${count})`,
+      type,
+      category,
+      amount,
+      due_date: d.toISOString().slice(0, 10),
+      vehicle_id: vehicleId,
+      notes,
+      created_by: user.id,
+    }
+  })
+
+  const { error } = await supabase.from('financial_due_dates').insert(rows)
+  if (error) return { error: error.message }
+
+  revalidatePath('/accounting/due-dates')
+  return { success: true, count }
+}
+
+/**
  * Marquer une échéance payée crée la transaction réelle correspondante plutôt
  * que de dupliquer la logique de saisie — l'échéance devient une simple trace
  * de ce qui était attendu, le mouvement réel vit dans financial_transactions

@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { logAudit } from '@/lib/audit/log'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { generateReservationNumber, generateContractNumber, calculateRentalDays, calculateRentalPrice } from '@/lib/utils'
 import { syncReservationToCalendar } from '@/lib/calendar/syncRental'
@@ -505,11 +506,26 @@ export async function validateContract(contractId: string) {
     }
   }
 
-  await supabase.from('audit_logs').insert({
-    user_id: user.id,
+  // Journal d'audit — phrase lisible avec client + véhicule (ex. demandé par le
+  // gérant : « Contrat validé — Babacar Diallo — Renault Captur »).
+  let validatedSummary = 'Contrat validé'
+  if (contract.reservation_id) {
+    const { data: resInfo } = await supabase
+      .from('reservations')
+      .select('clients(first_name, last_name), vehicles(brand, model, plate)')
+      .eq('id', contract.reservation_id).single()
+    const cl = Array.isArray(resInfo?.clients) ? resInfo?.clients[0] : resInfo?.clients
+    const ve = Array.isArray(resInfo?.vehicles) ? resInfo?.vehicles[0] : resInfo?.vehicles
+    const who = [cl?.first_name, cl?.last_name].filter(Boolean).join(' ')
+    const veh = ve ? `${ve.brand} ${ve.model}${ve.plate ? ` (${ve.plate})` : ''}` : ''
+    validatedSummary = `Contrat validé${who ? ` — ${who}` : ''}${veh ? ` — ${veh}` : ''}`
+  }
+  await logAudit(supabase, {
+    userId: user.id,
     action: 'contract_validated',
-    entity_type: 'contracts',
-    entity_id: contractId,
+    entityType: 'contracts',
+    entityId: contractId,
+    summary: validatedSummary,
     metadata: { dep_inspection: depInsp.id, arr_inspection: arrInsp.id },
   })
 

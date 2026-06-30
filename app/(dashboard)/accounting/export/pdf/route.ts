@@ -19,10 +19,16 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url)
   const monthParam = searchParams.get('month')
+  const fromParam = searchParams.get('from')
+  const toParam = searchParams.get('to')
   const year = Number(searchParams.get('year')) || new Date().getFullYear()
 
   let from: string, to: string, periodLabel: string, fileLabel: string
-  if (monthParam) {
+  if (fromParam && toParam) {                       // période libre
+    from = fromParam; to = toParam
+    periodLabel = `Bilan — ${fromParam} au ${toParam}`
+    fileLabel = `${fromParam}_${toParam}`
+  } else if (monthParam) {
     const month = Number(monthParam)
     from = `${year}-${String(month).padStart(2, '0')}-01`
     to = new Date(year, month, 0).toISOString().slice(0, 10)

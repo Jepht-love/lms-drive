@@ -93,6 +93,14 @@ export default function NewMaintenancePage() {
               placeholder={type === 'autre' ? 'Quel est ce type d\'intervention ?' : 'Notes complémentaires…'}
               className={`${inputCls} resize-none ${type === 'autre' ? 'border-amber-200 bg-amber-50' : ''}`} />
           </div>
+
+          {/* Justificatif optionnel → rangé dans Documents › Véhicule si joint */}
+          <div>
+            <label className={labelCls} htmlFor="justificatif">Justificatif (facture, devis…) — optionnel</label>
+            <input id="justificatif" name="justificatif" type="file" accept="image/*,application/pdf"
+              className="w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-gray-100 file:text-gray-700 file:font-semibold file:text-xs" />
+            <p className="text-[11px] text-gray-400 mt-1">Si joint, classé automatiquement dans Documents › Véhicule.</p>
+          </div>
         </div>
 
         {error && (

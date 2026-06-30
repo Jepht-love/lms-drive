@@ -18,12 +18,36 @@ export const DAMAGE_TYPES: { id: string; label: string }[] = [
   { id: 'fissure',         label: 'Fissure' },
   { id: 'casse',           label: 'Élément cassé' },
   { id: 'manquant',        label: 'Manquant' },
+  { id: 'crevaison',       label: 'Crevaison' },
+  { id: 'usure',           label: 'Usure (pneu)' },
   { id: 'salissure',       label: 'Salissure' },
 ]
 
 export function damageTypeLabel(id?: string): string {
   if (!id) return ''
   return DAMAGE_TYPES.find(t => t.id === id)?.label ?? id
+}
+
+// Grille tarifaire par type de dommage — montants par défaut proposés à
+// l'EDL retour pour chaque nouveau dommage, toujours ajustables au cas par
+// cas (zone, gravité réelle) avant validation. Estimations de départ à
+// corriger par le gérant selon ses tarifs réels de réparation.
+export const DAMAGE_TYPE_PRICES: Record<string, number> = {
+  rayure:          50,
+  rayure_profonde: 100,
+  bosse:           150,
+  impact:          80,
+  fissure:         120,
+  casse:           250,
+  manquant:        200,
+  crevaison:       120,
+  usure:           90,
+  salissure:       30,
+}
+
+export function defaultDamagePrice(type?: string): number {
+  if (!type) return 0
+  return DAMAGE_TYPE_PRICES[type] ?? 0
 }
 
 // Gravité — réutilise les valeurs `severity` historiques comme identifiants
@@ -55,6 +79,10 @@ export const VEHICLE_ZONES: DamageZone[] = [
   { id: 'jante-av-droite',      label: 'Jante avant droite',    views: ['top', 'front', 'right'] },
   { id: 'jante-ar-gauche',      label: 'Jante arrière gauche',  views: ['top', 'rear', 'left'] },
   { id: 'jante-ar-droite',      label: 'Jante arrière droite',  views: ['top', 'rear', 'right'] },
+  { id: 'pneu-av-gauche',       label: 'Pneu avant gauche',     views: ['front', 'left'] },
+  { id: 'pneu-av-droite',       label: 'Pneu avant droite',     views: ['front', 'right'] },
+  { id: 'pneu-ar-gauche',       label: 'Pneu arrière gauche',   views: ['rear', 'left'] },
+  { id: 'pneu-ar-droite',       label: 'Pneu arrière droite',   views: ['rear', 'right'] },
   { id: 'phare-gauche',         label: 'Phare gauche',          views: ['front'] },
   { id: 'phare-droit',          label: 'Phare droit',           views: ['front'] },
   { id: 'calandre',             label: 'Calandre',              views: ['front'] },

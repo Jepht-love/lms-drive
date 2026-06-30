@@ -19,7 +19,7 @@ export function loadLogoDataUrl(): string | null {
 /** Fond du schéma EDL (le même détourage que l'app) pour les pages EDL du PDF. */
 export function loadEdlSchemaDataUrl(): string | null {
   try {
-    const buf = readFileSync(join(process.cwd(), 'public', 'edl', 'vehicle-blueprint-v2.png'))
+    const buf = readFileSync(join(process.cwd(), 'public', 'edl', 'vehicle-blueprint-v3.png'))
     return `data:image/png;base64,${buf.toString('base64')}`
   } catch {
     return null
@@ -111,10 +111,10 @@ export async function buildContractPdfData(
 
   // Documents d'identité du client (bucket client-docs)
   const [idFrontUrl, idBackUrl, licFrontUrl, licBackUrl] = await Promise.all([
-    c?.id_doc_front_path  ? fetchPhotoAsDataUrl(supabase, c.id_doc_front_path,  'client-docs') : Promise.resolve(null),
-    c?.id_doc_back_path   ? fetchPhotoAsDataUrl(supabase, c.id_doc_back_path,   'client-docs') : Promise.resolve(null),
-    c?.license_front_path ? fetchPhotoAsDataUrl(supabase, c.license_front_path, 'client-docs') : Promise.resolve(null),
-    c?.license_back_path  ? fetchPhotoAsDataUrl(supabase, c.license_back_path,  'client-docs') : Promise.resolve(null),
+    c?.id_doc_front_path  ? fetchPhotoAsDataUrl(supabase, c.id_doc_front_path,  'client-documents') : Promise.resolve(null),
+    c?.id_doc_back_path   ? fetchPhotoAsDataUrl(supabase, c.id_doc_back_path,   'client-documents') : Promise.resolve(null),
+    c?.license_front_path ? fetchPhotoAsDataUrl(supabase, c.license_front_path, 'client-documents') : Promise.resolve(null),
+    c?.license_back_path  ? fetchPhotoAsDataUrl(supabase, c.license_back_path,  'client-documents') : Promise.resolve(null),
   ])
 
   const clientDocs = [
@@ -179,6 +179,7 @@ export async function buildContractPdfData(
     lateMinutes: r?.late_minutes > 0 ? r.late_minutes : undefined,
     extraKmCount: r?.extra_km_count > 0 ? r.extra_km_count : undefined,
     extraKmAmount: r?.extra_km_amount > 0 ? r.extra_km_amount : undefined,
+    damageFeeAmount: r?.damage_fee_amount > 0 ? r.damage_fee_amount : undefined,
     prolongations: prolongations.length > 0 ? prolongations : undefined,
     clientSignature: contract.client_signature_svg ?? undefined,
     agentSignature: contract.agent_signature_svg ?? undefined,

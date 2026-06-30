@@ -1,12 +1,35 @@
 'use client'
 
-import { useActionState, useRef, useState } from 'react'
-import { Camera, Upload, X, Check } from 'lucide-react'
+import { useRef, useState, useTransition } from 'react'
+import { Camera, Upload, X, Check, Loader2 } from 'lucide-react'
 import type { Client } from '@/types/database'
 
 interface ClientFormProps {
   action: (formData: FormData) => Promise<{ error: string } | void>
   client?: Client
+}
+
+/** Comprime une image via canvas (max 1400px, JPEG 82%). Retourne un Blob. */
+async function compressImage(file: File): Promise<Blob> {
+  return new Promise((resolve) => {
+    const img = document.createElement('img')
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      const MAX = 1400
+      let { width, height } = img
+      if (width > MAX || height > MAX) {
+        if (width >= height) { height = Math.round(height * MAX / width); width = MAX }
+        else { width = Math.round(width * MAX / height); height = MAX }
+      }
+      const canvas = document.createElement('canvas')
+      canvas.width = width; canvas.height = height
+      canvas.getContext('2d')!.drawImage(img, 0, 0, width, height)
+      canvas.toBlob(blob => resolve(blob ?? file), 'image/jpeg', 0.82)
+    }
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file) }
+    img.src = url
+  })
 }
 
 const DOC_TYPES = ['CNI', 'passeport', 'titre_sejour']
@@ -61,15 +84,46 @@ function PhotoUpload({ label, name, existingUrl }: { label: string; name: string
   )
 }
 
+const PHOTO_SLOTS = ['id_doc_front', 'id_doc_back', 'license_front', 'license_back', 'proof_of_address'] as const
+
 export default function ClientForm({ action, client: c }: ClientFormProps) {
-  const [state, formAction, pending] = useActionState(async (_prev: any, formData: FormData) => {
-    return action(formData)
-  }, null)
+  const [error, setError] = useState<string | null>(null)
+  const [isPending, startTransition] = useTransition()
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    setError(null)
+    const raw = new FormData(e.currentTarget)
+
+    // Compression côté client avant envoi (évite la limite 1 Mo / 4.5 Mo Vercel)
+    const compressed = new FormData()
+    for (const [key, value] of raw.entries()) {
+      if (value instanceof File && value.size > 0 && PHOTO_SLOTS.includes(key as any)) {
+        const blob = await compressImage(value)
+        compressed.append(key, new File([blob], value.name, { type: 'image/jpeg' }))
+      } else {
+        compressed.append(key, value)
+      }
+    }
+
+    startTransition(async () => {
+      try {
+        const result = await action(compressed)
+        if (result?.error) setError(result.error)
+      } catch (err: any) {
+        // redirect() lève une erreur spéciale Next.js — la laisser se propager
+        if (err?.digest?.startsWith?.('NEXT_REDIRECT') || err?.message === 'NEXT_REDIRECT') throw err
+        setError("Une erreur est survenue lors de l'enregistrement.")
+      }
+    })
+  }
+
+  const pending = isPending
 
   return (
-    <form action={formAction} className="space-y-6">
-      {state?.error && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-700">{state.error}</div>
+    <form onSubmit={handleSubmit} className="space-y-6">
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-700">{error}</div>
       )}
 
       {/* Identité */}
@@ -153,7 +207,9 @@ export default function ClientForm({ action, client: c }: ClientFormProps) {
         type="submit" disabled={pending}
         className="px-6 py-3 bg-slate-900 hover:bg-slate-800 disabled:bg-slate-300 text-white font-semibold rounded-xl transition-colors text-sm"
       >
-        {pending ? 'Enregistrement…' : (c ? 'Mettre à jour' : 'Créer le client')}
+        {pending ? (
+        <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Enregistrement…</span>
+      ) : (c ? 'Mettre à jour' : 'Créer le client')}
       </button>
     </form>
   )

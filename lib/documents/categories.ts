@@ -29,9 +29,11 @@ export const DOCUMENT_SUBCATEGORIES: Record<DocumentCategory, { id: string; labe
   client: [
     { id: 'contrat_location',     label: 'Contrat de location' },
     { id: 'etat_des_lieux',       label: 'État des lieux' },
-    { id: 'cni',                  label: "Pièce d'identité" },
-    { id: 'permis',               label: 'Permis de conduire' },
+    { id: 'cni',                  label: "Carte nationale d'identité (CNI)" },
+    { id: 'passeport',            label: 'Passeport' },
+    { id: 'titre_sejour',         label: 'Titre de séjour' },
     { id: 'justif_domicile',      label: 'Justificatif de domicile' },
+    { id: 'permis',               label: 'Permis de conduire' },
     { id: 'procuration',          label: 'Procuration' },
     { id: 'autres',               label: 'Autres' },
   ],
@@ -43,7 +45,7 @@ export const DOCUMENT_SUBCATEGORIES: Record<DocumentCategory, { id: string; labe
   ],
 }
 
-export const SENSITIVE_SUBCATEGORIES = ['cni', 'permis']
+export const SENSITIVE_SUBCATEGORIES = ['cni', 'permis', 'passeport', 'titre_sejour']
 
 export function isExpiringSoon(date: string): boolean {
   const expiry = new Date(date)

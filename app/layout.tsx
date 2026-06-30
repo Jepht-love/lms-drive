@@ -3,6 +3,8 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import ServiceWorkerRegistration from '@/components/pwa/ServiceWorkerRegistration'
 import OfflineBanner from '@/components/pwa/OfflineBanner'
+import NavigationProgress from '@/components/ui/NavigationProgress'
+import PushPermissionBanner from '@/components/pwa/PushPermissionBanner'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 
@@ -32,7 +34,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="apple-touch-icon" href="/logo.png" />
       </head>
       <body className="bg-white text-[#111111] antialiased font-sans">
+        <NavigationProgress />
         <OfflineBanner />
+        <PushPermissionBanner />
         {children}
         <ServiceWorkerRegistration />
       </body>

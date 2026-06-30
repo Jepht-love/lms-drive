@@ -1,8 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Mail, MailWarning } from 'lucide-react'
-import { formatDate } from '@/lib/utils'
+import EmailsList from './EmailsList'
 
 const TYPE_LABELS: Record<string, string> = {
   contrat_location: 'Contrat de location',
@@ -29,7 +28,7 @@ export default async function EmailsPage({
 
   let query = supabase
     .from('email_logs')
-    .select('*, clients(first_name, last_name)')
+    .select('*, clients(first_name, last_name), sender:profiles!sent_by(full_name)')
     .order('created_at', { ascending: false })
     .limit(200)
   if (type) query = query.eq('type', type)
@@ -60,38 +59,7 @@ export default async function EmailsPage({
         ))}
       </div>
 
-      {!logs || logs.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 text-center">
-          <Mail className="w-12 h-12 text-gray-200 mx-auto mb-4" />
-          <p className="text-gray-400 font-medium text-sm">Aucun email envoyé pour ce filtre</p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {logs.map(log => {
-            const c = Array.isArray(log.clients) ? log.clients[0] : log.clients
-            const failed = log.status === 'echec'
-            return (
-              <div key={log.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-                <div className="flex items-start justify-between gap-3 mb-1.5">
-                  <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-blue-50 text-blue-700">
-                    {TYPE_LABELS[log.type] ?? log.type}
-                  </span>
-                  <span className="text-xs text-gray-400 flex-shrink-0">{formatDate(log.created_at)}</span>
-                </div>
-                <p className="text-sm font-semibold text-gray-900 truncate">{log.subject}</p>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  {c ? `${c.first_name} ${c.last_name} — ` : ''}{log.recipient}
-                </p>
-                {failed && (
-                  <p className="text-xs text-red-500 mt-1.5 flex items-center gap-1">
-                    <MailWarning className="w-3.5 h-3.5" /> Échec d'envoi{log.error ? ` — ${log.error}` : ''}
-                  </p>
-                )}
-              </div>
-            )
-          })}
-        </div>
-      )}
+      <EmailsList logs={logs ?? []} />
     </div>
   )
 }

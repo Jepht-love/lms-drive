@@ -1,8 +1,17 @@
 'use client'
 
 import { useState } from 'react'
-import VehicleViewSVG from './VehicleViewSVG'
+import VehicleSchemaStatic, { type ViewBox } from './VehicleSchemaStatic'
 import { VEHICLE_ZONES, VIEW_LABELS, type VehicleView, type DamageEntry } from './inspection-types'
+
+// Cadrage du fond v3 (1254×1254) sur chaque vue, calé sur les placements.
+const VIEW_BOXES: Record<VehicleView, ViewBox> = {
+  top:   { x: 315, y: 8,   w: 628, h: 320 },
+  front: { x: 262, y: 328, w: 340, h: 206 },
+  rear:  { x: 644, y: 316, w: 340, h: 230 },
+  left:  { x: 186, y: 546, w: 884, h: 356 },
+  right: { x: 186, y: 898, w: 884, h: 356 },
+}
 
 interface DamageComparisonProps {
   departureDamages: Record<string, DamageEntry[]>
@@ -48,11 +57,11 @@ export default function DamageComparison({ departureDamages, returnDamages }: Da
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-3">
           <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 text-center">Départ</p>
-          <VehicleViewSVG view={selectedView} damages={departureDamages} onZoneClick={() => {}} />
+          <VehicleSchemaStatic damages={departureDamages} box={VIEW_BOXES[selectedView]} />
         </div>
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-3">
           <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 text-center">Retour</p>
-          <VehicleViewSVG view={selectedView} damages={returnDamages} onZoneClick={() => {}} />
+          <VehicleSchemaStatic damages={returnDamages} box={VIEW_BOXES[selectedView]} highlightIds={new Set(newDamageZoneIds)} />
         </div>
       </div>
 

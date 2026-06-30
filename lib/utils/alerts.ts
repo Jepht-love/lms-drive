@@ -268,6 +268,34 @@ export async function fetchAllAlerts(
     })
   })
 
+  // ── 9. Départs imminents (< 1h) ─────────────────────────────────────────────
+  const in1h = new Date(now.getTime() + 3600 * 1000)
+  const { data: upcomingDepartures } = await supabase
+    .from('reservations')
+    .select('id, vehicle_id, start_datetime, vehicles(plate, brand, model)')
+    .eq('status', 'confirmee')
+    .gte('start_datetime', now.toISOString())
+    .lte('start_datetime', in1h.toISOString())
+
+  upcomingDepartures?.forEach(r => {
+    const v = Array.isArray(r.vehicles) ? r.vehicles[0] : r.vehicles
+    const minutesLeft = Math.max(0, Math.round(
+      (new Date(r.start_datetime).getTime() - now.getTime()) / 60000
+    ))
+    alerts.push({
+      id: `depart-${r.id}`,
+      category: 'important',
+      urgent: false,
+      type: 'depart_imminent',
+      label: 'DÉPART IMMINENT',
+      sublabel: `${vLabel(v)} · dans ${minutesLeft} min`,
+      href: `/reservations/${r.id}`,
+      date: r.start_datetime,
+      vehicleId: r.vehicle_id,
+      reservationId: r.id,
+    })
+  })
+
   // ── 8. Documents expirés ou < 30 jours ────────────────────────────────────
   const { data: expiringDocs } = await supabase
     .from('documents')
@@ -287,6 +315,30 @@ export async function fetchAllAlerts(
       sublabel: `${doc.name} · ${expired ? `expiré il y a ${Math.abs(days)}j` : `dans ${days}j`}`,
       href: `/documents`,
       date: doc.expiry_date ?? undefined,
+    })
+  })
+
+  // ── 10. Échéances financières courtes (J-2 et moins = urgent) ──────────────
+  const { data: dueDates } = await supabase
+    .from('financial_due_dates')
+    .select('id, description, type, amount, due_date, vehicle_id, vehicles(plate, brand, model)')
+    .eq('is_paid', false)
+    .lte('due_date', new Date(now.getTime() + 7 * 24 * 3600 * 1000).toISOString().split('T')[0])
+
+  dueDates?.forEach(d => {
+    const v = Array.isArray(d.vehicles) ? d.vehicles[0] : d.vehicles
+    const days = differenceInDays(new Date(d.due_date), now)
+    const overdue = days < 0
+    alerts.push({
+      id: `due-${d.id}`,
+      category: overdue || days <= 2 ? 'urgent' : 'important',
+      urgent: overdue || days <= 2,
+      type: 'echeance',
+      label: overdue ? 'ÉCHÉANCE DÉPASSÉE' : 'ÉCHÉANCE PROCHE',
+      sublabel: `${d.description}${v ? ` · ${vLabel(v)}` : ''} · ${d.type === 'recette' ? '+' : '−'}${d.amount}€ · ${overdue ? `dépassée de ${Math.abs(days)}j` : `dans ${days}j`}`,
+      href: `/accounting/due-dates`,
+      date: d.due_date,
+      vehicleId: d.vehicle_id ?? undefined,
     })
   })
 

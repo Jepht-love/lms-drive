@@ -41,6 +41,7 @@ export async function createInfraction(formData: FormData) {
     points_lost:      int(formData, 'points_lost'),
     reception_date:   str(formData, 'reception_date'),
     admin_fees:       num(formData, 'admin_fees'),
+    reference:        str(formData, 'reference'),
     notes:            str(formData, 'notes'),
     client_id:        str(formData, 'client_id'),
     internal_user_id: str(formData, 'internal_user_id'),
@@ -131,20 +132,23 @@ export async function transmitInfractionToClient(id: string) {
   return { success: true }
 }
 
-export async function markInfractionPaid(id: string) {
+export async function markInfractionPaid(id: string, paidBy: 'client' | 'agence') {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non authentifié' }
 
   const today = new Date().toISOString().slice(0, 10)
-  const { error } = await supabase.from('infractions').update({ status: 'regle', payment_date: today }).eq('id', id)
+  const { error } = await supabase.from('infractions')
+    .update({ status: 'regle', payment_date: today, paid_by: paidBy }).eq('id', id)
   if (error) return { error: error.message }
 
-  // S6 — enregistrement automatique en comptabilité (catégorie « amendes »)
+  // S6 — enregistrement automatique en comptabilité (catégorie « amendes »),
+  // seulement si l'agence règle elle-même : si le client règle directement,
+  // l'agence n'a aucune sortie de caisse à comptabiliser.
   const { data: inf } = await supabase
     .from('infractions').select('amount, admin_fees, vehicle_id, type, infraction_date').eq('id', id).single()
   const amount = (inf?.amount ?? 0) + (inf?.admin_fees ?? 0)
-  if (inf && amount > 0) {
+  if (inf && amount > 0 && paidBy === 'agence') {
     await supabase.from('financial_transactions').insert({
       date: today, type: 'depense', category: 'amendes', amount,
       vehicle_id: inf.vehicle_id,
@@ -202,6 +206,33 @@ export async function createAccident(formData: FormData) {
   // B4 — passer le véhicule « en vérification »
   await supabase.from('vehicles').update({ status: 'en_verification' }).eq('id', vehicleId)
 
+  // Justificatif optionnel (constat, PV d'expertise, photos) → Documents › Véhicule
+  // si un fichier est réellement joint (même logique que l'entretien).
+  const justificatif = formData.get('justificatif') as File | null
+  if (justificatif && justificatif.size > 0) {
+    const ext = justificatif.name.split('.').pop() || 'pdf'
+    const path = `vehicule/pv_expertise/${Date.now()}-${vehicleId}.${ext}`
+    const ab = await justificatif.arrayBuffer()
+    const { error: upErr } = await supabase.storage.from('documents').upload(path, ab, { contentType: justificatif.type })
+    if (!upErr) {
+      const { data: { publicUrl } } = supabase.storage.from('documents').getPublicUrl(path)
+      const { data: veh } = await supabase.from('vehicles').select('brand, model, plate').eq('id', vehicleId).single()
+      const vehLabel = veh ? `${veh.brand} ${veh.model}${veh.plate ? ` (${veh.plate})` : ''}` : ''
+      await supabase.from('documents').insert({
+        category: 'vehicule',
+        subcategory: 'pv_expertise',
+        name: `Sinistre ${accidentDate} — ${vehLabel}`,
+        file_url: publicUrl,
+        file_type: justificatif.type,
+        file_size: justificatif.size,
+        entity_id: vehicleId,
+        entity_type: 'vehicle',
+        is_auto_generated: false,
+        created_by: user.id,
+      })
+    }
+  }
+
   await supabase.from('audit_logs').insert({
     user_id: user.id, action: 'accident_created', entity_type: 'accidents', entity_id: data.id,
   })
@@ -217,13 +248,38 @@ export async function updateAccidentStatus(id: string, status: string) {
   const { error } = await supabase.from('accidents').update({ status }).eq('id', id)
   if (error) return { error: error.message }
 
-  // À la clôture : remettre le véhicule disponible
+  // À la clôture : remettre le véhicule disponible + comptabiliser le coût NET
+  // restant à la charge de l'agence (choix gérant : coût net à la clôture =
+  // réparation − remboursement assurance − caution retenue). Anti-doublon par
+  // `reference = accident:<id>` → une re-clôture ne recrée pas la charge.
   if (status === 'cloture') {
-    const { data: acc } = await supabase.from('accidents').select('vehicle_id, repair_cost').eq('id', id).single()
+    const { data: acc } = await supabase.from('accidents')
+      .select('vehicle_id, repair_cost, insurance_covered, insurance_amount, deposit_retained, accident_date, dossier_number')
+      .eq('id', id).single()
     if (acc?.vehicle_id) {
       await supabase.from('vehicles').update({ status: 'disponible' }).eq('id', acc.vehicle_id)
+
+      const insurance = acc.insurance_covered ? (acc.insurance_amount ?? 0) : 0
+      const net = Math.max(0, (acc.repair_cost ?? 0) - insurance - (acc.deposit_retained ?? 0))
+      const reference = `accident:${id}`
+      if (net > 0) {
+        const { data: dup } = await supabase
+          .from('financial_transactions').select('id').eq('reference', reference).maybeSingle()
+        if (!dup) {
+          await supabase.from('financial_transactions').insert({
+            date: new Date().toISOString().slice(0, 10),
+            type: 'depense', category: 'sinistre', amount: net,
+            vehicle_id: acc.vehicle_id, reference,
+            notes: `Sinistre${acc.dossier_number ? ` (dossier ${acc.dossier_number})` : ''} — coût net agence (${acc.accident_date})`,
+            created_by: user.id,
+          })
+        }
+      }
     }
-    // TODO (S6) — si repair_cost > 0 : enregistrer en comptabilité catégorie 'reparations'
+    await supabase.from('audit_logs').insert({
+      user_id: user.id, action: 'accident_closed', entity_type: 'accidents', entity_id: id,
+      metadata: { status },
+    })
   }
   revalidatePath(`/incidents/sinistres/${id}`)
   return { success: true }

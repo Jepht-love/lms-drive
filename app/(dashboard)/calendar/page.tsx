@@ -31,13 +31,14 @@ const EVENT_COLORS: Record<string, { bg: string; border: string; text: string }>
   livraison:          { bg: '#f0fdfa', border: '#14b8a6', text: '#0f766e' },
   recuperation:       { bg: '#ecfeff', border: '#06b6d4', text: '#0e7490' },
   entretien:          { bg: '#fff7ed', border: '#ea580c', text: '#c2410c' },
+  marketing:          { bg: '#fdf2f8', border: '#ec4899', text: '#be185d' },
   autre:              { bg: '#f9fafb', border: '#9ca3af', text: '#374151' },
 }
 
 const TASK_LABELS: Record<string, string> = {
   lavage: 'Lavage', preparation: 'Prépa', rendez_vous_client: 'RDV Client',
   rendez_vous_garage: 'RDV Garage', livraison: 'Livraison',
-  recuperation: 'Récupération', entretien: 'Entretien', autre: 'Tâche',
+  recuperation: 'Récupération', entretien: 'Entretien', marketing: 'Marketing', autre: 'Tâche',
 }
 
 // Couleurs des réservations selon leur statut (barres multi-jours)

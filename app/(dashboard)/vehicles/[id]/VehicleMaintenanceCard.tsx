@@ -22,7 +22,10 @@ export default function VehicleMaintenanceCard({
   const [pending, startTransition] = useTransition()
 
   const serviceNeeds = needs.filter(n => n.key !== 'degradation')
-  const inRepair = status === 'a_reparer'
+  // « En réparation » couvre aussi le passage au garage (statut `maintenance`,
+  // posé automatiquement à la création d'une intervention atelier) : un véhicule
+  // au garage doit pouvoir être marqué « réparé » sans passer par le réglage manuel.
+  const inRepair = status === 'a_reparer' || status === 'maintenance'
   const nothing = serviceNeeds.length === 0 && flags.length === 0
 
   function resolve(flagId: string) {
@@ -99,7 +102,7 @@ export default function VehicleMaintenanceCard({
         }`}
       >
         {inRepair
-          ? (<><RotateCcw className="w-4 h-4" /> Remettre en service</>)
+          ? (<><RotateCcw className="w-4 h-4" /> Réparation terminée — remettre en service</>)
           : (<><ShieldAlert className="w-4 h-4" /> Marquer à réparer</>)}
       </button>
     </div>

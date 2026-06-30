@@ -18,7 +18,10 @@ interface CalendarSidebarProps {
   events: CalendarEvent[]
   resources: CalendarResource[]
   onToggleResource: (id: string) => void
+  onSelectOnlyResource: (id: string) => void
   onCreateTeam: (name: string, color: string) => void
+  onRenameTeam: (id: string, name: string) => void
+  onDeleteTeam: (id: string) => void
   canManageTeams: boolean
   alertCount: number
   onShowAlerts: () => void
@@ -26,7 +29,8 @@ interface CalendarSidebarProps {
 
 export default function CalendarSidebar({
   currentDate, onSelectDate, view, onViewChange, onNavigate, events,
-  resources, onToggleResource, onCreateTeam, canManageTeams, alertCount, onShowAlerts,
+  resources, onToggleResource, onSelectOnlyResource, onCreateTeam, onRenameTeam, onDeleteTeam,
+  canManageTeams, alertCount, onShowAlerts,
 }: CalendarSidebarProps) {
   const [addingTeam, setAddingTeam] = useState(false)
   const [teamName, setTeamName] = useState('')
@@ -102,7 +106,14 @@ export default function CalendarSidebar({
         </div>
       )}
 
-      <ResourceList resources={resources} onToggle={onToggleResource} />
+      <ResourceList
+        resources={resources}
+        onToggle={onToggleResource}
+        onSelectOnly={onSelectOnlyResource}
+        canManageTeams={canManageTeams}
+        onRenameTeam={onRenameTeam}
+        onDeleteTeam={onDeleteTeam}
+      />
     </div>
   )
 }

@@ -135,6 +135,10 @@ export default function NewInfractionPage() {
               <label className={label} htmlFor="admin_fees">Frais de dossier LMS (€)</label>
               <input id="admin_fees" name="admin_fees" type="number" step="0.01" min="0" placeholder="0" className={input} inputMode="decimal" />
             </div>
+            <div className="col-span-2">
+              <label className={label} htmlFor="reference">Référence de la contravention</label>
+              <input id="reference" name="reference" type="text" placeholder="N° sur l'avis" className={input} />
+            </div>
           </div>
 
           <div>

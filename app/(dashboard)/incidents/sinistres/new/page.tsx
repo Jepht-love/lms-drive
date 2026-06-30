@@ -138,7 +138,12 @@ export default function NewSinistrePage() {
             <textarea id="notes" name="notes" rows={2} placeholder="Notes complémentaires…" className={`${input} resize-none`} />
           </div>
 
-          <p className="text-[11px] text-gray-400">📷 L'upload des photos de dommages sera disponible après la création du bucket de stockage.</p>
+          <div>
+            <label className={label} htmlFor="justificatif">Justificatif (constat, PV, photo…) — optionnel</label>
+            <input id="justificatif" name="justificatif" type="file" accept="image/*,application/pdf"
+              className="w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-gray-100 file:text-gray-700 file:font-semibold file:text-xs" />
+            <p className="text-[11px] text-gray-400 mt-1">Si joint, classé automatiquement dans Documents › Véhicule.</p>
+          </div>
         </div>
 
         {error && <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2">{error}</p>}

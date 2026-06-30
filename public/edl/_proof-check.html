@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>EDL Zones — Vérification</title>
+<style>
+  body { margin: 0; background: #f0f0f0; font-family: sans-serif; }
+  .container { display: flex; gap: 16px; padding: 16px; flex-wrap: wrap; }
+  .panel { background: white; border-radius: 8px; padding: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.1); }
+  h2 { margin: 0 0 8px; font-size: 13px; color: #666; text-transform: uppercase; letter-spacing: 1px; }
+  svg { display: block; }
+  .zone { cursor: pointer; transition: fill-opacity .15s; }
+  .zone:hover { fill-opacity: 0.6 !important; }
+  #info { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); background: #111; color: #fff; padding: 8px 16px; border-radius: 20px; font-size: 13px; pointer-events: none; opacity: 0; transition: opacity .2s; }
+  #info.show { opacity: 1; }
+</style>
+</head>
+<body>
+<div id="info"></div>
+<div class="container">
+
+<div class="panel">
+<h2>Dessus (5 zones)</h2>
+<svg width="400" height="400" viewBox="0 0 1254 1254">
+  <image href="/edl/vehicle-blueprint-v3.png" x="0" y="0" width="1254" height="1254"/>
+  <!-- Capot -->
+  <polygon class="zone" points="505,100 448,88 380,83 316,94 278,118 265,148 264,168 265,192 280,218 318,237 382,247 450,244 505,228"
+    fill="#f97316" fill-opacity="0.4" stroke="#f97316" stroke-width="3" data-label="Capot"/>
+  <!-- Pare-brise -->
+  <polygon class="zone" points="505,100 536,108 572,104 572,224 536,219 505,228"
+    fill="#3b82f6" fill-opacity="0.4" stroke="#3b82f6" stroke-width="3" data-label="Pare-brise"/>
+  <!-- Toit -->
+  <polygon class="zone" points="572,104 644,101 716,101 716,231 644,232 572,224"
+    fill="#ec4899" fill-opacity="0.4" stroke="#ec4899" stroke-width="3" data-label="Toit"/>
+  <!-- Lunette AR -->
+  <polygon class="zone" points="716,101 758,106 798,118 798,214 758,226 716,231"
+    fill="#22c55e" fill-opacity="0.4" stroke="#22c55e" stroke-width="3" data-label="Lunette AR"/>
+  <!-- Coffre -->
+  <polygon class="zone" points="795,106 845,90 878,108 884,148 884,186 878,218 845,237 795,228"
+    fill="#a855f7" fill-opacity="0.4" stroke="#a855f7" stroke-width="3" data-label="Coffre"/>
+</svg>
+</div>
+
+<div class="panel">
+<h2>Face Avant (10 zones)</h2>
+<svg width="320" height="240" viewBox="250 330 370 190">
+  <image href="/edl/vehicle-blueprint-v3.png" x="0" y="0" width="1254" height="1254"/>
+  <!-- Capot -->
+  <polygon class="zone" points="498,413 365,413 330,383 328,376 333,372 533,373 535,376 533,384 498,413"
+    fill="#f97316" fill-opacity="0.4" stroke="#f97316" stroke-width="3" data-label="Capot"/>
+  <!-- Pare-brise -->
+  <polygon class="zone" points="368,351 440,347 503,351 510,374 440,372 360,374"
+    fill="#3b82f6" fill-opacity="0.4" stroke="#3b82f6" stroke-width="3" data-label="Pare-brise"/>
+  <!-- Calandre -->
+  <polygon class="zone" points="435,451 372,449 362,440 362,431 370,422 495,422 503,431 503,440 492,449 435,451"
+    fill="#ec4899" fill-opacity="0.4" stroke="#ec4899" stroke-width="3" data-label="Calandre"/>
+  <!-- Phare G -->
+  <polygon class="zone" points="353,433 298,422 298,400 312,397 354,415 361,424"
+    fill="#eab308" fill-opacity="0.5" stroke="#ca8a04" stroke-width="3" data-label="Phare G"/>
+  <!-- Phare D -->
+  <polygon class="zone" points="510,433 503,422 503,400 518,397 558,415 566,424 563,433"
+    fill="#eab308" fill-opacity="0.5" stroke="#ca8a04" stroke-width="3" data-label="Phare D"/>
+  <!-- Rétro G -->
+  <polygon class="zone" points="308,377 279,373 277,360 286,354 305,352 310,366 308,377"
+    fill="#06b6d4" fill-opacity="0.5" stroke="#0891b2" stroke-width="3" data-label="Rétro G"/>
+  <!-- Rétro D -->
+  <polygon class="zone" points="565,377 558,377 554,373 556,355 568,352 583,356 586,361 586,372 565,377"
+    fill="#06b6d4" fill-opacity="0.5" stroke="#0891b2" stroke-width="3" data-label="Rétro D"/>
+  <!-- Pare-chocs AV -->
+  <polygon class="zone" points="311,451 382,448 478,448 555,451 552,476 544,497 330,497 315,476"
+    fill="#6366f1" fill-opacity="0.4" stroke="#4f46e5" stroke-width="3" data-label="Pare-chocs AV"/>
+  <!-- Plaque AV -->
+  <polygon class="zone" points="398,455 466,455 466,476 398,476"
+    fill="#f43f5e" fill-opacity="0.5" stroke="#e11d48" stroke-width="3" data-label="Plaque AV"/>
+  <!-- Aile AVG -->
+  <polygon class="zone" points="293,386 314,399 315,449 297,450"
+    fill="#10b981" fill-opacity="0.5" stroke="#059669" stroke-width="3" data-label="Aile AVG"/>
+  <!-- Aile AVD -->
+  <polygon class="zone" points="571,386 550,399 549,449 567,450"
+    fill="#10b981" fill-opacity="0.5" stroke="#059669" stroke-width="3" data-label="Aile AVD"/>
+</svg>
+</div>
+
+<div class="panel">
+<h2>Face Arrière (8 zones)</h2>
+<svg width="320" height="200" viewBox="630 340 370 190">
+  <image href="/edl/vehicle-blueprint-v3.png" x="0" y="0" width="1254" height="1254"/>
+  <!-- Lunette AR (simplifié) -->
+  <polygon class="zone" points="714,422 712,408 718,376 728,364 896,364 906,376 912,408 910,422"
+    fill="#3b82f6" fill-opacity="0.4" stroke="#3b82f6" stroke-width="3" data-label="Lunette AR"/>
+  <!-- Coffre (simplifié) -->
+  <polygon class="zone" points="700,422 914,422 930,453 924,493 700,493"
+    fill="#f97316" fill-opacity="0.4" stroke="#f97316" stroke-width="3" data-label="Coffre"/>
+  <!-- Feu AR G -->
+  <polygon class="zone" points="686,403 722,405 721,438 688,437"
+    fill="#eab308" fill-opacity="0.5" stroke="#ca8a04" stroke-width="3" data-label="Feu AR G"/>
+  <!-- Feu AR D -->
+  <polygon class="zone" points="902,405 938,403 936,437 903,438"
+    fill="#eab308" fill-opacity="0.5" stroke="#ca8a04" stroke-width="3" data-label="Feu AR D"/>
+  <!-- Pare-chocs AR -->
+  <polygon class="zone" points="694,459 812,457 930,459 926,499 700,500"
+    fill="#6366f1" fill-opacity="0.4" stroke="#4f46e5" stroke-width="3" data-label="Pare-chocs AR"/>
+  <!-- Plaque AR -->
+  <polygon class="zone" points="768,452 854,452 854,478 768,478"
+    fill="#f43f5e" fill-opacity="0.5" stroke="#e11d48" stroke-width="3" data-label="Plaque AR"/>
+  <!-- Aile ARG -->
+  <polygon class="zone" points="664,406 683,408 683,452 666,451"
+    fill="#10b981" fill-opacity="0.5" stroke="#059669" stroke-width="3" data-label="Aile ARG"/>
+  <!-- Aile ARD -->
+  <polygon class="zone" points="959,408 940,406 940,451 958,452"
+    fill="#10b981" fill-opacity="0.5" stroke="#059669" stroke-width="3" data-label="Aile ARD"/>
+</svg>
+</div>
+
+</div>
+<script>
+document.querySelectorAll('.zone').forEach(el => {
+  el.addEventListener('mouseenter', () => {
+    const info = document.getElementById('info');
+    info.textContent = el.dataset.label;
+    info.classList.add('show');
+  });
+  el.addEventListener('mouseleave', () => {
+    document.getElementById('info').classList.remove('show');
+  });
+});
+</script>
+</body>
+</html>

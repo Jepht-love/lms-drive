@@ -17,6 +17,7 @@ function AlertIcon({ type }: { type: string }) {
   const cls = 'w-5 h-5'
   if (type === 'contrat')  return <FileText   className={cls} />
   if (type === 'retard')   return <Clock      className={cls} />
+  if (type === 'depart_imminent') return <Clock className={cls} />
   if (type === 'ct' || type === 'assurance') return <ShieldAlert className={cls} />
   if (type === 'revision') return <Wrench     className={cls} />
   if (type === 'lavage')   return <Wrench     className={cls} />

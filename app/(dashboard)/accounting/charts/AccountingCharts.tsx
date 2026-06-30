@@ -7,6 +7,7 @@ import {
 interface Props {
   monthly: { month: string; revenue: number; expenses: number }[]
   expensesByCategory: { label: string; amount: number }[]
+  expensesByVehicle: { name: string; amount: number }[]
   vehicleData: { name: string; revenue: number; expenses: number }[]
 }
 
@@ -21,7 +22,7 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
   )
 }
 
-export default function AccountingCharts({ monthly, expensesByCategory, vehicleData }: Props) {
+export default function AccountingCharts({ monthly, expensesByCategory, expensesByVehicle, vehicleData }: Props) {
   const hasData = monthly.some(m => m.revenue || m.expenses)
 
   if (!hasData) {
@@ -56,6 +57,19 @@ export default function AccountingCharts({ monthly, expensesByCategory, vehicleD
               <YAxis type="category" dataKey="label" tick={{ fontSize: 11, fill: '#6B7280' }} width={110} />
               <Tooltip formatter={(v: any) => euro(Number(v))} />
               <Bar dataKey="amount" fill="#EF4444" radius={[0, 4, 4, 0]} name="Montant" />
+            </BarChart>
+          </ResponsiveContainer>
+        </Card>
+      )}
+
+      {expensesByVehicle.length > 0 && (
+        <Card title="Dépenses par véhicule">
+          <ResponsiveContainer width="100%" height={Math.max(160, expensesByVehicle.length * 32)}>
+            <BarChart data={expensesByVehicle} layout="vertical" margin={{ top: 0, right: 8, left: 0, bottom: 0 }}>
+              <XAxis type="number" tick={{ fontSize: 10, fill: '#9CA3AF' }} tickFormatter={(v) => `${v}€`} />
+              <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: '#6B7280' }} width={110} />
+              <Tooltip formatter={(v: any) => euro(Number(v))} />
+              <Bar dataKey="amount" fill="#EF4444" radius={[0, 4, 4, 0]} name="Dépenses" />
             </BarChart>
           </ResponsiveContainer>
         </Card>

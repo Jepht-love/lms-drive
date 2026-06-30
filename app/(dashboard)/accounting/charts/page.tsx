@@ -45,6 +45,14 @@ export default async function ChartsPage() {
   }
   const vehicleData = [...vehMap.values()]
 
+  // Dépenses par véhicule, triées du plus coûteux au moins coûteux — pour
+  // repérer en un coup d'œil quel véhicule "consomme" le plus sur la période,
+  // distinct de "Rentabilité par véhicule" qui mélange recettes et dépenses.
+  const expensesByVehicle = [...vehMap.values()]
+    .filter(v => v.expenses > 0)
+    .sort((a, b) => b.expenses - a.expenses)
+    .map(v => ({ name: v.name, amount: v.expenses }))
+
   return (
     <div className="space-y-4">
       <BackButton fallbackHref="/accounting" className="inline-flex items-center gap-1.5 text-sm text-gray-400 font-medium hover:text-gray-700 transition-colors">
@@ -55,7 +63,12 @@ export default async function ChartsPage() {
         <p className="text-sm text-gray-400 mt-0.5">Année {year}</p>
       </div>
 
-      <AccountingCharts monthly={monthly} expensesByCategory={expensesByCategory} vehicleData={vehicleData} />
+      <AccountingCharts
+        monthly={monthly}
+        expensesByCategory={expensesByCategory}
+        expensesByVehicle={expensesByVehicle}
+        vehicleData={vehicleData}
+      />
     </div>
   )
 }

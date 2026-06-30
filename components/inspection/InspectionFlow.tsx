@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import VehicleInspectionMap from '@/components/vehicle-schema/VehicleInspectionMap'
 import SignatureCanvas from '@/components/signature/SignatureCanvas'
 import { MANDATORY_PHOTOS } from '@/components/vehicle-schema/zones'
-import { VEHICLE_ZONES as NEW_ZONES, graviteLabel, type DamageEntry } from '@/components/vehicle-schema/inspection-types'
+import { VEHICLE_ZONES as NEW_ZONES, graviteLabel, defaultDamagePrice, type DamageEntry } from '@/components/vehicle-schema/inspection-types'
 import { createClient } from '@/lib/supabase/client'
 import { compressImageToBase64 } from '@/lib/utils'
 import { calculateLateFee, calculateExtraKm } from '@/lib/calculations/fees'
@@ -41,6 +41,7 @@ interface ComputedFees {
   lateFeeAmount: number
   extraKmCount: number
   extraKmAmount: number
+  damageFeeAmount: number
 }
 
 const CLEANLINESS_LEVELS = [
@@ -98,6 +99,7 @@ export default function InspectionFlow({
   const [exteriorCleanliness, setExteriorCleanliness] = useState(3)
   const [interiorCleanliness, setInteriorCleanliness] = useState(3)
   const [damages, setDamages] = useState<Record<string, DamageEntry[]>>({})
+  const [damagePrices, setDamagePrices] = useState<Record<string, number>>({})
   const [photos, setPhotos] = useState<Record<string, string>>({})
   const [clientSig, setClientSig] = useState<string | null>(null)
   // Signature agent supprimée pour l'EDL — remplacée par le cachet entreprise
@@ -144,6 +146,17 @@ export default function InspectionFlow({
   const currentDamagedZoneIds = Object.entries(damages).filter(([, e]) => e.length > 0).map(([id]) => id)
   const newDamageZoneIds = currentDamagedZoneIds.filter(id => !previousZoneIds.has(id))
   const stillPresentZoneIds = currentDamagedZoneIds.filter(id => previousZoneIds.has(id))
+
+  // Montant à facturer : uniquement les nouveaux dommages (pas ceux déjà
+  // présents au départ) — prix par défaut de la grille, ajustable par zone.
+  function priceForZone(zoneId: string): number {
+    const stored = damagePrices[zoneId]
+    if (stored != null) return stored
+    return defaultDamagePrice(damages[zoneId]?.[0]?.type)
+  }
+  const totalDamageFee = type === 'arrivee'
+    ? newDamageZoneIds.reduce((sum, id) => sum + priceForZone(id), 0)
+    : 0
 
   function handleDamageAdd(zoneId: string, entry: DamageEntry) {
     setDamages(prev => ({
@@ -200,6 +213,9 @@ export default function InspectionFlow({
               type: entry.type ?? null,
               description: entry.comment,
               photos: entry.photos,
+              // Prix retenu uniquement pour les nouveaux dommages à l'EDL retour
+              // (pas ceux déjà présents au départ, jamais facturables au client).
+              price: type === 'arrivee' && !previousZoneIds.has(zoneId) ? priceForZone(zoneId) : 0,
             }))),
           client_signature_svg: clientSig,
           agent_signature_svg: null,
@@ -267,6 +283,7 @@ export default function InspectionFlow({
           late_fee_amount: lateFeeAmount,
           extra_km_count: extraKmCount,
           extra_km_amount: extraKmAmount,
+          damage_fee_amount: totalDamageFee,
         }).eq('id', reservationId)
 
         // Dégradations relevées au retour → drapeaux « Dégradé » sur le véhicule
@@ -280,7 +297,7 @@ export default function InspectionFlow({
           await reportVehicleIssues(vehicleId, issues, inspection.id)
         }
 
-        setComputedFees({ lateMinutes, lateFeeAmount, extraKmCount, extraKmAmount })
+        setComputedFees({ lateMinutes, lateFeeAmount, extraKmCount, extraKmAmount, damageFeeAmount: totalDamageFee })
       }
 
       await supabase.from('audit_logs').insert({
@@ -300,7 +317,7 @@ export default function InspectionFlow({
   }
 
   if (step === 'done') {
-    const totalExtra = (computedFees?.lateFeeAmount ?? 0) + (computedFees?.extraKmAmount ?? 0)
+    const totalExtra = (computedFees?.lateFeeAmount ?? 0) + (computedFees?.extraKmAmount ?? 0) + (computedFees?.damageFeeAmount ?? 0)
     return (
       <div className="space-y-4">
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-10 text-center">
@@ -352,6 +369,20 @@ export default function InspectionFlow({
                     </div>
                   </div>
                   <span className="text-base font-bold text-orange-600">+{computedFees.extraKmAmount.toLocaleString('fr-FR')} €</span>
+                </div>
+              )}
+              {computedFees.damageFeeAmount > 0 && (
+                <div className="flex items-center justify-between px-5 py-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-red-100 flex items-center justify-center flex-shrink-0">
+                      <AlertTriangle className="w-4 h-4 text-red-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">Dommages constatés</p>
+                      <p className="text-xs text-slate-400">{newDamageZoneIds.length} nouvelle(s) zone(s) endommagée(s)</p>
+                    </div>
+                  </div>
+                  <span className="text-base font-bold text-red-600">+{computedFees.damageFeeAmount.toLocaleString('fr-FR')} €</span>
                 </div>
               )}
               <div className="flex items-center justify-between px-5 py-4 bg-slate-50">
@@ -573,8 +604,9 @@ export default function InspectionFlow({
                   .filter(([, entries]) => entries.length > 0)
                   .map(([zoneId, entries]) => {
                     const zone = NEW_ZONES.find(z => z.id === zoneId)
+                    const isNew = type === 'arrivee' && !previousZoneIds.has(zoneId)
                     return (
-                      <div key={zoneId} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50">
+                      <div key={zoneId} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 gap-2">
                         <div className="flex-1 min-w-0">
                           <span className={`text-xs px-2 py-0.5 rounded-full mr-2 font-medium ${
                             entries[0].severity === 'dommage'   ? 'bg-red-100 text-red-700' :
@@ -585,21 +617,34 @@ export default function InspectionFlow({
                           </span>
                           <span className="text-sm font-medium text-slate-800">{zone?.label ?? zoneId}</span>
                           {type === 'arrivee' && (
-                            previousZoneIds.has(zoneId)
-                              ? <span className="ml-2 text-[10px] font-bold uppercase text-blue-500">déjà signalé au départ</span>
-                              : <span className="ml-2 text-[10px] font-bold uppercase text-red-500">nouveau</span>
+                            isNew
+                              ? <span className="ml-2 text-[10px] font-bold uppercase text-red-500">nouveau</span>
+                              : <span className="ml-2 text-[10px] font-bold uppercase text-blue-500">déjà signalé au départ</span>
                           )}
                           {entries[0].comment && (
                             <p className="text-xs text-slate-400 mt-0.5 truncate">{entries[0].comment}</p>
                           )}
                         </div>
+                        {isNew && (
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <input
+                              type="number"
+                              min={0}
+                              step="0.01"
+                              value={priceForZone(zoneId)}
+                              onChange={e => setDamagePrices(prev => ({ ...prev, [zoneId]: Number(e.target.value) }))}
+                              className="w-20 text-sm text-right bg-white border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-blue-400"
+                            />
+                            <span className="text-xs text-slate-400">€</span>
+                          </div>
+                        )}
                         <button
                           onClick={() => setDamages(prev => {
                             const next = { ...prev }
                             delete next[zoneId]
                             return next
                           })}
-                          className="p-1 hover:bg-red-50 rounded-lg ml-2"
+                          className="p-1 hover:bg-red-50 rounded-lg flex-shrink-0"
                         >
                           <X className="w-4 h-4 text-slate-400 hover:text-red-500" />
                         </button>
@@ -607,6 +652,12 @@ export default function InspectionFlow({
                     )
                   })}
               </div>
+              {type === 'arrivee' && totalDamageFee > 0 && (
+                <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100">
+                  <span className="text-sm font-bold text-slate-700">Total dommages à facturer</span>
+                  <span className="text-base font-bold text-red-600">{totalDamageFee.toLocaleString('fr-FR')} €</span>
+                </div>
+              )}
             </div>
           )}
 

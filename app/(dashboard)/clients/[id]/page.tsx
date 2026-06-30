@@ -102,7 +102,7 @@ export default async function ClientPage({
   async function getSignedUrl(path: string | null | undefined): Promise<string | null> {
     if (!path) return null
     const { data } = await supabase.storage
-      .from('client-docs')
+      .from('client-documents')
       .createSignedUrl(path, 3600)
     return data?.signedUrl ?? null
   }

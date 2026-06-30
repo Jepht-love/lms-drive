@@ -1,15 +1,29 @@
 'use client'
 
-import { useState } from 'react'
-import { FileText } from 'lucide-react'
+import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
+import { FileText, Check, BadgeEuro } from 'lucide-react'
 import { formatPrice, formatDate } from '@/lib/utils'
 import { MAINTENANCE_TYPES, maintenanceType, type MaintenanceRecord } from '@/lib/maintenance'
+import { PAYMENT_METHODS, paymentMethodLabel } from '@/lib/accounting/categories'
+import { markMaintenancePaid } from '@/lib/actions/maintenance'
 
 export default function MaintenanceHistory({ records }: { records: MaintenanceRecord[] }) {
+  const router = useRouter()
   const [filter, setFilter] = useState<string>('tous')
+  const [openPay, setOpenPay] = useState<string | null>(null)
+  const [pending, startTransition] = useTransition()
 
   const presentTypes = new Set(records.map(r => r.type))
   const filtered = filter === 'tous' ? records : records.filter(r => r.type === filter)
+
+  function pay(id: string, method: string) {
+    startTransition(async () => {
+      await markMaintenancePaid(id, method)
+      setOpenPay(null)
+      router.refresh()
+    })
+  }
 
   if (records.length === 0) {
     return (
@@ -53,6 +67,7 @@ export default function MaintenanceHistory({ records }: { records: MaintenanceRe
       <div className="space-y-2">
         {filtered.map(r => {
           const t = maintenanceType(r.type)
+          const amount = r.amount ?? 0
           return (
             <div key={r.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
               <div className="flex items-start justify-between gap-3 mb-2">
@@ -65,7 +80,7 @@ export default function MaintenanceHistory({ records }: { records: MaintenanceRe
                     <p className="text-sm font-medium text-gray-900 mt-0.5">{r.description}</p>
                   )}
                 </div>
-                <span className="text-sm font-black text-gray-900 flex-shrink-0">{formatPrice(r.amount ?? 0)}</span>
+                <span className="text-sm font-black text-gray-900 flex-shrink-0">{formatPrice(amount)}</span>
               </div>
               <div className="flex items-center gap-2 text-xs text-gray-400 flex-wrap">
                 <span>{formatDate(r.date)}</span>
@@ -94,6 +109,41 @@ export default function MaintenanceHistory({ records }: { records: MaintenanceRe
                 >
                   <FileText className="w-3 h-3" /> Voir la facture
                 </a>
+              )}
+
+              {/* Règlement → comptabilité (booké au paiement) */}
+              {amount > 0 && (
+                <div className="mt-3 pt-3 border-t border-gray-100">
+                  {r.paid_at ? (
+                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-green-600">
+                      <Check className="w-3.5 h-3.5" />
+                      Payé{r.paid_method ? ` · ${paymentMethodLabel(r.paid_method)}` : ''} — comptabilisé
+                    </span>
+                  ) : openPay === r.id ? (
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Mode de paiement</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {PAYMENT_METHODS.map(m => (
+                          <button
+                            key={m.id}
+                            disabled={pending}
+                            onClick={() => pay(r.id, m.id)}
+                            className="px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+                          >
+                            {m.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setOpenPay(r.id)}
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-600 border border-gray-200 rounded-lg px-2.5 py-1.5 hover:bg-gray-50"
+                    >
+                      <BadgeEuro className="w-3.5 h-3.5" /> Marquer payé
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           )

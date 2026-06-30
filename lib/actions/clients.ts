@@ -15,7 +15,7 @@ async function uploadClientDoc(
   const ext = file.type === 'image/png' ? 'png' : 'jpg'
   const path = `clients/${clientId}/${slot}.${ext}`
   const { error } = await supabase.storage
-    .from('client-docs')
+    .from('client-documents')
     .upload(path, bytes, { contentType: file.type || 'image/jpeg', upsert: true })
   return error ? null : path
 }
@@ -119,7 +119,9 @@ export async function updateClientAction(id: string, formData: FormData) {
     }
   }
 
-  const { error } = await supabase.from('clients').update({ ...payload, ...paths }).eq('id', id)
+  // Exclure les chemins null (upload échoué) pour ne pas effacer les photos existantes
+  const validPaths = Object.fromEntries(Object.entries(paths).filter(([, v]) => v !== null))
+  const { error } = await supabase.from('clients').update({ ...payload, ...validPaths }).eq('id', id)
   if (error) return { error: error.message }
 
   await applyDiscount(supabase, id, formData.get('discount_percent'))

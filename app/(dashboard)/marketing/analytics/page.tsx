@@ -35,6 +35,7 @@ export default async function AnalyticsPage() {
     { data: clients },
     { data: reservations },
     { data: topClients },
+    { data: campaigns },
   ] = await Promise.all([
     supabase.from('clients').select('id, birth_date, status, rating, acquisition_channel, city'),
     supabase
@@ -46,6 +47,7 @@ export default async function AnalyticsPage() {
       .select('id, first_name, last_name, rating, status')
       .order('created_at', { ascending: false })
       .limit(100),
+    supabase.from('campaigns').select('channel, budget'),
   ])
 
   // C1 — Tranches d'âge
@@ -134,6 +136,21 @@ export default async function AnalyticsPage() {
     cityRevenue.set(city, e)
   })
   const topCities = [...cityRevenue.entries()].sort((a, b) => b[1].revenue - a[1].revenue).slice(0, 5)
+
+  // C8b — Coût d'acquisition par canal (budget campagnes / clients acquis via ce canal)
+  const budgetByChannel = new Map<string, number>()
+  campaigns?.forEach(c => {
+    if (!c.channel) return
+    budgetByChannel.set(c.channel, (budgetByChannel.get(c.channel) ?? 0) + (c.budget ?? 0))
+  })
+  const acqCostByChannel = topChannels.map(([channel, count]) => ({
+    channel,
+    count,
+    budget: budgetByChannel.get(channel) ?? 0,
+    costPerClient: budgetByChannel.has(channel) && count > 0
+      ? (budgetByChannel.get(channel)! / count)
+      : null,
+  })).filter(c => c.budget > 0)
 
   // C8 — Habitudes de consommation : durée moyenne de location, fréquence par client
   const durations = (reservations ?? []).map(r =>
@@ -277,6 +294,27 @@ export default async function AnalyticsPage() {
                   <p className="text-[11px] text-gray-400">{e.count} location{e.count > 1 ? 's' : ''}</p>
                 </div>
                 <span className="text-[13px] font-black text-[#111111] flex-shrink-0">{formatPrice(e.revenue)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* C8b — Coût d'acquisition par canal */}
+      {acqCostByChannel.length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1">Coût d'acquisition par canal</p>
+          <p className="text-[11px] text-gray-400 mb-4">Budget campagnes ÷ clients acquis via ce canal</p>
+          <div className="space-y-3">
+            {acqCostByChannel.map(c => (
+              <div key={c.channel} className="flex items-center justify-between">
+                <div>
+                  <p className="text-[13px] font-medium text-[#111111] capitalize">{c.channel}</p>
+                  <p className="text-[11px] text-gray-400">{c.count} client{c.count > 1 ? 's' : ''} · budget {formatPrice(c.budget)}</p>
+                </div>
+                <span className="text-[13px] font-black text-[#111111]">
+                  {c.costPerClient != null ? formatPrice(c.costPerClient) : '—'} / client
+                </span>
               </div>
             ))}
           </div>

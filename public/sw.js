@@ -133,4 +133,36 @@ if (isLocalDev) {
   self.addEventListener('message', (event) => {
     if (event.data?.type === 'SKIP_WAITING') self.skipWaiting()
   })
+
+  // ── Push notifications ──────────────────────────────────────────────────────
+  self.addEventListener('push', (event) => {
+    if (!event.data) return
+    let payload
+    try { payload = event.data.json() } catch { payload = { title: 'LMS Drive', body: event.data.text() } }
+
+    const { title = 'LMS Drive', body = '', url = '/', icon = '/logo.png', badge = '/logo.png' } = payload
+
+    event.waitUntil(
+      self.registration.showNotification(title, {
+        body,
+        icon,
+        badge,
+        data: { url },
+        vibrate: [150, 50, 150],
+        requireInteraction: false,
+      })
+    )
+  })
+
+  self.addEventListener('notificationclick', (event) => {
+    event.notification.close()
+    const url = event.notification.data?.url ?? '/'
+    event.waitUntil(
+      self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+        const existing = clients.find((c) => c.url.includes(self.location.origin))
+        if (existing) { existing.focus(); existing.navigate(url) }
+        else self.clients.openWindow(url)
+      })
+    )
+  })
 }

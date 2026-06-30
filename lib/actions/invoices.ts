@@ -27,12 +27,11 @@ async function nextInvoiceNumber(supabase: SupabaseServer): Promise<string> {
 
 /**
  * Brouillon généré automatiquement à la clôture du contrat (validateContract) :
- * ne reprend que les frais déjà calculés de façon fiable par l'app (retard,
- * km supplémentaires). Les dommages constatés au retour sont listés à prix 0 —
- * à chiffrer par le gérant avant envoi plutôt que de deviner un tarif au hasard
- * (la grille de tarifs par type de dommage existe mais ne couvre pas toutes les
- * zones/combinaisons possibles, un montant inventé serait risqué sur un document
- * envoyé tel quel à un client). Ne crée rien s'il n'y a aucun frais à facturer.
+ * reprend les frais déjà calculés de façon fiable par l'app (retard, km
+ * supplémentaires, dommages). Le prix de chaque dommage est celui choisi par
+ * l'agent à l'EDL retour (grille par type de dommage, ajustée au cas par cas
+ * dans InspectionFlow) — pas recalculé ici. Ne crée rien s'il n'y a aucun frais
+ * à facturer.
  */
 export async function generateInvoiceDraft(contractId: string): Promise<{ invoiceId?: string } | { error: string }> {
   const supabase = await createClient()
@@ -79,11 +78,13 @@ export async function generateInvoiceDraft(contractId: string): Promise<{ invoic
     })
   }
   for (const z of newDamages) {
+    const price = z.price ?? 0
+    if (price <= 0) continue
     lineItems.push({
       description: `Dommage constaté — ${z.label} (${graviteLabel(z.severity)})`,
       quantity: 1,
-      unit_price: 0,
-      total: 0,
+      unit_price: price,
+      total: price,
     })
   }
 
@@ -108,7 +109,7 @@ export async function generateInvoiceDraft(contractId: string): Promise<{ invoic
   return { invoiceId: invoice.id }
 }
 
-export async function updateInvoiceLines(invoiceId: string, lineItems: InvoiceLineItem[]) {
+export async function updateInvoiceLines(invoiceId: string, lineItems: InvoiceLineItem[], paymentTermDays?: number) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non authentifié' }
@@ -116,7 +117,11 @@ export async function updateInvoiceLines(invoiceId: string, lineItems: InvoiceLi
   const totalAmount = lineItems.reduce((s, l) => s + l.total, 0)
   const { data: invoice, error } = await supabase
     .from('invoices')
-    .update({ line_items: lineItems, total_amount: totalAmount })
+    .update({
+      line_items: lineItems,
+      total_amount: totalAmount,
+      ...(paymentTermDays != null ? { payment_term_days: paymentTermDays } : {}),
+    })
     .eq('id', invoiceId)
     .select('reservation_id')
     .single()
@@ -215,10 +220,30 @@ export async function sendInvoice(invoiceId: string) {
     is_auto_generated: true,
   })
 
+  // Échéance figée à l'envoi (pas avant : le délai/montant peuvent encore
+  // changer pendant que la facture est en brouillon) — remontée dans le
+  // système d'échéances générique pour un suivi unifié (lib/actions/dueDates.ts).
+  const termDays = invoice.payment_term_days ?? 30
+  const dueDate = new Date()
+  dueDate.setDate(dueDate.getDate() + termDays)
+  const dueDateStr = dueDate.toISOString().slice(0, 10)
+
   await admin.from('invoices').update({
     pdf_storage_path: pdfPath,
     sent_at: new Date().toISOString(),
+    due_date: dueDateStr,
   }).eq('id', invoiceId)
+
+  await admin.from('financial_due_dates').insert({
+    description: `Facture ${invoice.invoice_number} — ${c.first_name} ${c.last_name}`,
+    type: 'recette',
+    category: 'facturation',
+    amount: invoice.total_amount,
+    due_date: dueDateStr,
+    vehicle_id: invoice.vehicle_id,
+    invoice_id: invoiceId,
+    created_by: user.id,
+  })
 
   await admin.from('audit_logs').insert({
     user_id: user.id,

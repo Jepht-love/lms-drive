@@ -4,8 +4,9 @@ import Link from 'next/link'
 import { ArrowLeft, CheckCircle2 } from 'lucide-react'
 import BackButton from '@/components/ui/BackButton'
 import { formatPrice } from '@/lib/utils'
-import { getCategoryLabel } from '@/lib/accounting/categories'
+import { getCategoryLabel, paymentMethodLabel, expenseNature } from '@/lib/accounting/categories'
 import CloseButton from '../CloseButton'
+import ReopenClosingButton from '../ReopenClosingButton'
 import AccountingTransactions from '../../AccountingTransactions'
 
 const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre']
@@ -21,14 +22,23 @@ export default async function MonthlyClosingPage() {
   const year = now.getFullYear()
   const from = `${year}-${String(month).padStart(2, '0')}-01`
   const to = new Date(year, month, 0).toISOString().slice(0, 10)
+  // Mois précédent (pour l'analyse de variation)
+  const pm = month === 1 ? 12 : month - 1
+  const py = month === 1 ? year - 1 : year
+  const pFrom = `${py}-${String(pm).padStart(2, '0')}-01`
+  const pTo = new Date(py, pm, 0).toISOString().slice(0, 10)
 
-  const [{ data: closing }, { data: txs }] = await Promise.all([
+  const [{ data: closing }, { data: txs }, { data: prevTxs }] = await Promise.all([
     supabase.from('monthly_closings').select('*').eq('month', month).eq('year', year).maybeSingle(),
     supabase.from('financial_transactions').select('*, vehicles(plate, brand, model)').gte('date', from).lte('date', to),
+    supabase.from('financial_transactions').select('type, category, amount, is_transparent').gte('date', pFrom).lte('date', pTo),
   ])
 
-  const all = txs ?? []
   const isClosed = closing?.is_closed
+  // Mois clôturé → on affiche le SNAPSHOT FIGÉ (pris à la clôture), pas le recalcul
+  // live, pour garantir un historique stable. Sinon, données en direct.
+  const snap = (closing?.snapshot as { transactions?: any[] } | null)?.transactions
+  const all = isClosed && Array.isArray(snap) ? snap : (txs ?? [])
 
   // Transparence : une ligne marquée transparente est déduite du bilan affiché
   // ici et des exports (déjà le cas pour export/pdf et export/excel) — sans
@@ -48,6 +58,13 @@ export default async function MonthlyClosingPage() {
     byCat.set(t.category, e)
   }
 
+  const byMethod = new Map<string, number>()
+  for (const t of visible) {
+    if (t.type !== 'recette') continue
+    const m = t.payment_method || 'non_precise'
+    byMethod.set(m, (byMethod.get(m) ?? 0) + (t.amount ?? 0))
+  }
+
   const byVeh = new Map<string, { name: string; plate: string; revenue: number; expenses: number }>()
   for (const t of visible) {
     if (!t.vehicle_id) continue
@@ -57,6 +74,30 @@ export default async function MonthlyClosingPage() {
     else e.expenses += t.amount ?? 0
     byVeh.set(t.vehicle_id, e)
   }
+
+  // Charges fixes vs variables (sur les dépenses) — demandé au cahier des charges.
+  let chargesFixes = 0, chargesVariables = 0
+  for (const t of visible) {
+    if (t.type !== 'depense') continue
+    if (expenseNature(t.category) === 'fixe') chargesFixes += t.amount ?? 0
+    else chargesVariables += t.amount ?? 0
+  }
+
+  // ── Analyse de variation vs mois précédent (expliquer une baisse de rentabilité) ──
+  const pv = (prevTxs ?? []).filter(t => !t.is_transparent)
+  const prevRev = pv.filter(t => t.type === 'recette').reduce((s, t) => s + (t.amount ?? 0), 0)
+  const prevExp = pv.filter(t => t.type === 'depense').reduce((s, t) => s + (t.amount ?? 0), 0)
+  const prevNet = prevRev - prevExp
+  const expNow = new Map<string, number>()
+  for (const t of visible) if (t.type === 'depense') expNow.set(t.category, (expNow.get(t.category) ?? 0) + (t.amount ?? 0))
+  const expPrev = new Map<string, number>()
+  for (const t of pv) if (t.type === 'depense') expPrev.set(t.category, (expPrev.get(t.category) ?? 0) + (t.amount ?? 0))
+  const catDeltas = [...new Set([...expNow.keys(), ...expPrev.keys()])]
+    .map(c => ({ cat: c, delta: (expNow.get(c) ?? 0) - (expPrev.get(c) ?? 0) }))
+    .filter(d => Math.abs(d.delta) > 0.01)
+    .sort((a, b) => b.delta - a.delta)
+  const hasPrev = pv.length > 0
+  const fmtDelta = (n: number) => `${n >= 0 ? '+' : '−'}${formatPrice(Math.abs(n))}`
 
   return (
     <div className="space-y-4">
@@ -109,6 +150,69 @@ export default async function MonthlyClosingPage() {
               <p className={`text-sm font-black ${e.type === 'recette' ? 'text-green-600' : 'text-red-500'}`}>
                 {e.type === 'recette' ? '+' : '−'}{formatPrice(e.amount)}
               </p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Charges fixes vs variables */}
+      {(chargesFixes > 0 || chargesVariables > 0) && (
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Charges fixes</p>
+            <p className="text-lg font-black text-gray-900">{formatPrice(chargesFixes)}</p>
+            <p className="text-[11px] text-gray-400 mt-0.5">assurance, loyers, salaires…</p>
+          </div>
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Charges variables</p>
+            <p className="text-lg font-black text-gray-900">{formatPrice(chargesVariables)}</p>
+            <p className="text-[11px] text-gray-400 mt-0.5">carburant, entretien, réparations…</p>
+          </div>
+        </div>
+      )}
+
+      {/* Analyse de variation vs mois précédent */}
+      {hasPrev && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-3">Variation vs {MONTHS[pm - 1]} {py}</p>
+          <div className="grid grid-cols-3 gap-3 mb-1">
+            <div>
+              <p className="text-[10px] text-gray-400 uppercase tracking-wide">CA</p>
+              <p className={`text-sm font-black ${rev - prevRev >= 0 ? 'text-green-600' : 'text-red-500'}`}>{fmtDelta(rev - prevRev)}</p>
+            </div>
+            <div>
+              <p className="text-[10px] text-gray-400 uppercase tracking-wide">Dépenses</p>
+              <p className={`text-sm font-black ${exp - prevExp <= 0 ? 'text-green-600' : 'text-red-500'}`}>{fmtDelta(exp - prevExp)}</p>
+            </div>
+            <div>
+              <p className="text-[10px] text-gray-400 uppercase tracking-wide">Bénéfice</p>
+              <p className={`text-sm font-black ${net - prevNet >= 0 ? 'text-green-600' : 'text-red-500'}`}>{fmtDelta(net - prevNet)}</p>
+            </div>
+          </div>
+          {net - prevNet < 0 && catDeltas.some(d => d.delta > 0) && (
+            <div className="mt-3 pt-3 border-t border-gray-100">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Postes de dépense en hausse</p>
+              <div className="space-y-1">
+                {catDeltas.filter(d => d.delta > 0).slice(0, 4).map(d => (
+                  <div key={d.cat} className="flex items-center justify-between text-[13px]">
+                    <span className="text-gray-600">{getCategoryLabel(d.cat)}</span>
+                    <span className="font-bold text-red-500">{fmtDelta(d.delta)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Encaissements par type */}
+      {byMethod.size > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 p-4 border-b border-gray-100">Encaissements par type</p>
+          {[...byMethod.entries()].sort((a, b) => b[1] - a[1]).map(([method, amount]) => (
+            <div key={method} className="flex items-center justify-between px-4 py-3 border-b border-gray-50 last:border-0">
+              <p className="text-[13px] font-medium text-gray-900">{paymentMethodLabel(method)}</p>
+              <p className="text-sm font-black text-green-600">{formatPrice(amount)}</p>
             </div>
           ))}
         </div>
@@ -167,6 +271,7 @@ export default async function MonthlyClosingPage() {
       )}
 
       {!isClosed && <CloseButton mode="monthly" month={month} year={year} />}
+      {isClosed && <ReopenClosingButton mode="monthly" month={month} year={year} />}
     </div>
   )
 }

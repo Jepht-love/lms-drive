@@ -57,6 +57,7 @@ export interface ContractData {
   lateMinutes?: number
   extraKmCount?: number
   extraKmAmount?: number
+  damageFeeAmount?: number
   prolongations?: { date: string; additionalDays: number; addedAmount: number }[]
   clientSignature?: string
   agentSignature?: string
@@ -558,7 +559,7 @@ export function ContractPDF({ data }: { data: ContractData }) {
         )}
 
         {/* Frais complémentaires */}
-        {((data.lateFeeAmount ?? 0) > 0 || (data.extraKmCount ?? 0) > 0) && (
+        {((data.lateFeeAmount ?? 0) > 0 || (data.extraKmCount ?? 0) > 0 || (data.damageFeeAmount ?? 0) > 0) && (
           <View style={[s.section, { backgroundColor: '#fff7ed', borderRadius: 4, padding: 8 }]}>
             <Text style={[s.sectionTitle, { color: '#9a3412' }]}>Frais complémentaires</Text>
             {(data.lateFeeAmount ?? 0) > 0 && (
@@ -573,10 +574,16 @@ export function ContractPDF({ data }: { data: ContractData }) {
                 <Text style={[s.value, { color: '#ea580c' }]}>{fmtMoney(data.extraKmAmount)}</Text>
               </View>
             )}
+            {(data.damageFeeAmount ?? 0) > 0 && (
+              <View style={s.row}>
+                <Text style={s.label}>Dommages constatés à l'état des lieux de retour</Text>
+                <Text style={[s.value, { color: '#dc2626' }]}>{fmtMoney(data.damageFeeAmount)}</Text>
+              </View>
+            )}
             <View style={[s.row, { marginTop: 4, paddingTop: 4, borderTop: '1px solid #fed7aa' }]}>
               <Text style={[s.label, { fontFamily: 'Helvetica-Bold' }]}>Total frais supplémentaires</Text>
               <Text style={[s.value, { fontFamily: 'Helvetica-Bold', color: '#9a3412' }]}>
-                {fmtMoney((data.lateFeeAmount ?? 0) + (data.extraKmAmount ?? 0))}
+                {fmtMoney((data.lateFeeAmount ?? 0) + (data.extraKmAmount ?? 0) + (data.damageFeeAmount ?? 0))}
               </Text>
             </View>
           </View>

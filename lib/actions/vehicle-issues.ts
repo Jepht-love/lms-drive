@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { recomputeVehicleStatus } from '@/lib/vehicles/vehicleStatus'
 import type { MaintenanceFlag } from '@/types/database'
 
 type NewIssue = Omit<MaintenanceFlag, 'id' | 'created_at'>
@@ -82,17 +83,30 @@ export async function resolveVehicleIssue(vehicleId: string, flagId: string) {
   return { success: true }
 }
 
-/** Bascule manuelle dans/hors la catégorie « À réparer ». */
+/**
+ * Bascule manuelle « à réparer » ↔ « réparé ».
+ * Mise en réparation → statut `a_reparer`.
+ * Réparation terminée → on remet le véhicule disponible ET on met à jour l'état
+ * mécanique : les dégradations actives sont effacées (le garage les a traitées),
+ * puis recompute pour qu'un véhicule encore réservé/loué retrouve son vrai statut.
+ */
 export async function setVehicleRepairStatus(vehicleId: string, toRepair: boolean) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non authentifié' }
 
-  const { error } = await supabase
-    .from('vehicles')
-    .update({ status: toRepair ? 'a_reparer' : 'disponible' })
-    .eq('id', vehicleId)
-  if (error) return { error: error.message }
+  if (toRepair) {
+    const { error } = await supabase.from('vehicles').update({ status: 'a_reparer' }).eq('id', vehicleId)
+    if (error) return { error: error.message }
+  } else {
+    // Réparation terminée : on solde l'état mécanique puis on recalcule le statut réel.
+    const { error } = await supabase
+      .from('vehicles')
+      .update({ status: 'disponible', maintenance_flags: [] })
+      .eq('id', vehicleId)
+    if (error) return { error: error.message }
+    await recomputeVehicleStatus(supabase, vehicleId)
+  }
 
   await supabase.from('audit_logs').insert({
     user_id: user.id,
@@ -103,5 +117,6 @@ export async function setVehicleRepairStatus(vehicleId: string, toRepair: boolea
 
   revalidatePath('/vehicles')
   revalidatePath(`/vehicles/${vehicleId}`)
+  revalidatePath('/maintenance')
   return { success: true }
 }

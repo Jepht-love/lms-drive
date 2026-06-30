@@ -14,7 +14,7 @@ const TYPES: Record<string, string> = {
   livraison: 'Livraison', recuperation: 'Récupération',
   entretien: 'Entretien', controle_etat_lieux: 'État des lieux',
   paiement_caution: 'Paiement caution', document_manquant: 'Document manquant',
-  autre: 'Autre',
+  marketing: 'Marketing', autre: 'Autre',
 }
 
 const STATUSES = [

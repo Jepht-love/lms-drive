@@ -11,6 +11,8 @@ export interface MaintenanceRecord {
   provider: string | null
   invoice_url: string | null
   notes: string | null
+  paid_at: string | null        // date de règlement → déclenche la dépense en compta
+  paid_method: string | null    // mode de paiement du règlement
   created_at: string
 }
 

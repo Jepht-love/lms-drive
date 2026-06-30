@@ -101,7 +101,7 @@ export default async function MarketingPage({
                       <p className="text-[13px] font-black text-[#111111]">{c.prospects_count}</p>
                     </div>
                     <div className="text-center">
-                      <p className="text-[10px] text-gray-400 uppercase tracking-wide">Resas</p>
+                      <p className="text-[10px] text-gray-400 uppercase tracking-wide">Réservations</p>
                       <p className="text-[13px] font-black text-[#111111]">{c.reservations_count}</p>
                     </div>
                     <div className="text-center">

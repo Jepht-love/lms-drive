@@ -1,9 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { Settings, Users, Shield, FileClock, Building2 } from 'lucide-react'
-import { formatDateTime } from '@/lib/utils'
+import { Settings, Users, FileClock, Building2 } from 'lucide-react'
 import { getAgencySettings } from '@/lib/contracts/agency'
 import AgencySettingsForm from './AgencySettingsForm'
+import AuditLogList from './AuditLogList'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
@@ -20,7 +20,7 @@ export default async function SettingsPage() {
 
   const [{ data: profiles }, { data: auditLogs }] = await Promise.all([
     supabase.from('profiles').select('*').order('created_at'),
-    supabase.from('audit_logs').select('*, user:profiles(full_name)').order('created_at', { ascending: false }).limit(30),
+    supabase.from('audit_logs').select('*, user:profiles(full_name)').order('created_at', { ascending: false }).limit(100),
   ])
 
   const agency = await getAgencySettings(supabase)
@@ -71,27 +71,12 @@ export default async function SettingsPage() {
         </div>
       </div>
 
-      {/* Audit log */}
+      {/* Journal d'audit — français lisible, filtrable par employé */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
         <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2">
-          <FileClock className="w-4 h-4" /> Journal d'audit (30 dernières actions)
+          <FileClock className="w-4 h-4" /> Journal d'audit
         </h3>
-        <div className="space-y-1.5 max-h-96 overflow-y-auto">
-          {auditLogs?.length === 0 ? (
-            <p className="text-sm text-slate-400">Aucune action enregistrée</p>
-          ) : (
-            auditLogs?.map(log => (
-              <div key={log.id} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-50 text-sm">
-                <Shield className="w-3.5 h-3.5 text-slate-300 flex-shrink-0" />
-                <span className="font-mono text-xs text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded">{log.action}</span>
-                <span className="text-slate-500 text-xs flex-1 truncate">
-                  {(log.user as any)?.full_name ?? 'Système'} · {log.entity_type}
-                </span>
-                <span className="text-xs text-slate-300 flex-shrink-0">{formatDateTime(log.created_at)}</span>
-              </div>
-            ))
-          )}
-        </div>
+        <AuditLogList logs={auditLogs ?? []} profiles={profiles ?? []} />
       </div>
     </div>
   )

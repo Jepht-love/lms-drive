@@ -3,20 +3,26 @@ import { fetchAllAlerts } from '@/lib/utils/alerts'
 import Link from 'next/link'
 import {
   differenceInDays, format, isSameDay,
-  startOfDay, endOfDay, addDays, subDays,
+  startOfDay, endOfDay, addDays, subDays, addHours,
 } from 'date-fns'
 import { getColumnWindow } from '@/lib/calendar/dateUtils'
 import { CALENDAR_START_HOUR } from '@/lib/calendar/constants'
 import { fr } from 'date-fns/locale'
 import {
   ChevronRight, AlertTriangle, CheckCircle2, Plus,
-  Wrench, Clock, FileText, ArrowLeftRight, type LucideIcon,
+  Wrench, Clock, FileText, ArrowLeftRight, Users, type LucideIcon,
 } from 'lucide-react'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function getVehicle(r: any) { return Array.isArray(r.vehicles) ? r.vehicles[0] : r.vehicles }
 function getClient(r: any)  { return Array.isArray(r.clients)  ? r.clients[0]  : r.clients  }
+
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/)
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase()
+  return name.slice(0, 2).toUpperCase()
+}
 
 const TASK_STATUS_BADGE: Record<string, string> = {
   a_faire:  'bg-gray-100 text-gray-600',
@@ -75,8 +81,25 @@ const TASK_TYPE_LABELS: Record<string, string> = {
   controle_etat_lieux:  'État des lieux',
   paiement_caution:     'Caution',
   document_manquant:    'Document',
+  marketing:            'Marketing',
   autre:                'Tâche',
 }
+
+// Couleurs du demi-calendrier (par type d'événement calendrier) — alignées sur
+// la palette du calendrier complet (lib/calendar/constants EVENT_COLORS).
+const CAL_EVENT_COLORS: Record<string, { bg: string; border: string; text: string }> = {
+  tache:        { bg: '#f5f3ff', border: '#8b5cf6', text: '#6d28d9' },
+  rdv_client:   { bg: '#fdf2f8', border: '#ec4899', text: '#be185d' },
+  rdv_garage:   { bg: '#ecfeff', border: '#06b6d4', text: '#0e7490' },
+  livraison:    { bg: '#f7fee7', border: '#84cc16', text: '#4d7c0f' },
+  recuperation: { bg: '#fff7ed', border: '#f97316', text: '#c2410c' },
+}
+function calEventColor(type?: string | null) {
+  return CAL_EVENT_COLORS[type ?? 'tache'] ?? CAL_EVENT_COLORS.tache
+}
+
+// Demi-calendrier : largeur d'une heure (px) sur la piste horaire glissante.
+const NEXT6H_HOUR_W = 88
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
@@ -162,6 +185,22 @@ export default async function DashboardPage() {
     new Date(r.end_datetime) <= businessDayEnd
   ) ?? []
 
+  // ── Retours EN RETARD (date de retour passée, véhicule pas restitué) ────────
+  // Cas prioritaire : chaque jour de retard = manque à gagner direct. Une résa
+  // encore "en cours"/"en retard" dont la date de retour est antérieure au jour
+  // ouvré courant (≥ 1 jour entier) n'apparaît PAS dans retoursAujourdhui — on
+  // la remonte ici, tout en haut des tâches, en rouge. Le retard "du jour même"
+  // reste géré par retoursAujourdhui (badge RETOUR EN RETARD).
+  const daysLateOf = (r: { end_datetime: string }) =>
+    differenceInDays(todayStart, startOfDay(new Date(r.end_datetime)))
+  const retoursEnRetard = (reservations ?? [])
+    .filter(r =>
+      (r.status === 'en_cours' || r.status === 'en_retard') &&
+      new Date(r.end_datetime) < businessDayStart &&
+      daysLateOf(r) >= 1
+    )
+    .sort((a, b) => a.end_datetime.localeCompare(b.end_datetime)) // plus en retard en premier
+
   // Même véhicule avec un départ ET un retour aujourd'hui (rotation rapide) —
   // à signaler clairement : peu de marge pour laver/préparer entre les deux.
   const departVehicleIds = new Set(departsAujourdhui.map(r => getVehicle(r)?.id).filter(Boolean))
@@ -235,7 +274,7 @@ export default async function DashboardPage() {
   // la section Semaine ci-dessous (qui veut voir, par jour, qui fait quoi).
   const { data: rawCalendarTasks } = await supabase
     .from('calendar_events')
-    .select('id, title, status, start_at, vehicle_ids, source_key, assigned_to, assigned_team_id, assignee:profiles!assigned_to(full_name), team:calendar_teams!assigned_team_id(name)')
+    .select('id, title, status, start_at, end_at, event_type, vehicle_ids, source_key, assigned_to, assigned_team_id, assignee:profiles!assigned_to(full_name), team:calendar_teams!assigned_team_id(name, color)')
     .in('event_type', ['tache', 'rdv_client', 'rdv_garage', 'livraison', 'recuperation'])
     .gte('start_at', businessDayStart.toISOString())
     .lte('start_at', in7Days.toISOString())
@@ -251,6 +290,62 @@ export default async function DashboardPage() {
     const assignee = Array.isArray(t.assignee) ? t.assignee[0] : t.assignee
     const team = Array.isArray(t.team) ? t.team[0] : t.team
     return assignee?.full_name ?? team?.name ?? null
+  }
+
+  // ── Demi-calendrier : fenêtre GLISSANTE des prochaines 6h, par équipe/salarié ─
+  // Vue resserrée du calendrier (lib/calendar) : on prend les tâches/RDV
+  // calendrier dont l'heure de début tombe dans les 6 prochaines heures, et on
+  // les répartit en pistes horizontales — une par collaborateur ou équipe
+  // assigné, plus une piste « À assigner » pour les événements non attribués.
+  const next6hStart = now
+  const next6hEnd   = addHours(now, 6)
+  const next6hMs    = next6hEnd.getTime() - next6hStart.getTime()
+
+  type Next6hLane = {
+    key: string
+    label: string
+    kind: 'profile' | 'team' | 'unassigned'
+    color: string
+    items: typeof weekCalendarTasks
+  }
+  const next6hLaneMap = new Map<string, Next6hLane>()
+  for (const t of weekCalendarTasks) {
+    const s = new Date(t.start_at).getTime()
+    if (s < next6hStart.getTime() || s > next6hEnd.getTime()) continue
+    const assignee = Array.isArray(t.assignee) ? t.assignee[0] : t.assignee
+    const team     = Array.isArray(t.team) ? t.team[0] : t.team
+    let key: string, label: string, kind: Next6hLane['kind'], color: string
+    if (t.assigned_to && assignee?.full_name) {
+      key = `p:${t.assigned_to}`; label = assignee.full_name; kind = 'profile'; color = '#111111'
+    } else if (t.assigned_team_id && team?.name) {
+      key = `t:${t.assigned_team_id}`; label = team.name; kind = 'team'; color = team.color ?? '#6366f1'
+    } else {
+      key = 'unassigned'; label = 'À assigner'; kind = 'unassigned'; color = '#f59e0b'
+    }
+    if (!next6hLaneMap.has(key)) next6hLaneMap.set(key, { key, label, kind, color, items: [] })
+    next6hLaneMap.get(key)!.items.push(t)
+  }
+  const next6hLanes = [...next6hLaneMap.values()].sort((a, b) => {
+    if (a.kind === 'unassigned') return 1
+    if (b.kind === 'unassigned') return -1
+    return a.label.localeCompare(b.label)
+  })
+  // Repères horaires : chaque heure pleine comprise dans la fenêtre.
+  const next6hTicks: Date[] = []
+  {
+    const firstTick = new Date(next6hStart)
+    firstTick.setMinutes(0, 0, 0)
+    if (firstTick <= next6hStart) firstTick.setHours(firstTick.getHours() + 1)
+    for (let d = firstTick; d <= next6hEnd; d = addHours(d, 1)) next6hTicks.push(new Date(d))
+  }
+  const next6hTrackW = NEXT6H_HOUR_W * 6
+  const next6hLeftPx = (iso: string) =>
+    ((new Date(iso).getTime() - next6hStart.getTime()) / next6hMs) * next6hTrackW
+  const next6hWidthPx = (t: typeof weekCalendarTasks[number]) => {
+    const durMs = t.end_at ? new Date(t.end_at).getTime() - new Date(t.start_at).getTime() : 3_600_000
+    const w = (Math.max(durMs, 1_800_000) / next6hMs) * next6hTrackW
+    const left = next6hLeftPx(t.start_at)
+    return Math.min(Math.max(w, 60), next6hTrackW - left)
   }
 
   // ── Alertes ───────────────────────────────────────────────────────────────
@@ -339,28 +434,38 @@ export default async function DashboardPage() {
 
       {/* ═══ 2. TÂCHES DU JOUR (départs + retours + interventions) ══════════ */}
       <section>
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <h2 className="text-[11px] font-bold uppercase tracking-widest text-gray-900">
+        <div className="mb-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-[11px] font-bold uppercase tracking-widest text-gray-900 whitespace-nowrap">
               Tâches du jour
             </h2>
-            {aPreparerAujourdhui.length > 0 && (
-              <span className="text-[10px] font-bold text-amber-600 bg-amber-50 border border-amber-100 px-2 py-0.5 rounded-full">
-                {aPreparerAujourdhui.length} à préparer
-              </span>
-            )}
+            <div className="flex items-center gap-3 flex-shrink-0">
+              <Link href="/calendrier" className="flex items-center gap-1 text-[11px] text-gray-400 font-medium hover:text-gray-700 transition-colors">
+                <Plus className="w-3.5 h-3.5" /> CRÉER
+              </Link>
+              <Link href="/calendrier" className="text-[11px] text-gray-400 font-medium flex items-center gap-1">
+                CALENDRIER <ChevronRight className="w-3 h-3" />
+              </Link>
+            </div>
           </div>
-          <div className="flex items-center gap-3">
-            <Link href="/calendrier" className="flex items-center gap-1 text-[11px] text-gray-400 font-medium hover:text-gray-700 transition-colors">
-              <Plus className="w-3.5 h-3.5" /> CRÉER
-            </Link>
-            <Link href="/calendrier" className="text-[11px] text-gray-400 font-medium flex items-center gap-1">
-              CALENDRIER <ChevronRight className="w-3 h-3" />
-            </Link>
-          </div>
+          {(retoursEnRetard.length > 0 || aPreparerAujourdhui.length > 0) && (
+            <div className="flex items-center gap-2 mt-2 flex-wrap">
+              {retoursEnRetard.length > 0 && (
+                <span className="inline-flex items-center gap-1 text-[10px] font-black text-white bg-red-600 px-2.5 py-1 rounded-full animate-pulse whitespace-nowrap">
+                  <AlertTriangle className="w-3 h-3" />
+                  {retoursEnRetard.length} retour{retoursEnRetard.length > 1 ? 's' : ''} en retard
+                </span>
+              )}
+              {aPreparerAujourdhui.length > 0 && (
+                <span className="text-[10px] font-bold text-amber-600 bg-amber-50 border border-amber-100 px-2.5 py-1 rounded-full whitespace-nowrap">
+                  {aPreparerAujourdhui.length} à préparer
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
-        {departsAujourdhui.length === 0 && retoursAujourdhui.length === 0 && (todayTasks?.length ?? 0) === 0 && todayCalendarTasks.length === 0 ? (
+        {retoursEnRetard.length === 0 && departsAujourdhui.length === 0 && retoursAujourdhui.length === 0 && (todayTasks?.length ?? 0) === 0 && todayCalendarTasks.length === 0 ? (
           <div className="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm text-center">
             <CheckCircle2 className="w-10 h-10 text-gray-200 mx-auto mb-3" />
             <p className="text-sm text-gray-400 font-medium">Aucune mission aujourd'hui</p>
@@ -370,6 +475,41 @@ export default async function DashboardPage() {
           </div>
         ) : (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden divide-y divide-gray-50">
+            {/* ⚠️ Retours EN RETARD — tout en haut, rouge vif, voyant bien visible */}
+            {retoursEnRetard.map(r => {
+              const v = getVehicle(r); const c = getClient(r)
+              const daysLate = daysLateOf(r)
+              return (
+                <Link key={`late-${r.id}`} href={`/reservations/${r.id}`}>
+                  <div className="flex items-center gap-4 px-4 py-4 bg-red-50 hover:bg-red-100 border-l-4 border-red-600 transition-colors">
+                    <span className="w-12 flex flex-col items-center flex-shrink-0 leading-tight">
+                      <span className="text-[10px] font-bold text-red-500 capitalize">
+                        {format(new Date(r.end_datetime), 'd MMM', { locale: fr })}
+                      </span>
+                      <span className="text-sm font-black text-red-700 font-mono">
+                        {format(new Date(r.end_datetime), 'HH:mm')}
+                      </span>
+                    </span>
+                    <span className="flex items-center gap-1 text-[10px] font-black uppercase px-2.5 py-1.5 rounded-full flex-shrink-0 bg-red-600 text-white">
+                      <AlertTriangle className="w-3 h-3" /> {daysLate} j
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[11px] font-black uppercase tracking-wide text-red-600">
+                        Retour en retard de {daysLate} jour{daysLate > 1 ? 's' : ''}
+                      </p>
+                      <p className="text-sm font-bold text-gray-900 truncate">
+                        {c?.first_name} {c?.last_name}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        {v?.brand} {v?.model} <span className="text-gray-400 font-mono">· {v?.plate}</span>
+                      </p>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-red-300 flex-shrink-0" />
+                  </div>
+                </Link>
+              )
+            })}
+
             {/* Départs */}
             {departsAujourdhui.map(r => {
               const v = getVehicle(r); const c = getClient(r)
@@ -517,6 +657,90 @@ export default async function DashboardPage() {
             })}
           </div>
         )}
+      </section>
+
+      {/* ═══ 2a. DEMI-CALENDRIER — prochaines 6h, par équipe/salarié ════════ */}
+      <section>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-[11px] font-bold uppercase tracking-widest text-gray-900">
+            Prochaines 6h
+          </h2>
+          <span className="text-[11px] text-gray-400 font-medium">
+            {format(next6hStart, 'HH:mm')} – {format(next6hEnd, 'HH:mm')}
+          </span>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-3">
+          {next6hLanes.length === 0 ? (
+            <div className="flex items-center gap-2 py-4 px-1">
+              <CheckCircle2 className="w-4 h-4 text-gray-200 flex-shrink-0" />
+              <p className="text-xs text-gray-400 font-medium">Rien de prévu dans les 6 prochaines heures</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto -mx-3 px-3" style={{ scrollbarWidth: 'thin' }}>
+              <div style={{ minWidth: 92 + next6hTrackW }}>
+                {/* Axe horaire */}
+                <div className="flex">
+                  <div className="w-[92px] flex-shrink-0" />
+                  <div className="relative flex-shrink-0" style={{ width: next6hTrackW, height: 16 }}>
+                    {next6hTicks.map(tick => (
+                      <span key={tick.toISOString()}
+                        className="absolute top-0 text-[9px] font-mono text-gray-400 -translate-x-1/2"
+                        style={{ left: next6hLeftPx(tick.toISOString()) }}>
+                        {format(tick, 'HH')}h
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Pistes ressources */}
+                <div className="divide-y divide-gray-50">
+                  {next6hLanes.map(lane => (
+                    <div key={lane.key} className="flex items-stretch">
+                      {/* Étiquette ressource */}
+                      <div className="w-[92px] flex-shrink-0 flex items-center gap-1.5 pr-2 py-1.5">
+                        <span className="w-[18px] h-[18px] rounded-full flex items-center justify-center flex-shrink-0"
+                          style={{ backgroundColor: lane.color }}>
+                          {lane.kind === 'team'
+                            ? <Users className="w-2.5 h-2.5 text-white" />
+                            : <span className="text-[8px] font-bold text-white">{initials(lane.label)}</span>}
+                        </span>
+                        <span className="text-[10px] font-medium text-gray-600 truncate">{lane.label}</span>
+                      </div>
+
+                      {/* Piste horaire */}
+                      <div className="relative flex-shrink-0 py-1.5" style={{ width: next6hTrackW, minHeight: 36 }}>
+                        {/* Lignes d'heure */}
+                        {next6hTicks.map(tick => (
+                          <div key={tick.toISOString()}
+                            className="absolute top-0 bottom-0 border-l border-gray-50"
+                            style={{ left: next6hLeftPx(tick.toISOString()) }} />
+                        ))}
+                        {/* Repère "maintenant" */}
+                        <div className="absolute top-0 bottom-0 border-l-2 border-red-400/60" style={{ left: 0 }} />
+                        {/* Événements */}
+                        {lane.items.map(t => {
+                          const cfg = calEventColor(t.event_type)
+                          const left = next6hLeftPx(t.start_at)
+                          const width = next6hWidthPx(t)
+                          return (
+                            <Link key={t.id} href="/calendrier"
+                              className="absolute top-1/2 -translate-y-1/2 rounded-lg px-1.5 py-1 overflow-hidden border-l-[3px] shadow-sm"
+                              style={{ left, width, backgroundColor: cfg.bg, borderLeftColor: cfg.border }}>
+                              <p className="text-[10px] font-bold leading-tight truncate" style={{ color: cfg.text }}>
+                                {format(new Date(t.start_at), 'HH:mm')} {t.title}
+                              </p>
+                            </Link>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </section>
 
       {/* ═══ 2b. RÉSERVATIONS À VENIR (prochains jours) ════════════════════ */}
@@ -794,7 +1018,7 @@ export default async function DashboardPage() {
       </section>
 
       {/* État vide global */}
-      {enLocationNow.length === 0 && alerts.length === 0 &&
+      {enLocationNow.length === 0 && alerts.length === 0 && retoursEnRetard.length === 0 &&
        departsAujourdhui.length === 0 && retoursAujourdhui.length === 0 &&
        (todayTasks?.length ?? 0) === 0 && todayCalendarTasks.length === 0 && (
         <div className="flex flex-col items-center gap-3 py-16 text-center">

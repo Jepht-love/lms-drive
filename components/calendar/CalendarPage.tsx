@@ -72,8 +72,11 @@ export default function CalendarPage() {
           role: null,
           type: 'profile',
           color: '#94A3B8',
-          visible: true,
+          visible: false,
         }
+        // Vue par défaut : uniquement le planning du gérant — les collaborateurs
+        // sont consultés en détail un par un via le clic sur leur nom (voir
+        // handleSelectOnlyResource), pas tous affichés simultanément.
         setResources([
           unassigned,
           ...body.resources.map((r, i) => ({
@@ -82,7 +85,7 @@ export default function CalendarPage() {
             role: r.role,
             type: r.type,
             color: r.color ?? RESOURCE_PALETTE[i % RESOURCE_PALETTE.length],
-            visible: true,
+            visible: r.role === 'gerant',
           })),
         ])
       })
@@ -132,12 +135,32 @@ export default function CalendarPage() {
     setResources(rs => rs.map(r => (r.id === id ? { ...r, visible: !r.visible } : r)))
   }
 
+  // Clic sur le nom d'un collaborateur : vue exclusive (son planning détaillé
+  // seul), distincte du clic sur la pastille couleur (ajout/retrait au comparatif).
+  const handleSelectOnlyResource = (id: string) => {
+    setResources(rs => rs.map(r => ({ ...r, visible: r.id === id })))
+  }
+
   const handleCreateTeam = async (name: string, color: string) => {
     await fetch('/api/calendar/teams', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, color }),
     })
+    loadResources()
+  }
+
+  const handleRenameTeam = async (id: string, name: string) => {
+    await fetch('/api/calendar/teams', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, name }),
+    })
+    loadResources()
+  }
+
+  const handleDeleteTeam = async (id: string) => {
+    await fetch(`/api/calendar/teams?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
     loadResources()
   }
 
@@ -183,7 +206,10 @@ export default function CalendarPage() {
         events={events}
         resources={resources}
         onToggleResource={handleToggleResource}
+        onSelectOnlyResource={handleSelectOnlyResource}
         onCreateTeam={handleCreateTeam}
+        onRenameTeam={handleRenameTeam}
+        onDeleteTeam={handleDeleteTeam}
         canManageTeams={canManageTeams}
         alertCount={alertCount}
         onShowAlerts={() => setAlertPanelOpen(true)}

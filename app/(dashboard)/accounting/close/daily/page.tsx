@@ -4,18 +4,21 @@ import Link from 'next/link'
 import { ArrowLeft, CheckCircle2 } from 'lucide-react'
 import BackButton from '@/components/ui/BackButton'
 import { formatPrice, formatDate } from '@/lib/utils'
-import CloseButton from '../CloseButton'
+import DailyCloseReconcile from '../DailyCloseReconcile'
+import DayPicker from '../DayPicker'
 
-export default async function DailyClosingPage() {
+export default async function DailyClosingPage({ searchParams }: { searchParams: Promise<{ date?: string }> }) {
+  const { date: dp } = await searchParams
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user?.id).single()
   if (!profile || !['gerant', 'associe'].includes(profile.role)) redirect('/')
 
-  const today = new Date().toISOString().slice(0, 10)
+  // Date sélectionnée (par défaut aujourd'hui) — permet de consulter/clôturer un jour passé.
+  const today = dp || new Date().toISOString().slice(0, 10)
   const [{ data: closing }, { data: txs }] = await Promise.all([
     supabase.from('daily_closings').select('*').eq('date', today).maybeSingle(),
-    supabase.from('financial_transactions').select('type, amount').eq('date', today),
+    supabase.from('financial_transactions').select('type, amount, payment_method').eq('date', today),
   ])
 
   const rev = (txs ?? []).filter(t => t.type === 'recette').reduce((s, t) => s + (t.amount ?? 0), 0)
@@ -23,15 +26,26 @@ export default async function DailyClosingPage() {
   const net = rev - exp
   const isClosed = closing?.is_closed
 
+  // Répartition des recettes par mode d'encaissement — figée si déjà clôturé,
+  // recalculée en direct sinon (mêmes transactions, juste pas encore gelées).
+  const byMethod: Record<string, number> = isClosed
+    ? (closing!.revenue_by_payment_method ?? {})
+    : (txs ?? []).filter(t => t.type === 'recette').reduce((acc: Record<string, number>, t) => {
+        const m = t.payment_method || 'non_precise'
+        acc[m] = (acc[m] ?? 0) + (t.amount ?? 0)
+        return acc
+      }, {})
+
   return (
     <div className="space-y-4">
       <BackButton fallbackHref="/accounting" className="inline-flex items-center gap-1.5 text-sm text-gray-400 font-medium hover:text-gray-700 transition-colors">
         <ArrowLeft className="w-4 h-4" /> Comptabilité
       </BackButton>
 
-      <div>
-        <h1 className="text-xl font-black text-gray-900">Clôture du jour</h1>
-        <p className="text-sm text-gray-400 mt-0.5 capitalize">{formatDate(today)}</p>
+      <div className="space-y-2">
+        <h1 className="text-xl font-black text-gray-900">Clôture journalière</h1>
+        <p className="text-sm text-gray-400 capitalize">{formatDate(today)}</p>
+        <DayPicker date={today} />
       </div>
 
       {isClosed && (
@@ -58,7 +72,14 @@ export default async function DailyClosingPage() {
         <p className="text-xs text-white/50 mt-1">{txs?.length ?? 0} mouvement(s)</p>
       </div>
 
-      {!isClosed && <CloseButton mode="daily" date={today} />}
+      <DailyCloseReconcile
+        date={today}
+        softwareByMethod={byMethod}
+        softwareRevenue={isClosed ? (closing!.total_revenue ?? 0) : rev}
+        isClosed={!!isClosed}
+        countedByMethod={(closing?.counted_by_method as Record<string, number>) ?? {}}
+        variance={closing?.variance ?? null}
+      />
     </div>
   )
 }

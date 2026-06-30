@@ -4,8 +4,8 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, CheckCircle2, AlertTriangle, Trash2 } from 'lucide-react'
 import { formatPrice, formatDate } from '@/lib/utils'
-import { EXPENSE_CATEGORIES, REVENUE_CATEGORIES, getCategoryLabel } from '@/lib/accounting/categories'
-import { createDueDate, markDuePaid, deleteDueDate } from '@/lib/actions/dueDates'
+import { REVENUE_CATEGORIES, getCategoryLabel, expenseCategoriesByFamily } from '@/lib/accounting/categories'
+import { createDueDate, createRecurringDueDates, markDuePaid, deleteDueDate } from '@/lib/actions/dueDates'
 
 interface Vehicle { id: string; plate: string; brand: string; model: string }
 interface DueDate {
@@ -24,25 +24,29 @@ export default function DueDatesClient({ dueDates, vehicles }: { dueDates: DueDa
   const router = useRouter()
   const [showForm, setShowForm] = useState(false)
   const [type, setType] = useState<'recette' | 'depense'>('depense')
+  const [recurring, setRecurring] = useState(false)
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  const [successMsg, setSuccessMsg] = useState<string | null>(null)
 
   const today = new Date().toISOString().slice(0, 10)
   const unpaid = dueDates.filter(d => !d.is_paid)
   const overdue = unpaid.filter(d => d.due_date < today)
   const upcoming = unpaid.filter(d => d.due_date >= today)
   const paid = dueDates.filter(d => d.is_paid).slice(0, 10)
-  const categories = type === 'recette' ? REVENUE_CATEGORIES : EXPENSE_CATEGORIES
+  const expenseGroups = expenseCategoriesByFamily()
 
   function onCreate(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setError(null)
+    setSuccessMsg(null)
     const fd = new FormData(e.currentTarget)
     fd.set('type', type)
     startTransition(async () => {
-      const res = await createDueDate(fd)
+      const res = recurring ? await createRecurringDueDates(fd) : await createDueDate(fd)
       if (res?.error) { setError(res.error); return }
       setShowForm(false)
+      if (recurring && 'count' in res) setSuccessMsg(`${res.count} mensualités ajoutées`)
       router.refresh()
     })
   }
@@ -113,6 +117,10 @@ export default function DueDatesClient({ dueDates, vehicles }: { dueDates: DueDa
               Facture à régler
             </button>
           </div>
+          <label className="flex items-center gap-2 text-sm text-gray-600">
+            <input type="checkbox" checked={recurring} onChange={e => setRecurring(e.target.checked)} className="w-4 h-4" />
+            Échéancier récurrent (plusieurs mensualités — ex. loyer véhicule sur 36 mois)
+          </label>
           <div>
             <label className={label} htmlFor="description">Description</label>
             <input id="description" name="description" type="text" required placeholder="Loyer local, assurance flotte..." className={input} />
@@ -120,25 +128,48 @@ export default function DueDatesClient({ dueDates, vehicles }: { dueDates: DueDa
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className={label} htmlFor="category">Catégorie</label>
-              <select id="category" name="category" required className={input}>
-                {categories.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+              <select id="category" name="category" required className={input} defaultValue="">
+                <option value="" disabled>Choisir…</option>
+                {type === 'recette'
+                  ? REVENUE_CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)
+                  : expenseGroups.map(g => (
+                      <optgroup key={g.family.id} label={`${g.family.nature === 'fixe' ? '[Fixe] ' : '[Var.] '}${g.family.label}`}>
+                        {g.categories.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+                      </optgroup>
+                    ))}
               </select>
             </div>
             <div>
-              <label className={label} htmlFor="amount">Montant (€)</label>
+              <label className={label} htmlFor="amount">Montant {recurring ? 'par mensualité' : ''} (€)</label>
               <input id="amount" name="amount" type="number" step="0.01" min="0.01" required className={input} inputMode="decimal" />
             </div>
             <div>
-              <label className={label} htmlFor="due_date">Échéance</label>
+              <label className={label} htmlFor="due_date">{recurring ? '1ère échéance' : 'Échéance'}</label>
               <input id="due_date" name="due_date" type="date" required defaultValue={today} className={input} />
             </div>
-            <div>
-              <label className={label} htmlFor="vehicle_id">Véhicule (optionnel)</label>
-              <select id="vehicle_id" name="vehicle_id" className={input}>
-                <option value="">Aucun</option>
-                {vehicles.map(v => <option key={v.id} value={v.id}>{v.brand} {v.model} · {v.plate}</option>)}
-              </select>
-            </div>
+            {recurring ? (
+              <div>
+                <label className={label} htmlFor="installments">Nombre de mensualités</label>
+                <input id="installments" name="installments" type="number" min="1" max="120" step="1" required placeholder="36" className={input} inputMode="numeric" />
+              </div>
+            ) : (
+              <div>
+                <label className={label} htmlFor="vehicle_id">Véhicule (optionnel)</label>
+                <select id="vehicle_id" name="vehicle_id" className={input}>
+                  <option value="">Aucun</option>
+                  {vehicles.map(v => <option key={v.id} value={v.id}>{v.brand} {v.model} · {v.plate}</option>)}
+                </select>
+              </div>
+            )}
+            {recurring && (
+              <div className="col-span-2">
+                <label className={label} htmlFor="vehicle_id">Véhicule (optionnel)</label>
+                <select id="vehicle_id" name="vehicle_id" className={input}>
+                  <option value="">Aucun</option>
+                  {vehicles.map(v => <option key={v.id} value={v.id}>{v.brand} {v.model} · {v.plate}</option>)}
+                </select>
+              </div>
+            )}
           </div>
           <div>
             <label className={label} htmlFor="notes">Notes</label>
@@ -147,9 +178,13 @@ export default function DueDatesClient({ dueDates, vehicles }: { dueDates: DueDa
           {error && <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2">{error}</p>}
           <button type="submit" disabled={pending}
             className="w-full py-3 bg-[#111111] text-white rounded-xl font-bold text-sm hover:bg-gray-800 transition-colors disabled:opacity-40">
-            {pending ? 'Enregistrement…' : 'Ajouter l’échéance'}
+            {pending ? 'Enregistrement…' : recurring ? 'Créer toutes les mensualités' : 'Ajouter l’échéance'}
           </button>
         </form>
+      )}
+
+      {successMsg && (
+        <p className="text-sm text-green-700 bg-green-50 border border-green-100 rounded-xl px-3 py-2">{successMsg}</p>
       )}
 
       {overdue.length > 0 && (

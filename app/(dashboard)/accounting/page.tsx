@@ -1,8 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { Plus, CalendarCheck, BarChart3, FileSpreadsheet, AlertTriangle } from 'lucide-react'
+import { Plus, CalendarCheck, BarChart3, FileSpreadsheet, AlertTriangle, TrendingUp } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
+import { getCategoryLabel } from '@/lib/accounting/categories'
 import { periodRange } from '@/lib/accounting/categories'
 import AccountingTransactions from './AccountingTransactions'
 import AccountingCustomPeriod from './AccountingCustomPeriod'
@@ -20,9 +21,9 @@ const PERIODS = [
 export default async function AccountingPage({
   searchParams,
 }: {
-  searchParams: Promise<{ period?: string; type?: string; from?: string; to?: string }>
+  searchParams: Promise<{ period?: string; type?: string; from?: string; to?: string; category?: string }>
 }) {
-  const { period = 'month', type, from: customFrom, to: customTo } = await searchParams
+  const { period = 'month', type, from: customFrom, to: customTo, category } = await searchParams
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user?.id).single()
@@ -48,7 +49,8 @@ export default async function AccountingPage({
   const totalExpenses = all.filter(t => t.type === 'depense').reduce((s, t) => s + (t.amount ?? 0), 0)
   const net = totalRevenue - totalExpenses
 
-  const list = type === 'recette' || type === 'depense' ? all.filter(t => t.type === type) : all
+  const byType = type === 'recette' || type === 'depense' ? all.filter(t => t.type === type) : all
+  const list = category ? byType.filter(t => t.category === category) : byType
 
   const periodPill = (active: boolean) =>
     `px-3.5 py-2 rounded-xl text-sm font-semibold whitespace-nowrap flex-shrink-0 transition-colors ${
@@ -118,6 +120,12 @@ export default async function AccountingPage({
         <Link href="/accounting/charts" className="flex items-center justify-center gap-2 py-2.5 bg-white border border-gray-100 shadow-sm rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50">
           <BarChart3 className="w-4 h-4" /> Graphiques
         </Link>
+        <Link href="/accounting/analysis" className="flex items-center justify-center gap-2 py-2.5 bg-white border border-gray-100 shadow-sm rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50">
+          <TrendingUp className="w-4 h-4" /> Analyse
+        </Link>
+        <Link href="/accounting/kpi" className="flex items-center justify-center gap-2 py-2.5 bg-white border border-gray-100 shadow-sm rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50">
+          <BarChart3 className="w-4 h-4" /> KPI véhicules
+        </Link>
         <Link href="/accounting/due-dates" className="relative col-span-2 flex items-center justify-center gap-2 py-2.5 bg-white border border-gray-100 shadow-sm rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50">
           <AlertTriangle className="w-4 h-4" /> Échéances
           {(dueCount ?? 0) > 0 && (
@@ -130,6 +138,14 @@ export default async function AccountingPage({
           <FileSpreadsheet className="w-4 h-4" /> Rapport CA personnalisé
         </Link>
       </div>
+
+      {/* Filtre catégorie actif */}
+      {category && (
+        <div className="flex items-center justify-between bg-blue-50 border border-blue-100 rounded-xl px-3 py-2">
+          <span className="text-xs font-semibold text-blue-700">Filtré : {getCategoryLabel(category)}</span>
+          <Link href={`/accounting?period=${period}${type ? `&type=${type}` : ''}`} className="text-xs font-black text-blue-500">✕ Effacer</Link>
+        </div>
+      )}
 
       {/* Filtre type */}
       <div className="flex items-center gap-2">

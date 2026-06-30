@@ -13,6 +13,7 @@ const TYPES = [
   { id: 'controle_etat_lieux', label: 'État des lieux' },
   { id: 'paiement_caution',    label: 'Paiement caution' },
   { id: 'document_manquant',   label: 'Document manquant' },
+  { id: 'marketing',           label: 'Marketing' },
   { id: 'autre',               label: 'Autre' },
 ]
 
