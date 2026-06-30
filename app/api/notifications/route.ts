@@ -12,7 +12,12 @@ import { addHours, subMinutes } from 'date-fns'
 // en broadcast (user_id: null, visibles de tous).
 export async function GET(request: NextRequest) {
   const auth = request.headers.get('authorization')
-  if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
+  const querySecret = request.nextUrl.searchParams.get('secret')
+  const validSecret = process.env.CRON_SECRET
+  const authorized =
+    auth === `Bearer ${validSecret}` ||
+    querySecret === validSecret
+  if (!authorized) {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
   }
 
