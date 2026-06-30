@@ -224,13 +224,16 @@ export default async function VehicleKpiPage({
               </span>
             </div>
 
-            <div className="grid grid-cols-3 gap-y-2.5 gap-x-2 pb-3 border-b border-gray-50">
+            <div className="grid grid-cols-3 gap-y-3 gap-x-2 pb-3 border-b border-gray-50">
               <Stat label="CA" value={formatPrice(r.ca)} accent="text-green-600" />
-              <Stat label="Coûts" value={formatPrice(r.cost)} accent="text-red-500" />
-              <Stat label="Utilisation" value={`${r.tauxUtilisation}%`} />
+              <Stat label="Coûts totaux" value={formatPrice(r.cost)} accent="text-red-500" />
+              <Stat label="Marge" value={`${r.marge >= 0 ? '+' : ''}${formatPrice(r.marge)}`} accent={r.marge >= 0 ? 'text-green-600' : 'text-red-500'} />
+              <Stat label="Taux utilisation" value={`${r.tauxUtilisation}%`} />
               <Stat label="Coût / km" value={r.coutKm != null ? `${r.coutKm.toFixed(2)} €` : '—'} />
-              <Stat label="Pannes" value={`${r.pannes}`} />
-              <Stat label="Immob. (est.)" value={`${r.immobDays} j`} />
+              <Stat label="Âge véhicule" value={r.age != null ? `${r.age} ans` : '—'} />
+              <Stat label="Taux de panne" value={`${r.pannes} panne${r.pannes !== 1 ? 's' : ''}`} />
+              <Stat label="Taux immob." value={`${r.tauxImmobilisation}%`} />
+              <Stat label="Km parcourus" value={r.kmDriven > 0 ? `${r.kmDriven.toLocaleString('fr-FR')} km` : '—'} />
             </div>
 
             {/* Coûts détaillés par poste */}
@@ -252,8 +255,8 @@ export default async function VehicleKpiPage({
       </div>
 
       <p className="text-[11px] text-gray-400 px-1">
-        « Immob. (est.) » : estimation d'après les interventions atelier (1 intervention ≈ 1 jour).
-        Le coût/km se base sur les relevés kilométriques des états des lieux.
+        Taux d'immobilisation : estimation d'après les interventions atelier (1 intervention ≈ 1 jour / période).
+        Coût/km et km parcourus : calculés sur les relevés kilométriques des états des lieux.
       </p>
     </div>
   )

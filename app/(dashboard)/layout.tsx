@@ -3,6 +3,7 @@ import { fetchAllAlerts } from '@/lib/utils/alerts'
 import BottomNav from '@/components/layout/BottomNav'
 import PageHeader from '@/components/layout/PageHeader'
 import ClientRedirect from '@/components/layout/ClientRedirect'
+import PageTransition from '@/components/layout/PageTransition'
 import { ToastProvider } from '@/components/Toast'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -54,9 +55,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
           WebkitOverflowScrolling: 'touch',
           minHeight: 0,
         } as React.CSSProperties}>
-          <div className="px-4 py-5 pb-6">
-            {children}
-          </div>
+          <PageTransition>
+            <div className="px-4 py-5 pb-6">
+              {children}
+            </div>
+          </PageTransition>
         </main>
         <BottomNav alertCount={alertCount} allowedTabs={allowedTabs} />
       </div>
