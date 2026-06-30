@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { fetchAllAlerts } from '@/lib/utils/alerts'
 import { syncAlertsToCalendar } from '@/lib/calendar/syncAlerts'
-import { addHours } from 'date-fns'
+import { broadcastPushToManagers } from '@/lib/push/broadcastPush'
+import { addHours, subMinutes } from 'date-fns'
 
 // GET: détecte départs imminents et retours en retard, bascule le statut des
 // retours en `en_retard`. Appelé toutes les heures par un crontab local
@@ -37,14 +38,13 @@ export async function GET(request: NextRequest) {
         .limit(1)
 
       if (!existing || existing.length === 0) {
+        const body = `${r.reservation_number} — ${(r.vehicle as any)?.brand} ${(r.vehicle as any)?.model} (${(r.vehicle as any)?.plate}) part dans moins d'une heure`
         await supabase.from('notifications').insert({
-          user_id: null,
-          type: 'departure_soon',
-          title: 'Départ imminent',
-          body: `${r.reservation_number} — ${(r.vehicle as any)?.brand} ${(r.vehicle as any)?.model} (${(r.vehicle as any)?.plate}) part dans moins d'une heure`,
-          entity_type: 'reservations',
-          entity_id: r.id,
+          user_id: null, type: 'departure_soon',
+          title: 'Départ imminent', body,
+          entity_type: 'reservations', entity_id: r.id,
         })
+        await broadcastPushToManagers({ title: 'Départ imminent', body, url: '/reservations' })
         created.push(r.id)
       }
     }
@@ -67,15 +67,42 @@ export async function GET(request: NextRequest) {
         .limit(1)
 
       if (!existing || existing.length === 0) {
+        const body = `${r.reservation_number} — ${(r.vehicle as any)?.brand} ${(r.vehicle as any)?.model} (${(r.vehicle as any)?.plate}) aurait dû être rendu`
         await supabase.from('notifications').insert({
-          user_id: null,
-          type: 'return_late',
-          title: 'Retour en retard',
-          body: `${r.reservation_number} — ${(r.vehicle as any)?.brand} ${(r.vehicle as any)?.model} (${(r.vehicle as any)?.plate}) aurait dû être rendu`,
-          entity_type: 'reservations',
-          entity_id: r.id,
+          user_id: null, type: 'return_late',
+          title: 'Retour en retard', body,
+          entity_type: 'reservations', entity_id: r.id,
         })
+        await broadcastPushToManagers({ title: 'Retour en retard', body, url: '/reservations' })
         created.push(r.id)
+      }
+    }
+
+    // Retours en retard >30min sur les tâches calendrier (calendar_events)
+    const thirtyMinAgo = subMinutes(now, 30).toISOString()
+    const { data: lateEvents } = await supabase
+      .from('calendar_events')
+      .select('id, title')
+      .lt('end_at', thirtyMinAgo)
+      .not('status', 'in', '("termine","annule")')
+
+    for (const ev of lateEvents ?? []) {
+      const { data: existing } = await supabase
+        .from('notifications')
+        .select('id')
+        .eq('type', 'event_return_late')
+        .eq('entity_id', ev.id)
+        .limit(1)
+
+      if (!existing || existing.length === 0) {
+        const body = `"${ev.title}" aurait dû être terminé il y a plus de 30 minutes`
+        await supabase.from('notifications').insert({
+          user_id: null, type: 'event_return_late',
+          title: 'Retour en retard', body,
+          entity_type: 'calendar_events', entity_id: ev.id,
+        })
+        await broadcastPushToManagers({ title: 'Retour en retard', body, url: '/calendar' })
+        created.push(ev.id)
       }
     }
 

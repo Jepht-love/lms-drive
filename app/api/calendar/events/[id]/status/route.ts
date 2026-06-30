@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { broadcastPushToManagers } from '@/lib/push/broadcastPush'
 
 export async function PATCH(
   request: NextRequest,
@@ -14,7 +15,7 @@ export async function PATCH(
   if (!status) return NextResponse.json({ error: 'status requis' }, { status: 400 })
 
   const { data: caller } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  const { data: event } = await supabase.from('calendar_events').select('assigned_to').eq('id', id).single()
+  const { data: event } = await supabase.from('calendar_events').select('assigned_to, title').eq('id', id).single()
 
   const isManager = caller?.role === 'gerant' || caller?.role === 'associe'
   const isOwner = event?.assigned_to === user.id
@@ -30,6 +31,22 @@ export async function PATCH(
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+
+  const eventTitle = event?.title ?? 'Tâche'
+
+  if (status === 'en_cours') {
+    await broadcastPushToManagers({
+      title: 'Départ confirmé',
+      body: eventTitle,
+      url: '/calendar',
+    })
+  } else if (status === 'termine') {
+    await broadcastPushToManagers({
+      title: 'Retour effectué',
+      body: eventTitle,
+      url: '/calendar',
+    })
+  }
 
   return NextResponse.json(data)
 }

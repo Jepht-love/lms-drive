@@ -5,6 +5,7 @@ import { ArrowLeft } from 'lucide-react'
 import BackButton from '@/components/ui/BackButton'
 import { revalidatePath } from 'next/cache'
 import TaskTypeField from './TaskTypeField'
+import { broadcastPushToManagers } from '@/lib/push/broadcastPush'
 
 async function createTask(formData: FormData) {
   'use server'
@@ -26,6 +27,13 @@ async function createTask(formData: FormData) {
     title, type: type || null, due_datetime: due,
     description, vehicle_id, assigned_to, notes,
     status: 'a_faire', created_by: user.id,
+  })
+
+  const dueDate = new Date(due).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+  await broadcastPushToManagers({
+    title: 'Nouvelle tâche créée',
+    body: `${title} — prévu le ${dueDate}`,
+    url: '/calendar/tasks',
   })
 
   revalidatePath('/calendar/tasks')
