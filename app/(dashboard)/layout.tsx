@@ -46,6 +46,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           display: 'grid',
           gridTemplateRows: 'auto 1fr auto',
           overflow: 'hidden',
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
         }}
       >
         <PageHeader alertCount={alertCount} />
