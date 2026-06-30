@@ -4,6 +4,7 @@ import { Settings, Users, FileClock, Building2 } from 'lucide-react'
 import { getAgencySettings } from '@/lib/contracts/agency'
 import AgencySettingsForm from './AgencySettingsForm'
 import AuditLogList from './AuditLogList'
+import NotificationSettings from '@/components/settings/NotificationSettings'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
@@ -70,6 +71,9 @@ export default async function SettingsPage() {
           ))}
         </div>
       </div>
+
+      {/* Notifications push */}
+      <NotificationSettings />
 
       {/* Journal d'audit — français lisible, filtrable par employé */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">

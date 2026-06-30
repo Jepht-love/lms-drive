@@ -78,8 +78,22 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Retours en retard >30min sur les tâches calendrier (calendar_events)
-    const thirtyMinAgo = subMinutes(now, 30).toISOString()
+    // Seuil de retard : lit la config du gérant (défaut 30 min)
+    const { data: notifCfg } = await supabase
+      .from('notification_settings')
+      .select('late_return_threshold_minutes, alert_window_start, alert_window_end')
+      .limit(1)
+      .maybeSingle()
+    const thresholdMin = notifCfg?.late_return_threshold_minutes ?? 30
+    const windowStart  = notifCfg?.alert_window_start ?? 7
+    const windowEnd    = notifCfg?.alert_window_end   ?? 22
+    const currentHour  = now.getHours()
+    if (currentHour < windowStart || currentHour >= windowEnd) {
+      return NextResponse.json({ skipped: 'outside alert window' })
+    }
+
+    // Retours en retard sur les tâches calendrier (calendar_events)
+    const thirtyMinAgo = subMinutes(now, thresholdMin).toISOString()
     const { data: lateEvents } = await supabase
       .from('calendar_events')
       .select('id, title')

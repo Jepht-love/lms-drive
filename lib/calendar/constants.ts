@@ -11,6 +11,7 @@ export const EVENT_COLORS: Record<EventType, string> = {
   tache:               '#8B5CF6',   // violet
   disponibilite:       '#E2E8F0',   // gris clair (texte sombre)
   deplacement_interne: '#0EA5E9',   // bleu ciel
+  marketing:           '#EC4899',   // rose vif
 }
 
 export const EVENT_TYPE_LABELS: Record<EventType, string> = {
@@ -24,6 +25,7 @@ export const EVENT_TYPE_LABELS: Record<EventType, string> = {
   tache:               'Tâche',
   disponibilite:       'Disponibilité',
   deplacement_interne: 'Déplacement interne',
+  marketing:           'Marketing',
 }
 
 export const EVENT_STATUS_LABELS: Record<EventStatus, string> = {

@@ -8,6 +8,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { generateReservationNumber, generateContractNumber, calculateRentalDays, calculateRentalPrice } from '@/lib/utils'
 import { syncReservationToCalendar } from '@/lib/calendar/syncRental'
 import { recomputeVehicleStatus } from '@/lib/vehicles/vehicleStatus'
+import { broadcastPushToManagers } from '@/lib/push/broadcastPush'
 import { generateInvoiceDraft } from '@/lib/actions/invoices'
 import type { ReservationStatus } from '@/types/database'
 
@@ -193,6 +194,13 @@ export async function createReservation(formData: FormData) {
 
   await syncReservationToCalendar(data.id)
 
+  const startFmt = new Date(startDatetime).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+  await broadcastPushToManagers({
+    title: 'Nouvelle réservation',
+    body: `${payload.reservation_number} — départ le ${startFmt}`,
+    url: `/reservations/${data.id}`,
+  })
+
   revalidatePath('/')
   revalidatePath('/reservations')
   revalidatePath('/calendar')
@@ -216,6 +224,17 @@ export async function updateReservationStatus(id: string, status: ReservationSta
   await supabase.from('reservations').update({ status }).eq('id', id)
 
   await recomputeVehicleStatus(supabase, reservation.vehicle_id)
+
+  const PUSH_LABELS: Partial<Record<ReservationStatus, { title: string; body: string }>> = {
+    confirmee:  { title: 'Réservation confirmée', body: `Réservation ${id.slice(-6).toUpperCase()} confirmée` },
+    en_cours:   { title: 'Départ effectué', body: `Véhicule parti — réservation ${id.slice(-6).toUpperCase()} en cours` },
+    en_retard:  { title: 'Retour en retard', body: `La réservation ${id.slice(-6).toUpperCase()} dépasse l'heure de retour` },
+    terminee:   { title: 'Retour effectué', body: `Réservation ${id.slice(-6).toUpperCase()} terminée` },
+  }
+  const pushMsg = PUSH_LABELS[status]
+  if (pushMsg) {
+    await broadcastPushToManagers({ ...pushMsg, url: `/reservations/${id}` })
+  }
 
   // If starting, create contract
   if (status === 'en_cours') {

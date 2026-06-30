@@ -583,8 +583,8 @@ export default function CalendarPage() {
       }}
       style={{
         display: 'flex', flexDirection: 'column',
-        // Header fixe 104px + BottomNav ~126px = 230px total
-        height: 'calc(100vh - 230px)',
+        // 100dvh - safe-area-top (notch/Dynamic Island) - safe-area-bottom (home indicator) - header content (84px) - bottom nav bar (60px)
+        height: 'calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 144px)',
         backgroundColor: 'white', overflow: 'hidden',
         // Casser hors du padding px-4 py-5 du layout
         marginLeft: '-1rem', marginRight: '-1rem', marginTop: '-1.25rem',

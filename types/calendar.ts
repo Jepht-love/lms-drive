@@ -6,7 +6,7 @@ export type EventType =
   | 'reservation' | 'depart_vehicule' | 'retour_vehicule'
   | 'rdv_client'  | 'rdv_garage'      | 'livraison'
   | 'recuperation'| 'tache'           | 'disponibilite'
-  | 'deplacement_interne'
+  | 'deplacement_interne' | 'marketing'
 
 export type EventStatus = 'a_faire' | 'en_cours' | 'termine' | 'reporte' | 'annule'
 
