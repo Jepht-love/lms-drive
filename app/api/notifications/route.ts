@@ -59,6 +59,8 @@ export async function GET(request: NextRequest) {
       .eq('status', 'en_cours')
       .lt('end_datetime', now.toISOString())
 
+    const repeatThreshold = new Date(now.getTime() - 30 * 60 * 1000).toISOString()
+
     for (const r of lateReturns ?? []) {
       await supabase.from('reservations').update({ status: 'en_retard' }).eq('id', r.id)
 
@@ -67,6 +69,7 @@ export async function GET(request: NextRequest) {
         .select('id')
         .eq('type', 'return_late')
         .eq('entity_id', r.id)
+        .gte('created_at', repeatThreshold)
         .limit(1)
 
       if (!existing || existing.length === 0) {
@@ -112,10 +115,11 @@ export async function GET(request: NextRequest) {
         .select('id')
         .eq('type', 'event_return_late')
         .eq('entity_id', ev.id)
+        .gte('created_at', repeatThreshold)
         .limit(1)
 
       if (!existing || existing.length === 0) {
-        const body = `"${ev.title}" aurait dû être terminé il y a plus de 30 minutes`
+        const body = `"${ev.title}" aurait dû être terminé`
         await supabase.from('notifications').insert({
           user_id: null, type: 'event_return_late',
           title: 'Retour en retard', body,
