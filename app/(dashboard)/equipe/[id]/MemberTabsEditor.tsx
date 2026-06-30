@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Check, Loader2, ShieldCheck, FolderArchive, LayoutDashboard } from 'lucide-react'
 import { APP_TABS, ALL_TAB_KEYS } from '@/lib/navigation/tabs'
 import { DOCUMENT_CATEGORIES } from '@/lib/documents/categories'
+import Toggle from '@/components/ui/Toggle'
 
 const ALL_DOC_KEYS = DOCUMENT_CATEGORIES.map(c => c.id as string)
 
@@ -143,14 +144,7 @@ export default function MemberTabsEditor({
             <p className="text-xs text-gray-400">Compteurs parc, disponibles, immobilisés.</p>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={() => setCanViewFleet(v => !v)}
-          aria-pressed={canViewFleet}
-          className={`relative w-12 h-7 rounded-full transition-colors flex-shrink-0 ${canViewFleet ? 'bg-green-500' : 'bg-gray-300'}`}
-        >
-          <span className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full shadow transition-transform ${canViewFleet ? 'translate-x-5' : ''}`} />
-        </button>
+        <Toggle checked={canViewFleet} onChange={setCanViewFleet} />
       </div>
 
       {error && <p className="text-xs text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>}

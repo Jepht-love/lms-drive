@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import Toggle from '@/components/ui/Toggle'
 
 // Interrupteur « Compte actif » façon réglages iPhone (ovale vert/gris).
 // Active/désactive le compte via PATCH /api/team/[id] (best-effort, optimiste).
@@ -32,21 +33,5 @@ export default function MemberActiveToggle({
     }
   }
 
-  return (
-    <button
-      type="button"
-      onClick={toggle}
-      disabled={pending}
-      aria-pressed={active}
-      className={`relative w-12 h-7 rounded-full transition-colors flex-shrink-0 disabled:opacity-60 ${
-        active ? 'bg-green-500' : 'bg-gray-300'
-      }`}
-    >
-      <span
-        className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full shadow transition-transform ${
-          active ? 'translate-x-5' : ''
-        }`}
-      />
-    </button>
-  )
+  return <Toggle checked={active} onChange={() => toggle()} disabled={pending} />
 }

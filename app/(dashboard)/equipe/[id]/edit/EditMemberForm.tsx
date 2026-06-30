@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Check, Loader2 } from 'lucide-react'
+import Toggle from '@/components/ui/Toggle'
 
 const ROLES = [
   { value: 'gerant',      label: 'Gérant',      desc: 'Accès total' },
@@ -156,13 +157,7 @@ export default function EditMemberForm({ member }: { member: Member }) {
           <p className="text-sm font-bold text-gray-900">Compte actif</p>
           <p className="text-xs text-gray-400">Un compte inactif ne peut plus se connecter.</p>
         </div>
-        <button
-          type="button"
-          onClick={() => set('is_active', !form.is_active)}
-          className={`relative w-12 h-7 rounded-full transition-colors ${form.is_active ? 'bg-green-500' : 'bg-gray-200'}`}
-        >
-          <span className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full shadow transition-transform ${form.is_active ? 'translate-x-5' : ''}`} />
-        </button>
+        <Toggle checked={form.is_active} onChange={(v) => set('is_active', v)} />
       </div>
 
       {error && (

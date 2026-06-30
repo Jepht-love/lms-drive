@@ -1,28 +1,13 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { addDays, addMonths, addWeeks, subDays, subMonths, subWeeks, format } from 'date-fns'
-import { fr } from 'date-fns/locale'
-import { ChevronLeft, ChevronRight, Bell } from 'lucide-react'
+import { addDays, addMonths, addWeeks, subDays, subMonths, subWeeks } from 'date-fns'
 import type { CalendarEvent, CalendarResource, CalendarView } from '@/types/calendar'
 import type { UserRole } from '@/types/database'
 import { RESOURCE_PALETTE, UNASSIGNED_RESOURCE_ID } from '@/lib/calendar/constants'
 import { getWeekDates, getMonthDates, getColumnWindow } from '@/lib/calendar/dateUtils'
-
-const VIEW_OPTIONS: { key: CalendarView; label: string }[] = [
-  { key: 'day',      label: 'Jour' },
-  { key: 'week_5d',  label: '5 J' },
-  { key: 'week_7d',  label: '7 J' },
-  { key: 'month',    label: 'Mois' },
-]
-
-function mobilePeriodLabel(view: CalendarView, date: Date): string {
-  if (view === 'month') return format(date, 'MMMM yyyy', { locale: fr })
-  if (view === 'day')   return format(date, 'EEE d MMM', { locale: fr })
-  const dates = getWeekDates(date, view)
-  return `${format(dates[0], 'd MMM', { locale: fr })} — ${format(dates[dates.length - 1], 'd MMM', { locale: fr })}`
-}
 import CalendarSidebar from './CalendarSidebar'
+import MobileCalendar from './MobileCalendar'
 import CalendarGrid from './CalendarGrid'
 import MonthView from './MonthView'
 import EventDrawer from './EventDrawer'
@@ -69,6 +54,7 @@ export default function CalendarPage() {
   const [myRole, setMyRole] = useState<UserRole | null>(null)
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [loading, setLoading] = useState(true)
+  const [isMobile, setIsMobile] = useState(false)
 
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [slotContext, setSlotContext] = useState<SlotContext | null>(null)
@@ -77,7 +63,20 @@ export default function CalendarPage() {
   const [alertCount, setAlertCount] = useState(0)
   const [alertPanelOpen, setAlertPanelOpen] = useState(false)
 
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)')
+    setIsMobile(mq.matches)
+    if (mq.matches) setView('day')
+    const handler = (e: MediaQueryListEvent) => {
+      setIsMobile(e.matches)
+      if (e.matches) setView('day')
+    }
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
+
   const loadResources = useCallback(() => {
+    const mobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches
     fetch('/api/calendar/resources')
       .then(r => r.json())
       .then((body: { me: { id: string; role: UserRole } | null; resources: any[] }) => {
@@ -90,9 +89,6 @@ export default function CalendarPage() {
           color: '#94A3B8',
           visible: false,
         }
-        // Vue par défaut : uniquement le planning du gérant — les collaborateurs
-        // sont consultés en détail un par un via le clic sur leur nom (voir
-        // handleSelectOnlyResource), pas tous affichés simultanément.
         setResources([
           unassigned,
           ...body.resources.map((r, i) => ({
@@ -101,7 +97,8 @@ export default function CalendarPage() {
             role: r.role,
             type: r.type,
             color: r.color ?? RESOURCE_PALETTE[i % RESOURCE_PALETTE.length],
-            visible: r.role === 'gerant',
+            // Mobile : tous visibles par défaut. Desktop : seulement le gérant.
+            visible: mobile ? true : r.role === 'gerant',
           })),
         ])
       })
@@ -149,6 +146,10 @@ export default function CalendarPage() {
 
   const handleToggleResource = (id: string) => {
     setResources(rs => rs.map(r => (r.id === id ? { ...r, visible: !r.visible } : r)))
+  }
+
+  const handleSelectAll = () => {
+    setResources(rs => rs.map(r => ({ ...r, visible: true })))
   }
 
   // Clic sur le nom d'un collaborateur : vue exclusive (son planning détaillé
@@ -213,83 +214,44 @@ export default function CalendarPage() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#F2F2F7]">
-      <CalendarSidebar
-        currentDate={currentDate}
-        onSelectDate={setCurrentDate}
-        view={view}
-        onViewChange={setView}
-        onNavigate={handleNavigate}
-        events={events}
-        resources={resources}
-        onToggleResource={handleToggleResource}
-        onSelectOnlyResource={handleSelectOnlyResource}
-        onCreateTeam={handleCreateTeam}
-        onRenameTeam={handleRenameTeam}
-        onDeleteTeam={handleDeleteTeam}
-        canManageTeams={canManageTeams}
-        alertCount={alertCount}
-        onShowAlerts={() => setAlertPanelOpen(true)}
-      />
+      {!isMobile && (
+        <CalendarSidebar
+          currentDate={currentDate}
+          onSelectDate={setCurrentDate}
+          view={view}
+          onViewChange={setView}
+          onNavigate={handleNavigate}
+          events={events}
+          resources={resources}
+          onToggleResource={handleToggleResource}
+          onSelectOnlyResource={handleSelectOnlyResource}
+          onCreateTeam={handleCreateTeam}
+          onRenameTeam={handleRenameTeam}
+          onDeleteTeam={handleDeleteTeam}
+          canManageTeams={canManageTeams}
+          alertCount={alertCount}
+          onShowAlerts={() => setAlertPanelOpen(true)}
+        />
+      )}
 
       <div className="flex flex-col flex-1 overflow-hidden">
-        {/* Toolbar mobile — remplace la sidebar cachée sur <md */}
-        <div className="md:hidden bg-white border-b border-gray-100 px-3 py-2 flex-shrink-0">
-          <div className="flex gap-1 mb-2">
-            {VIEW_OPTIONS.map(opt => (
-              <button
-                key={opt.key}
-                type="button"
-                onClick={() => setView(opt.key)}
-                className={[
-                  'flex-1 h-8 rounded-lg text-[10px] font-semibold',
-                  view === opt.key ? 'bg-[#111111] text-white' : 'bg-gray-100 text-gray-600',
-                ].join(' ')}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => handleNavigate('prev')}
-              className="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500"
-            >
-              <ChevronLeft size={14} />
-            </button>
-            <span className="flex-1 text-center text-[11px] font-semibold text-gray-700 capitalize">
-              {mobilePeriodLabel(view, currentDate)}
-            </span>
-            <button
-              type="button"
-              onClick={() => handleNavigate('next')}
-              className="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500"
-            >
-              <ChevronRight size={14} />
-            </button>
-            <button
-              type="button"
-              onClick={() => handleNavigate('today')}
-              className="px-2 h-7 text-[10px] font-medium border border-gray-200 rounded-lg text-gray-600"
-            >
-              Auj.
-            </button>
-            <button
-              type="button"
-              onClick={() => setAlertPanelOpen(true)}
-              className="relative w-7 h-7 flex items-center justify-center text-gray-400"
-            >
-              <Bell size={14} />
-              {alertCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] bg-red-500 rounded-full text-white text-[9px] font-black flex items-center justify-center px-0.5">
-                  {alertCount > 9 ? '9+' : alertCount}
-                </span>
-              )}
-            </button>
-          </div>
-        </div>
-
-        {view === 'month' ? (
+        {isMobile ? (
+          <MobileCalendar
+            currentDate={currentDate}
+            view={view}
+            events={events}
+            resources={resources}
+            alertCount={alertCount}
+            onSelectDate={setCurrentDate}
+            onViewChange={setView}
+            onToggleResource={handleToggleResource}
+            onSelectAll={handleSelectAll}
+            onShowAlerts={() => setAlertPanelOpen(true)}
+            onCreateNew={handleCreateNew}
+            onEventClick={handleEventClick}
+            onSlotClick={handleSlotClick}
+          />
+        ) : view === 'month' ? (
           <MonthView
             currentDate={currentDate}
             events={events}
@@ -330,11 +292,13 @@ export default function CalendarPage() {
         onDismissed={loadAlertCount}
       />
 
-      <CalendarBottomBar
-        events={events}
-        onCreateNew={handleCreateNew}
-        onPickEvent={handleEventClick}
-      />
+      {!isMobile && (
+        <CalendarBottomBar
+          events={events}
+          onCreateNew={handleCreateNew}
+          onPickEvent={handleEventClick}
+        />
+      )}
     </div>
   )
 }
