@@ -6,7 +6,10 @@ import { sendPushToSubscription } from '@/lib/push/sendPush'
 // Vérifie les échéances de loyers / paiements à J-7, J-1, J0 et retard
 export async function GET(request: NextRequest) {
   const auth = request.headers.get('authorization')
-  if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
+  const querySecret = request.nextUrl.searchParams.get('secret')
+  const validSecret = process.env.CRON_SECRET
+  const authorized = auth === `Bearer ${validSecret}` || querySecret === validSecret
+  if (!authorized) {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
   }
 
