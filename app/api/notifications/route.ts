@@ -54,18 +54,24 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Late returns (en_cours past end time) → bascule en_retard + notif
+    // 1. Bascule en_retard les réservations en_cours dépassées
+    const { data: newlyLate } = await supabase
+      .from('reservations')
+      .select('id')
+      .eq('status', 'en_cours')
+      .lt('end_datetime', now.toISOString())
+    for (const r of newlyLate ?? []) {
+      await supabase.from('reservations').update({ status: 'en_retard' }).eq('id', r.id)
+    }
+
+    // 2. Notif répétée toutes les 30 min pour TOUTES les réservations en_retard
+    const repeatThreshold = new Date(now.getTime() - 30 * 60 * 1000).toISOString()
     const { data: lateReturns } = await supabase
       .from('reservations')
       .select('id, reservation_number, end_datetime, vehicle:vehicles(plate, brand, model, color), client:clients(first_name, last_name)')
-      .eq('status', 'en_cours')
-      .lt('end_datetime', now.toISOString())
-
-    const repeatThreshold = new Date(now.getTime() - 30 * 60 * 1000).toISOString()
+      .eq('status', 'en_retard')
 
     for (const r of lateReturns ?? []) {
-      await supabase.from('reservations').update({ status: 'en_retard' }).eq('id', r.id)
-
       const { data: existing } = await supabase
         .from('notifications')
         .select('id')
