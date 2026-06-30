@@ -1,11 +1,27 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { addDays, addMonths, addWeeks, subDays, subMonths, subWeeks } from 'date-fns'
+import { addDays, addMonths, addWeeks, subDays, subMonths, subWeeks, format } from 'date-fns'
+import { fr } from 'date-fns/locale'
+import { ChevronLeft, ChevronRight, Bell } from 'lucide-react'
 import type { CalendarEvent, CalendarResource, CalendarView } from '@/types/calendar'
 import type { UserRole } from '@/types/database'
 import { RESOURCE_PALETTE, UNASSIGNED_RESOURCE_ID } from '@/lib/calendar/constants'
 import { getWeekDates, getMonthDates, getColumnWindow } from '@/lib/calendar/dateUtils'
+
+const VIEW_OPTIONS: { key: CalendarView; label: string }[] = [
+  { key: 'day',      label: 'Jour' },
+  { key: 'week_5d',  label: '5 J' },
+  { key: 'week_7d',  label: '7 J' },
+  { key: 'month',    label: 'Mois' },
+]
+
+function mobilePeriodLabel(view: CalendarView, date: Date): string {
+  if (view === 'month') return format(date, 'MMMM yyyy', { locale: fr })
+  if (view === 'day')   return format(date, 'EEE d MMM', { locale: fr })
+  const dates = getWeekDates(date, view)
+  return `${format(dates[0], 'd MMM', { locale: fr })} — ${format(dates[dates.length - 1], 'd MMM', { locale: fr })}`
+}
 import CalendarSidebar from './CalendarSidebar'
 import CalendarGrid from './CalendarGrid'
 import MonthView from './MonthView'
@@ -216,6 +232,63 @@ export default function CalendarPage() {
       />
 
       <div className="flex flex-col flex-1 overflow-hidden">
+        {/* Toolbar mobile — remplace la sidebar cachée sur <md */}
+        <div className="md:hidden bg-white border-b border-gray-100 px-3 py-2 flex-shrink-0">
+          <div className="flex gap-1 mb-2">
+            {VIEW_OPTIONS.map(opt => (
+              <button
+                key={opt.key}
+                type="button"
+                onClick={() => setView(opt.key)}
+                className={[
+                  'flex-1 h-8 rounded-lg text-[10px] font-semibold',
+                  view === opt.key ? 'bg-[#111111] text-white' : 'bg-gray-100 text-gray-600',
+                ].join(' ')}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => handleNavigate('prev')}
+              className="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500"
+            >
+              <ChevronLeft size={14} />
+            </button>
+            <span className="flex-1 text-center text-[11px] font-semibold text-gray-700 capitalize">
+              {mobilePeriodLabel(view, currentDate)}
+            </span>
+            <button
+              type="button"
+              onClick={() => handleNavigate('next')}
+              className="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500"
+            >
+              <ChevronRight size={14} />
+            </button>
+            <button
+              type="button"
+              onClick={() => handleNavigate('today')}
+              className="px-2 h-7 text-[10px] font-medium border border-gray-200 rounded-lg text-gray-600"
+            >
+              Auj.
+            </button>
+            <button
+              type="button"
+              onClick={() => setAlertPanelOpen(true)}
+              className="relative w-7 h-7 flex items-center justify-center text-gray-400"
+            >
+              <Bell size={14} />
+              {alertCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] bg-red-500 rounded-full text-white text-[9px] font-black flex items-center justify-center px-0.5">
+                  {alertCount > 9 ? '9+' : alertCount}
+                </span>
+              )}
+            </button>
+          </div>
+        </div>
+
         {view === 'month' ? (
           <MonthView
             currentDate={currentDate}

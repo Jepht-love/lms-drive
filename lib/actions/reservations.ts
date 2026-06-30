@@ -94,6 +94,8 @@ export async function createReservation(formData: FormData) {
   const newLastName = (formData.get('new_client_last_name') as string)?.trim()
   const newPhone = (formData.get('new_client_phone') as string)?.trim()
 
+  let clientName = ''
+
   if (newFirstName && newLastName && newPhone) {
     if (await isNameBlacklisted(supabase, newFirstName, newLastName)) {
       return { error: 'Ce nom correspond à un client blacklisté — réservation impossible.' }
@@ -105,6 +107,7 @@ export async function createReservation(formData: FormData) {
       .single()
     if (clientErr || !newClient) return { error: clientErr?.message ?? 'Erreur lors de la création du client' }
     clientId = newClient.id
+    clientName = `${newFirstName} ${newLastName}`
   } else {
     const { data: selectedClient } = await supabase
       .from('clients').select('status, first_name, last_name').eq('id', clientId).maybeSingle()
@@ -114,6 +117,7 @@ export async function createReservation(formData: FormData) {
     if (selectedClient && await isNameBlacklisted(supabase, selectedClient.first_name, selectedClient.last_name, clientId)) {
       return { error: 'Ce nom correspond à un client blacklisté sous un autre dossier — réservation impossible.' }
     }
+    clientName = selectedClient ? `${selectedClient.first_name} ${selectedClient.last_name}` : ''
   }
 
   // Check conflict — chevauchement réel : l'existante commence avant la fin de
@@ -197,7 +201,7 @@ export async function createReservation(formData: FormData) {
   const startFmt = new Date(startDatetime).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
   await broadcastPushToManagers({
     title: 'Nouvelle réservation',
-    body: `${payload.reservation_number} — départ le ${startFmt}`,
+    body: `${clientName ? clientName + ' — ' : payload.reservation_number + ' — '}départ le ${startFmt}`,
     url: `/reservations/${data.id}`,
   })
 
@@ -215,7 +219,7 @@ export async function updateReservationStatus(id: string, status: ReservationSta
 
   const { data: reservation } = await supabase
     .from('reservations')
-    .select('vehicle_id, status')
+    .select('vehicle_id, status, reservation_number, client:clients(first_name, last_name), vehicle:vehicles(brand, model, plate)')
     .eq('id', id)
     .single()
 
@@ -225,11 +229,16 @@ export async function updateReservationStatus(id: string, status: ReservationSta
 
   await recomputeVehicleStatus(supabase, reservation.vehicle_id)
 
+  const clt = reservation.client as any
+  const veh = reservation.vehicle as any
+  const pushClientName = clt ? `${clt.first_name} ${clt.last_name}` : reservation.reservation_number
+  const pushVehicle = veh ? `${veh.brand} ${veh.model} (${veh.plate})` : ''
+
   const PUSH_LABELS: Partial<Record<ReservationStatus, { title: string; body: string }>> = {
-    confirmee:  { title: 'Réservation confirmée', body: `Réservation ${id.slice(-6).toUpperCase()} confirmée` },
-    en_cours:   { title: 'Départ effectué', body: `Véhicule parti — réservation ${id.slice(-6).toUpperCase()} en cours` },
-    en_retard:  { title: 'Retour en retard', body: `La réservation ${id.slice(-6).toUpperCase()} dépasse l'heure de retour` },
-    terminee:   { title: 'Retour effectué', body: `Réservation ${id.slice(-6).toUpperCase()} terminée` },
+    confirmee:  { title: 'Réservation confirmée', body: `${pushClientName}${pushVehicle ? ` — ${pushVehicle}` : ''}` },
+    en_cours:   { title: 'Départ effectué',        body: `${pushClientName} — ${pushVehicle} en cours de location` },
+    en_retard:  { title: 'Retour en retard',       body: `${pushClientName} — ${pushVehicle} n'est pas encore rendu` },
+    terminee:   { title: 'Retour effectué',        body: `${pushClientName} — ${pushVehicle} rendu` },
   }
   const pushMsg = PUSH_LABELS[status]
   if (pushMsg) {

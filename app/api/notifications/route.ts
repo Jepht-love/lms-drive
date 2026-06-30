@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     // Departures within 1h (confirmed reservations)
     const { data: upcomingDepartures } = await supabase
       .from('reservations')
-      .select('id, reservation_number, start_datetime, vehicle:vehicles(plate, brand, model)')
+      .select('id, reservation_number, start_datetime, vehicle:vehicles(plate, brand, model), client:clients(first_name, last_name)')
       .eq('status', 'confirmee')
       .gte('start_datetime', now.toISOString())
       .lte('start_datetime', addHours(now, 1).toISOString())
@@ -38,7 +38,10 @@ export async function GET(request: NextRequest) {
         .limit(1)
 
       if (!existing || existing.length === 0) {
-        const body = `${r.reservation_number} — ${(r.vehicle as any)?.brand} ${(r.vehicle as any)?.model} (${(r.vehicle as any)?.plate}) part dans moins d'une heure`
+        const clt = r.client as any
+        const veh = r.vehicle as any
+        const clientLabel = clt ? `${clt.first_name} ${clt.last_name}` : r.reservation_number
+        const body = `${clientLabel} — ${veh?.brand} ${veh?.model} (${veh?.plate}) part dans moins d'une heure`
         await supabase.from('notifications').insert({
           user_id: null, type: 'departure_soon',
           title: 'Départ imminent', body,
@@ -52,7 +55,7 @@ export async function GET(request: NextRequest) {
     // Late returns (en_cours past end time) → bascule en_retard + notif
     const { data: lateReturns } = await supabase
       .from('reservations')
-      .select('id, reservation_number, end_datetime, vehicle:vehicles(plate, brand, model)')
+      .select('id, reservation_number, end_datetime, vehicle:vehicles(plate, brand, model), client:clients(first_name, last_name)')
       .eq('status', 'en_cours')
       .lt('end_datetime', now.toISOString())
 
@@ -67,7 +70,10 @@ export async function GET(request: NextRequest) {
         .limit(1)
 
       if (!existing || existing.length === 0) {
-        const body = `${r.reservation_number} — ${(r.vehicle as any)?.brand} ${(r.vehicle as any)?.model} (${(r.vehicle as any)?.plate}) aurait dû être rendu`
+        const clt = r.client as any
+        const veh = r.vehicle as any
+        const clientLabel = clt ? `${clt.first_name} ${clt.last_name}` : r.reservation_number
+        const body = `${clientLabel} — ${veh?.brand} ${veh?.model} (${veh?.plate}) aurait dû être rendu`
         await supabase.from('notifications').insert({
           user_id: null, type: 'return_late',
           title: 'Retour en retard', body,
