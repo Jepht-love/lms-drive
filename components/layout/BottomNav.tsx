@@ -41,7 +41,7 @@ export default function BottomNav({ alertCount: initial = 0, allowedTabs }: { al
   }, [initial])
 
   return (
-    <nav className="shrink-0 bg-[#111111]">
+    <nav className="shrink-0 bg-[#111111]" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 8px)' }}>
       {/* Items de navigation */}
       <div className="flex items-center h-[60px] px-1">
         {visibleTabs.map(({ label, href, Icon, ActiveIcon, badge }) => {
