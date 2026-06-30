@@ -42,8 +42,8 @@ export default function BottomNav({ alertCount: initial = 0, allowedTabs }: { al
 
   return (
     <nav
-      className="shrink-0 bg-white"
-      style={{ paddingBottom: 'env(safe-area-inset-bottom)', borderTop: '1px solid rgba(0,0,0,0.08)' }}
+      className="shrink-0 bg-[#111111]"
+      style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 40px)' }}
     >
       {/* Items de navigation */}
       <div className="flex items-center h-[60px] px-1">
@@ -58,15 +58,15 @@ export default function BottomNav({ alertCount: initial = 0, allowedTabs }: { al
               {isActive && (
                 <motion.div
                   layoutId="nav-pill"
-                  className="absolute inset-0 bg-gray-100 rounded-2xl"
+                  className="absolute inset-0 bg-white/10 rounded-2xl"
                   transition={{ type: 'spring', damping: 25, stiffness: 300 }}
                 />
               )}
               <div className="relative z-10 flex flex-col items-center gap-1">
                 <div className="relative">
                   {isActive
-                    ? <ActiveIcon className="w-5 h-5 text-gray-900" />
-                    : <Icon className="w-5 h-5 text-gray-400" />
+                    ? <ActiveIcon className="w-5 h-5 text-white" />
+                    : <Icon className="w-5 h-5 text-white/40" />
                   }
                   {badge && (
                     <AnimatePresence>
@@ -85,7 +85,7 @@ export default function BottomNav({ alertCount: initial = 0, allowedTabs }: { al
                     </AnimatePresence>
                   )}
                 </div>
-                <span className={`text-[10px] font-semibold leading-none ${isActive ? 'text-gray-900' : 'text-gray-400'}`}>
+                <span className={`text-[10px] font-semibold leading-none ${isActive ? 'text-white' : 'text-white/40'}`}>
                   {label}
                 </span>
               </div>
