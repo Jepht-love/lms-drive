@@ -145,12 +145,12 @@ export default function EventDrawer({ open, event, slotContext, resources, onClo
       )
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
-        throw new Error(body.error ?? 'Erreur lors de l’enregistrement')
+        throw new Error(body.error ?? "Erreur lors de l'enregistrement")
       }
       onSave()
       onClose()
     } catch (e: any) {
-      setError(e.message ?? 'Erreur lors de l’enregistrement')
+      setError(e.message ?? "Erreur lors de l'enregistrement")
     } finally {
       setSaving(false)
     }
@@ -171,181 +171,217 @@ export default function EventDrawer({ open, event, slotContext, resources, onClo
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end">
+    <div className="fixed inset-0 z-50 flex items-end md:items-stretch md:justify-end">
+      {/* Backdrop */}
       <button type="button" aria-label="Fermer" onClick={onClose} className="absolute inset-0 bg-black/30" />
-      <div className="relative w-full max-w-[380px] bg-white h-full shadow-sm border-l border-gray-100 p-4 overflow-y-auto">
-        <h2 className="text-[14px] font-semibold mb-4">{isEdit ? 'Modifier l’événement' : 'Nouvel événement'}</h2>
 
-        <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1">Titre</label>
-        <input
-          type="text"
-          value={title}
-          onChange={e => setTitle(e.target.value)}
-          className="w-full border border-gray-200 rounded-lg px-3 h-9 text-[13px] mb-3"
-          placeholder="Ex : RDV client signature contrat"
-        />
+      {/*
+        Mobile  : bottom sheet, monte du bas, 90dvh, coins arrondis en haut
+        Desktop : tiroir droite, plein hauteur
+      */}
+      <div className="
+        relative flex flex-col bg-white shadow-sm border-gray-100
+        w-full max-h-[90dvh] rounded-t-2xl
+        md:rounded-none md:border-l md:max-h-none md:h-full md:w-full md:max-w-[380px]
+      ">
+        {/* Drag handle (mobile only) */}
+        <div className="md:hidden flex justify-center pt-3 pb-1 shrink-0">
+          <div className="w-10 h-1 bg-gray-200 rounded-full" />
+        </div>
 
-        <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1">Type d&apos;événement</label>
-        <div className="flex items-center gap-2 mb-3">
-          <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: EVENT_COLORS[eventType] }} />
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 pt-2 pb-3 shrink-0 border-b border-gray-100">
+          <h2 className="text-[14px] font-semibold">{isEdit ? "Modifier l'événement" : 'Nouvel événement'}</h2>
+          <button type="button" onClick={onClose} className="text-gray-400 text-[20px] leading-none w-7 h-7 flex items-center justify-center rounded-full hover:bg-gray-100">
+            ✕
+          </button>
+        </div>
+
+        {/* Scrollable form */}
+        <div className="flex-1 overflow-y-auto px-4 py-3">
+          <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1">Titre</label>
+          <input
+            type="text"
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            className="w-full border border-gray-200 rounded-lg px-3 h-9 text-[13px] mb-3"
+            placeholder="Ex : RDV client signature contrat"
+          />
+
+          <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1">Type d&apos;événement</label>
+          <div className="flex items-center gap-2 mb-3">
+            <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: EVENT_COLORS[eventType] }} />
+            <select
+              value={eventType}
+              onChange={e => setEventType(e.target.value as EventType)}
+              className="flex-1 border border-gray-200 rounded-lg px-3 h-9 text-[13px]"
+            >
+              {Object.entries(EVENT_TYPE_LABELS).map(([key, label]) => (
+                <option key={key} value={key}>{label}</option>
+              ))}
+            </select>
+          </div>
+
+          <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1">Statut</label>
+          <div className="flex flex-wrap gap-1.5 mb-3">
+            {Object.entries(EVENT_STATUS_LABELS).map(([key, label]) => {
+              const active = key === status
+              const color = STATUS_COLORS[key as EventStatus]
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setStatus(key as EventStatus)}
+                  className="h-7 px-2.5 rounded-full text-[11px] font-medium"
+                  style={active
+                    ? { backgroundColor: color, color: 'white' }
+                    : { backgroundColor: 'white', color, border: `1px solid ${color}` }}
+                >
+                  {label}
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Début / Fin côte à côte sur mobile pour gagner de la place */}
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1">Début</label>
+              <input
+                type="datetime-local"
+                value={startAt}
+                onChange={e => setStartAt(e.target.value)}
+                className="w-full border border-gray-200 rounded-lg px-2 h-9 text-[12px]"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1">Fin</label>
+              <input
+                type="datetime-local"
+                value={endAt}
+                onChange={e => setEndAt(e.target.value)}
+                className="w-full border border-gray-200 rounded-lg px-2 h-9 text-[12px]"
+              />
+            </div>
+          </div>
+
+          <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1">Ressource assignée</label>
           <select
-            value={eventType}
-            onChange={e => setEventType(e.target.value as EventType)}
-            className="flex-1 border border-gray-200 rounded-lg px-3 h-9 text-[13px]"
+            value={assignee}
+            onChange={e => setAssignee(e.target.value)}
+            className="w-full border border-gray-200 rounded-lg px-3 h-9 text-[13px] mb-3"
           >
-            {Object.entries(EVENT_TYPE_LABELS).map(([key, label]) => (
-              <option key={key} value={key}>{label}</option>
+            <option value="">— Aucune —</option>
+            <optgroup label="Collaborateurs">
+              {resources.filter(r => r.type === 'profile' && r.id !== UNASSIGNED_RESOURCE_ID).map(r => (
+                <option key={r.id} value={`profile:${r.id}`}>{r.full_name}</option>
+              ))}
+            </optgroup>
+            <optgroup label="Équipes">
+              {resources.filter(r => r.type === 'team').map(r => (
+                <option key={r.id} value={`team:${r.id}`}>{r.full_name}</option>
+              ))}
+            </optgroup>
+          </select>
+
+          <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1">
+            Véhicules liés {vehicleIds.length > 0 && `(${vehicleIds.length})`}
+          </label>
+          <div className="border border-gray-200 rounded-lg max-h-[140px] overflow-y-auto mb-3">
+            {vehicles.length === 0 && (
+              <p className="text-[12px] text-gray-400 px-3 py-2">Chargement…</p>
+            )}
+            {vehicles.map(v => {
+              const checked = vehicleIds.includes(v.id)
+              return (
+                <label
+                  key={v.id}
+                  className="flex items-center gap-2 px-3 py-2 border-b border-gray-50 last:border-0 text-[13px]"
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => setVehicleIds(ids =>
+                      checked ? ids.filter(id => id !== v.id) : [...ids, v.id]
+                    )}
+                    className="w-4 h-4 accent-[#111111] flex-shrink-0"
+                  />
+                  <span>
+                    {v.brand} {v.model}
+                    <span className="text-gray-400 font-mono"> · {v.plate}</span>
+                  </span>
+                </label>
+              )
+            })}
+          </div>
+
+          <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1">Client lié</label>
+          <select
+            value={clientId}
+            onChange={e => setClientId(e.target.value)}
+            className="w-full border border-gray-200 rounded-lg px-3 h-9 text-[13px] mb-3"
+          >
+            <option value="">— Aucun —</option>
+            {clients.map(c => (
+              <option key={c.id} value={c.id}>{c.first_name} {c.last_name}</option>
             ))}
           </select>
+
+          <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1">Notes</label>
+          <textarea
+            value={notes}
+            onChange={e => setNotes(e.target.value)}
+            rows={3}
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-[13px]"
+          />
+
+          {error && <p className="text-[12px] text-red-500 mt-2">{error}</p>}
         </div>
 
-        <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1">Statut</label>
-        <div className="flex flex-wrap gap-1.5 mb-3">
-          {Object.entries(EVENT_STATUS_LABELS).map(([key, label]) => {
-            const active = key === status
-            const color = STATUS_COLORS[key as EventStatus]
-            return (
+        {/* Footer collé en bas — toujours visible sans scroll */}
+        <div
+          className="shrink-0 px-4 pt-3 pb-4 border-t border-gray-100 flex flex-col gap-2 bg-white"
+          style={{ paddingBottom: 'max(16px, env(safe-area-inset-bottom))' }}
+        >
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving}
+            className="w-full h-10 rounded-xl bg-[#111111] text-white text-[13px] font-medium disabled:opacity-50"
+          >
+            {saving ? 'Enregistrement…' : 'Enregistrer'}
+          </button>
+
+          {isEdit && (
+            confirmingDelete ? (
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  disabled={saving}
+                  className="flex-1 h-9 rounded-xl bg-red-500 text-white text-[12px] font-medium"
+                >
+                  Confirmer la suppression
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmingDelete(false)}
+                  className="flex-1 h-9 rounded-xl border border-gray-200 text-[12px] font-medium"
+                >
+                  Annuler
+                </button>
+              </div>
+            ) : (
               <button
-                key={key}
                 type="button"
-                onClick={() => setStatus(key as EventStatus)}
-                className="h-7 px-2.5 rounded-full text-[11px] font-medium"
-                style={active
-                  ? { backgroundColor: color, color: 'white' }
-                  : { backgroundColor: 'white', color, border: `1px solid ${color}` }}
+                onClick={() => setConfirmingDelete(true)}
+                className="w-full h-9 rounded-xl border border-red-200 text-red-500 text-[12px] font-medium"
               >
-                {label}
+                Supprimer l'événement
               </button>
             )
-          })}
-        </div>
-
-        <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1">Début</label>
-        <input
-          type="datetime-local"
-          value={startAt}
-          onChange={e => setStartAt(e.target.value)}
-          className="w-full border border-gray-200 rounded-lg px-3 h-9 text-[13px] mb-3"
-        />
-
-        <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1">Fin</label>
-        <input
-          type="datetime-local"
-          value={endAt}
-          onChange={e => setEndAt(e.target.value)}
-          className="w-full border border-gray-200 rounded-lg px-3 h-9 text-[13px] mb-3"
-        />
-
-        <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1">Ressource assignée</label>
-        <select
-          value={assignee}
-          onChange={e => setAssignee(e.target.value)}
-          className="w-full border border-gray-200 rounded-lg px-3 h-9 text-[13px] mb-3"
-        >
-          <option value="">— Aucune —</option>
-          <optgroup label="Collaborateurs">
-            {resources.filter(r => r.type === 'profile' && r.id !== UNASSIGNED_RESOURCE_ID).map(r => (
-              <option key={r.id} value={`profile:${r.id}`}>{r.full_name}</option>
-            ))}
-          </optgroup>
-          <optgroup label="Équipes">
-            {resources.filter(r => r.type === 'team').map(r => (
-              <option key={r.id} value={`team:${r.id}`}>{r.full_name}</option>
-            ))}
-          </optgroup>
-        </select>
-
-        <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1">
-          Véhicules liés {vehicleIds.length > 0 && `(${vehicleIds.length})`}
-        </label>
-        <div className="border border-gray-200 rounded-lg max-h-[160px] overflow-y-auto mb-3">
-          {vehicles.length === 0 && (
-            <p className="text-[12px] text-gray-400 px-3 py-2">Chargement…</p>
           )}
-          {vehicles.map(v => {
-            const checked = vehicleIds.includes(v.id)
-            return (
-              <label
-                key={v.id}
-                className="flex items-center gap-2 px-3 py-2 border-b border-gray-50 last:border-0 text-[13px]"
-              >
-                <input
-                  type="checkbox"
-                  checked={checked}
-                  onChange={() => setVehicleIds(ids =>
-                    checked ? ids.filter(id => id !== v.id) : [...ids, v.id]
-                  )}
-                  className="w-4 h-4 accent-[#111111] flex-shrink-0"
-                />
-                <span>
-                  {v.brand} {v.model}
-                  <span className="text-gray-400 font-mono"> · {v.plate}</span>
-                </span>
-              </label>
-            )
-          })}
         </div>
-
-        <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1">Client lié</label>
-        <select
-          value={clientId}
-          onChange={e => setClientId(e.target.value)}
-          className="w-full border border-gray-200 rounded-lg px-3 h-9 text-[13px] mb-3"
-        >
-          <option value="">— Aucun —</option>
-          {clients.map(c => (
-            <option key={c.id} value={c.id}>{c.first_name} {c.last_name}</option>
-          ))}
-        </select>
-
-        <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1">Notes</label>
-        <textarea
-          value={notes}
-          onChange={e => setNotes(e.target.value)}
-          rows={3}
-          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-[13px] mb-4"
-        />
-
-        {error && <p className="text-[12px] text-red-500 mb-3">{error}</p>}
-
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={saving}
-          className="w-full h-10 rounded-lg bg-[#111111] text-white text-[13px] font-medium disabled:opacity-50 mb-2"
-        >
-          {saving ? 'Enregistrement…' : 'Enregistrer'}
-        </button>
-
-        {isEdit && (
-          confirmingDelete ? (
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={handleDelete}
-                disabled={saving}
-                className="flex-1 h-9 rounded-lg bg-red-500 text-white text-[12px] font-medium"
-              >
-                Confirmer ?
-              </button>
-              <button
-                type="button"
-                onClick={() => setConfirmingDelete(false)}
-                className="flex-1 h-9 rounded-lg border border-gray-200 text-[12px] font-medium"
-              >
-                Annuler
-              </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setConfirmingDelete(true)}
-              className="w-full h-9 rounded-lg border border-red-200 text-red-500 text-[12px] font-medium"
-            >
-              Supprimer
-            </button>
-          )
-        )}
       </div>
     </div>
   )

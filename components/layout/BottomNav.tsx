@@ -56,7 +56,7 @@ export default function BottomNav({ alertCount: initial = 0, allowedTabs }: { al
                 <motion.div
                   layoutId="nav-pill"
                   className="absolute inset-0 bg-white/10 rounded-2xl"
-                  transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                  transition={{ type: 'spring', damping: 30, stiffness: 500 }}
                 />
               )}
               <div className="relative z-10 flex flex-col items-center gap-1">
