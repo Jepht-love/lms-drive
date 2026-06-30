@@ -140,7 +140,7 @@ export async function createReservation(formData: FormData) {
 
   const { data: vehicle } = await supabase
     .from('vehicles')
-    .select('weekly_price, km_included_daily, extra_km_price')
+    .select('weekly_price, km_included_daily, extra_km_price, brand, model, color')
     .eq('id', vehicleId)
     .single()
 
@@ -199,9 +199,12 @@ export async function createReservation(formData: FormData) {
   await syncReservationToCalendar(data.id)
 
   const startFmt = new Date(startDatetime).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+  const vehLabel = vehicle
+    ? `${vehicle.brand} ${vehicle.model}${vehicle.color ? ' ' + vehicle.color : ''}`
+    : ''
   await broadcastPushToManagers({
     title: 'Nouvelle réservation',
-    body: `${clientName ? clientName + ' — ' : payload.reservation_number + ' — '}départ le ${startFmt}`,
+    body: `${clientName || payload.reservation_number}${vehLabel ? ' — ' + vehLabel : ''} · départ le ${startFmt}`,
     url: `/reservations/${data.id}`,
   })
 
@@ -219,7 +222,7 @@ export async function updateReservationStatus(id: string, status: ReservationSta
 
   const { data: reservation } = await supabase
     .from('reservations')
-    .select('vehicle_id, status, reservation_number, client:clients(first_name, last_name), vehicle:vehicles(brand, model, plate)')
+    .select('vehicle_id, status, reservation_number, start_datetime, end_datetime, client:clients(first_name, last_name), vehicle:vehicles(brand, model, plate, color)')
     .eq('id', id)
     .single()
 
@@ -232,12 +235,17 @@ export async function updateReservationStatus(id: string, status: ReservationSta
   const clt = reservation.client as any
   const veh = reservation.vehicle as any
   const pushClientName = clt ? `${clt.first_name} ${clt.last_name}` : reservation.reservation_number
-  const pushVehicle = veh ? `${veh.brand} ${veh.model} (${veh.plate})` : ''
+  const pushVehicle = veh ? `${veh.brand} ${veh.model}${veh.color ? ' ' + veh.color : ''} (${veh.plate})` : ''
+  const fmtDate = (iso: string | null) => iso
+    ? new Date(iso).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+    : ''
+  const departFmt = fmtDate(reservation.start_datetime)
+  const retourFmt = fmtDate(reservation.end_datetime)
 
   const PUSH_LABELS: Partial<Record<ReservationStatus, { title: string; body: string }>> = {
-    confirmee:  { title: 'Réservation confirmée', body: `${pushClientName}${pushVehicle ? ` — ${pushVehicle}` : ''}` },
-    en_cours:   { title: 'Départ effectué',        body: `${pushClientName} — ${pushVehicle} en cours de location` },
-    en_retard:  { title: 'Retour en retard',       body: `${pushClientName} — ${pushVehicle} n'est pas encore rendu` },
+    confirmee:  { title: 'Réservation confirmée', body: `${pushClientName}${pushVehicle ? ' — ' + pushVehicle : ''}${departFmt ? ' · départ le ' + departFmt : ''}` },
+    en_cours:   { title: 'Départ effectué',        body: `${pushClientName} — ${pushVehicle}${retourFmt ? ' · retour prévu le ' + retourFmt : ''}` },
+    en_retard:  { title: 'Retour en retard',       body: `${pushClientName} — ${pushVehicle}${retourFmt ? ' · prévu le ' + retourFmt : ''}` },
     terminee:   { title: 'Retour effectué',        body: `${pushClientName} — ${pushVehicle} rendu` },
   }
   const pushMsg = PUSH_LABELS[status]
