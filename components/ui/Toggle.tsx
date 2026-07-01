@@ -25,9 +25,15 @@ export default function Toggle({ checked, onChange, disabled, label, onColor = '
       <span
         className="absolute bg-white rounded-full"
         style={{
-          top: 2, width: 27, height: 27,
+          // Position pilotée par `left` explicite dans les deux états → géométrie
+          // déterministe et immunisée contre toute règle CSS de page (aucune règle
+          // externe left/right ne peut s'appliquer, l'inline gagne). Le glissement
+          // reste animé par translateX (compositeur, fluide), amplitude 0→20px.
+          //   OFF : left 2 + 0  = 2px            (marge gauche 2px)
+          //   ON  : left 2 + 20 = 22px → 22+27=49 (marge droite 2px)   piste 51px
+          top: 2, left: 2, width: 27, height: 27,
           boxShadow: '0 2px 4px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.1)',
-          transform: checked ? 'translateX(22px)' : 'translateX(2px)',
+          transform: checked ? 'translateX(20px)' : 'translateX(0)',
           transition: 'transform 0.22s cubic-bezier(0.4, 0.0, 0.2, 1)',
         }}
       />
