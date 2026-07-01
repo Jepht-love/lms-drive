@@ -91,10 +91,10 @@ export async function GET(request: NextRequest) {
         const body = `${clientLabel}${vehLabel ? ' — ' + vehLabel : ''} · retour prévu à ${heureFmt}`
         await supabase.from('notifications').insert({
           user_id: null, type: 'return_today_soon',
-          title: 'Arrivée du jour', body,
+          title: 'Retour du jour', body,
           entity_type: 'reservations', entity_id: r.id,
         })
-        await broadcastPushToManagers({ title: 'Arrivée du jour', body, url: '/reservations' })
+        await broadcastPushToManagers({ title: 'Retour du jour', body, url: '/reservations' })
         created.push(r.id)
       }
     }
