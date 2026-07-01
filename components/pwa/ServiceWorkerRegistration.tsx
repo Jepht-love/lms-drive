@@ -20,10 +20,20 @@ export default function ServiceWorkerRegistration() {
       return
     }
 
+    // Recharge la page dès que le nouveau SW prend le contrôle —
+    // sans ça, les vieux chunks JS restent en mémoire même après l'activation.
+    let reloading = false
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (reloading) return
+      reloading = true
+      window.location.reload()
+    })
+
     navigator.serviceWorker
       .register('/sw.js', { scope: '/' })
       .then((registration) => {
-        setInterval(() => registration.update(), 60 * 60 * 1000)
+        // Vérifier une mise à jour toutes les 5 minutes (au lieu d'1h)
+        setInterval(() => registration.update(), 5 * 60 * 1000)
 
         if (registration.waiting) {
           registration.waiting.postMessage({ type: 'SKIP_WAITING' })
