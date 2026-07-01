@@ -50,7 +50,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         }}
       >
         <PageHeader alertCount={alertCount} />
-        <main style={{ overflow: 'hidden', minHeight: 0 }}>
+        <main style={{ overflowY: 'auto', overscrollBehavior: 'none', WebkitOverflowScrolling: 'touch', minHeight: 0 } as React.CSSProperties}>
           <PageTransition>
             <ContentWrapper>{children}</ContentWrapper>
           </PageTransition>

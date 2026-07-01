@@ -8,19 +8,10 @@ export default function ContentWrapper({ children }: { children: React.ReactNode
   const path = usePathname()
   const noPadding = NO_PADDING_ROUTES.some(r => path === r || path.startsWith(r + '/'))
 
-  if (noPadding) {
-    return (
-      <div className="h-full overflow-hidden">
-        {children}
-      </div>
-    )
-  }
+  if (noPadding) return <>{children}</>
 
   return (
-    <div
-      className="h-full overflow-y-auto px-4 py-5 pb-6"
-      style={{ overscrollBehavior: 'none', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
-    >
+    <div className="px-4 py-5 pb-6">
       {children}
     </div>
   )
