@@ -2,8 +2,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendPushToSubscription } from '@/lib/push/sendPush'
 
-// Cron Vercel — exécuté chaque matin à 08h00 UTC
-// Vérifie les échéances de loyers / paiements à J-7, J-1, J0 et retard
+// ─── Calendrier de rappel des échéances (facile à ajuster) ───────────────────
+// AVANT l'échéance : on prévient à J-7, J-5, J-3, J-1.
+const UPCOMING_DAYS = [7, 5, 3, 1]
+// APRÈS l'échéance (si toujours impayée) : relance tous les 2 jours jusqu'à J+19.
+const OVERDUE_DAYS = [1, 3, 5, 7, 9, 11, 13, 15, 17, 19]
+// Le jour J (offset 0) déclenche aussi un rappel « échéance aujourd'hui ».
+
+// Cron — à appeler 1×/jour (le rappel du jour dépend de la date, pas de l'heure).
+// Vérifie les échéances de loyers / paiements selon le calendrier ci-dessus.
 export async function GET(request: NextRequest) {
   const auth = request.headers.get('authorization')
   const querySecret = request.nextUrl.searchParams.get('secret')
@@ -16,22 +23,25 @@ export async function GET(request: NextRequest) {
   const supabase = createAdminClient()
   const today = new Date()
   today.setHours(0, 0, 0, 0)
+  const todayStr = today.toISOString().slice(0, 10)
 
-  const todayStr  = today.toISOString().slice(0, 10)
-  const d1 = addDays(today, 1).toISOString().slice(0, 10)  // J+1 (on prévient J-1 avant)
-  const d7 = addDays(today, 7).toISOString().slice(0, 10)  // J+7
+  // Fenêtre de scan : de J-19 (retard max relancé) à J+7 (anticipation max).
+  const maxUpcoming = Math.max(...UPCOMING_DAYS)
+  const maxOverdue = Math.max(...OVERDUE_DAYS)
+  const dueMax = addDays(today, maxUpcoming).toISOString().slice(0, 10)
+  const dueMin = addDays(today, -maxOverdue).toISOString().slice(0, 10)
 
-  // Échéances impayées : en retard, aujourd'hui, dans 1 jour, dans 7 jours
   const { data: dues } = await supabase
     .from('financial_due_dates')
     .select('id, description, amount, due_date, category, vehicle_id, vehicles(brand, model, plate)')
     .eq('is_paid', false)
-    .lte('due_date', d7)
+    .gte('due_date', dueMin)
+    .lte('due_date', dueMax)
     .order('due_date')
 
   if (!dues?.length) return NextResponse.json({ sent: 0 })
 
-  // Récupérer tous les abonnés push (gérant + associé)
+  // Abonnés push (gérant + associé)
   const { data: subs } = await supabase
     .from('push_subscriptions')
     .select('id, endpoint, p256dh, auth, user_id, profiles(role)')
@@ -51,53 +61,48 @@ export async function GET(request: NextRequest) {
     const vehicle = due.vehicles as any
     const vehicleLabel = vehicle ? `${vehicle.brand} ${vehicle.model} (${vehicle.plate})` : null
 
-    let urgency: 'overdue' | 'today' | 'tomorrow' | 'week'
-    let title: string
-    let body: string
+    // Décalage en jours : >0 à venir, 0 aujourd'hui, <0 en retard.
+    const offset = Math.round(
+      (Date.parse(dueDate + 'T00:00:00Z') - Date.parse(todayStr + 'T00:00:00Z')) / 86_400_000
+    )
 
-    if (dueDate < todayStr) {
-      urgency = 'overdue'
-      const daysLate = Math.round((today.getTime() - new Date(dueDate).getTime()) / 86400000)
-      title = `⚠️ Échéance en retard — ${daysLate}j`
-      body = `${due.description}${vehicleLabel ? ` · ${vehicleLabel}` : ''} — ${formatAmount(due.amount)} (dû le ${formatDate(dueDate)})`
-    } else if (dueDate === todayStr) {
-      urgency = 'today'
+    // Aujourd'hui est-il un jour de rappel pour cette échéance ?
+    let title: string
+    if (offset === 0) {
       title = `🔴 Échéance aujourd'hui`
-      body = `${due.description}${vehicleLabel ? ` · ${vehicleLabel}` : ''} — ${formatAmount(due.amount)}`
-    } else if (dueDate === d1) {
-      urgency = 'tomorrow'
-      title = `🟡 Échéance demain`
-      body = `${due.description}${vehicleLabel ? ` · ${vehicleLabel}` : ''} — ${formatAmount(due.amount)}`
+    } else if (offset > 0 && UPCOMING_DAYS.includes(offset)) {
+      title = offset === 1 ? `🟡 Échéance demain` : `📅 Échéance dans ${offset} jours`
+    } else if (offset < 0 && OVERDUE_DAYS.includes(-offset)) {
+      title = `⚠️ Échéance en retard — ${-offset} j`
     } else {
-      urgency = 'week'
-      title = `📅 Échéance dans 7 jours`
-      body = `${due.description}${vehicleLabel ? ` · ${vehicleLabel}` : ''} — ${formatAmount(due.amount)}`
+      continue // pas un jour de rappel pour cette échéance
     }
 
-    // Éviter les doublons : vérifier si une notif identique a déjà été envoyée aujourd'hui
-    const notifKey = `due_date_${due.id}_${urgency}`
+    const body = `${due.description}${vehicleLabel ? ` · ${vehicleLabel}` : ''} — ${formatAmount(due.amount)}${offset < 0 ? ` (due le ${formatDate(dueDate)})` : ''}`
+
+    // Dédup : une seule notif par échéance et par jour (le cron peut être appelé
+    // plusieurs fois sans spammer).
     const { data: existing } = await supabase
       .from('notifications')
       .select('id')
       .eq('type', 'due_date_reminder')
       .eq('entity_id', due.id)
       .gte('created_at', todayStr + 'T00:00:00Z')
-      .ilike('body', `%${urgency}%`)
       .limit(1)
 
     if (existing?.length) continue
 
-    // Créer une notif in-app
+    // Notif in-app
     await supabase.from('notifications').insert({
       user_id: null,
       type: 'due_date_reminder',
       title,
-      body: body + ` [${urgency}]`,
+      body,
       entity_type: 'financial_due_dates',
       entity_id: due.id,
     })
 
-    // Envoyer push à tous les managers
+    // Push à tous les managers
     for (const sub of managerSubs) {
       const result = await sendPushToSubscription(
         { id: sub.id, endpoint: sub.endpoint, p256dh: sub.p256dh, auth: sub.auth },
