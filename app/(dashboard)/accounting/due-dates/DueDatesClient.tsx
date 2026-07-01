@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, CheckCircle2, AlertTriangle, Trash2 } from 'lucide-react'
+import Toggle from '@/components/ui/Toggle'
 import { formatPrice, formatDate } from '@/lib/utils'
 import { REVENUE_CATEGORIES, getCategoryLabel, expenseCategoriesByFamily } from '@/lib/accounting/categories'
 import { createDueDate, createRecurringDueDates, markDuePaid, deleteDueDate } from '@/lib/actions/dueDates'
@@ -117,10 +118,11 @@ export default function DueDatesClient({ dueDates, vehicles }: { dueDates: DueDa
               Facture à régler
             </button>
           </div>
-          <label className="flex items-center gap-2 text-sm text-gray-600">
-            <input type="checkbox" checked={recurring} onChange={e => setRecurring(e.target.checked)} className="w-4 h-4" />
-            Échéancier récurrent (plusieurs mensualités — ex. loyer véhicule sur 36 mois)
-          </label>
+          <Toggle
+            label="Échéancier récurrent (plusieurs mensualités — ex. loyer véhicule sur 36 mois)"
+            checked={recurring}
+            onChange={setRecurring}
+          />
           <div>
             <label className={label} htmlFor="description">Description</label>
             <input id="description" name="description" type="text" required placeholder="Loyer local, assurance flotte..." className={input} />

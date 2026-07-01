@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, UserCheck, UserCog, AlertTriangle } from 'lucide-react'
 import BackButton from '@/components/ui/BackButton'
+import Toggle from '@/components/ui/Toggle'
 import { createClient } from '@/lib/supabase/client'
 import { lookupDriver, createAccident } from '@/lib/actions/incidents'
 
@@ -25,6 +26,8 @@ export default function NewSinistrePage() {
   const [driverLoading, setDriverLoading] = useState(false)
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  const [insuranceCovered, setInsuranceCovered] = useState(false)
+  const [clientResponsibility, setClientResponsibility] = useState(true)
 
   useEffect(() => {
     const sb = createClient()
@@ -45,6 +48,8 @@ export default function NewSinistrePage() {
     e.preventDefault()
     setError(null)
     const fd = new FormData(e.currentTarget)
+    fd.set('insurance_covered', insuranceCovered ? 'on' : '')
+    fd.set('client_responsibility', clientResponsibility ? 'on' : '')
     if (driver?.type === 'client') {
       if (driver.client?.id) fd.set('client_id', driver.client.id)
       if (driver.reservationId) fd.set('reservation_id', driver.reservationId)
@@ -124,13 +129,9 @@ export default function NewSinistrePage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
-            <label className="flex items-center gap-2 text-sm text-gray-700">
-              <input type="checkbox" name="insurance_covered" className="w-4 h-4 rounded" /> Couvert par l'assurance
-            </label>
-            <label className="flex items-center gap-2 text-sm text-gray-700">
-              <input type="checkbox" name="client_responsibility" defaultChecked className="w-4 h-4 rounded" /> Responsabilité client
-            </label>
+          <div className="flex flex-col gap-3">
+            <Toggle label="Couvert par l'assurance" checked={insuranceCovered} onChange={setInsuranceCovered} />
+            <Toggle label="Responsabilité client" checked={clientResponsibility} onChange={setClientResponsibility} />
           </div>
 
           <div>
