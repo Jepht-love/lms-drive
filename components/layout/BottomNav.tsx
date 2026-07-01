@@ -2,7 +2,6 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { motion, AnimatePresence } from 'framer-motion'
 import { useAlertCount } from './AlertCountProvider'
 import {
   HomeIcon, TruckIcon, CalendarDaysIcon, BellIcon, Squares2X2Icon,
@@ -46,11 +45,7 @@ export default function BottomNav({ allowedTabs }: { allowedTabs?: string[] | nu
               className="flex-1 flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-2xl relative min-h-[auto]"
             >
               {isActive && (
-                <motion.div
-                  layoutId="nav-pill"
-                  className="absolute inset-0 bg-white/10 rounded-2xl"
-                  transition={{ type: 'spring', damping: 30, stiffness: 500 }}
-                />
+                <div className="absolute inset-0 bg-white/10 rounded-2xl" />
               )}
               <div className="relative z-10 flex flex-col items-center gap-1">
                 <div className="relative">
@@ -58,21 +53,10 @@ export default function BottomNav({ allowedTabs }: { allowedTabs?: string[] | nu
                     ? <ActiveIcon className="w-5 h-5 text-white" />
                     : <Icon className="w-5 h-5 text-white/40" />
                   }
-                  {badge && (
-                    <AnimatePresence>
-                      {alertCount > 0 && (
-                        <motion.span
-                          key={alertCount}
-                          initial={{ scale: 1.4 }}
-                          animate={{ scale: 1 }}
-                          exit={{ scale: 0 }}
-                          transition={{ type: 'spring', damping: 10, stiffness: 300 }}
-                          className="absolute -top-1.5 -right-1.5 min-w-[14px] h-[14px] bg-red-500 rounded-full text-white text-[9px] font-black flex items-center justify-center px-0.5"
-                        >
-                          {alertCount > 9 ? '9+' : alertCount}
-                        </motion.span>
-                      )}
-                    </AnimatePresence>
+                  {badge && alertCount > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-[14px] bg-red-500 rounded-full text-white text-[9px] font-black flex items-center justify-center px-0.5">
+                      {alertCount > 9 ? '9+' : alertCount}
+                    </span>
                   )}
                 </div>
                 <span className={`text-[10px] font-semibold leading-none ${isActive ? 'text-white' : 'text-white/40'}`}>
