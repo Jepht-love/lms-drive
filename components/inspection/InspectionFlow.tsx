@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import VehicleInspectionMap from '@/components/vehicle-schema/VehicleInspectionMap'
 import SignatureCanvas from '@/components/signature/SignatureCanvas'
 import { MANDATORY_PHOTOS } from '@/components/vehicle-schema/zones'
-import { VEHICLE_ZONES as NEW_ZONES, graviteLabel, defaultDamagePrice, type DamageEntry } from '@/components/vehicle-schema/inspection-types'
+import { VEHICLE_ZONES as NEW_ZONES, INTERIOR_DAMAGE_ITEMS, graviteLabel, defaultDamagePrice, type DamageEntry } from '@/components/vehicle-schema/inspection-types'
 import { createClient } from '@/lib/supabase/client'
 import { compressImageToBase64 } from '@/lib/utils'
 import { calculateLateFee, calculateExtraKm } from '@/lib/calculations/fees'
@@ -31,7 +31,7 @@ interface Props {
   fuelRangeAtDeparture?: number
   kmIncluded?: number
   extraKmPrice?: number
-  previousDamagedZones?: { id: string; label: string; severity: string }[]
+  previousDamagedZones?: { id: string; label: string; severity: string; description?: string; photos?: string[] }[]
 }
 
 type Step = 'info' | 'schema' | 'photos' | 'signatures' | 'done'
@@ -100,6 +100,8 @@ export default function InspectionFlow({
   const [interiorCleanliness, setInteriorCleanliness] = useState(3)
   const [damages, setDamages] = useState<Record<string, DamageEntry[]>>({})
   const [damagePrices, setDamagePrices] = useState<Record<string, number>>({})
+  // Dégâts intérieurs facturés à l'EDL retour (poste → montant libre en €)
+  const [interiorCharges, setInteriorCharges] = useState<Record<string, number>>({})
   const [photos, setPhotos] = useState<Record<string, string>>({})
   const [clientSig, setClientSig] = useState<string | null>(null)
   // Signature agent supprimée pour l'EDL — remplacée par le cachet entreprise
@@ -134,8 +136,12 @@ export default function InspectionFlow({
     }
   }
 
-  const photoCount = Object.keys(photos).length
-  const mandatoryCompleted = photoCount >= 3
+  // Toutes les prises de vue de MANDATORY_PHOTOS sont obligatoires (intérieur,
+  // extérieur, 4 côtés…) : l'EDL ne peut être validé tant qu'il en manque une.
+  const totalRequiredPhotos = MANDATORY_PHOTOS.length
+  const missingPhotos = MANDATORY_PHOTOS.filter(p => !photos[p.type])
+  const photoCount = totalRequiredPhotos - missingPhotos.length
+  const mandatoryCompleted = missingPhotos.length === 0
   const damageCount = Object.values(damages).flat().length
   const damagedZoneCount = Object.values(damages).filter(e => e.length > 0).length
 
@@ -154,9 +160,14 @@ export default function InspectionFlow({
     if (stored != null) return stored
     return defaultDamagePrice(damages[zoneId]?.[0]?.type)
   }
-  const totalDamageFee = type === 'arrivee'
+  const exteriorDamageFee = type === 'arrivee'
     ? newDamageZoneIds.reduce((sum, id) => sum + priceForZone(id), 0)
     : 0
+  // Dégâts intérieurs : somme des montants (positifs) saisis librement.
+  const interiorDamageFee = type === 'arrivee'
+    ? Object.values(interiorCharges).reduce((s, v) => s + (Number.isFinite(v) && v > 0 ? v : 0), 0)
+    : 0
+  const totalDamageFee = exteriorDamageFee + interiorDamageFee
 
   function handleDamageAdd(zoneId: string, entry: DamageEntry) {
     setDamages(prev => ({
@@ -194,6 +205,38 @@ export default function InspectionFlow({
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Non authentifié')
 
+      // Zones carrosserie (schéma) + dégâts intérieurs facturés à la restitution.
+      const damagedZonesPayload = [
+        ...Object.entries(damages)
+          .filter(([, entries]) => entries.length > 0)
+          .flatMap(([zoneId, entries]) => entries.map(entry => ({
+            id: zoneId,
+            label: NEW_ZONES.find(z => z.id === zoneId)?.label ?? zoneId,
+            severity: entry.severity,
+            type: entry.type ?? null,
+            description: entry.comment,
+            photos: entry.photos,
+            // Prix retenu uniquement pour les nouveaux dommages à l'EDL retour
+            // (pas ceux déjà présents au départ, jamais facturables au client).
+            price: type === 'arrivee' && !previousZoneIds.has(zoneId) ? priceForZone(zoneId) : 0,
+          }))),
+        // Dégâts intérieurs (EDL retour) : postes prédéfinis + montant libre.
+        ...(type === 'arrivee'
+          ? INTERIOR_DAMAGE_ITEMS
+              .filter(it => (interiorCharges[it.id] ?? 0) > 0)
+              .map(it => ({
+                id: it.id,
+                label: it.label,
+                severity: 'dommage' as DamageEntry['severity'],
+                type: 'interieur',
+                kind: 'interieur',
+                description: 'Dégât intérieur',
+                photos: [] as string[],
+                price: interiorCharges[it.id],
+              }))
+          : []),
+      ]
+
       const { data: inspection, error: inspErr } = await supabase
         .from('inspections')
         .insert({
@@ -204,19 +247,7 @@ export default function InspectionFlow({
           fuel_range_km: fuelRangeKm,
           exterior_cleanliness: exteriorCleanliness,
           interior_cleanliness: interiorCleanliness,
-          damaged_zones: Object.entries(damages)
-            .filter(([, entries]) => entries.length > 0)
-            .flatMap(([zoneId, entries]) => entries.map(entry => ({
-              id: zoneId,
-              label: NEW_ZONES.find(z => z.id === zoneId)?.label ?? zoneId,
-              severity: entry.severity,
-              type: entry.type ?? null,
-              description: entry.comment,
-              photos: entry.photos,
-              // Prix retenu uniquement pour les nouveaux dommages à l'EDL retour
-              // (pas ceux déjà présents au départ, jamais facturables au client).
-              price: type === 'arrivee' && !previousZoneIds.has(zoneId) ? priceForZone(zoneId) : 0,
-            }))),
+          damaged_zones: damagedZonesPayload,
           client_signature_svg: clientSig,
           agent_signature_svg: null,
           signed_at: new Date().toISOString(),
@@ -591,6 +622,7 @@ export default function InspectionFlow({
             damages={damages}
             onDamageAdd={handleDamageAdd}
             onDamageRemove={handleDamageRemove}
+            previousZones={type === 'arrivee' ? previousDamagedZones : []}
           />
 
           {damagedZoneCount > 0 && (
@@ -652,12 +684,68 @@ export default function InspectionFlow({
                     )
                   })}
               </div>
-              {type === 'arrivee' && totalDamageFee > 0 && (
+              {type === 'arrivee' && exteriorDamageFee > 0 && (
                 <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100">
-                  <span className="text-sm font-bold text-slate-700">Total dommages à facturer</span>
-                  <span className="text-base font-bold text-red-600">{totalDamageFee.toLocaleString('fr-FR')} €</span>
+                  <span className="text-sm font-bold text-slate-700">Sous-total carrosserie</span>
+                  <span className="text-base font-bold text-red-600">{exteriorDamageFee.toLocaleString('fr-FR')} €</span>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Dégâts intérieurs à facturer (EDL retour uniquement) */}
+          {type === 'arrivee' && (
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+              <h4 className="font-medium text-slate-700 mb-1 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-500" />
+                Dégâts intérieurs à facturer
+              </h4>
+              <p className="text-xs text-slate-400 mb-3">Renseignez un montant pour chaque poste dégradé (laisser vide si aucun).</p>
+              <div className="space-y-2">
+                {INTERIOR_DAMAGE_ITEMS.map(it => {
+                  const val = interiorCharges[it.id]
+                  return (
+                    <div key={it.id} className="flex items-center justify-between gap-3">
+                      <span className="text-sm text-slate-600 flex-1 min-w-0">{it.label}</span>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          inputMode="decimal"
+                          placeholder="0"
+                          value={val != null ? String(val) : ''}
+                          onChange={e => {
+                            const n = e.target.value === '' ? NaN : Number(e.target.value)
+                            setInteriorCharges(prev => {
+                              const next = { ...prev }
+                              if (!Number.isFinite(n) || n <= 0) delete next[it.id]
+                              else next[it.id] = n
+                              return next
+                            })
+                          }}
+                          className="w-24 text-sm text-right bg-white border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-blue-400"
+                        />
+                        <span className="text-xs text-slate-400">€</span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+              {interiorDamageFee > 0 && (
+                <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100">
+                  <span className="text-sm font-bold text-slate-700">Sous-total intérieur</span>
+                  <span className="text-base font-bold text-red-600">{interiorDamageFee.toLocaleString('fr-FR')} €</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Total général des dégradations facturées au client */}
+          {type === 'arrivee' && totalDamageFee > 0 && (
+            <div className="flex items-center justify-between bg-red-50 border border-red-100 rounded-2xl px-4 py-3">
+              <span className="text-sm font-bold text-red-800">Total à facturer au client</span>
+              <span className="text-lg font-black text-red-600">{totalDamageFee.toLocaleString('fr-FR')} €</span>
             </div>
           )}
 
@@ -684,9 +772,9 @@ export default function InspectionFlow({
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
             <h3 className="font-semibold text-slate-800 mb-1">
               Photos de l'état des lieux
-              <span className="ml-2 text-sm font-normal text-slate-500">({photoCount} prise{photoCount > 1 ? 's' : ''})</span>
+              <span className="ml-2 text-sm font-normal text-slate-500">({photoCount}/{totalRequiredPhotos})</span>
             </h3>
-            <p className="text-xs text-slate-400 mb-3">Minimum 3 photos requises.</p>
+            <p className="text-xs text-slate-400 mb-3">Toutes les photos sont obligatoires : intérieur, extérieur et les 4 côtés.</p>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
               {MANDATORY_PHOTOS.map(p => {
                 const taken = photos[p.type]
@@ -707,10 +795,13 @@ export default function InspectionFlow({
                         </div>
                       </>
                     ) : (
-                      <div className="flex flex-col items-center justify-center h-full bg-slate-50 gap-1.5 p-2">
-                        <Camera className="w-6 h-6 text-slate-300" />
-                        <span className="text-xs text-slate-400 text-center leading-tight">{p.label}</span>
-                      </div>
+                      <>
+                        <div className="flex flex-col items-center justify-center h-full bg-slate-50 gap-1.5 p-2">
+                          <Camera className="w-6 h-6 text-slate-300" />
+                          <span className="text-xs text-slate-400 text-center leading-tight">{p.label}</span>
+                        </div>
+                        <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-red-400" title="Photo obligatoire" />
+                      </>
                     )}
                   </button>
                 )
@@ -728,10 +819,13 @@ export default function InspectionFlow({
           />
 
           {!mandatoryCompleted && (
-            <p className="text-sm text-amber-600 bg-amber-50 rounded-xl px-4 py-3 flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-              Minimum 3 photos requises — {photoCount}/3
-            </p>
+            <div className="text-sm text-amber-700 bg-amber-50 rounded-xl px-4 py-3 flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium">{missingPhotos.length} photo{missingPhotos.length > 1 ? 's' : ''} obligatoire{missingPhotos.length > 1 ? 's' : ''} manquante{missingPhotos.length > 1 ? 's' : ''} ({photoCount}/{totalRequiredPhotos})</p>
+                <p className="text-xs text-amber-600 mt-0.5">{missingPhotos.map(p => p.label).join(' · ')}</p>
+              </div>
+            </div>
           )}
 
           <div className="flex gap-3">

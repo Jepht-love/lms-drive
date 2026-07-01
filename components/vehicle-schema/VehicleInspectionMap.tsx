@@ -1,13 +1,14 @@
 'use client'
 
 import { type DamageEntry } from './inspection-types'
-import VehicleMap2D from './VehicleMap2D'
+import VehicleMap2D, { type PreviousZone } from './VehicleMap2D'
 
 export interface VehicleInspectionMapProps {
   damages: Record<string, DamageEntry[]>
   onDamageAdd: (zoneId: string, entry: DamageEntry) => void
   onDamageRemove: (zoneId: string, index: number) => void
   readonly?: boolean
+  previousZones?: PreviousZone[]
 }
 
 export default function VehicleInspectionMap({
@@ -15,6 +16,7 @@ export default function VehicleInspectionMap({
   onDamageAdd,
   onDamageRemove,
   readonly,
+  previousZones,
 }: VehicleInspectionMapProps) {
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
@@ -26,6 +28,7 @@ export default function VehicleInspectionMap({
         onDamageAdd={onDamageAdd}
         onDamageRemove={onDamageRemove}
         readonly={readonly}
+        previousZones={previousZones}
       />
     </div>
   )

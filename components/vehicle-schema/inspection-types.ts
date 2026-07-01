@@ -50,6 +50,20 @@ export function defaultDamagePrice(type?: string): number {
   return DAMAGE_TYPE_PRICES[type] ?? 0
 }
 
+// Postes de dégradation intérieure proposés à l'EDL retour. Contrairement aux
+// dommages carrosserie, le montant est saisi librement par l'agent (pas de
+// tarif par défaut) et facturé au client sur la facture de restitution.
+export const INTERIOR_DAMAGE_ITEMS: { id: string; label: string }[] = [
+  { id: 'int_sieges',       label: 'Sièges / assises' },
+  { id: 'int_sellerie',     label: 'Sellerie / tissus' },
+  { id: 'int_tableau_bord', label: 'Tableau de bord / console' },
+  { id: 'int_ciel_toit',    label: 'Ciel de toit / plafonnier' },
+  { id: 'int_sol',          label: 'Tapis / moquette / sol' },
+  { id: 'int_nettoyage',    label: 'Nettoyage approfondi' },
+  { id: 'int_odeur',        label: 'Désodorisation (tabac, animaux)' },
+  { id: 'int_equipement',   label: 'Équipement manquant / cassé' },
+]
+
 // Gravité — réutilise les valeurs `severity` historiques comme identifiants
 export const GRAVITES: { id: DamageSeverity; label: string; dot: string; chip: string; active: string }[] = [
   { id: 'rayure',    label: 'Léger',     dot: 'bg-yellow-400', chip: 'bg-yellow-50 text-yellow-700 border-yellow-200', active: 'bg-yellow-400 text-yellow-900 border-yellow-400' },

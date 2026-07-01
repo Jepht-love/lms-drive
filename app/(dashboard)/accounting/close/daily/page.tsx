@@ -31,7 +31,7 @@ export default async function DailyClosingPage({ searchParams }: { searchParams:
   const byMethod: Record<string, number> = isClosed
     ? (closing!.revenue_by_payment_method ?? {})
     : (txs ?? []).filter(t => t.type === 'recette').reduce((acc: Record<string, number>, t) => {
-        const m = t.payment_method || 'non_precise'
+        const m = t.payment_method || 'carte'
         acc[m] = (acc[m] ?? 0) + (t.amount ?? 0)
         return acc
       }, {})

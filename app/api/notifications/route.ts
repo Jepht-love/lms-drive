@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { fetchAllAlerts } from '@/lib/utils/alerts'
 import { syncAlertsToCalendar } from '@/lib/calendar/syncAlerts'
 import { broadcastPushToManagers } from '@/lib/push/broadcastPush'
+import { RESEND_FROM, resendTo } from '@/lib/email/config'
 import { addHours, subMinutes } from 'date-fns'
 
 // GET: détecte départs imminents et retours en retard, bascule le statut des
@@ -113,7 +114,7 @@ export async function GET(request: NextRequest) {
     const repeatThreshold = new Date(now.getTime() - 30 * 60 * 1000).toISOString()
     const { data: lateReturns } = await supabase
       .from('reservations')
-      .select('id, reservation_number, end_datetime, vehicle:vehicles(plate, brand, model, color), client:clients(first_name, last_name)')
+      .select('id, reservation_number, end_datetime, vehicle:vehicles(plate, brand, model, color), client:clients(first_name, last_name, email)')
       .eq('status', 'en_retard')
 
     for (const r of lateReturns ?? []) {
@@ -154,6 +155,57 @@ export async function GET(request: NextRequest) {
     const currentHour  = now.getHours()
     if (currentHour < windowStart || currentHour >= windowEnd) {
       return NextResponse.json({ skipped: 'outside alert window' })
+    }
+
+    // ── Relance automatique par email au client en retard ────────────────────
+    // Déclenchée au passage du cron (dans la fenêtre 7h-22h ci-dessus). Une seule
+    // relance par réservation : marqueur `client_late_email` = anti-doublon.
+    for (const r of lateReturns ?? []) {
+      const clt = r.client as any
+      if (!clt?.email) continue
+
+      const { data: alreadyEmailed } = await supabase
+        .from('notifications')
+        .select('id')
+        .eq('type', 'client_late_email')
+        .eq('entity_id', r.id)
+        .limit(1)
+      if (alreadyEmailed && alreadyEmailed.length > 0) continue
+
+      const veh = r.vehicle as any
+      const clientLabel = `${clt.first_name ?? ''} ${clt.last_name ?? ''}`.trim()
+      const vehLabel = veh ? `${veh.brand} ${veh.model} (${veh.plate})` : ''
+      const retourFmt = new Date(r.end_datetime).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+
+      try {
+        const { Resend } = await import('resend')
+        const resend = new Resend(process.env.RESEND_API_KEY)
+        await resend.emails.send({
+          from: RESEND_FROM,
+          to: resendTo(clt.email),
+          subject: `Restitution de véhicule en retard — ${vehLabel || r.reservation_number}`,
+          // Contenu provisoire (à finaliser avec le gérant).
+          html: `
+            <p>Bonjour ${clt.first_name ?? ''},</p>
+            <p>Le véhicule <b>${vehLabel || r.reservation_number}</b> devait être restitué le <b>${retourFmt}</b> et ne nous a pas encore été rendu.</p>
+            <p>Merci de nous recontacter au plus vite afin d'organiser sa restitution.</p>
+            <p>Cordialement,<br>LMS Drive</p>
+          `,
+        })
+      } catch {
+        // Un échec d'envoi (email invalide, quota…) ne doit pas bloquer le cron —
+        // pas de marqueur posé → nouvelle tentative au prochain passage.
+        continue
+      }
+
+      // Marqueur anti-doublon + visibilité côté gérant.
+      await supabase.from('notifications').insert({
+        user_id: null, type: 'client_late_email',
+        title: 'Relance retard envoyée au client',
+        body: `${clientLabel}${vehLabel ? ' — ' + vehLabel : ''} · email de relance envoyé`,
+        entity_type: 'reservations', entity_id: r.id,
+      })
+      created.push(r.id)
     }
 
     // Retours en retard sur les tâches calendrier (calendar_events)

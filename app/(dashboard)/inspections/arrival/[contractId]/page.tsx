@@ -64,7 +64,7 @@ export default async function ArrivalInspectionPage({ params }: { params: Promis
         reservationEndDatetime={reservation?.end_datetime ?? undefined}
         kmAtDeparture={departureInspection?.km_reading ?? vehicle?.current_km ?? 0}
         fuelRangeAtDeparture={departureInspection?.fuel_range_km ?? undefined}
-        previousDamagedZones={(departureInspection?.damaged_zones as { id: string; label: string; severity: string }[] | null) ?? []}
+        previousDamagedZones={(departureInspection?.damaged_zones as { id: string; label: string; severity: string; description?: string; photos?: string[] }[] | null) ?? []}
         kmIncluded={reservation?.km_included ?? 200}
         extraKmPrice={reservation?.extra_km_price ?? 2}
       />

@@ -81,8 +81,11 @@ export async function generateInvoiceDraft(contractId: string): Promise<{ invoic
   for (const z of newDamages) {
     const price = z.price ?? 0
     if (price <= 0) continue
+    const description = z.kind === 'interieur'
+      ? `Dégât intérieur — ${z.label}`
+      : `Dommage constaté — ${z.label} (${graviteLabel(z.severity)})`
     lineItems.push({
-      description: `Dommage constaté — ${z.label} (${graviteLabel(z.severity)})`,
+      description,
       quantity: 1,
       unit_price: price,
       total: price,

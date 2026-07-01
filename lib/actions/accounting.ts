@@ -46,7 +46,7 @@ function revenueByPaymentMethod(txs: { type: string; amount: number | null; paym
   const out: Record<string, number> = {}
   for (const t of txs) {
     if (t.type !== 'recette') continue
-    const method = t.payment_method || 'non_precise'
+    const method = t.payment_method || 'carte'
     out[method] = (out[method] ?? 0) + (t.amount ?? 0)
   }
   return out

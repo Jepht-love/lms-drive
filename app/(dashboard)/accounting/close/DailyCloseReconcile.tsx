@@ -21,11 +21,20 @@ export default function DailyCloseReconcile({
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
 
-  // Modes à réconcilier : ceux encaissés aujourd'hui + espèces (toujours comptées).
-  const methods = [...new Set([...Object.keys(softwareByMethod), 'especes'])]
+  // Replie l'ancien bucket « non précisé » sur Carte bancaire (mode par défaut).
+  const foldLegacy = (src: Record<string, number>): Record<string, number> => {
+    const out = { ...src }
+    if (out.non_precise != null) { out.carte = (out.carte ?? 0) + out.non_precise; delete out.non_precise }
+    return out
+  }
+  const software = foldLegacy(softwareByMethod)
+  const counted0 = foldLegacy(countedByMethod)
+
+  // Modes à réconcilier : ceux encaissés aujourd'hui + carte/virement/espèces toujours présents.
+  const methods = [...new Set([...Object.keys(software), 'carte', 'virement', 'especes'])]
   // Inputs pré-remplis avec le montant logiciel → l'utilisateur confirme ou corrige.
   const [counted, setCounted] = useState<Record<string, string>>(
-    Object.fromEntries(methods.map(m => [m, String(softwareByMethod[m] ?? 0)])),
+    Object.fromEntries(methods.map(m => [m, String(software[m] ?? 0)])),
   )
 
   const parse = (s: string) => { const n = parseFloat((s || '').replace(',', '.')); return Number.isFinite(n) ? n : 0 }
@@ -60,7 +69,7 @@ export default function DailyCloseReconcile({
               <div key={m} className="flex items-center justify-between text-sm">
                 <span className="text-gray-500">{paymentMethodLabel(m)}</span>
                 <span className="text-gray-400">
-                  logiciel {formatPrice(softwareByMethod[m] ?? 0)} · réel <span className="font-bold text-gray-900">{formatPrice(countedByMethod[m] ?? 0)}</span>
+                  logiciel {formatPrice(software[m] ?? 0)} · réel <span className="font-bold text-gray-900">{formatPrice(counted0[m] ?? 0)}</span>
                 </span>
               </div>
             ))}
@@ -93,7 +102,7 @@ export default function DailyCloseReconcile({
             <div key={m} className="flex items-center justify-between gap-3">
               <span className="text-sm text-gray-600">{paymentMethodLabel(m)}</span>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-400 w-20 text-right">{formatPrice(softwareByMethod[m] ?? 0)}</span>
+                <span className="text-xs text-gray-400 w-20 text-right">{formatPrice(software[m] ?? 0)}</span>
                 <div className="relative">
                   <input
                     inputMode="decimal"

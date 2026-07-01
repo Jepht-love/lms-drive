@@ -186,7 +186,7 @@ export function getCategoryLabel(id: string) {
 export const PAYMENT_METHODS = [
   { id: 'especes', label: 'Espèces' },
   { id: 'virement', label: 'Virement' },
-  { id: 'carte', label: 'Carte' },
+  { id: 'carte', label: 'Carte bancaire' },
   { id: 'cheque', label: 'Chèque' },
   { id: 'prelevement', label: 'Prélèvement' },
   { id: 'autre', label: 'Autre' },

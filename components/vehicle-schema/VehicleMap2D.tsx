@@ -28,14 +28,26 @@ function worstSeverity(entries: DamageEntry[]): DamageSeverity | null {
   return entries.reduce<DamageSeverity>((acc, e) => (SEV_RANK[e.severity] > SEV_RANK[acc] ? e.severity : acc), 'rayure')
 }
 
+// Zone signalée à l'EDL de départ — sert de référence visuelle au retour
+// (pré-dessinée sur le schéma + photo de départ consultable pour comparaison).
+export interface PreviousZone {
+  id: string
+  label: string
+  severity: string
+  description?: string
+  photos?: string[]
+}
+
 interface Props {
   damages: Record<string, DamageEntry[]>
   onDamageAdd: (zoneId: string, entry: DamageEntry) => void
   onDamageRemove: (zoneId: string, index: number) => void
   readonly?: boolean
+  previousZones?: PreviousZone[]
 }
 
-export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, readonly }: Props) {
+export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, readonly, previousZones = [] }: Props) {
+  const prevById = new Map(previousZones.map(z => [z.id, z]))
   const [selected, setSelected] = useState<string | null>(null)
   const [showZones, setShowZones] = useState(false)
   // Formulaire de saisie
@@ -117,6 +129,7 @@ export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, rea
 
   const zone = selected ? ZONES.find(z => z.id === selected) ?? null : null
   const existing = selected ? (damages[selected] ?? []) : []
+  const prevSel = selected ? prevById.get(selected) : undefined
 
   return (
     <div className="w-full max-w-[520px] mx-auto bg-white rounded-xl overflow-hidden">
@@ -161,9 +174,12 @@ export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, rea
             const box = zoneBox(z)
             const cx = box.x + box.w / 2, cy = box.y + box.h / 2
 
+            const hasPrev = prevById.has(z.id)
             let fill = '#000000', fillOpacity = 0, stroke = 'transparent', dash: string | undefined
             if (n > 0 && sev) { fill = SEV[sev].fill; fillOpacity = 0.4; stroke = SEV[sev].stroke }
             else if (isSel) { fill = '#3b82f6'; fillOpacity = 0.18; stroke = '#3b82f6' }
+            // Zone déjà signalée au départ (et pas re-marquée) : rappel bleu pointillé.
+            else if (hasPrev) { fill = '#3b82f6'; fillOpacity = 0.12; stroke = '#2563eb'; dash = '6,4' }
             else if (showZones) { fill = '#64748b'; fillOpacity = 0.06; stroke = '#94a3b8'; dash = '6,4' }
 
             return (
@@ -188,6 +204,14 @@ export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, rea
                     </text>
                   </>
                 )}
+                {hasPrev && n === 0 && (
+                  <>
+                    <circle cx={box.x + box.w - 6} cy={box.y + 6} r={13} fill="#2563eb" />
+                    <text x={box.x + box.w - 6} y={box.y + 6} textAnchor="middle" dominantBaseline="middle" fontSize={14} fontWeight={800} fill="white" style={{ pointerEvents: 'none', userSelect: 'none' }}>
+                      D
+                    </text>
+                  </>
+                )}
               </g>
             )
           })}
@@ -209,6 +233,28 @@ export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, rea
               <span className="text-[11px] font-bold text-gray-400">{existing.length} dommage{existing.length > 1 ? 's' : ''}</span>
             )}
           </div>
+
+          {/* Référence : ce qui avait été constaté au départ (photo comparative) */}
+          {prevSel && (
+            <div className="rounded-xl border border-blue-100 bg-blue-50 p-3">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-blue-700 mb-1.5">Constaté au départ</p>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold border border-blue-200 text-blue-700 bg-white">
+                  {graviteLabel(prevSel.severity as DamageSeverity)}
+                </span>
+                {prevSel.description && <span className="text-[11px] text-blue-800/80">{prevSel.description}</span>}
+              </div>
+              {prevSel.photos && prevSel.photos.length > 0 && (
+                <div className="flex gap-1.5 mt-2">
+                  {prevSel.photos.map((p, pi) => (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img key={pi} src={p} alt="Photo au départ" className="w-14 h-14 rounded-lg object-cover border border-blue-200" />
+                  ))}
+                </div>
+              )}
+              <p className="text-[10px] text-blue-600/70 mt-1.5">Comparez avec l&apos;état actuel avant de constater un nouveau dommage.</p>
+            </div>
+          )}
 
           {/* Dommages existants */}
           {existing.length > 0 && (
