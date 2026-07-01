@@ -26,9 +26,9 @@ export default function Toggle({ checked, onChange, disabled, label, onColor = '
         className="absolute bg-white rounded-full"
         style={{
           top: 2, width: 27, height: 27,
-          boxShadow: '0 2px 4px rgba(0,0,0,0.25)',
-          transform: checked ? 'translateX(20px)' : 'translateX(2px)',
-          transition: 'transform 0.2s ease',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.1)',
+          transform: checked ? 'translateX(22px)' : 'translateX(2px)',
+          transition: 'transform 0.22s cubic-bezier(0.4, 0.0, 0.2, 1)',
         }}
       />
     </span>
