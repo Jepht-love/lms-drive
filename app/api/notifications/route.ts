@@ -59,20 +59,27 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Retours du jour : réservations en_cours avec retour dans ~2h (fenêtre [1h30, 2h30])
+    // Retours du jour : toutes les réservations en_cours revenant aujourd'hui
+    // Notif envoyée une fois par heure (rappel toutes les heures + digest 8h)
+    const todayStart = new Date(now); todayStart.setHours(0, 0, 0, 0)
+    const todayEnd   = new Date(now); todayEnd.setHours(23, 59, 59, 999)
+    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000).toISOString()
+
     const { data: returnsToday } = await supabase
       .from('reservations')
       .select('id, reservation_number, end_datetime, vehicle:vehicles(plate, brand, model, color), client:clients(first_name, last_name)')
       .eq('status', 'en_cours')
-      .gte('end_datetime', addHours(now, 1.5).toISOString())
-      .lte('end_datetime', addHours(now, 2.5).toISOString())
+      .gte('end_datetime', todayStart.toISOString())
+      .lte('end_datetime', todayEnd.toISOString())
 
     for (const r of returnsToday ?? []) {
+      // Déduplication : ne pas renvoyer si une notif identique existe dans la dernière heure
       const { data: existing } = await supabase
         .from('notifications')
         .select('id')
         .eq('type', 'return_today_soon')
         .eq('entity_id', r.id)
+        .gte('created_at', oneHourAgo)
         .limit(1)
 
       if (!existing || existing.length === 0) {
@@ -84,7 +91,7 @@ export async function GET(request: NextRequest) {
         const body = `${clientLabel}${vehLabel ? ' — ' + vehLabel : ''} · retour prévu à ${heureFmt}`
         await supabase.from('notifications').insert({
           user_id: null, type: 'return_today_soon',
-          title: 'Arrivée du jour',  body,
+          title: 'Arrivée du jour', body,
           entity_type: 'reservations', entity_id: r.id,
         })
         await broadcastPushToManagers({ title: 'Arrivée du jour', body, url: '/reservations' })
