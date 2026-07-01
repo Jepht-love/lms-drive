@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { findDriverAtDate } from '@/lib/utils/findDriverAtDate'
 import { logEmail } from '@/lib/email/log'
+import { RESEND_FROM, resendTo } from '@/lib/email/config'
 
 // Appelé depuis le formulaire client quand véhicule + date sont renseignés
 export async function lookupDriver(vehicleId: string, date: string, time?: string) {
@@ -100,8 +101,8 @@ export async function transmitInfractionToClient(id: string) {
     const { Resend } = await import('resend')
     const resend = new Resend(process.env.RESEND_API_KEY)
     await resend.emails.send({
-      from: process.env.RESEND_FROM ?? 'LMS Drive <onboarding@resend.dev>',
-      to: client.email,
+      from: RESEND_FROM,
+      to: resendTo(client.email),
       subject: `Avis de contravention — véhicule ${v?.brand ?? ''} ${v?.model ?? ''} (${v?.plate ?? ''})`,
       html: `<p>Bonjour ${client.first_name},</p>
         <p>Une infraction a été constatée le <b>${inf.infraction_date}</b> avec le véhicule

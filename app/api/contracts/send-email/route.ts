@@ -6,6 +6,7 @@ import { ContractPDF } from '@/lib/pdf/contract-template'
 import { buildContractPdfData } from '@/lib/pdf/build-contract-data'
 import { createElement, type ReactElement } from 'react'
 import { logEmail } from '@/lib/email/log'
+import { RESEND_FROM, resendTo } from '@/lib/email/config'
 
 export async function POST(request: NextRequest) {
   try {
@@ -40,8 +41,8 @@ export async function POST(request: NextRequest) {
     const docLabel = hasArrivee ? 'contrat de restitution (avec les états des lieux de départ et de retour)' : 'contrat de location'
 
     await resend.emails.send({
-      from: 'LMS Drive <noreply@lmsdrive.fr>',
-      to: c.email,
+      from: RESEND_FROM,
+      to: resendTo(c.email),
       subject: `Votre ${hasArrivee ? 'contrat de restitution' : 'contrat de location'} ${contract.contract_number}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">

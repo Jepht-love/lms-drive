@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import type { DocumentCategory } from '@/lib/documents/categories'
+import { RESEND_FROM, resendTo } from '@/lib/email/config'
 
 export async function uploadDocument(formData: FormData) {
   const supabase = await createClient()
@@ -93,8 +94,8 @@ export async function sendDocumentByEmail(
   const resend = new Resend(process.env.RESEND_API_KEY)
 
   await resend.emails.send({
-    from: process.env.RESEND_FROM ?? 'LMS Agency <onboarding@resend.dev>',
-    to: recipientEmail,
+    from: RESEND_FROM,
+    to: resendTo(recipientEmail),
     subject: `Document LMS Agency — ${doc.name}`,
     html: `
       <p>Bonjour,</p>

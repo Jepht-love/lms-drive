@@ -11,6 +11,7 @@ import { renderToBuffer } from '@react-pdf/renderer'
 import { createElement } from 'react'
 import { Resend } from 'resend'
 import { logEmail } from '@/lib/email/log'
+import { RESEND_FROM, resendTo } from '@/lib/email/config'
 
 type SupabaseServer = Awaited<ReturnType<typeof createClient>>
 
@@ -189,8 +190,8 @@ export async function sendInvoice(invoiceId: string) {
   const resend = new Resend(process.env.RESEND_API_KEY)
   try {
     await resend.emails.send({
-      from: 'LMS Drive <noreply@lmsdrive.fr>',
-      to: c.email,
+      from: RESEND_FROM,
+      to: resendTo(c.email),
       subject: `Facture de restitution ${invoice.invoice_number}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
