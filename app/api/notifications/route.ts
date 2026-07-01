@@ -59,13 +59,13 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Retours du jour : réservations en_cours avec retour dans les 2h (notif unique)
+    // Retours du jour : réservations en_cours avec retour dans ~2h (fenêtre [1h30, 2h30])
     const { data: returnsToday } = await supabase
       .from('reservations')
       .select('id, reservation_number, end_datetime, vehicle:vehicles(plate, brand, model, color), client:clients(first_name, last_name)')
       .eq('status', 'en_cours')
-      .gte('end_datetime', now.toISOString())
-      .lte('end_datetime', addHours(now, 2).toISOString())
+      .gte('end_datetime', addHours(now, 1.5).toISOString())
+      .lte('end_datetime', addHours(now, 2.5).toISOString())
 
     for (const r of returnsToday ?? []) {
       const { data: existing } = await supabase
