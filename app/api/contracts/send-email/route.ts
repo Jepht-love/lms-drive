@@ -9,6 +9,14 @@ import { logEmail } from '@/lib/email/log'
 
 export async function POST(request: NextRequest) {
   try {
+    if (!process.env.RESEND_API_KEY) {
+      // Clé d'envoi email non configurée côté serveur : message clair plutôt
+      // qu'une erreur technique brute renvoyée à l'utilisateur.
+      return NextResponse.json(
+        { error: "L'envoi d'email n'est pas configuré (clé API manquante). Contactez l'administrateur." },
+        { status: 503 }
+      )
+    }
     const resend = new Resend(process.env.RESEND_API_KEY)
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()

@@ -36,7 +36,18 @@ export async function proxy(request: NextRequest) {
     }
   )
 
-  const { data: { user } } = await supabase.auth.getUser()
+  // getUser() tente de rafraîchir le jeton si expiré. Si le refresh token a déjà
+  // été consommé (requêtes concurrentes, onglet laissé ouvert), Supabase lève une
+  // AuthApiError « Invalid Refresh Token: Already Used ». On la capture et on
+  // traite la session comme expirée (→ redirection /login) au lieu de faire
+  // planter la requête et polluer les logs.
+  let user = null
+  try {
+    const { data } = await supabase.auth.getUser()
+    user = data.user
+  } catch {
+    user = null
+  }
 
   const { pathname } = request.nextUrl
 
