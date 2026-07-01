@@ -1,9 +1,6 @@
 import Image from 'next/image'
-import Link from 'next/link'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
-import { Bell } from 'lucide-react'
-import HeaderAlertBadge from './HeaderAlertBadge'
 
 interface PageHeaderProps {
   title?: string
@@ -37,13 +34,9 @@ export default function PageHeader({ title }: PageHeaderProps) {
           unoptimized
         />
 
-        {/* Droite : cloche */}
-        <div className="w-20 flex justify-end">
-          <Link href="/alerts" className="relative inline-flex items-center">
-            <Bell className="w-5 h-5 text-white" strokeWidth={2} />
-            <HeaderAlertBadge />
-          </Link>
-        </div>
+        {/* Droite : espace symétrique pour centrer le logo (cloche retirée —
+            l'onglet Alertes de la barre du bas est l'unique point d'entrée). */}
+        <div className="w-20" />
       </div>
     </header>
   )

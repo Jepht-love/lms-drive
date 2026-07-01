@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Bell, Clock, AlertTriangle } from 'lucide-react'
+import UiToggle from '@/components/ui/Toggle'
 
 type Settings = {
   departure_alert: boolean
@@ -52,15 +53,8 @@ export default function NotificationSettings() {
   }
 
   const Toggle = ({ label, value, onChange }: { label: string; value: boolean; onChange: (v: boolean) => void }) => (
-    <div className="flex items-center justify-between py-2.5 border-b border-gray-50 last:border-0">
-      <span className="text-sm text-gray-700">{label}</span>
-      <button
-        type="button"
-        onClick={() => onChange(!value)}
-        className={`relative w-10 h-6 rounded-full transition-colors flex-shrink-0 ${value ? 'bg-[#111111]' : 'bg-gray-200'}`}
-      >
-        <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${value ? 'translate-x-5' : 'translate-x-1'}`} />
-      </button>
+    <div className="py-2.5 border-b border-gray-50 last:border-0">
+      <UiToggle label={label} checked={value} onChange={onChange} />
     </div>
   )
 

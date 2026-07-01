@@ -4,12 +4,10 @@ import { redirect } from 'next/navigation'
 import {
   BarChart3, CalendarDays, ClipboardList, Users, Car,
   FileText, AlertTriangle, Navigation, Settings,
-  Bell, ChevronRight, LogOut, UsersRound, Wrench, Repeat, Wallet, Megaphone, FolderArchive, Mail,
+  ChevronRight, LogOut, UsersRound, Wrench, Repeat, Wallet, Megaphone, FolderArchive, Mail,
 } from 'lucide-react'
 import { logout } from '@/lib/actions/auth'
 import { allowedHrefSet } from '@/lib/navigation/tabs'
-import { createAdminClient } from '@/lib/supabase/admin'
-import { fetchAllAlerts } from '@/lib/utils/alerts'
 
 // ─── Modules principaux ───────────────────────────────────────────────────────
 const modules = [
@@ -61,8 +59,6 @@ export default async function MenuPage() {
     .eq('id', user.id)
     .maybeSingle()
 
-  const alerts = await fetchAllAlerts(createAdminClient())
-
   const isManager = profile?.role === 'gerant' || profile?.role === 'associe'
 
   // Permissions par onglet : un employé ne voit que ses sections autorisées
@@ -105,18 +101,6 @@ export default async function MenuPage() {
             </div>
           </div>
 
-          {/* Cloche notifications */}
-          <Link
-            href="/alerts"
-            className="relative w-10 h-10 flex items-center justify-center rounded-xl bg-white/10 border border-white/20 flex-shrink-0"
-          >
-            <Bell className="w-5 h-5 text-white/80" strokeWidth={1.8} />
-            {alerts.length > 0 && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-white text-[9px] font-black flex items-center justify-center leading-none">
-                {alerts.length > 9 ? '9+' : alerts.length}
-              </span>
-            )}
-          </Link>
         </div>
       </div>
 
