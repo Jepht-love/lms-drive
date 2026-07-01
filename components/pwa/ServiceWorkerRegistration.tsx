@@ -35,6 +35,17 @@ export default function ServiceWorkerRegistration() {
         // Vérifier une mise à jour toutes les 5 minutes (au lieu d'1h)
         setInterval(() => registration.update(), 5 * 60 * 1000)
 
+        // iOS gèle setInterval en arrière-plan : une PWA installée reprend au
+        // lieu de recharger, donc le timer ne se relance jamais et le SW reste
+        // bloqué sur l'ancien code. On force une vérification à chaque retour au
+        // premier plan → nouveau SW détecté → skipWaiting → controllerchange →
+        // reload. C'est ce qui rend les déploiements visibles sans fermeture manuelle.
+        const checkOnFocus = () => {
+          if (document.visibilityState === 'visible') registration.update()
+        }
+        document.addEventListener('visibilitychange', checkOnFocus)
+        window.addEventListener('focus', checkOnFocus)
+
         if (registration.waiting) {
           registration.waiting.postMessage({ type: 'SKIP_WAITING' })
         }
