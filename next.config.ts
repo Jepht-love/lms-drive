@@ -9,7 +9,8 @@ const nextConfig: NextConfig = {
     // s'affiche instantanément depuis le cache au lieu de refaire un aller-retour
     // serveur. Les mutations appellent router.refresh() → données rafraîchies.
     //   dynamic : onglet non préchargé, réutilisé 30 s
-    //   static  : onglet préchargé (Link prefetch par défaut), réutilisé 5 min
+    //   static  : onglet préchargé (BottomNav <Link prefetch> → données incluses),
+    //             réutilisé 5 min → changement d'onglet instantané
     staleTimes: { dynamic: 30, static: 300 },
   },
 };
