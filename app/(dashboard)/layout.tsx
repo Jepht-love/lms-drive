@@ -4,6 +4,7 @@ import BottomNav from '@/components/layout/BottomNav'
 import PageHeader from '@/components/layout/PageHeader'
 import ClientRedirect from '@/components/layout/ClientRedirect'
 import PageTransition from '@/components/layout/PageTransition'
+import ContentWrapper from '@/app/(dashboard)/ContentWrapper'
 import { ToastProvider } from '@/components/Toast'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -49,16 +50,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
         }}
       >
         <PageHeader alertCount={alertCount} />
-        <main style={{
-          overflowY: 'auto',
-          overscrollBehavior: 'none',
-          WebkitOverflowScrolling: 'touch',
-          minHeight: 0,
-        } as React.CSSProperties}>
+        <main style={{ overflow: 'hidden', minHeight: 0 }}>
           <PageTransition>
-            <div className="px-4 py-5 pb-6">
-              {children}
-            </div>
+            <ContentWrapper>{children}</ContentWrapper>
           </PageTransition>
         </main>
         <BottomNav alertCount={alertCount} allowedTabs={allowedTabs} />

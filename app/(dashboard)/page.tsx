@@ -10,7 +10,7 @@ import { CALENDAR_START_HOUR } from '@/lib/calendar/constants'
 import { fr } from 'date-fns/locale'
 import {
   ChevronRight, AlertTriangle, CheckCircle2, Plus,
-  Wrench, Clock, FileText, ArrowLeftRight, Users, type LucideIcon,
+  Wrench, Clock, FileText, ArrowLeftRight, Users, Car, type LucideIcon,
 } from 'lucide-react'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -179,10 +179,12 @@ export default async function DashboardPage() {
     new Date(r.start_datetime) <= businessDayEnd
   ) ?? []
 
+  // Retours du jour : fenêtre calendaire (minuit→23h59) pour ne pas rater
+  // les retours de l'après-midi quand on consulte le tableau avant 7h.
   const retoursAujourdhui = reservations?.filter(r =>
     (r.status === 'en_cours' || r.status === 'en_retard') &&
-    new Date(r.end_datetime) >= businessDayStart &&
-    new Date(r.end_datetime) <= businessDayEnd
+    new Date(r.end_datetime) >= todayStart &&
+    new Date(r.end_datetime) <= todayEnd
   ) ?? []
 
   // ── Retours EN RETARD (date de retour passée, véhicule pas restitué) ────────
@@ -339,6 +341,12 @@ export default async function DashboardPage() {
     for (let d = firstTick; d <= next6hEnd; d = addHours(d, 1)) next6hTicks.push(new Date(d))
   }
   const next6hTrackW = NEXT6H_HOUR_W * 6
+  // Retours de réservations prévus dans les 6 prochaines heures
+  const retoursProchaines6h = (reservations ?? [])
+    .filter(r => r.status === 'en_cours' &&
+      new Date(r.end_datetime) >= next6hStart &&
+      new Date(r.end_datetime) <= next6hEnd)
+    .sort((a, b) => new Date(a.end_datetime).getTime() - new Date(b.end_datetime).getTime())
   const next6hLeftPx = (iso: string) =>
     ((new Date(iso).getTime() - next6hStart.getTime()) / next6hMs) * next6hTrackW
   const next6hWidthPx = (t: typeof weekCalendarTasks[number]) => {
@@ -671,12 +679,32 @@ export default async function DashboardPage() {
         </div>
 
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-3">
-          {next6hLanes.length === 0 ? (
+          {/* Retours de réservation dans les 6h */}
+          {retoursProchaines6h.length > 0 && (
+            <div className={`flex flex-col gap-1.5${next6hLanes.length > 0 ? ' mb-3' : ''}`}>
+              {retoursProchaines6h.map(r => {
+                const v = getVehicle(r); const c = getClient(r)
+                const heure = format(new Date(r.end_datetime), 'HH:mm')
+                return (
+                  <Link key={r.id} href="/reservations"
+                    className="flex items-center gap-2 bg-blue-50 rounded-xl px-3 py-2">
+                    <Car className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                    <p className="flex-1 min-w-0 text-[11px] font-semibold text-blue-800 truncate">
+                      {c ? `${c.first_name} ${c.last_name}` : '—'}
+                      {v ? ` — ${v.brand} ${v.model} (${v.plate})` : ''}
+                    </p>
+                    <span className="text-[10px] font-mono font-bold text-blue-500 flex-shrink-0 ml-1">↩ {heure}</span>
+                  </Link>
+                )
+              })}
+            </div>
+          )}
+          {next6hLanes.length === 0 && retoursProchaines6h.length === 0 ? (
             <div className="flex items-center gap-2 py-4 px-1">
               <CheckCircle2 className="w-4 h-4 text-gray-200 flex-shrink-0" />
               <p className="text-xs text-gray-400 font-medium">Rien de prévu dans les 6 prochaines heures</p>
             </div>
-          ) : (
+          ) : next6hLanes.length > 0 ? (
             <div className="overflow-x-auto -mx-3 px-3" style={{ scrollbarWidth: 'thin' }}>
               <div style={{ minWidth: 92 + next6hTrackW }}>
                 {/* Axe horaire */}
@@ -739,7 +767,7 @@ export default async function DashboardPage() {
                 </div>
               </div>
             </div>
-          )}
+          ) : null}
         </div>
       </section>
 

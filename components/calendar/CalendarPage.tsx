@@ -213,7 +213,7 @@ export default function CalendarPage() {
   const canManageTeams = myRole === 'gerant' || myRole === 'associe'
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#F2F2F7]">
+    <div className="flex h-full overflow-hidden bg-[#F2F2F7]">
       {!isMobile && (
         <CalendarSidebar
           currentDate={currentDate}

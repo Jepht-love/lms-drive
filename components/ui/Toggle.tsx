@@ -6,23 +6,30 @@ interface ToggleProps {
   disabled?: boolean
   /** Si fourni, le libellé s'affiche à gauche et toute la ligne est cliquable. */
   label?: string
-  /** Couleur de l'état activé. Par défaut #111111 (charte de l'app). */
+  /** Couleur de l'état activé. Par défaut vert iOS #34C759. */
   onColor?: string
 }
 
-// Interrupteur unique et cohérent pour toute l'app (remplace les toggles dupliqués
-// à la main). Piste 44×24, knob 20px blanc avec ombre, glissement fluide.
-export default function Toggle({ checked, onChange, disabled, label, onColor = '#111111' }: ToggleProps) {
+// Toggle style iOS Réglages : piste 51×31, knob 27px, vert ON / gris OFF.
+export default function Toggle({ checked, onChange, disabled, label, onColor = '#34C759' }: ToggleProps) {
   const track = (
     <span
       aria-hidden
-      className={`relative inline-block w-11 h-6 rounded-full transition-colors flex-shrink-0 ${checked ? '' : 'bg-gray-300'}`}
-      style={checked ? { backgroundColor: onColor } : undefined}
+      className="relative inline-block rounded-full flex-shrink-0"
+      style={{
+        width: 51, height: 31,
+        backgroundColor: checked ? onColor : '#E5E5EA',
+        transition: 'background-color 0.2s ease',
+      }}
     >
       <span
-        className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
-          checked ? 'translate-x-5' : 'translate-x-0'
-        }`}
+        className="absolute bg-white rounded-full"
+        style={{
+          top: 2, width: 27, height: 27,
+          boxShadow: '0 2px 4px rgba(0,0,0,0.25)',
+          transform: checked ? 'translateX(20px)' : 'translateX(2px)',
+          transition: 'transform 0.2s ease',
+        }}
       />
     </span>
   )

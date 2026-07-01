@@ -191,7 +191,7 @@ export default function MobileCalendar({
     if (view === 'month') {
       onSelectDate(dir === -1 ? subMonths(currentDate, 1) : addMonths(currentDate, 1))
     } else {
-      onSelectDate(addDays(currentDate, dir * 7))
+      onSelectDate(addDays(currentDate, dir))
     }
   }
 
