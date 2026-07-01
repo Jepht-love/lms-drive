@@ -5,14 +5,11 @@ html, body {
   background-color: #111111;
 }
 
-@keyframes shimmer {
-  from { background-position: -200% 0; }
-  to   { background-position: 200% 0; }
-}
+/* Placeholder de chargement : bloc gris statique et sobre — aucune animation
+   (pas de « barres grises qui défilent »). La navigation étant préchargée, il
+   n'apparaît quasiment jamais ; quand il apparaît, il reste discret. */
 .skeleton {
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.4s ease-in-out infinite;
+  background: #F1F1F1;
   border-radius: 10px;
 }
 
@@ -74,11 +71,6 @@ button, a, [role="button"] { min-height: 44px; }
 ::-webkit-scrollbar-track  { background: transparent; }
 ::-webkit-scrollbar-thumb  { background: #E5E7EB; border-radius: 2px; }
 ::-webkit-scrollbar-thumb:hover { background: #D1D5DB; }
-
-/* Skeleton shimmer animation */
-@keyframes shimmer {
-  100% { transform: translateX(100%); }
-}
 
 /* Cards cliquables — hover lift */
 .card-interactive {

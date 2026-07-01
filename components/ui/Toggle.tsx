@@ -6,12 +6,12 @@ interface ToggleProps {
   disabled?: boolean
   /** Si fourni, le libellé s'affiche à gauche et toute la ligne est cliquable. */
   label?: string
-  /** Couleur de l'état activé. Par défaut vert iOS #34C759. */
+  /** Couleur de l'état activé. Par défaut noir LMS Drive #111111 (couleur de l'app). */
   onColor?: string
 }
 
-// Toggle style iOS Réglages : piste 51×31, knob 27px, vert ON / gris OFF.
-export default function Toggle({ checked, onChange, disabled, label, onColor = '#34C759' }: ToggleProps) {
+// Toggle style iOS Réglages : piste 51×31, knob 27px, noir app ON / gris OFF.
+export default function Toggle({ checked, onChange, disabled, label, onColor = '#111111' }: ToggleProps) {
   const track = (
     <span
       aria-hidden
