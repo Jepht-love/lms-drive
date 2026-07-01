@@ -18,7 +18,7 @@ export default function ContentWrapper({ children }: { children: React.ReactNode
 
   return (
     <div
-      className="px-4 py-5 pb-6"
+      className="h-full overflow-y-auto px-4 py-5 pb-6"
       style={{ overscrollBehavior: 'none', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
     >
       {children}
