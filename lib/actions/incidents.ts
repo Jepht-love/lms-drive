@@ -108,6 +108,7 @@ export async function transmitInfractionToClient(id: string) {
         <p>Une infraction a été constatée le <b>${inf.infraction_date}</b> avec le véhicule
         <b>${v?.brand} ${v?.model} (${v?.plate})</b> que vous aviez en location.</p>
         <p>Montant de l'amende : <b>${inf.amount} €</b>${inf.admin_fees ? ` (+ ${inf.admin_fees} € de frais de dossier)` : ''}.</p>
+        ${inf.reference ? `<p>Référence de l'avis : <b>${inf.reference}</b></p>` : ''}
         ${inf.document_url ? `<p><a href="${inf.document_url}">Consulter l'avis de contravention</a></p>` : ''}
         <p>Merci de procéder à la régularisation.</p>
         <p>— LMS Drive</p>`,
