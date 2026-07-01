@@ -59,6 +59,39 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Retours du jour : réservations en_cours avec retour dans les 2h (notif unique)
+    const { data: returnsToday } = await supabase
+      .from('reservations')
+      .select('id, reservation_number, end_datetime, vehicle:vehicles(plate, brand, model, color), client:clients(first_name, last_name)')
+      .eq('status', 'en_cours')
+      .gte('end_datetime', now.toISOString())
+      .lte('end_datetime', addHours(now, 2).toISOString())
+
+    for (const r of returnsToday ?? []) {
+      const { data: existing } = await supabase
+        .from('notifications')
+        .select('id')
+        .eq('type', 'return_today_soon')
+        .eq('entity_id', r.id)
+        .limit(1)
+
+      if (!existing || existing.length === 0) {
+        const clt = r.client as any
+        const veh = r.vehicle as any
+        const clientLabel = clt ? `${clt.first_name} ${clt.last_name}` : r.reservation_number
+        const vehLabel = veh ? `${veh.brand} ${veh.model} (${veh.plate})` : ''
+        const heureFmt = new Date(r.end_datetime).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+        const body = `${clientLabel}${vehLabel ? ' — ' + vehLabel : ''} · retour prévu à ${heureFmt}`
+        await supabase.from('notifications').insert({
+          user_id: null, type: 'return_today_soon',
+          title: 'Arrivée du jour',  body,
+          entity_type: 'reservations', entity_id: r.id,
+        })
+        await broadcastPushToManagers({ title: 'Arrivée du jour', body, url: '/reservations' })
+        created.push(r.id)
+      }
+    }
+
     // 1. Bascule en_retard les réservations en_cours dépassées
     const { data: newlyLate } = await supabase
       .from('reservations')
