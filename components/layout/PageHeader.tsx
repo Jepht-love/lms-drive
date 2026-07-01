@@ -3,13 +3,13 @@ import Link from 'next/link'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { Bell } from 'lucide-react'
+import HeaderAlertBadge from './HeaderAlertBadge'
 
 interface PageHeaderProps {
   title?: string
-  alertCount?: number
 }
 
-export default function PageHeader({ title, alertCount = 0 }: PageHeaderProps) {
+export default function PageHeader({ title }: PageHeaderProps) {
   const today = new Date()
   const date  = title ?? format(today, 'EEE d', { locale: fr })
 
@@ -41,12 +41,7 @@ export default function PageHeader({ title, alertCount = 0 }: PageHeaderProps) {
         <div className="w-20 flex justify-end">
           <Link href="/alerts" className="relative inline-flex items-center">
             <Bell className="w-5 h-5 text-white" strokeWidth={2} />
-            {alertCount > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 rounded-full
-                               text-white text-[9px] font-black flex items-center justify-center leading-none">
-                {alertCount > 9 ? '9+' : alertCount}
-              </span>
-            )}
+            <HeaderAlertBadge />
           </Link>
         </div>
       </div>

@@ -1,10 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
-import { fetchAllAlerts } from '@/lib/utils/alerts'
 import BottomNav from '@/components/layout/BottomNav'
 import PageHeader from '@/components/layout/PageHeader'
 import ClientRedirect from '@/components/layout/ClientRedirect'
 import PageTransition from '@/components/layout/PageTransition'
 import ContentWrapper from '@/app/(dashboard)/ContentWrapper'
+import AlertCountProvider from '@/components/layout/AlertCountProvider'
 import { ToastProvider } from '@/components/Toast'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -34,29 +34,30 @@ export default async function DashboardLayout({ children }: { children: React.Re
     allowedTabs = (perm as { allowed_tabs?: string[] | null } | null)?.allowed_tabs ?? null
   }
 
-  const alerts     = await fetchAllAlerts(supabase)
-  const alertCount = alerts.length
-
+  // Le compteur d'alertes est chargé côté client (AlertCountProvider) pour ne pas
+  // bloquer le premier affichage sur ~10 requêtes Supabase à chaque démarrage.
   return (
     <ToastProvider>
-      <div
-        className="bg-[#F2F2F7]"
-        style={{
-          position: 'fixed',
-          inset: 0,
-          display: 'grid',
-          gridTemplateRows: 'auto 1fr auto',
-          overflow: 'hidden',
-        }}
-      >
-        <PageHeader alertCount={alertCount} />
-        <main style={{ overflowY: 'auto', overscrollBehavior: 'none', WebkitOverflowScrolling: 'touch', minHeight: 0 } as React.CSSProperties}>
-          <PageTransition>
-            <ContentWrapper>{children}</ContentWrapper>
-          </PageTransition>
-        </main>
-        <BottomNav alertCount={alertCount} allowedTabs={allowedTabs} />
-      </div>
+      <AlertCountProvider>
+        <div
+          className="bg-[#F2F2F7]"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            display: 'grid',
+            gridTemplateRows: 'auto 1fr auto',
+            overflow: 'hidden',
+          }}
+        >
+          <PageHeader />
+          <main style={{ overflowY: 'auto', overscrollBehavior: 'none', WebkitOverflowScrolling: 'touch', minHeight: 0 } as React.CSSProperties}>
+            <PageTransition>
+              <ContentWrapper>{children}</ContentWrapper>
+            </PageTransition>
+          </main>
+          <BottomNav allowedTabs={allowedTabs} />
+        </div>
+      </AlertCountProvider>
     </ToastProvider>
   )
 }

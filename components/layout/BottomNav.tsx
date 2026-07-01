@@ -2,8 +2,8 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useAlertCount } from './AlertCountProvider'
 import {
   HomeIcon, TruckIcon, CalendarDaysIcon, BellIcon, Squares2X2Icon,
   ClipboardDocumentListIcon,
@@ -24,21 +24,14 @@ const TABS = [
   { label: 'Menu',      href: '/menu',         tabKey: null,           Icon: Squares2X2Icon,             ActiveIcon: Squares2X2Solid },
 ]
 
-export default function BottomNav({ alertCount: initial = 0, allowedTabs }: { alertCount?: number; allowedTabs?: string[] | null }) {
+export default function BottomNav({ allowedTabs }: { allowedTabs?: string[] | null }) {
   const pathname = usePathname()
-  const [alertCount, setAlertCount] = useState(initial)
+  const alertCount = useAlertCount()
 
   // Membre restreint : on masque les onglets non autorisés (Alertes/Menu restent).
   const visibleTabs = (!allowedTabs || allowedTabs.length === 0)
     ? TABS
     : TABS.filter(t => !t.tabKey || allowedTabs.includes(t.tabKey))
-
-  useEffect(() => {
-    fetch('/api/alerts/count')
-      .then(r => r.json())
-      .then(d => setAlertCount(d.count ?? initial))
-      .catch(() => {})
-  }, [initial])
 
   return (
     <nav className="shrink-0 bg-[#111111]" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 8px)' }}>
