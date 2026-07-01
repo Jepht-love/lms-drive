@@ -38,8 +38,7 @@ export default function PageHeader({ title, alertCount = 0 }: PageHeaderProps) {
         />
 
         {/* Droite : cloche */}
-        <div className="w-20 flex justify-end items-center gap-2">
-          <span className="text-[10px] font-bold text-yellow-400">v5</span>
+        <div className="w-20 flex justify-end">
           <Link href="/alerts" className="relative inline-flex items-center">
             <Bell className="w-5 h-5 text-white" strokeWidth={2} />
             {alertCount > 0 && (
