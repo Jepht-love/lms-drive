@@ -625,8 +625,8 @@
     "semantic_hash": ""
   },
   "components/inspection/InspectionFlow.tsx": {
-    "mtime": 1782932071.0132487,
-    "ast_hash": "b04ea23fbc393f4a8b03754d36883e15",
+    "mtime": 1782932718.7990184,
+    "ast_hash": "9f656b4f7ffe055e2d839deef4229e6a",
     "semantic_hash": ""
   },
   "components/layout/BottomNav.tsx": {
@@ -990,8 +990,8 @@
     "semantic_hash": ""
   },
   "public/sw.js": {
-    "mtime": 1782929659.0618129,
-    "ast_hash": "d98b21e544864d1fb5aa48c8c415ece3",
+    "mtime": 1782932726.946181,
+    "ast_hash": "4c02d8db3920d3c12614fa6dfd0541bd",
     "semantic_hash": ""
   },
   "scripts/seed-vehicles.ts": {

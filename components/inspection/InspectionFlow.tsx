@@ -136,12 +136,10 @@ export default function InspectionFlow({
     }
   }
 
-  // Toutes les prises de vue de MANDATORY_PHOTOS sont obligatoires (intérieur,
-  // extérieur, 4 côtés…) : l'EDL ne peut être validé tant qu'il en manque une.
-  const totalRequiredPhotos = MANDATORY_PHOTOS.length
-  const missingPhotos = MANDATORY_PHOTOS.filter(p => !photos[p.type])
-  const photoCount = totalRequiredPhotos - missingPhotos.length
-  const mandatoryCompleted = missingPhotos.length === 0
+  // Les emplacements de MANDATORY_PHOTOS servent de repères (où photographier).
+  // On n'impose qu'un minimum de 3 photos, pas la totalité.
+  const photoCount = Object.keys(photos).length
+  const mandatoryCompleted = photoCount >= 3
   const damageCount = Object.values(damages).flat().length
   const damagedZoneCount = Object.values(damages).filter(e => e.length > 0).length
 
@@ -772,9 +770,9 @@ export default function InspectionFlow({
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
             <h3 className="font-semibold text-slate-800 mb-1">
               Photos de l'état des lieux
-              <span className="ml-2 text-sm font-normal text-slate-500">({photoCount}/{totalRequiredPhotos})</span>
+              <span className="ml-2 text-sm font-normal text-slate-500">({photoCount} prise{photoCount > 1 ? 's' : ''})</span>
             </h3>
-            <p className="text-xs text-slate-400 mb-3">Toutes les photos sont obligatoires : intérieur, extérieur et les 4 côtés.</p>
+            <p className="text-xs text-slate-400 mb-3">Minimum 3 photos requises. Les emplacements ci-dessous indiquent où photographier (intérieur, extérieur, 4 côtés…).</p>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
               {MANDATORY_PHOTOS.map(p => {
                 const taken = photos[p.type]
@@ -795,13 +793,10 @@ export default function InspectionFlow({
                         </div>
                       </>
                     ) : (
-                      <>
-                        <div className="flex flex-col items-center justify-center h-full bg-slate-50 gap-1.5 p-2">
-                          <Camera className="w-6 h-6 text-slate-300" />
-                          <span className="text-xs text-slate-400 text-center leading-tight">{p.label}</span>
-                        </div>
-                        <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-red-400" title="Photo obligatoire" />
-                      </>
+                      <div className="flex flex-col items-center justify-center h-full bg-slate-50 gap-1.5 p-2">
+                        <Camera className="w-6 h-6 text-slate-300" />
+                        <span className="text-xs text-slate-400 text-center leading-tight">{p.label}</span>
+                      </div>
                     )}
                   </button>
                 )
@@ -819,13 +814,10 @@ export default function InspectionFlow({
           />
 
           {!mandatoryCompleted && (
-            <div className="text-sm text-amber-700 bg-amber-50 rounded-xl px-4 py-3 flex items-start gap-2">
-              <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="font-medium">{missingPhotos.length} photo{missingPhotos.length > 1 ? 's' : ''} obligatoire{missingPhotos.length > 1 ? 's' : ''} manquante{missingPhotos.length > 1 ? 's' : ''} ({photoCount}/{totalRequiredPhotos})</p>
-                <p className="text-xs text-amber-600 mt-0.5">{missingPhotos.map(p => p.label).join(' · ')}</p>
-              </div>
-            </div>
+            <p className="text-sm text-amber-600 bg-amber-50 rounded-xl px-4 py-3 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+              Minimum 3 photos requises — {photoCount}/3
+            </p>
           )}
 
           <div className="flex gap-3">
