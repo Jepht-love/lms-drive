@@ -740,8 +740,8 @@
     "semantic_hash": ""
   },
   "components/vehicle-schema/VehicleMap2D.tsx": {
-    "mtime": 1782929579.5679119,
-    "ast_hash": "1594055db2c31a8dc7c8f83754bb12d2",
+    "mtime": 1782983924.2648737,
+    "ast_hash": "12f0b130f375b1a2c470c1082d9986d6",
     "semantic_hash": ""
   },
   "components/vehicle-schema/VehicleOrthographicSVG.tsx": {
@@ -755,8 +755,8 @@
     "semantic_hash": ""
   },
   "components/vehicle-schema/edl-zones.ts": {
-    "mtime": 1782753793.155363,
-    "ast_hash": "2697a03c4843f047f7135c28a7ec242c",
+    "mtime": 1782982569.0290148,
+    "ast_hash": "bfcd6529dbfca840a5fcae30f704a592",
     "semantic_hash": ""
   },
   "components/vehicle-schema/inspection-types.ts": {
@@ -990,8 +990,8 @@
     "semantic_hash": ""
   },
   "public/sw.js": {
-    "mtime": 1782932726.946181,
-    "ast_hash": "4c02d8db3920d3c12614fa6dfd0541bd",
+    "mtime": 1782982786.2768028,
+    "ast_hash": "e8b7cbb8a02684dc20ec3556e871e5ab",
     "semantic_hash": ""
   },
   "scripts/seed-vehicles.ts": {
@@ -1902,6 +1902,11 @@
   "lib/email/config.ts": {
     "mtime": 1782903110.6314366,
     "ast_hash": "51487a817fdebf0d8134f359a53c88b0",
+    "semantic_hash": ""
+  },
+  "components/inspection/PhotoLightbox.tsx": {
+    "mtime": 1782982584.1649683,
+    "ast_hash": "7192220336ff17a559e36c6e41515f6c",
     "semantic_hash": ""
   }
 }

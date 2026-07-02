@@ -17,16 +17,42 @@ import {
 // Zones + fond partagés avec le PDF du contrat (source unique : ./edl-zones)
 import { EDL_IMG as IMG, EDL_SRC as SRC, EDL_ZONES as ZONES, zoneBox, type Zone2D } from './edl-zones'
 
-const SEV: Record<DamageSeverity, { fill: string; stroke: string }> = {
-  rayure:    { fill: '#eab308', stroke: '#ca8a04' },
-  attention: { fill: '#f97316', stroke: '#ea580c' },
-  dommage:   { fill: '#ef4444', stroke: '#dc2626' },
-}
-const SEV_RANK: Record<DamageSeverity, number> = { rayure: 0, attention: 1, dommage: 2 }
+// Système de couleurs par STATUT (départ / retour), pas par gravité :
+//   • dommage signalé AU DÉPART  → orange (#F97316) + badge « D »
+//   • nouveau dommage AU RETOUR  → rouge  (#EF4444) + badge « R »
+//   • les deux                   → rouge + badges D & R
+//   • sélection active           → bleu par-dessus (fill), badges conservés
+// Priorité visuelle : sélection > retour > départ > survol > mode zones.
+type BadgeType = 'departure' | 'return' | 'both' | 'none'
 
-function worstSeverity(entries: DamageEntry[]): DamageSeverity | null {
-  if (!entries.length) return null
-  return entries.reduce<DamageSeverity>((acc, e) => (SEV_RANK[e.severity] > SEV_RANK[acc] ? e.severity : acc), 'rayure')
+function getZoneStyle(
+  isSelected: boolean,
+  isHovered: boolean,
+  hasDep: boolean,
+  hasRet: boolean,
+  showZones: boolean,
+): { fill: string; stroke: string; strokeWidth: number; dash?: string; badgeType: BadgeType } {
+  let fill = 'rgba(0,0,0,0)'
+  let stroke = 'transparent'
+  let strokeWidth = 0
+  let dash: string | undefined
+
+  if (isSelected) {
+    fill = 'rgba(59,130,246,0.30)'; stroke = '#3B82F6'; strokeWidth = 4
+  } else if (hasRet) {
+    fill = 'rgba(239,68,68,0.22)'; stroke = '#EF4444'; strokeWidth = 3
+  } else if (hasDep) {
+    fill = 'rgba(251,146,60,0.22)'; stroke = '#F97316'; strokeWidth = 3
+  } else if (isHovered) {
+    fill = 'rgba(59,130,246,0.10)'; stroke = '#93C5FD'; strokeWidth = 3
+  } else if (showZones) {
+    fill = 'rgba(100,116,139,0.06)'; stroke = '#94A3B8'; strokeWidth = 3; dash = '6,4'
+  }
+
+  const badgeType: BadgeType =
+    hasDep && hasRet ? 'both' : hasDep ? 'departure' : hasRet ? 'return' : 'none'
+
+  return { fill, stroke, strokeWidth, dash, badgeType }
 }
 
 // Zone signalée à l'EDL de départ — sert de référence visuelle au retour
@@ -50,6 +76,7 @@ interface Props {
 export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, readonly, previousZones = [] }: Props) {
   const prevById = new Map(previousZones.map(z => [z.id, z]))
   const [selected, setSelected] = useState<string | null>(null)
+  const [hovered, setHovered] = useState<string | null>(null)
   const [showZones, setShowZones] = useState(false)
   // Formulaire de saisie
   const [dtype, setDtype] = useState<string>(DAMAGE_TYPES[0].id)
@@ -134,6 +161,10 @@ export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, rea
   const existing = selected ? (damages[selected] ?? []) : []
   const prevSel = selected ? prevById.get(selected) : undefined
 
+  // Légende : n'apparaît que s'il existe au moins un dommage (départ ou retour).
+  const anyDep = previousZones.length > 0
+  const anyRet = Object.values(damages).some(a => a.length > 0)
+
   return (
     <div className="w-full max-w-[520px] mx-auto bg-white rounded-xl overflow-hidden">
       {/* Schéma */}
@@ -170,55 +201,92 @@ export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, rea
           <image href={SRC} x={0} y={0} width={IMG} height={IMG} />
 
           {ZONES.map((z, zi) => {
-            const entries = damages[z.id] ?? []
-            const n = entries.length
-            const sev = worstSeverity(entries)
+            const hasRet = (damages[z.id]?.length ?? 0) > 0
+            const hasDep = prevById.has(z.id)
             const isSel = selected === z.id
+            const isHov = hovered === z.id
             const box = zoneBox(z)
             const cx = box.x + box.w / 2, cy = box.y + box.h / 2
 
-            const hasPrev = prevById.has(z.id)
-            let fill = '#000000', fillOpacity = 0, stroke = 'transparent', dash: string | undefined
-            if (n > 0 && sev) { fill = SEV[sev].fill; fillOpacity = 0.4; stroke = SEV[sev].stroke }
-            else if (isSel) { fill = '#3b82f6'; fillOpacity = 0.18; stroke = '#3b82f6' }
-            // Zone déjà signalée au départ (et pas re-marquée) : rappel bleu pointillé.
-            else if (hasPrev) { fill = '#3b82f6'; fillOpacity = 0.12; stroke = '#2563eb'; dash = '6,4' }
-            else if (showZones) { fill = '#64748b'; fillOpacity = 0.06; stroke = '#94a3b8'; dash = '6,4' }
+            const style = getZoneStyle(isSel, isHov, hasDep, hasRet, showZones)
+            // Position des badges : coin haut-droit de la boîte englobante.
+            const bx = box.x + box.w - 6, by = box.y + 6
+            const dCx = style.badgeType === 'both' ? bx - 30 : bx
 
             return (
-              <g key={`${z.id}-${zi}`} onClick={() => selectZone(z)} style={{ cursor: readonly && n === 0 ? 'default' : 'pointer' }}>
+              <g
+                key={`${z.id}-${zi}`}
+                onClick={() => selectZone(z)}
+                onMouseEnter={() => setHovered(z.id)}
+                onMouseLeave={() => setHovered(h => (h === z.id ? null : h))}
+                style={{ cursor: readonly && !hasRet ? 'default' : 'pointer' }}
+              >
                 {z.points ? (
-                  <polygon points={z.points.map(p => p.join(',')).join(' ')} fill={fill} fillOpacity={fillOpacity} stroke={stroke} strokeWidth={isSel ? 4 : 3} strokeDasharray={dash} strokeLinejoin="round" />
+                  <polygon points={z.points.map(p => p.join(',')).join(' ')} fill={style.fill} stroke={style.stroke} strokeWidth={style.strokeWidth} strokeDasharray={style.dash} strokeLinejoin="round" style={{ transition: 'fill 0.15s ease, stroke 0.15s ease' }} />
                 ) : z.shape === 'ellipse' ? (
-                  <ellipse cx={cx} cy={cy} rx={box.w / 2} ry={box.h / 2} fill={fill} fillOpacity={fillOpacity} stroke={stroke} strokeWidth={isSel ? 4 : 3} strokeDasharray={dash} />
+                  <ellipse cx={cx} cy={cy} rx={box.w / 2} ry={box.h / 2} fill={style.fill} stroke={style.stroke} strokeWidth={style.strokeWidth} strokeDasharray={style.dash} style={{ transition: 'fill 0.15s ease, stroke 0.15s ease' }} />
                 ) : (
-                  <rect x={box.x} y={box.y} width={box.w} height={box.h} rx={z.rx ?? 8} fill={fill} fillOpacity={fillOpacity} stroke={stroke} strokeWidth={isSel ? 4 : 3} strokeDasharray={dash} />
+                  <rect x={box.x} y={box.y} width={box.w} height={box.h} rx={z.rx ?? 8} fill={style.fill} stroke={style.stroke} strokeWidth={style.strokeWidth} strokeDasharray={style.dash} style={{ transition: 'fill 0.15s ease, stroke 0.15s ease' }} />
                 )}
-                {showZones && n === 0 && (
+                {showZones && !hasRet && !hasDep && (
                   <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle" fontSize={15} fontWeight={700} fill="#475569" style={{ pointerEvents: 'none', userSelect: 'none' }}>
                     {z.label}
                   </text>
                 )}
-                {n > 0 && (
-                  <>
-                    <circle cx={box.x + box.w - 6} cy={box.y + 6} r={14} fill={SEV[sev!].stroke} />
-                    <text x={box.x + box.w - 6} y={box.y + 6} textAnchor="middle" dominantBaseline="middle" fontSize={16} fontWeight={800} fill="white" style={{ pointerEvents: 'none', userSelect: 'none' }}>
-                      {n}
-                    </text>
-                  </>
-                )}
-                {hasPrev && n === 0 && (
-                  <>
-                    <circle cx={box.x + box.w - 6} cy={box.y + 6} r={13} fill="#2563eb" />
-                    <text x={box.x + box.w - 6} y={box.y + 6} textAnchor="middle" dominantBaseline="middle" fontSize={14} fontWeight={800} fill="white" style={{ pointerEvents: 'none', userSelect: 'none' }}>
+                {/* Badge DÉPART — cercle orange « D » */}
+                {(style.badgeType === 'departure' || style.badgeType === 'both') && (
+                  <g style={{ pointerEvents: 'none' }}>
+                    <circle cx={dCx} cy={by} r={13} fill="#F97316" stroke="white" strokeWidth={2} />
+                    <text x={dCx} y={by} textAnchor="middle" dominantBaseline="middle" fontSize={15} fontWeight={800} fill="white" style={{ userSelect: 'none' }}>
                       D
                     </text>
-                  </>
+                  </g>
+                )}
+                {/* Badge RETOUR — cercle rouge « R » */}
+                {(style.badgeType === 'return' || style.badgeType === 'both') && (
+                  <g style={{ pointerEvents: 'none' }}>
+                    <circle cx={bx} cy={by} r={13} fill="#EF4444" stroke="white" strokeWidth={2} />
+                    <text x={bx} y={by} textAnchor="middle" dominantBaseline="middle" fontSize={15} fontWeight={800} fill="white" style={{ userSelect: 'none' }}>
+                      R
+                    </text>
+                  </g>
                 )}
               </g>
             )
           })}
         </svg>
+
+        {/* Légende couleurs — visible dès qu'un dommage départ ou retour existe */}
+        {(anyDep || anyRet) && (
+          <div style={{
+            display: 'flex',
+            gap: '16px',
+            justifyContent: 'center',
+            flexWrap: 'wrap',
+            margin: '12px 12px 0',
+            padding: '8px 16px',
+            backgroundColor: '#F8FAFC',
+            borderRadius: '10px',
+            border: '1px solid #E2E8F0',
+          }}>
+            {anyDep && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ width: '16px', height: '16px', borderRadius: '50%', backgroundColor: '#F97316', flexShrink: 0 }} />
+                <span style={{ fontSize: '11px', color: '#64748B', fontWeight: 500 }}>Dommage au départ</span>
+              </div>
+            )}
+            {anyRet && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ width: '16px', height: '16px', borderRadius: '50%', backgroundColor: '#EF4444', flexShrink: 0 }} />
+                <span style={{ fontSize: '11px', color: '#64748B', fontWeight: 500 }}>Nouveau dommage au retour</span>
+              </div>
+            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{ width: '16px', height: '16px', borderRadius: '50%', backgroundColor: '#3B82F6', flexShrink: 0 }} />
+              <span style={{ fontSize: '11px', color: '#64748B', fontWeight: 500 }}>Zone sélectionnée</span>
+            </div>
+          </div>
+        )}
 
         {!selected && !readonly && (
           <p className="text-center text-[11px] text-gray-400 pb-2">
@@ -256,11 +324,11 @@ export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, rea
                         src={p}
                         alt="Dommage constaté au départ"
                         style={{
-                          width: '80px',
-                          height: '80px',
+                          width: '96px',
+                          height: '96px',
                           objectFit: 'cover',
                           borderRadius: '8px',
-                          border: '2px solid #E2E8F0',
+                          border: '2px solid #FED7AA',
                         }}
                       />
                       <div
