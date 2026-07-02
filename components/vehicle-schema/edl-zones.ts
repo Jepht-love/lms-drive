@@ -89,7 +89,9 @@ export const EDL_ZONES: Zone2D[] = [
   // longe la couture de porte à gauche et enveloppe le passage de roue arrière.
   { id: 'aile-arriere-gauche', label: 'Aile ARG', points: [
     [864,662], [950,650], [1020,668], [1030,720],
-    [1004,742], [966,743], [940,762], [897,778], [830,762], [828,743],
+    // Bord bas = dôme d'arche qui reste AU-DESSUS du pneu (centre 897,812 r69) :
+    // chaque point est à > 69 du centre, plus de creux dans la roue.
+    [1004,742], [966,743], [935,740], [897,738], [860,740], [830,742], [828,743],
     [850,735], [866,700], [872,678],
   ]},
   { id: 'pneu-av-gauche', label: 'Pneu AVG', shape: 'ellipse', x: 305, y: 743, w: 140, h: 140 },
@@ -112,7 +114,8 @@ export const EDL_ZONES: Zone2D[] = [
   // Aile ARD : miroir de l'aile ARG — sous la custode, couture de porte à droite.
   { id: 'aile-arriere-droite', label: 'Aile ARD', points: [
     [390,1010], [312,996], [245,1010], [222,1052],
-    [220,1091], [288,1091], [305,1108], [357,1122], [426,1108], [426,1091],
+    // Miroir de l'ARG : dôme d'arche au-dessus du pneu (centre 357,1160 r69).
+    [220,1091], [288,1091], [320,1088], [357,1086], [394,1088], [426,1091],
     [404,1083], [388,1048], [382,1026],
   ]},
   { id: 'pneu-av-droite', label: 'Pneu AVD', shape: 'ellipse', x: 809, y: 1091, w: 140, h: 140 },

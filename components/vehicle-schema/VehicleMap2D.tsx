@@ -132,9 +132,12 @@ export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, rea
     setPending([])
   }
 
-  function selectZone(z: Zone2D) {
+  function selectZone(z: Zone2D, zi: number) {
     resetForm()
-    setSelected(z.id)
+    // Clé d'instance `${id}#${index}` : plusieurs vues peuvent partager le même
+    // id de pièce (ex. aile arrière = vue arrière + vue profil). On ne surligne
+    // que le polygone réellement cliqué, pas tous ceux qui portent cet id.
+    setSelected(`${z.id}#${zi}`)
     focusZone(z)
   }
 
@@ -152,14 +155,17 @@ export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, rea
   }
 
   function addDamage() {
-    if (!selected) return
-    onDamageAdd(selected, { severity: gravite, type: dtype, comment: comment.trim(), photos: pending })
+    if (!selId) return
+    onDamageAdd(selId, { severity: gravite, type: dtype, comment: comment.trim(), photos: pending })
     resetForm()
   }
 
-  const zone = selected ? ZONES.find(z => z.id === selected) ?? null : null
-  const existing = selected ? (damages[selected] ?? []) : []
-  const prevSel = selected ? prevById.get(selected) : undefined
+  // `selected` = clé d'instance `${id}#${index}` → on retrouve le polygone exact.
+  const selIdx = selected ? Number(selected.slice(selected.indexOf('#') + 1)) : -1
+  const zone = selIdx >= 0 ? (ZONES[selIdx] ?? null) : null
+  const selId = zone?.id ?? null
+  const existing = selId ? (damages[selId] ?? []) : []
+  const prevSel = selId ? prevById.get(selId) : undefined
 
   // Légende : n'apparaît que s'il existe au moins un dommage (départ ou retour).
   const anyDep = previousZones.length > 0
@@ -203,7 +209,7 @@ export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, rea
           {ZONES.map((z, zi) => {
             const hasRet = (damages[z.id]?.length ?? 0) > 0
             const hasDep = prevById.has(z.id)
-            const isSel = selected === z.id
+            const isSel = selected === `${z.id}#${zi}`
             const isHov = hovered === z.id
             const box = zoneBox(z)
             const cx = box.x + box.w / 2, cy = box.y + box.h / 2
@@ -216,7 +222,7 @@ export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, rea
             return (
               <g
                 key={`${z.id}-${zi}`}
-                onClick={() => selectZone(z)}
+                onClick={() => selectZone(z, zi)}
                 onMouseEnter={() => setHovered(z.id)}
                 onMouseLeave={() => setHovered(h => (h === z.id ? null : h))}
                 style={{ cursor: readonly && !hasRet ? 'default' : 'pointer' }}
@@ -377,7 +383,7 @@ export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, rea
                         </div>
                       )}
                     </div>
-                    <button onClick={() => onDamageRemove(selected!, i)} className="p-1.5 hover:bg-red-50 rounded-lg flex-shrink-0">
+                    <button onClick={() => onDamageRemove(selId!, i)} className="p-1.5 hover:bg-red-50 rounded-lg flex-shrink-0">
                       <X className="w-4 h-4 text-gray-400 hover:text-red-500" />
                     </button>
                   </div>
