@@ -75,7 +75,9 @@ export const EDL_ZONES: Zone2D[] = [
   // ── PROFIL GAUCHE ──
   { id: 'vitre-avant-gauche', label: 'Vitre AVG', points: [[539,674], [523,674], [522,653], [508,644], [513,636], [532,626], [580,602], [611,594], [658,588], [668,600], [676,601], [662,666], [539,674]] },
   { id: 'vitre-arriere-gauche', label: 'Vitre ARG', points: [[711,664], [700,662], [707,588], [802,590], [828,596], [840,623], [836,658], [711,664]] },
-  { id: 'vitre-laterale-gauche', label: 'Custode G', points: [[1013,658], [974,652], [926,607], [934,602], [952,602], [1008,648], [1016,655], [1013,658]] },
+  // Custode = uniquement la surface vitrée triangulaire fixe derrière la vitre de
+  // porte arrière ; ne descend pas sous la ligne de caisse, n'empiète pas sur l'aile.
+  { id: 'vitre-laterale-gauche', label: 'Custode G', points: [[845,594], [871,600], [890,617], [897,632], [884,647], [858,657]] },
   { id: 'porte-avant-gauche', label: 'Porte AVG', points: [[484,822], [466,819], [468,814], [476,814], [464,811], [460,792], [456,717], [465,684], [640,672], [680,673], [674,725], [674,808], [638,811], [673,812], [673,818], [484,822]] },
   { id: 'porte-arriere-gauche', label: 'Porte ARG', points: [[711,818], [680,818], [676,814], [682,811], [676,803], [676,724], [680,672], [684,668], [864,662], [872,678], [866,700], [850,735], [830,754], [816,775], [806,811], [794,816], [711,818]] },
   { id: 'bas-de-caisse-gauche', label: 'Bas caisse G', points: [[624,834], [471,834], [468,830], [790,824], [791,818], [795,822], [808,813], [814,803], [826,769], [832,762], [834,764], [822,789], [817,834], [624,834]] },
@@ -83,10 +85,12 @@ export const EDL_ZONES: Zone2D[] = [
     [462,648], [390,653], [270,698], [220,726],
     [218,790], [305,743], [322,762], [375,778], [445,762], [462,743],
   ]},
+  // Aile ARG : commence sous la ligne de caisse (là où la custode s'arrête),
+  // longe la couture de porte à gauche et enveloppe le passage de roue arrière.
   { id: 'aile-arriere-gauche', label: 'Aile ARG', points: [
-    [833,655], [950,648], [1020,668], [1030,720],
+    [864,662], [950,650], [1020,668], [1030,720],
     [1004,742], [966,743], [940,762], [897,778], [830,762], [828,743],
-    [820,780], [833,712],
+    [850,735], [866,700], [872,678],
   ]},
   { id: 'pneu-av-gauche', label: 'Pneu AVG', shape: 'ellipse', x: 305, y: 743, w: 140, h: 140 },
   { id: 'jante-av-gauche', label: 'Jante AVG', shape: 'ellipse', x: 321, y: 759, w: 108, h: 108 },
@@ -95,7 +99,8 @@ export const EDL_ZONES: Zone2D[] = [
   // ── PROFIL DROIT ──
   { id: 'vitre-avant-droite', label: 'Vitre AVD', points: [[715,1022], [592,1014], [578,949], [586,948], [596,936], [643,942], [674,950], [722,974], [741,984], [746,992], [732,1001], [731,1022], [715,1022]] },
   { id: 'vitre-arriere-droite', label: 'Vitre ARD', points: [[543,1012], [418,1006], [414,971], [426,944], [452,938], [547,936], [554,1010], [543,1012]] },
-  { id: 'vitre-laterale-droite', label: 'Custode D', points: [[241,1006], [238,1003], [246,996], [302,950], [320,950], [328,955], [280,1000], [241,1006]] },
+  // Custode D : même règle que Custode G (surface vitrée seule), miroir côté droit.
+  { id: 'vitre-laterale-droite', label: 'Custode D', points: [[412,942], [383,947], [361,964], [352,982], [366,998], [392,1007]] },
   { id: 'porte-avant-droite', label: 'Porte AVD', points: [[770,1170], [581,1166], [581,1160], [616,1159], [580,1156], [580,1073], [574,1021], [614,1020], [789,1032], [798,1065], [794,1140], [790,1159], [778,1162], [786,1162], [788,1167], [770,1170]] },
   { id: 'porte-arriere-droite', label: 'Porte ARD', points: [[543,1166], [460,1164], [448,1159], [438,1123], [424,1102], [404,1083], [388,1048], [382,1026], [390,1010], [570,1016], [574,1020], [578,1072], [578,1151], [572,1159], [578,1162], [574,1166], [543,1166]] },
   { id: 'bas-de-caisse-droite', label: 'Bas caisse D', points: [[630,1182], [437,1182], [432,1137], [420,1112], [422,1110], [428,1117], [440,1151], [446,1161], [459,1170], [463,1166], [464,1172], [786,1178], [783,1182], [630,1182]] },
@@ -104,10 +109,11 @@ export const EDL_ZONES: Zone2D[] = [
     [1038,1058], [1040,1091], [946,1091], [935,1104], [879,1120], [823,1104], [809,1091],
     [796,1060],
   ]},
+  // Aile ARD : miroir de l'aile ARG — sous la custode, couture de porte à droite.
   { id: 'aile-arriere-droite', label: 'Aile ARD', points: [
-    [421,1002], [312,992], [245,1010], [222,1052],
+    [390,1010], [312,996], [245,1010], [222,1052],
     [220,1091], [288,1091], [305,1108], [357,1122], [426,1108], [426,1091],
-    [422,1060],
+    [404,1083], [388,1048], [382,1026],
   ]},
   { id: 'pneu-av-droite', label: 'Pneu AVD', shape: 'ellipse', x: 809, y: 1091, w: 140, h: 140 },
   { id: 'jante-av-droite', label: 'Jante AVD', shape: 'ellipse', x: 825, y: 1107, w: 108, h: 108 },

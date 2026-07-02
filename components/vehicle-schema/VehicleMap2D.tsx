@@ -3,6 +3,7 @@
 import { useReducer, useRef, useState, useEffect } from 'react'
 import { ArrowLeft, Camera, X, Plus } from 'lucide-react'
 import { compressImageToBase64 } from '@/lib/utils'
+import { PhotoLightbox } from '@/components/inspection/PhotoLightbox'
 import {
   type DamageEntry,
   type DamageSeverity,
@@ -55,6 +56,8 @@ export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, rea
   const [gravite, setGravite] = useState<DamageSeverity>('rayure')
   const [comment, setComment] = useState('')
   const [pending, setPending] = useState<string[]>([])
+  // Photo de départ ouverte en plein écran (null = lightbox fermée)
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
   // viewBox animé
@@ -245,10 +248,38 @@ export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, rea
                 {prevSel.description && <span className="text-[11px] text-blue-800/80">{prevSel.description}</span>}
               </div>
               {prevSel.photos && prevSel.photos.length > 0 && (
-                <div className="flex gap-1.5 mt-2">
+                <div className="flex gap-2 mt-2 flex-wrap">
                   {prevSel.photos.map((p, pi) => (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img key={pi} src={p} alt="Photo au départ" className="w-14 h-14 rounded-lg object-cover border border-blue-200" />
+                    <div key={pi} style={{ position: 'relative', cursor: 'zoom-in' }} onClick={() => setLightboxSrc(p)}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={p}
+                        alt="Dommage constaté au départ"
+                        style={{
+                          width: '80px',
+                          height: '80px',
+                          objectFit: 'cover',
+                          borderRadius: '8px',
+                          border: '2px solid #E2E8F0',
+                        }}
+                      />
+                      <div
+                        style={{
+                          position: 'absolute',
+                          bottom: '4px',
+                          right: '4px',
+                          background: 'rgba(0,0,0,0.6)',
+                          borderRadius: '4px',
+                          padding: '2px 4px',
+                        }}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
+                          <circle cx="11" cy="11" r="8" />
+                          <path d="m21 21-4.35-4.35" />
+                          <path d="M11 8v6M8 11h6" />
+                        </svg>
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}
@@ -372,6 +403,13 @@ export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, rea
           </div>
         </div>
       )}
+
+      {/* Lightbox plein écran — photo de départ agrandie */}
+      <PhotoLightbox
+        src={lightboxSrc ?? ''}
+        open={!!lightboxSrc}
+        onClose={() => setLightboxSrc(null)}
+      />
     </div>
   )
 }
