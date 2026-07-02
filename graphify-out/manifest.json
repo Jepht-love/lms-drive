@@ -160,8 +160,8 @@
     "semantic_hash": ""
   },
   "app/(dashboard)/contracts/[id]/ContractSigningPanel.tsx": {
-    "mtime": 1781287342.32121,
-    "ast_hash": "5c109ef4fe61518f302c72a5676a0bbd",
+    "mtime": 1783009513.1164315,
+    "ast_hash": "1b2d44020c7bc79324fe93f301304ee0",
     "semantic_hash": ""
   },
   "app/(dashboard)/contracts/[id]/page.tsx": {
@@ -170,8 +170,8 @@
     "semantic_hash": ""
   },
   "app/(dashboard)/contracts/[id]/preview/ContractPreviewClient.tsx": {
-    "mtime": 1782155213.148239,
-    "ast_hash": "ceae56ba3effc77925fb8a9ec9232858",
+    "mtime": 1783009554.354968,
+    "ast_hash": "fa207f7204bdbb8482517163f7d0c919",
     "semantic_hash": ""
   },
   "app/(dashboard)/contracts/[id]/preview/page.tsx": {
@@ -185,13 +185,13 @@
     "semantic_hash": ""
   },
   "app/(dashboard)/documents/DocumentsClient.tsx": {
-    "mtime": 1782790347.2947934,
-    "ast_hash": "9badf7f708e02e34811d7d6eae43a584",
+    "mtime": 1783009394.619457,
+    "ast_hash": "6d16a19aabe205259bd2106755cee21e",
     "semantic_hash": ""
   },
   "app/(dashboard)/documents/page.tsx": {
-    "mtime": 1782757849.687528,
-    "ast_hash": "8b66b1734de002ccfd48f526802fea5b",
+    "mtime": 1783009425.0309544,
+    "ast_hash": "06228015e8f71efe4198121aa9e02182",
     "semantic_hash": ""
   },
   "app/(dashboard)/equipe/[id]/MemberTabsEditor.tsx": {
@@ -455,8 +455,8 @@
     "semantic_hash": ""
   },
   "app/(dashboard)/reservations/ValidateContractButton.tsx": {
-    "mtime": 1780986885.4222975,
-    "ast_hash": "ae390ead6664189d87a2ab24949ecf5e",
+    "mtime": 1783009544.9596715,
+    "ast_hash": "758068b5bedeab92588d9781264b3690",
     "semantic_hash": ""
   },
   "app/(dashboard)/reservations/WorkflowStepper.tsx": {
@@ -500,8 +500,8 @@
     "semantic_hash": ""
   },
   "app/(dashboard)/vehicles/VehiclesGridSwipeable.tsx": {
-    "mtime": 1782161588.1861036,
-    "ast_hash": "e6207ca0995983ebe53e57f156e7e481",
+    "mtime": 1783009818.837938,
+    "ast_hash": "1d47453f6280749195e652000a30e820",
     "semantic_hash": ""
   },
   "app/(dashboard)/vehicles/[id]/VehicleMaintenanceCard.tsx": {
@@ -525,8 +525,8 @@
     "semantic_hash": ""
   },
   "app/(dashboard)/vehicles/page.tsx": {
-    "mtime": 1782220538.0347717,
-    "ast_hash": "912382dcc261b39cc864d25b064e8998",
+    "mtime": 1783009795.4157681,
+    "ast_hash": "19bd06dd1f0cce9e9e89bae4ce3d5807",
     "semantic_hash": ""
   },
   "app/api/alerts/count/route.ts": {
@@ -540,8 +540,8 @@
     "semantic_hash": ""
   },
   "app/api/contracts/send-email/route.ts": {
-    "mtime": 1782903119.697925,
-    "ast_hash": "6fc45e51361521952b7865b619241c2e",
+    "mtime": 1783009714.9920876,
+    "ast_hash": "4dacabbb8ccfd4bedef64ca8d77d7a79",
     "semantic_hash": ""
   },
   "app/api/contracts/sign/route.ts": {
@@ -755,8 +755,8 @@
     "semantic_hash": ""
   },
   "components/vehicle-schema/edl-zones.ts": {
-    "mtime": 1782985564.7895868,
-    "ast_hash": "d6fff3b714bf8fb67be959b3e0ca0521",
+    "mtime": 1783004908.581581,
+    "ast_hash": "424154875a6dd78b4cce4c7a48fbbfb7",
     "semantic_hash": ""
   },
   "components/vehicle-schema/inspection-types.ts": {
@@ -915,13 +915,13 @@
     "semantic_hash": ""
   },
   "lib/pdf/build-contract-data.ts": {
-    "mtime": 1782755808.7369525,
-    "ast_hash": "c1a1dd9809d32929b01e14f10d461758",
+    "mtime": 1783009496.718618,
+    "ast_hash": "a7fcea311cfa80080f98ee28302b2bc2",
     "semantic_hash": ""
   },
   "lib/pdf/contract-template.tsx": {
-    "mtime": 1782315800.5858438,
-    "ast_hash": "000a4a7bffa59e4a74e697c3902c4d54",
+    "mtime": 1783009479.9002907,
+    "ast_hash": "34c7a94c1544300335c565c71f299398",
     "semantic_hash": ""
   },
   "lib/seed/vehicles.ts": {
@@ -990,8 +990,8 @@
     "semantic_hash": ""
   },
   "public/sw.js": {
-    "mtime": 1782984091.800198,
-    "ast_hash": "a47171dac4880e06d842f19c49e9eaee",
+    "mtime": 1783009857.6583989,
+    "ast_hash": "a598877d3c25f216693bf8ebaaebac08",
     "semantic_hash": ""
   },
   "scripts/seed-vehicles.ts": {
@@ -1465,8 +1465,8 @@
     "semantic_hash": ""
   },
   "lib/actions/invoices.ts": {
-    "mtime": 1782929413.5378225,
-    "ast_hash": "60ca9f172dd7b27ea6ea5f5727d87bd3",
+    "mtime": 1783009686.0532024,
+    "ast_hash": "13d235571a1f4ebda90ed3ac6f260995",
     "semantic_hash": ""
   },
   "lib/pdf/invoice-template.tsx": {
@@ -1907,6 +1907,11 @@
   "components/inspection/PhotoLightbox.tsx": {
     "mtime": 1782982584.1649683,
     "ast_hash": "7192220336ff17a559e36c6e41515f6c",
+    "semantic_hash": ""
+  },
+  "ailes_diagnostic.png": {
+    "mtime": 1783003406.9835699,
+    "ast_hash": "6030109fa550b9aec5ef8f64cc50d1bf",
     "semantic_hash": ""
   }
 }

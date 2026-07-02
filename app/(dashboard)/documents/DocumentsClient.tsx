@@ -5,11 +5,9 @@ import {
   MagnifyingGlassIcon,
   EyeIcon,
   ArrowDownTrayIcon,
-  EnvelopeIcon,
   PrinterIcon,
   PlusIcon,
   PaperClipIcon,
-  XMarkIcon,
   TrashIcon,
 } from '@heroicons/react/24/outline'
 import {
@@ -21,7 +19,7 @@ import {
 } from '@/lib/documents/categories'
 import Drawer from '@/components/Drawer'
 import { AnimatedList, AnimatedListItem } from '@/components/AnimatedList'
-import { uploadDocument, deleteDocument, sendDocumentByEmail } from '@/lib/actions/documents'
+import { uploadDocument, deleteDocument } from '@/lib/actions/documents'
 import { formatDate } from '@/lib/utils'
 
 type Document = {
@@ -115,8 +113,10 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
   const [category,    setCategory]    = useState<ActiveTab>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [showUpload,  setShowUpload]  = useState(false)
-  const [emailDoc,    setEmailDoc]    = useState<Document | null>(null)
   const [isPending,   startTransition] = useTransition()
+
+  // URL effective : URL signée (bucket privé contracts-pdf) si dispo, sinon file_url.
+  const urlFor = (doc: Document) => docSignedUrls[doc.id] ?? doc.file_url
 
   const [uploadCat,   setUploadCat]   = useState<DocumentCategory | ''>('')
   const [uploadSub,   setUploadSub]   = useState('')
@@ -125,11 +125,6 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
   const [expiryDate,  setExpiryDate]  = useState('')
   const [file,        setFile]        = useState<File | null>(null)
   const [uploadError, setUploadError] = useState('')
-
-  const [recipientEmail, setRecipientEmail] = useState('')
-  const [emailMessage,   setEmailMessage]   = useState('')
-  const [emailError,     setEmailError]     = useState('')
-  const [emailSent,      setEmailSent]      = useState(false)
 
   const canSeeSensitive = ['gerant', 'associe'].includes(userRole)
 
@@ -189,11 +184,6 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
     setShowUpload(false)
   }
 
-  function resetEmail() {
-    setRecipientEmail(''); setEmailMessage(''); setEmailError(''); setEmailSent(false)
-    setEmailDoc(null)
-  }
-
   async function handleUpload() {
     if (!file || !docName || !uploadCat || !uploadSub) return
     setUploadError('')
@@ -213,17 +203,6 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
     startTransition(async () => {
       try { await uploadDocument(fd); resetUpload() }
       catch (e: any) { setUploadError(e.message ?? 'Erreur upload') }
-    })
-  }
-
-  async function handleSendEmail() {
-    if (!emailDoc || !recipientEmail) return
-    setEmailError('')
-    startTransition(async () => {
-      try {
-        await sendDocumentByEmail(emailDoc.id, recipientEmail, emailMessage || undefined)
-        setEmailSent(true)
-      } catch (e: any) { setEmailError(e.message ?? 'Erreur envoi') }
     })
   }
 
@@ -370,35 +349,33 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
                         </div>
                         <div className="flex items-center gap-1 flex-shrink-0">
                           <a
-                            href={doc.file_url}
+                            href={urlFor(doc)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100"
+                            title="Visualiser"
                           >
                             <EyeIcon className="w-4 h-4 text-gray-400" />
                           </a>
                           <a
-                            href={doc.file_url}
+                            href={urlFor(doc)}
                             download
                             target="_blank"
                             rel="noopener noreferrer"
                             className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100"
+                            title="Télécharger"
                           >
                             <ArrowDownTrayIcon className="w-4 h-4 text-gray-400" />
                           </a>
-                          <button
-                            onClick={() => { setEmailDoc(doc); setEmailSent(false) }}
+                          <a
+                            href={urlFor(doc)}
+                            target="_blank"
+                            rel="noopener noreferrer"
                             className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100"
-                          >
-                            <EnvelopeIcon className="w-4 h-4 text-gray-400" />
-                          </button>
-                          <button
-                            onClick={() => { const w = window.open(doc.file_url, '_blank'); w?.print() }}
-                            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100"
-                            title="Imprimer"
+                            title="Imprimer (ouvre le PDF — Ctrl/Cmd+P)"
                           >
                             <PrinterIcon className="w-4 h-4 text-gray-400" />
-                          </button>
+                          </a>
                           {!doc.is_auto_generated && (
                             <button
                               onClick={() => handleDelete(doc)}
@@ -503,46 +480,6 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
           >
             {isPending ? 'Enregistrement...' : 'Enregistrer'}
           </button>
-        </div>
-      </Drawer>
-
-      {/* ── Drawer Email ──────────────────────────────────────── */}
-      <Drawer open={!!emailDoc} onClose={resetEmail} title="Envoyer par email">
-        <div>
-          <p className="text-[12px] text-gray-400 mb-4 truncate">{emailDoc?.name}</p>
-
-          {emailSent ? (
-            <div className="py-8 text-center">
-              <p className="text-[15px] font-semibold text-green-600 mb-1">Email envoyé ✓</p>
-              <p className="text-[12px] text-gray-400">Le document a été transmis à {recipientEmail}</p>
-              <button onClick={resetEmail} className="mt-4 text-[13px] text-gray-500 underline">Fermer</button>
-            </div>
-          ) : (
-            <>
-              <input
-                type="email"
-                placeholder="Adresse email destinataire..."
-                value={recipientEmail}
-                onChange={e => setRecipientEmail(e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px] mb-3"
-              />
-              <textarea
-                placeholder="Message (optionnel)..."
-                rows={3}
-                value={emailMessage}
-                onChange={e => setEmailMessage(e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px] mb-4 resize-none"
-              />
-              {emailError && <p className="text-[12px] text-red-500 mb-3">{emailError}</p>}
-              <button
-                onClick={handleSendEmail}
-                disabled={!recipientEmail || isPending}
-                className="w-full py-4 rounded-2xl bg-[#111111] text-white text-[14px] font-medium disabled:opacity-40 active:scale-[.97]"
-              >
-                {isPending ? 'Envoi...' : 'Envoyer'}
-              </button>
-            </>
-          )}
         </div>
       </Drawer>
     </div>

@@ -17,10 +17,12 @@ export default function ValidateContractButton({ contractId }: { contractId: str
     const result = await validateContract(contractId)
     if (result?.error) {
       setError(result.error)
+      setLoading(false)
     } else {
-      router.refresh()
+      // Retour naturel à la liste des réservations après clôture (replace : le
+      // bouton « retour » ne rouvre pas le contrat clôturé).
+      router.replace('/reservations')
     }
-    setLoading(false)
   }
 
   return (

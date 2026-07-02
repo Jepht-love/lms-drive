@@ -270,3 +270,139 @@ export async function sendInvoice(invoiceId: string) {
   revalidatePath(`/reservations/${invoice.reservation_id}`)
   return { success: true }
 }
+
+/**
+ * Prépare la facture de restitution d'un contrat pour l'ATTACHER à l'email du
+ * contrat signé — la facture part au client EN MÊME TEMPS que le contrat qui
+ * détaille l'état des lieux et les éléments facturés. Rend uniquement le PDF,
+ * sans aucune mutation : la facture n'est marquée « envoyée » qu'une fois l'email
+ * du contrat réellement parti (markRestitutionInvoiceSent), pour ne jamais figer
+ * l'envoi si l'email échoue. Renvoie `skipped` (silencieux, le contrat part seul)
+ * quand il n'y a rien à joindre ou que la facture n'est pas prête.
+ */
+export async function renderContractInvoiceAttachment(contractId: string): Promise<
+  | { attachment: { filename: string; content: Buffer }; invoiceId: string; totalAmount: number }
+  | { skipped: 'none' | 'already_sent' | 'unpriced' }
+> {
+  const admin = createAdminClient()
+  const { data: invoice } = await admin
+    .from('invoices')
+    .select('*, vehicles(plate, brand, model), clients(first_name, last_name, address, postal_code, city), reservations(end_datetime)')
+    .eq('contract_id', contractId)
+    .maybeSingle()
+  if (!invoice) return { skipped: 'none' }
+  if (invoice.sent_at) return { skipped: 'already_sent' }
+  const lines = (invoice.line_items as InvoiceLineItem[]) ?? []
+  if (lines.length === 0 || lines.some(l => l.total <= 0)) return { skipped: 'unpriced' }
+
+  const v = Array.isArray(invoice.vehicles) ? invoice.vehicles[0] : invoice.vehicles
+  const c = Array.isArray(invoice.clients) ? invoice.clients[0] : invoice.clients
+  const res = Array.isArray(invoice.reservations) ? invoice.reservations[0] : invoice.reservations
+  const agency = await getAgencySettings(admin)
+
+  const pdfData = {
+    invoiceNumber: invoice.invoice_number,
+    issueDate: new Date().toISOString(),
+    vehiclePlate: v?.plate ?? '',
+    vehicleBrand: v?.brand ?? '',
+    vehicleModel: v?.model ?? '',
+    returnDatetime: res?.end_datetime ?? new Date().toISOString(),
+    clientName: `${c?.first_name ?? ''} ${c?.last_name ?? ''}`.trim(),
+    clientAddress: c?.address ? `${c.address}${c.postal_code ? ', ' + c.postal_code : ''}${c.city ? ' ' + c.city : ''}` : undefined,
+    lineItems: lines,
+    totalAmount: invoice.total_amount,
+    agency: {
+      companyName: agency.company_name,
+      siret: agency.siret,
+      address: agency.address,
+      logoUrl: loadLogoDataUrl(),
+    },
+  }
+
+  const buffer = await renderToBuffer(createElement(InvoicePDF, { data: pdfData }) as any)
+  return {
+    attachment: { filename: `${invoice.invoice_number}.pdf`, content: Buffer.from(buffer) },
+    invoiceId: invoice.id,
+    totalAmount: invoice.total_amount,
+  }
+}
+
+/**
+ * Fige l'état « envoyée » de la facture (archive PDF, sent_at, due_date, échéance
+ * financière, audit, log email) APRÈS que l'email contrat + facture est réellement
+ * parti. Mêmes effets de bord que sendInvoice, sans réenvoyer d'email (l'email a
+ * déjà été envoyé par la route du contrat avec la facture en pièce jointe).
+ */
+export async function markRestitutionInvoiceSent(invoiceId: string, buffer: Buffer, sentBy: string) {
+  const admin = createAdminClient()
+  const { data: invoice } = await admin
+    .from('invoices')
+    .select('id, invoice_number, total_amount, reservation_id, vehicle_id, client_id, payment_term_days, sent_at, clients(first_name, last_name, email)')
+    .eq('id', invoiceId)
+    .single()
+  if (!invoice || invoice.sent_at) return
+
+  const c = Array.isArray(invoice.clients) ? invoice.clients[0] : invoice.clients
+
+  const pdfPath = `invoices/${invoiceId}/${invoice.invoice_number}.pdf`
+  await admin.storage.from('contracts-pdf').upload(pdfPath, new Uint8Array(buffer), {
+    contentType: 'application/pdf', upsert: true,
+  })
+
+  const { data: { publicUrl } } = admin.storage.from('contracts-pdf').getPublicUrl(pdfPath)
+  await admin.from('documents').insert({
+    category: 'client',
+    subcategory: 'facture_restitution',
+    name: `Facture ${invoice.invoice_number} — ${c?.first_name ?? ''} ${c?.last_name ?? ''}`.trim(),
+    file_url: publicUrl,
+    file_type: 'application/pdf',
+    entity_id: invoice.client_id,
+    entity_type: 'client',
+    reservation_id: invoice.reservation_id,
+    is_auto_generated: true,
+  })
+
+  const termDays = invoice.payment_term_days ?? 30
+  const dueDate = new Date()
+  dueDate.setDate(dueDate.getDate() + termDays)
+  const dueDateStr = dueDate.toISOString().slice(0, 10)
+
+  await admin.from('invoices').update({
+    pdf_storage_path: pdfPath,
+    sent_at: new Date().toISOString(),
+    due_date: dueDateStr,
+  }).eq('id', invoiceId)
+
+  await admin.from('financial_due_dates').insert({
+    description: `Facture ${invoice.invoice_number} — ${c?.first_name ?? ''} ${c?.last_name ?? ''}`.trim(),
+    type: 'recette',
+    category: 'facturation',
+    amount: invoice.total_amount,
+    due_date: dueDateStr,
+    vehicle_id: invoice.vehicle_id,
+    invoice_id: invoiceId,
+    created_by: sentBy,
+  })
+
+  await admin.from('audit_logs').insert({
+    user_id: sentBy,
+    action: 'invoice_sent',
+    entity_type: 'invoices',
+    entity_id: invoiceId,
+    metadata: { recipient: c?.email, total: invoice.total_amount, via: 'contract_email' },
+  })
+  if (c?.email) {
+    await logEmail({
+      type: 'facture_restitution',
+      recipient: c.email,
+      subject: `Facture de restitution ${invoice.invoice_number}`,
+      status: 'envoye',
+      referenceType: 'invoice',
+      referenceId: invoiceId,
+      clientId: invoice.client_id ?? undefined,
+      sentBy,
+    })
+  }
+
+  revalidatePath(`/reservations/${invoice.reservation_id}`)
+}

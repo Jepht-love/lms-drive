@@ -107,6 +107,36 @@ export default async function DocumentsPage() {
 
   const visibleDocuments = (documents ?? []).filter(d => visibleCategories.includes(d.category))
 
+  // URLs signées pour chaque document archivé. Les documents auto-générés
+  // (contrats, factures) stockent un file_url "public" pointant vers un bucket
+  // PRIVÉ (contracts-pdf) → "bucket not found" à l'ouverture. On re-signe donc
+  // chaque URL storage à partir de son bucket + path réels.
+  const docSignedUrls: Record<string, string> = {}
+  const byBucket = new Map<string, { docId: string; path: string }[]>()
+  for (const d of visibleDocuments) {
+    const url = d.file_url as string | null
+    if (!url) continue
+    const m = url.match(/\/storage\/v1\/object\/(?:public|sign|authenticated)\/([^/]+)\/([^?]+)/)
+    if (!m) continue
+    const bucket = m[1]
+    const path = decodeURIComponent(m[2])
+    const arr = byBucket.get(bucket) ?? []
+    arr.push({ docId: d.id, path })
+    byBucket.set(bucket, arr)
+  }
+  await Promise.all(
+    [...byBucket.entries()].map(async ([bucket, entries]) => {
+      const { data } = await supabase.storage
+        .from(bucket)
+        .createSignedUrls(entries.map(e => e.path), 3600)
+      const signedByPath = new Map((data ?? []).map(s => [s.path, s.signedUrl]))
+      for (const e of entries) {
+        const signed = signedByPath.get(e.path)
+        if (signed) docSignedUrls[e.docId] = signed
+      }
+    })
+  )
+
   return (
     <DocumentsClient
       documents={visibleDocuments}
@@ -116,7 +146,7 @@ export default async function DocumentsPage() {
       userRole={userRole}
       visibleCategories={visibleCategories}
       reservationDocs={reservationDocs}
-      docSignedUrls={{}}
+      docSignedUrls={docSignedUrls}
     />
   )
 }

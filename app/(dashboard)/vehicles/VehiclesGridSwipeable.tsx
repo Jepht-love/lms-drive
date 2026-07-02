@@ -1,11 +1,9 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { Plus } from 'lucide-react'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
-import SwipeableRow from '@/components/SwipeableRow'
 import { AnimatedList, AnimatedListItem } from '@/components/AnimatedList'
 import type { Vehicle } from '@/types/database'
 import { NEED_BADGE, type NeedBadge } from '@/lib/maintenance-health'
@@ -31,8 +29,6 @@ export default function VehiclesGridSwipeable({
   needsByVehicle?: Record<string, NeedBadge[]>
   returnDateByVehicle?: Record<string, string>
 }) {
-  const router = useRouter()
-
   return (
     <AnimatedList className="grid sm:grid-cols-2 gap-3 items-start">
       {vehicles.map(v => {
@@ -41,19 +37,7 @@ export default function VehiclesGridSwipeable({
 
         return (
           <AnimatedListItem key={v.id}>
-            <SwipeableRow
-              actions={[
-                ...(v.status === 'disponible'
-                  ? [{ label: 'Réserver', color: '#16A34A', onClick: () => router.push(`/reservations/new?vehicle=${v.id}`) }]
-                  : []),
-                ...(['loue', 'reserve'].includes(v.status)
-                  ? [{ label: 'Réserver après', color: '#2563EB', onClick: () => router.push(`/reservations/new?vehicle=${v.id}`) }]
-                  : []),
-                { label: 'Statut', color: '#D97706', onClick: () => router.push(`/vehicles/${v.id}?action=status`) },
-                { label: 'Détail', color: '#374151', onClick: () => router.push(`/vehicles/${v.id}`) },
-              ]}
-            >
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all overflow-hidden">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all overflow-hidden">
               <Link href={`/vehicles/${v.id}`} className="block group active:scale-[.99]">
                 <div className="p-4">
                   <div className="flex items-start justify-between gap-2 mb-3">
@@ -135,8 +119,7 @@ export default function VehiclesGridSwipeable({
                   </Link>
                 </div>
               )}
-              </div>
-            </SwipeableRow>
+            </div>
           </AnimatedListItem>
         )
       })}

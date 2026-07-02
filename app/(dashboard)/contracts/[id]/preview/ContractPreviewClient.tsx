@@ -93,7 +93,9 @@ export default function ContractPreviewClient({ contract, reservation, vehicle, 
       URL.revokeObjectURL(url)
     }
 
-    setTimeout(() => router.push(`/contracts/${contract.id}`), 2000)
+    // Retour naturel à la liste des réservations (replace : « retour » ne rouvre
+    // pas le contrat qu'on vient de signer).
+    setTimeout(() => router.replace('/reservations'), 2000)
   }
 
   if (done) {

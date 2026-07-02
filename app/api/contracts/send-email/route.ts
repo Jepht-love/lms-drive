@@ -4,6 +4,7 @@ import { renderToBuffer, type DocumentProps } from '@react-pdf/renderer'
 import { createClient } from '@/lib/supabase/server'
 import { ContractPDF } from '@/lib/pdf/contract-template'
 import { buildContractPdfData } from '@/lib/pdf/build-contract-data'
+import { renderContractInvoiceAttachment, markRestitutionInvoiceSent } from '@/lib/actions/invoices'
 import { createElement, type ReactElement } from 'react'
 import { logEmail } from '@/lib/email/log'
 import { RESEND_FROM, resendTo } from '@/lib/email/config'
@@ -40,6 +41,19 @@ export async function POST(request: NextRequest) {
     const hasArrivee = (pdfData.inspections ?? []).some(i => i.type === 'arrivee')
     const docLabel = hasArrivee ? 'contrat de restitution (avec les états des lieux de départ et de retour)' : 'contrat de location'
 
+    // Facture de restitution jointe AU MÊME EMAIL que le contrat signé : le client
+    // reçoit le contrat détaillant l'état des lieux ET la facture des éléments
+    // facturés en une seule fois. La facture n'est marquée « envoyée » qu'après
+    // l'envoi effectif de l'email (voir plus bas). `skipped` = pas de facture à
+    // joindre (aucun frais, déjà envoyée, ou tarif incomplet) → le contrat part seul.
+    const invoiceResult = await renderContractInvoiceAttachment(contractId)
+    const invoiceAttachment = 'attachment' in invoiceResult ? invoiceResult.attachment : null
+
+    const attachments: { filename: string; content: Buffer }[] = [
+      { filename: `${contract.contract_number}.pdf`, content: Buffer.from(buffer) },
+    ]
+    if (invoiceAttachment) attachments.push(invoiceAttachment)
+
     await resend.emails.send({
       from: RESEND_FROM,
       to: resendTo(c.email),
@@ -54,17 +68,19 @@ export async function POST(request: NextRequest) {
             <strong>Retour ${hasArrivee ? '' : 'prévu '}:</strong> ${r?.end_datetime ? new Date(r.end_datetime).toLocaleString('fr-FR') : '—'}<br>
             <strong>Montant total :</strong> ${r?.total_price?.toFixed(2)} €
           </p>
+          ${invoiceAttachment ? `<p>Une <strong>facture</strong> détaillant les éléments facturés lors de la restitution est également jointe à cet email.</p>` : ''}
           <p>Conservez ce document : il détaille les conditions de location et l'état du véhicule au départ comme au retour.</p>
           <p style="color: #64748b; font-size: 12px;">— LMS Drive</p>
         </div>
       `,
-      attachments: [
-        {
-          filename: `${contract.contract_number}.pdf`,
-          content: Buffer.from(buffer),
-        },
-      ],
+      attachments,
     })
+
+    // L'email (contrat + éventuelle facture) est parti : on fige maintenant l'état
+    // « envoyée » de la facture (archive, échéance, audit) — jamais avant.
+    if ('attachment' in invoiceResult) {
+      await markRestitutionInvoiceSent(invoiceResult.invoiceId, invoiceResult.attachment.content, user.id)
+    }
 
     await supabase.from('contracts').update({ email_sent_at: new Date().toISOString() }).eq('id', contractId)
     await supabase.from('audit_logs').insert({

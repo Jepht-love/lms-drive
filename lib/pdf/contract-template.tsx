@@ -14,6 +14,7 @@ export interface DamagedZone {
   label: string
   severity: 'rayure' | 'dommage' | 'attention'
   description: string
+  photos?: string[]   // data URLs base64 des photos prises pour ce dommage
 }
 
 export interface InspectionPDFData {
@@ -53,6 +54,7 @@ export interface ContractData {
   extraKmPrice?: number
   depositAmount?: number
   depositMethod?: string
+  depositDeducted?: number   // montant retenu sur la caution (le reste est restitué)
   lateFeeAmount?: number
   lateMinutes?: number
   extraKmCount?: number
@@ -276,6 +278,45 @@ function DamageTable({ zones }: { zones: DamagedZone[] }) {
   )
 }
 
+/**
+ * Photos des dommages signalés : pour chaque zone endommagée disposant d'au moins
+ * une photo, on affiche l'élément (label + sévérité + description) À CÔTÉ de la ou
+ * des photos réellement prises pour ce dommage lors de l'état des lieux.
+ */
+function DamagePhotos({ zones }: { zones: DamagedZone[] }) {
+  const withPhotos = zones.filter(z => (z.photos?.length ?? 0) > 0)
+  if (withPhotos.length === 0) return null
+
+  const badgeStyle = (sev: string) =>
+    sev === 'dommage' ? s.badgeDommage : sev === 'rayure' ? s.badgeRayure : s.badgeAttention
+  const sevLabel = (sev: string) =>
+    sev === 'dommage' ? 'Dommage' : sev === 'rayure' ? 'Rayure' : 'Attention'
+
+  return (
+    <View style={s.section}>
+      <Text style={s.sectionTitle}>Photos des dommages signalés</Text>
+      {withPhotos.map((z, i) => (
+        <View key={i} wrap={false} style={{ flexDirection: 'row', gap: 8, marginBottom: 8, alignItems: 'flex-start' }}>
+          <View style={{ width: '32%' }}>
+            <Text style={{ fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#1e293b', marginBottom: 2 }}>{z.label}</Text>
+            <Text style={[{ fontSize: 7, fontFamily: 'Helvetica-Bold', alignSelf: 'flex-start' }, badgeStyle(z.severity)]}>
+              {sevLabel(z.severity)}
+            </Text>
+            {z.description ? (
+              <Text style={{ fontSize: 7, color: '#64748b', marginTop: 3 }}>{z.description}</Text>
+            ) : null}
+          </View>
+          <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}>
+            {z.photos!.map((url, j) => (
+              <Image key={j} src={url} style={{ width: '31%', aspectRatio: 4 / 3, borderRadius: 3, border: '1px solid #e2e8f0' }} />
+            ))}
+          </View>
+        </View>
+      ))}
+    </View>
+  )
+}
+
 // ─── EDL Page ─────────────────────────────────────────────────────────────────
 
 function InspectionPage({ insp, contractNumber, clientName, vehiclePlate, vehicleModel, companyName, logoUrl, edlImage }: {
@@ -347,6 +388,8 @@ function InspectionPage({ insp, contractNumber, clientName, vehiclePlate, vehicl
           <DamageTable zones={insp.damagedZones} />
         </View>
       </View>
+
+      <DamagePhotos zones={insp.damagedZones} />
 
       {insp.photos.length > 0 && (
         <View style={s.section}>
@@ -553,6 +596,20 @@ export function ContractPDF({ data }: { data: ContractData }) {
               <View style={s.row}><Text style={s.label}>Montant</Text><Text style={s.value}>{fmtMoney(data.depositAmount)}</Text></View>
               {data.depositMethod && (
                 <View style={s.row}><Text style={s.label}>Mode de remise</Text><Text style={s.value}>{data.depositMethod}</Text></View>
+              )}
+              {(data.depositDeducted ?? 0) > 0 && (
+                <>
+                  <View style={[s.row, { marginTop: 4, paddingTop: 4, borderTop: '1px solid #e2e8f0' }]}>
+                    <Text style={[s.label, { color: '#991b1b' }]}>Montant retenu sur la caution</Text>
+                    <Text style={[s.value, { color: '#dc2626' }]}>- {fmtMoney(data.depositDeducted)}</Text>
+                  </View>
+                  <View style={s.row}>
+                    <Text style={[s.label, { fontFamily: 'Helvetica-Bold', color: '#166534' }]}>Caution restituée au client</Text>
+                    <Text style={[s.value, { fontFamily: 'Helvetica-Bold', color: '#16a34a' }]}>
+                      {fmtMoney(Math.max((data.depositAmount ?? 0) - (data.depositDeducted ?? 0), 0))}
+                    </Text>
+                  </View>
+                </>
               )}
             </View>
           </View>

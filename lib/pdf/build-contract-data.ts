@@ -175,6 +175,7 @@ export async function buildContractPdfData(
     extraKmPrice: r?.extra_km_price ?? undefined,
     depositAmount: r?.deposit_amount ?? undefined,
     depositMethod: r?.deposit_method ?? undefined,
+    depositDeducted: r?.deposit_deducted > 0 ? r.deposit_deducted : undefined,
     lateFeeAmount: r?.late_fee_amount > 0 ? r.late_fee_amount : undefined,
     lateMinutes: r?.late_minutes > 0 ? r.late_minutes : undefined,
     extraKmCount: r?.extra_km_count > 0 ? r.extra_km_count : undefined,

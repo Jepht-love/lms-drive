@@ -55,14 +55,48 @@ export default async function VehiclesPage({
   if (busyVehicleIds.length > 0) {
     const { data: activeReservations } = await supabase
       .from('reservations')
-      .select('vehicle_id, end_datetime')
+      .select('vehicle_id, end_datetime, status')
       .in('vehicle_id', busyVehicleIds)
       .not('status', 'in', '("annulee","terminee")')
+
+    const activeStatusesByVehicle = new Map<string, string[]>()
     for (const r of activeReservations ?? []) {
-      const current = returnDateByVehicle[r.vehicle_id]
-      if (!current || r.end_datetime > current) {
-        returnDateByVehicle[r.vehicle_id] = r.end_datetime
+      if (r.end_datetime) {
+        const current = returnDateByVehicle[r.vehicle_id]
+        if (!current || r.end_datetime > current) {
+          returnDateByVehicle[r.vehicle_id] = r.end_datetime
+        }
       }
+      const arr = activeStatusesByVehicle.get(r.vehicle_id) ?? []
+      arr.push(r.status)
+      activeStatusesByVehicle.set(r.vehicle_id, arr)
+    }
+
+    // Réconciliation des statuts : un véhicule marqué loué/réservé mais SANS
+    // réservation active correspondante (statut forcé à la main, réservation
+    // supprimée, contrat clôturé sans repasser le véhicule à disponible…) est
+    // remis au statut réellement dérivé des réservations. Corrige les orphelins
+    // « loué sans date de retour ni contrat » (ex. BMW i8) dès l'ouverture de la
+    // flotte. Même dérivation que recomputeVehicleStatus ; idempotent : n'écrit
+    // qu'en cas d'écart, et corrige aussi l'affichage en mémoire immédiatement.
+    const toPersist: string[] = []
+    for (const v of allVehicles) {
+      if (!['loue', 'reserve'].includes(v.status)) continue
+      const statuses = activeStatusesByVehicle.get(v.id) ?? []
+      const hasOngoing  = statuses.some(s => ['en_cours', 'en_retard'].includes(s))
+      const hasUpcoming = statuses.some(s => ['confirmee', 'option'].includes(s))
+      const next = hasOngoing ? 'loue' : hasUpcoming ? 'reserve' : 'disponible'
+      if (next !== v.status) {
+        v.status = next
+        toPersist.push(v.id)
+      }
+    }
+    if (toPersist.length > 0) {
+      await Promise.all(
+        toPersist.map(id =>
+          supabase.from('vehicles').update({ status: allVehicles.find(x => x.id === id)!.status }).eq('id', id),
+        ),
+      )
     }
   }
 

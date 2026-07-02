@@ -64,11 +64,12 @@ export default function ContractSigningPanel({ contract, reservation, vehicle, c
     const data = await res.json()
     if (data.error) {
       setError(data.error)
+      setSending(false)
     } else {
-      setMessage('Email envoyé avec le PDF !')
-      router.refresh()
+      // Retour naturel à la liste des réservations. `replace` (et non `push`)
+      // pour que le bouton « retour » ne rouvre pas le contrat qu'on vient d'envoyer.
+      router.replace('/reservations')
     }
-    setSending(false)
   }
 
   return (
