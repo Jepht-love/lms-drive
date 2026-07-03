@@ -472,7 +472,7 @@ export default function InspectionFlow({
         )}
 
         <button
-          onClick={() => router.push(doneHref ?? (reservationId ? `/reservations/${reservationId}` : '/partnerships'))}
+          onClick={() => router.replace(doneHref ?? (reservationId ? `/reservations/${reservationId}` : '/partnerships'))}
           className="w-full py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors"
         >
           {reservationId ? 'Retour à la réservation' : 'Retour à l\'opération'}

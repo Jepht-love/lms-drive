@@ -1,6 +1,6 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
-export type UserRole = 'gerant' | 'associe' | 'employe'
+export type UserRole = 'gerant' | 'associe' | 'employe' | 'prestataire'
 export type VehicleStatus = 'disponible' | 'loue' | 'reserve' | 'maintenance' | 'hors_service' | 'en_verification' | 'immobilise' | 'mis_a_disposition' | 'a_reparer'
 export type VehicleFuelType = 'essence' | 'diesel' | 'hybride' | 'electrique'
 export type VehicleCategory = 'citadine' | 'suv' | 'sportif'

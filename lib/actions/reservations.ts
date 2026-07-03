@@ -43,7 +43,7 @@ async function postRentalRevenue(reservationId: string, userId: string) {
 
   const { data: res } = await admin
     .from('reservations')
-    .select('total_price, vehicle_id, end_datetime, reservation_number, extra_km_amount, late_fee_amount, late_fee_validated')
+    .select('total_price, vehicle_id, end_datetime, reservation_number, extra_km_amount, late_fee_amount, late_fee_validated, deposit_deducted')
     .eq('id', reservationId)
     .single()
   if (!res) return
@@ -56,7 +56,10 @@ async function postRentalRevenue(reservationId: string, userId: string) {
     .limit(1)
   if (existing && existing.length > 0) return
 
-  const date = (res.end_datetime ?? new Date().toISOString()).slice(0, 10)
+  // Date réelle de clôture (aujourd'hui), pas la date prévue de fin de location.
+  // Sans ça, les retours tardifs postent dans le passé et n'apparaissent pas dans
+  // les recettes du jour.
+  const date = new Date().toISOString().slice(0, 10)
   const base = {
     date,
     type: 'recette' as const,
@@ -74,6 +77,9 @@ async function postRentalRevenue(reservationId: string, userId: string) {
   }
   if ((res.late_fee_amount ?? 0) > 0 && res.late_fee_validated) {
     rows.push({ ...base, category: 'frais_retard', amount: res.late_fee_amount, notes: `Frais de retard ${res.reservation_number}` })
+  }
+  if ((res.deposit_deducted ?? 0) > 0) {
+    rows.push({ ...base, category: 'degats', amount: res.deposit_deducted, notes: `Caution retenue ${res.reservation_number}` })
   }
   if (rows.length) await admin.from('financial_transactions').insert(rows)
 }
@@ -100,7 +106,8 @@ export async function createReservation(formData: FormData) {
     if (await isNameBlacklisted(supabase, newFirstName, newLastName)) {
       return { error: 'Ce nom correspond à un client blacklisté — réservation impossible.' }
     }
-    const { data: newClient, error: clientErr } = await supabase
+    const admin = createAdminClient()
+    const { data: newClient, error: clientErr } = await admin
       .from('clients')
       .insert({ first_name: newFirstName, last_name: newLastName, phone: newPhone, created_by: user.id })
       .select('id')
