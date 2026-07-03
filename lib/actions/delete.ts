@@ -52,33 +52,36 @@ export async function deleteReservation(id: string) {
   const { data: reservation } = await supabase
     .from('reservations').select('vehicle_id').eq('id', id).single()
 
+  // Client admin pour bypasser la RLS sur toutes les tables liées
+  const admin = createAdminClient()
+
   // 1. Événements calendrier
-  await removeReservationFromCalendar(id)
+  await admin.from('calendar_events').delete().eq('reservation_id', id)
 
   // 2. Cascade contracts → inspections → inspection_photos
-  const { data: contracts } = await supabase
+  const { data: contracts } = await admin
     .from('contracts').select('id').eq('reservation_id', id)
   if (contracts && contracts.length > 0) {
     const contractIds = contracts.map(c => c.id)
-    const { data: inspections } = await supabase
+    const { data: inspections } = await admin
       .from('inspections').select('id').in('contract_id', contractIds)
     if (inspections && inspections.length > 0) {
       const inspectionIds = inspections.map(i => i.id)
-      await supabase.from('inspection_photos').delete().in('inspection_id', inspectionIds)
-      await supabase.from('inspections').delete().in('id', inspectionIds)
+      await admin.from('inspection_photos').delete().in('inspection_id', inspectionIds)
+      await admin.from('inspections').delete().in('id', inspectionIds)
     }
-    await supabase.from('contracts').delete().in('id', contractIds)
+    await admin.from('contracts').delete().in('id', contractIds)
   }
 
   // 3. Déréférencer les FK sans CASCADE
-  await supabase.from('tasks').update({ reservation_id: null }).eq('reservation_id', id)
-  await supabase.from('infractions').update({ reservation_id: null }).eq('reservation_id', id)
-  await supabase.from('accidents').update({ reservation_id: null }).eq('reservation_id', id)
-  await supabase.from('financial_transactions').update({ reservation_id: null }).eq('reservation_id', id)
-  await supabase.from('inter_agency_rentals').update({ client_reservation_id: null }).eq('client_reservation_id', id)
+  await admin.from('tasks').update({ reservation_id: null }).eq('reservation_id', id)
+  await admin.from('infractions').update({ reservation_id: null }).eq('reservation_id', id)
+  await admin.from('accidents').update({ reservation_id: null }).eq('reservation_id', id)
+  await admin.from('financial_transactions').update({ reservation_id: null }).eq('reservation_id', id)
+  await admin.from('inter_agency_rentals').update({ client_reservation_id: null }).eq('client_reservation_id', id)
 
   // 4. Supprimer la réservation
-  const { error } = await supabase.from('reservations').delete().eq('id', id)
+  const { error } = await admin.from('reservations').delete().eq('id', id)
   if (error) return { error: error.message }
 
   if (reservation) await recomputeVehicleStatus(supabase, reservation.vehicle_id)
