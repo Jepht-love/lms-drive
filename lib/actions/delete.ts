@@ -52,8 +52,32 @@ export async function deleteReservation(id: string) {
   const { data: reservation } = await supabase
     .from('reservations').select('vehicle_id').eq('id', id).single()
 
+  // 1. Événements calendrier
   await removeReservationFromCalendar(id)
 
+  // 2. Cascade contracts → inspections → inspection_photos
+  const { data: contracts } = await supabase
+    .from('contracts').select('id').eq('reservation_id', id)
+  if (contracts && contracts.length > 0) {
+    const contractIds = contracts.map(c => c.id)
+    const { data: inspections } = await supabase
+      .from('inspections').select('id').in('contract_id', contractIds)
+    if (inspections && inspections.length > 0) {
+      const inspectionIds = inspections.map(i => i.id)
+      await supabase.from('inspection_photos').delete().in('inspection_id', inspectionIds)
+      await supabase.from('inspections').delete().in('id', inspectionIds)
+    }
+    await supabase.from('contracts').delete().in('id', contractIds)
+  }
+
+  // 3. Déréférencer les FK sans CASCADE
+  await supabase.from('tasks').update({ reservation_id: null }).eq('reservation_id', id)
+  await supabase.from('infractions').update({ reservation_id: null }).eq('reservation_id', id)
+  await supabase.from('accidents').update({ reservation_id: null }).eq('reservation_id', id)
+  await supabase.from('financial_transactions').update({ reservation_id: null }).eq('reservation_id', id)
+  await supabase.from('inter_agency_rentals').update({ client_reservation_id: null }).eq('client_reservation_id', id)
+
+  // 4. Supprimer la réservation
   const { error } = await supabase.from('reservations').delete().eq('id', id)
   if (error) return { error: error.message }
 

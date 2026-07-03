@@ -13,12 +13,18 @@ interface DeleteButtonProps {
 export default function DeleteButton({ onConfirm, label = 'Supprimer', confirmMessage = 'Cette action est irréversible.', variant = 'icon' }: DeleteButtonProps) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
   async function handleConfirm() {
     setLoading(true)
-    await onConfirm()
+    setErrorMsg(null)
+    const result = await onConfirm()
     setLoading(false)
-    setOpen(false)
+    if (result && 'error' in result) {
+      setErrorMsg(result.error)
+    } else {
+      setOpen(false)
+    }
   }
 
   return (
@@ -47,8 +53,13 @@ export default function DeleteButton({ onConfirm, label = 'Supprimer', confirmMe
                 <p className="text-sm text-gray-500 mt-1">{confirmMessage}</p>
               </div>
             </div>
+            {errorMsg && (
+              <div className="mb-3 px-3 py-2 rounded-xl text-sm text-red-600 bg-red-50 border border-red-100">
+                {errorMsg}
+              </div>
+            )}
             <div className="flex gap-3 mt-5">
-              <button onClick={() => setOpen(false)} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50">
+              <button onClick={() => { setOpen(false); setErrorMsg(null) }} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50">
                 Annuler
               </button>
               <button onClick={handleConfirm} disabled={loading} className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-semibold disabled:opacity-50">
