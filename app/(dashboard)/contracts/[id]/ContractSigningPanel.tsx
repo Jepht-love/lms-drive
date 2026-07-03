@@ -100,7 +100,7 @@ export default function ContractSigningPanel({ contract, reservation, vehicle, c
 
           <Link
             href={`/contracts/${contract.id}/preview`}
-            className="flex items-center justify-center gap-2 w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors text-sm"
+            className="flex items-center justify-center gap-2 w-full py-3 bg-[#111111] hover:bg-gray-800 text-white font-semibold rounded-xl transition-colors text-sm"
           >
             <Eye className="w-4 h-4" />
             Prévisualiser & Faire signer
@@ -147,7 +147,7 @@ export default function ContractSigningPanel({ contract, reservation, vehicle, c
           <button
             onClick={sendEmail}
             disabled={sending || !client?.email}
-            className="w-full flex items-center justify-center gap-2 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-xl text-sm font-medium transition-colors"
+            className="w-full flex items-center justify-center gap-2 py-3 bg-[#111111] hover:bg-gray-800 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-xl text-sm font-medium transition-colors"
           >
             <Send className="w-4 h-4" />
             {sending ? 'Envoi...' : `Envoyer par email${client?.email ? '' : " (pas d'email)"}`}

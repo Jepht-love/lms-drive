@@ -32,7 +32,7 @@ export default async function InfractionsPage({
 
   const vQ = vehicle ? `&vehicle=${vehicle}` : ''
   const pill = (active: boolean) =>
-    `px-3.5 py-2 rounded-xl text-sm font-semibold whitespace-nowrap flex-shrink-0 transition-colors ${
+    `px-3.5 py-2 min-h-[44px] flex items-center rounded-xl text-sm font-semibold whitespace-nowrap flex-shrink-0 transition-colors ${
       active ? 'bg-[#111111] text-white' : 'bg-white border border-gray-100 text-gray-600 hover:bg-gray-50 shadow-sm'
     }`
 
@@ -65,6 +65,9 @@ export default async function InfractionsPage({
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 text-center">
           <FileWarning className="w-12 h-12 text-gray-200 mx-auto mb-4" />
           <p className="text-gray-400 font-medium text-sm">Aucune infraction</p>
+          <Link href="/incidents/infractions/new" className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-700 hover:text-gray-900 transition-colors">
+            Déclarer une infraction →
+          </Link>
         </div>
       ) : (
         <div className="space-y-2">

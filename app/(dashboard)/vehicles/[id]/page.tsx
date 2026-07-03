@@ -170,7 +170,7 @@ export default async function VehiclePage({ params }: { params: Promise<{ id: st
         </BackButton>
         <div className="flex-1">
           <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-2xl font-bold text-gray-900">{vehicle.brand} {vehicle.model}</h1>
+            <h1 className="text-xl font-black text-gray-900">{vehicle.brand} {vehicle.model}</h1>
             <span className="bg-gray-100 text-gray-500 text-xs font-mono font-medium px-2.5 py-1 rounded-lg tracking-wider">
               {vehicle.plate}
             </span>

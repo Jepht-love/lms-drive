@@ -604,7 +604,7 @@ export default async function DashboardPage() {
                     <span className="w-12 text-sm font-mono font-bold text-gray-600 text-center flex-shrink-0">
                       {format(new Date(task.due_datetime), 'HH:mm')}
                     </span>
-                    <span className="text-[10px] font-black uppercase px-2.5 py-1.5 rounded-full flex-shrink-0 bg-indigo-50 text-indigo-700">
+                    <span className="text-[10px] font-black uppercase px-2.5 py-1.5 rounded-full flex-shrink-0 bg-gray-100 text-gray-600">
                       {TASK_TYPE_LABELS[task.type ?? 'autre']}
                     </span>
                     <div className="flex-1 min-w-0">
@@ -642,7 +642,7 @@ export default async function DashboardPage() {
                     <span className="w-12 text-sm font-mono font-bold text-gray-600 text-center flex-shrink-0">
                       {format(new Date(t.start_at), 'HH:mm')}
                     </span>
-                    <span className="text-[10px] font-black uppercase px-2.5 py-1.5 rounded-full flex-shrink-0 bg-violet-50 text-violet-700">
+                    <span className="text-[10px] font-black uppercase px-2.5 py-1.5 rounded-full flex-shrink-0 bg-gray-100 text-gray-600">
                       TÂCHE
                     </span>
                     <div className="flex-1 min-w-0">

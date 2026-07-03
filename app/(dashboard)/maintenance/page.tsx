@@ -79,6 +79,9 @@ export default async function MaintenancePage() {
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 text-center">
           <Wrench className="w-12 h-12 text-gray-200 mx-auto mb-4" />
           <p className="text-gray-400 font-medium text-sm">Aucun véhicule dans la flotte</p>
+          <Link href="/vehicles/new" className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-700 hover:text-gray-900 transition-colors">
+            Ajouter un véhicule →
+          </Link>
         </div>
       ) : (
         <div className="space-y-2">

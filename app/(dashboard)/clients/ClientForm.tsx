@@ -198,14 +198,15 @@ export default function ClientForm({ action, client: c }: ClientFormProps) {
             defaultValue={c?.internal_notes ?? ''}
             rows={3}
             placeholder="Préférences, historique, remarques…"
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 text-sm resize-none"
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm resize-none"
           />
         </div>
       </Section>
 
+      <p className="text-[11px] text-gray-400">* Champ obligatoire</p>
       <button
         type="submit" disabled={pending}
-        className="px-6 py-3 bg-[#111111] hover:bg-gray-800 disabled:bg-gray-300 text-white font-semibold rounded-xl transition-colors text-sm"
+        className="px-6 py-3 bg-[#111111] hover:bg-gray-800 disabled:opacity-40 text-white font-semibold rounded-xl transition-colors text-sm"
       >
         {pending ? (
         <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Enregistrement…</span>
@@ -234,7 +235,7 @@ function Field({ label, name, type = 'text', defaultValue = '', required = false
       <input
         id={name} name={name} type={type} defaultValue={defaultValue}
         required={required} placeholder={placeholder} step={step}
-        className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 text-sm"
+        className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm"
       />
     </div>
   )
@@ -249,7 +250,7 @@ function SelectField({ label, name, defaultValue, options, labels }: {
       <label htmlFor={name} className="block text-xs font-medium text-gray-600 mb-1.5 uppercase tracking-wide">{label}</label>
       <select
         id={name} name={name} defaultValue={defaultValue ?? ''}
-        className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 text-sm bg-white"
+        className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white"
       >
         <option value="">— Choisir —</option>
         {options.map(o => <option key={o} value={o}>{labels?.[o] ?? o}</option>)}

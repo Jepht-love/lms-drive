@@ -101,7 +101,7 @@ export default function PaymentEditor({ reservationId, totalPrice, currentStatus
               onClick={() => setMethod(m.value)}
               className={`flex flex-col items-center gap-1 py-2 px-1 rounded-xl text-xs font-medium border transition-all ${
                 method === m.value
-                  ? 'border-blue-400 bg-blue-50 text-blue-700'
+                  ? 'border-[#111111] bg-gray-50 text-[#111111]'
                   : 'border-gray-100 bg-white text-gray-500 hover:bg-gray-50'
               }`}
             >
@@ -121,7 +121,7 @@ export default function PaymentEditor({ reservationId, totalPrice, currentStatus
             value={amount}
             onChange={e => setAmount(e.target.value)}
             placeholder={totalPrice.toString()}
-            className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20"
           />
         </div>
         <div>
@@ -131,7 +131,7 @@ export default function PaymentEditor({ reservationId, totalPrice, currentStatus
             value={ref}
             onChange={e => setRef(e.target.value)}
             placeholder="N° transaction…"
-            className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20"
           />
         </div>
       </div>
@@ -150,7 +150,7 @@ export default function PaymentEditor({ reservationId, totalPrice, currentStatus
         className={`w-full py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
           saved
             ? 'bg-green-100 text-green-700'
-            : 'bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50'
+            : 'bg-[#111111] text-white hover:bg-gray-800 disabled:opacity-50'
         }`}
       >
         {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : saved ? <Check className="w-4 h-4" /> : null}

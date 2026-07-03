@@ -84,16 +84,16 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Vehicle + client */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
-          <h3 className="font-semibold text-gray-800">Véhicule & client</h3>
+          <h3 className="font-bold text-gray-900">Véhicule & client</h3>
 
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1.5 uppercase tracking-wide">Véhicule *</label>
+            <label className="block text-[11px] font-bold text-gray-400 mb-1.5 uppercase tracking-wide">Véhicule *</label>
             <select
               name="vehicle_id"
               value={selectedVehicleId}
               onChange={e => setSelectedVehicleId(e.target.value)}
               required
-              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white"
+              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white"
             >
               <option value="">— Choisir un véhicule —</option>
               {vehicles.map(v => (
@@ -106,11 +106,11 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
 
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-xs font-medium text-gray-600 uppercase tracking-wide">Client *</label>
+              <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wide">Client *</label>
               <button
                 type="button"
                 onClick={() => setCreatingNewClient(v => !v)}
-                className="text-xs font-semibold text-blue-600 hover:underline"
+                className="text-xs font-semibold text-gray-700 hover:underline"
               >
                 {creatingNewClient ? 'Choisir un client existant' : '+ Nouveau client'}
               </button>
@@ -118,11 +118,11 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
             {creatingNewClient ? (
               <div className="grid grid-cols-3 gap-2">
                 <input name="new_client_first_name" placeholder="Prénom" required
-                  className="px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
+                  className="px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm" />
                 <input name="new_client_last_name" placeholder="Nom" required
-                  className="px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
+                  className="px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm" />
                 <input name="new_client_phone" type="tel" placeholder="Téléphone" required
-                  className="px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
+                  className="px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm" />
               </div>
             ) : (
               <div className="relative">
@@ -138,7 +138,7 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
                     setShowClientResults(false)
                   }, 150)}
                   required
-                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white"
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white"
                 />
                 {showClientResults && filteredClients.length > 0 && (
                   <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg max-h-56 overflow-y-auto">
@@ -163,21 +163,21 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
 
         {/* Dates */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
-          <h3 className="font-semibold text-gray-800">Dates</h3>
+          <h3 className="font-bold text-gray-900">Dates</h3>
 
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1.5 uppercase tracking-wide">Départ *</label>
+            <label className="block text-[11px] font-bold text-gray-400 mb-1.5 uppercase tracking-wide">Départ *</label>
             <input
               type="datetime-local"
               name="start_datetime"
               value={startDatetime}
               onChange={e => setStartDatetime(e.target.value)}
               required
-              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1.5 uppercase tracking-wide">Retour *</label>
+            <label className="block text-[11px] font-bold text-gray-400 mb-1.5 uppercase tracking-wide">Retour *</label>
             <input
               type="datetime-local"
               name="end_datetime"
@@ -185,7 +185,7 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
               onChange={e => setEndDatetime(e.target.value)}
               required
               min={startDatetime}
-              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm"
             />
           </div>
           <div className="flex gap-2">
@@ -209,10 +209,10 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
 
       {/* Tarification */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-        <h3 className="font-semibold text-gray-800 mb-4">Tarification</h3>
+        <h3 className="font-bold text-gray-900 mb-4">Tarification</h3>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1.5 uppercase tracking-wide">Prix/jour (€) *</label>
+            <label className="block text-[11px] font-bold text-gray-400 mb-1.5 uppercase tracking-wide">Prix/jour (€) *</label>
             <input
               type="number"
               name="daily_price"
@@ -221,43 +221,43 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
               required
               step="0.01"
               min="0"
-              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1.5 uppercase tracking-wide">KM inclus/jour</label>
+            <label className="block text-[11px] font-bold text-gray-400 mb-1.5 uppercase tracking-wide">KM inclus/jour</label>
             <input
               type="number"
               name="km_included"
               defaultValue={selectedVehicle?.km_included_daily?.toString() ?? ''}
-              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1.5 uppercase tracking-wide">Supplément KM (€/km)</label>
+            <label className="block text-[11px] font-bold text-gray-400 mb-1.5 uppercase tracking-wide">Supplément KM (€/km)</label>
             <input
               type="number"
               name="extra_km_price"
               defaultValue={selectedVehicle?.extra_km_price?.toString() ?? ''}
               step="0.01"
-              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1.5 uppercase tracking-wide">Caution (€)</label>
+            <label className="block text-[11px] font-bold text-gray-400 mb-1.5 uppercase tracking-wide">Caution (€)</label>
             <input
               type="number"
               name="deposit_amount"
               defaultValue={selectedVehicle?.deposit_amount?.toString() ?? ''}
               step="0.01"
-              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1.5 uppercase tracking-wide">Mode caution</label>
+            <label className="block text-[11px] font-bold text-gray-400 mb-1.5 uppercase tracking-wide">Mode caution</label>
             <select
               name="deposit_method"
-              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white"
+              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white"
             >
               <option value="">— Choisir —</option>
               <option value="especes">Espèces</option>
@@ -267,15 +267,15 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1.5 uppercase tracking-wide">Référence caution</label>
+            <label className="block text-[11px] font-bold text-gray-400 mb-1.5 uppercase tracking-wide">Référence caution</label>
             <input
               type="text"
               name="deposit_ref"
-              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1.5 uppercase tracking-wide">Acompte encaissé (€)</label>
+            <label className="block text-[11px] font-bold text-gray-400 mb-1.5 uppercase tracking-wide">Acompte encaissé (€)</label>
             <input
               type="number"
               name="payment_amount"
@@ -284,13 +284,13 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
               step="0.01"
               min="0"
               placeholder="0"
-              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm"
             />
           </div>
         </div>
 
         {totalPrice > 0 && (
-          <div className="mt-4 p-4 bg-blue-50 rounded-xl border border-blue-100 space-y-2">
+          <div className="mt-4 p-4 bg-gray-50 rounded-xl border border-gray-100 space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-blue-800">Total estimé ({days} jour{days > 1 ? 's' : ''})</span>
               <span className="text-xl font-bold text-blue-900">{formatPrice(totalPrice)}</span>
@@ -307,19 +307,20 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
 
       {/* Notes */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-        <h3 className="font-semibold text-gray-800 mb-3">Notes internes</h3>
+        <h3 className="font-bold text-gray-900 mb-3">Notes internes</h3>
         <textarea
           name="internal_notes"
           rows={2}
           placeholder="Observations, demandes spéciales..."
-          className="w-full px-4 py-3 rounded-xl border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none"
+          className="w-full px-4 py-3 rounded-xl border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm resize-none"
         />
       </div>
 
+      <p className="text-[11px] text-gray-400">* Champ obligatoire</p>
       <button
         type="submit"
         disabled={pending}
-        className="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold rounded-xl transition-colors text-sm"
+        className="px-6 py-3 bg-[#111111] hover:bg-gray-800 disabled:opacity-40 text-white font-semibold rounded-xl transition-colors text-sm"
       >
         {pending ? 'Création...' : 'Créer la réservation'}
       </button>

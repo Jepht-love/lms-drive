@@ -66,7 +66,7 @@ export default function InternalTripsClient({ vehicles, trips, isManager, curren
       {/* Action */}
       <button
         onClick={() => setShowStartForm(true)}
-        className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors text-sm"
+        className="flex items-center gap-2 px-4 py-2.5 bg-[#111111] text-white rounded-xl font-medium hover:bg-gray-800 transition-colors text-sm"
       >
         <Plus className="w-4 h-4" /> Démarrer un déplacement
       </button>
@@ -148,7 +148,7 @@ export default function InternalTripsClient({ vehicles, trips, isManager, curren
       <Drawer open={showStartForm} onClose={() => setShowStartForm(false)} title="Démarrer un déplacement">
         <form action={handleStart} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Véhicule *</label>
+            <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Véhicule *</label>
             <select
               name="vehicle_id"
               required
@@ -162,13 +162,13 @@ export default function InternalTripsClient({ vehicles, trips, isManager, curren
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Motif *</label>
+            <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Motif *</label>
             <select name="purpose" required className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white">
               {PURPOSES.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">
               KM départ * {selectedVehicle && <span className="text-gray-400 font-normal">(actuel: {selectedVehicle.current_km.toLocaleString('fr-FR')})</span>}
             </label>
             <input
@@ -180,14 +180,15 @@ export default function InternalTripsClient({ vehicles, trips, isManager, curren
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Autonomie carburant (km)</label>
+            <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Autonomie carburant (km)</label>
             <input type="number" name="fuel_start" min="0" placeholder="Autonomie en km" inputMode="numeric" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Notes</label>
+            <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Notes</label>
             <input type="text" name="purpose_notes" placeholder="Détails..." className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm" />
           </div>
           {error && <div className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{error}</div>}
+          <p className="text-[11px] text-gray-400">* Champ obligatoire</p>
           <button type="submit" disabled={loading} className="w-full py-3 bg-[#111111] text-white rounded-xl font-semibold disabled:opacity-50 transition-colors active:scale-[.97]">
             {loading ? 'Démarrage...' : 'Démarrer'}
           </button>
@@ -198,26 +199,27 @@ export default function InternalTripsClient({ vehicles, trips, isManager, curren
       <Drawer open={!!endingTrip} onClose={() => setEndingTrip(null)} title={`Terminer — ${endingTrip?.vehicle?.plate ?? ''}`}>
         <form action={handleEnd} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">
               KM retour * <span className="text-gray-400 font-normal">(départ: {endingTrip?.km_start.toLocaleString('fr-FR')})</span>
             </label>
             <input type="number" name="km_end" required min={endingTrip?.km_start} defaultValue={endingTrip?.km_start} className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm font-bold" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Autonomie carburant (km)</label>
+            <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Autonomie carburant (km)</label>
             <input type="number" name="fuel_end" min="0" placeholder="Autonomie en km" inputMode="numeric" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Péages (€)</label>
+              <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Péages (€)</label>
               <input type="number" name="tolls_amount" step="0.01" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Dépenses (€)</label>
+              <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Dépenses (€)</label>
               <input type="number" name="expenses_amount" step="0.01" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm" />
             </div>
           </div>
           {error && <div className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{error}</div>}
+          <p className="text-[11px] text-gray-400">* Champ obligatoire</p>
           <button type="submit" disabled={loading} className="w-full py-3 bg-[#111111] text-white rounded-xl font-semibold disabled:opacity-50 transition-colors active:scale-[.97]">
             {loading ? 'Enregistrement...' : 'Terminer le déplacement'}
           </button>

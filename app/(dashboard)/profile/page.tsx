@@ -21,7 +21,7 @@ export default async function ProfilePage() {
     <div className="space-y-6 max-w-2xl">
       <div className="flex items-center gap-3">
         <User className="w-6 h-6 text-gray-700" />
-        <h1 className="text-2xl font-bold text-gray-900">Mon profil</h1>
+        <h1 className="text-xl font-black text-gray-900">Mon profil</h1>
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">

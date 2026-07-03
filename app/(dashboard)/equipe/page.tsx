@@ -54,7 +54,7 @@ export default async function EquipePage() {
         </div>
         {isManager && (
           <Link href="/equipe/new"
-            className="flex items-center gap-2 bg-black text-white text-xs font-bold px-4 py-2.5 rounded-2xl">
+            className="flex items-center gap-2 bg-[#111111] text-white text-xs font-bold px-4 py-2.5 rounded-2xl">
             <UserPlus className="w-4 h-4" />
             INVITER
           </Link>
@@ -69,7 +69,7 @@ export default async function EquipePage() {
       {/* Membres inactifs */}
       {inactive.length > 0 && (
         <section>
-          <h2 className="text-[11px] font-black uppercase tracking-widest text-gray-300 mb-2">Inactifs</h2>
+          <h2 className="text-[11px] font-black uppercase tracking-widest text-gray-400 mb-2">Inactifs</h2>
           <div className="space-y-2 opacity-50">
             {inactive.map(member => <MemberCard key={member.id} member={member} tasks={0} />)}
           </div>

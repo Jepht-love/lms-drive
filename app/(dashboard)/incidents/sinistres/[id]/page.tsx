@@ -107,7 +107,7 @@ export default async function SinistreDetailPage({
           <div className="space-y-2">
             {docs.map(doc => (
               <a key={doc.id} href={doc.file_url} target="_blank" rel="noopener noreferrer"
-                className="flex items-center gap-2.5 text-sm text-blue-700 hover:text-blue-900 transition-colors">
+                className="flex items-center gap-2.5 text-sm text-[#111111] hover:text-gray-700 transition-colors">
                 <FileText className="w-4 h-4 flex-shrink-0" />
                 <span className="truncate">{doc.name}</span>
               </a>

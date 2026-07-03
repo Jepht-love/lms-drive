@@ -89,7 +89,7 @@ export default function VehicleForm({ action, vehicle }: VehicleFormProps) {
         <button
           type="submit"
           disabled={pending}
-          className="px-6 py-3 bg-[#111111] hover:bg-gray-800 disabled:opacity-60 text-white font-semibold rounded-xl transition-colors text-sm"
+          className="px-6 py-3 bg-[#111111] hover:bg-gray-800 disabled:opacity-40 text-white font-semibold rounded-xl transition-colors text-sm"
         >
           {pending ? 'Enregistrement...' : (vehicle ? 'Mettre à jour' : 'Créer le véhicule')}
         </button>
@@ -117,7 +117,7 @@ function Field({
 }) {
   return (
     <div>
-      <label htmlFor={name} className="block text-xs font-medium text-gray-600 mb-1.5 uppercase tracking-wide">
+      <label htmlFor={name} className="block text-[11px] font-bold text-gray-400 mb-1.5 uppercase tracking-wide">
         {label}
       </label>
       <input
@@ -143,7 +143,7 @@ function SelectField({
 }) {
   return (
     <div>
-      <label htmlFor={name} className="block text-xs font-medium text-gray-600 mb-1.5 uppercase tracking-wide">
+      <label htmlFor={name} className="block text-[11px] font-bold text-gray-400 mb-1.5 uppercase tracking-wide">
         {label}
       </label>
       <select

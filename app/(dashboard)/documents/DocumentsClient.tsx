@@ -225,7 +225,7 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
           <button
             key={cat}
             onClick={() => setCategory(cat)}
-            className={`flex-shrink-0 text-[12px] font-medium px-4 py-2 rounded-2xl transition-colors ${
+            className={`flex-shrink-0 text-[12px] font-medium px-4 py-2.5 min-h-[44px] flex items-center justify-center rounded-2xl transition-colors ${
               category === cat
                 ? 'bg-[#111111] text-white'
                 : 'bg-white border border-gray-200 text-gray-600'

@@ -73,7 +73,7 @@ export default function DepositInfoEditor({ reservationId, depositMethod, deposi
         <select
           value={method}
           onChange={e => setMethod(e.target.value)}
-          className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+          className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20 bg-white"
         >
           <option value="">— Non renseigné —</option>
           <option value="especes">Espèces</option>
@@ -89,14 +89,14 @@ export default function DepositInfoEditor({ reservationId, depositMethod, deposi
           value={ref}
           onChange={e => setRef(e.target.value)}
           placeholder="N° virement, référence…"
-          className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20"
         />
       </div>
       <div className="flex gap-2">
         <button
           onClick={handleSave}
           disabled={loading}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+          className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#111111] text-white text-sm font-medium hover:bg-gray-800 disabled:opacity-50 transition-colors"
         >
           {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
           Enregistrer

@@ -19,7 +19,7 @@ export default function AgencySettingsForm({ settings }: { settings: AgencySetti
     })
   }
 
-  const input = 'w-full text-sm border border-gray-200 rounded-xl px-3 py-2.5 text-gray-900 focus:outline-none focus:border-gray-400 transition-colors'
+  const input = 'w-full text-sm border border-gray-200 rounded-xl px-3 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20 focus:border-gray-400 transition-colors'
   const label = 'block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5'
 
   return (

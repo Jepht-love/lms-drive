@@ -32,7 +32,7 @@ export default async function ContractPage({ params }: { params: Promise<{ id: s
         </BackButton>
         <div className="flex-1">
           <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-2xl font-bold text-gray-900">{contract.contract_number}</h1>
+            <h1 className="text-xl font-black text-gray-900">{contract.contract_number}</h1>
             <span className={`text-sm px-3 py-1 rounded-full font-medium ${
               contract.status === 'cloture'  ? 'bg-emerald-100 text-emerald-700' :
               contract.status === 'signe'    ? 'bg-green-100 text-green-700' :

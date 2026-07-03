@@ -31,7 +31,7 @@ export default async function SettingsPage() {
       <div className="flex items-center gap-3">
         <Settings className="w-6 h-6 text-gray-700" />
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Paramètres</h1>
+          <h1 className="text-xl font-black text-gray-900">Paramètres</h1>
           <p className="text-gray-500 mt-0.5">Administration — Gérant uniquement</p>
         </div>
       </div>

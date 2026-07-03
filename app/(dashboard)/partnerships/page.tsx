@@ -21,7 +21,7 @@ export default async function PartnershipsPage({
     .order('start_date', { ascending: false })
 
   const tab = (active: boolean) =>
-    `flex-1 text-sm font-semibold py-2.5 rounded-xl transition-colors ${
+    `flex-1 text-sm font-semibold py-2.5 min-h-[44px] flex items-center justify-center rounded-xl transition-colors ${
       active ? 'bg-[#111111] text-white' : 'bg-white border border-gray-100 text-gray-600 hover:bg-gray-50 shadow-sm'
     }`
 

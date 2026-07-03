@@ -40,7 +40,7 @@ export default function ValidateContractButton({ contractId }: { contractId: str
           </button>
           <button
             onClick={handleValidate}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 transition-colors"
+            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-[#111111] text-white text-sm font-semibold hover:bg-gray-800 transition-colors"
           >
             <ShieldCheck className="w-3.5 h-3.5" /> Confirmer
           </button>
@@ -54,7 +54,7 @@ export default function ValidateContractButton({ contractId }: { contractId: str
       <button
         onClick={() => setStep('confirm')}
         disabled={step === 'loading'}
-        className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-semibold text-sm bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60 transition-colors shadow-sm"
+        className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-semibold text-sm bg-[#111111] text-white hover:bg-gray-800 disabled:opacity-40 transition-colors shadow-sm"
       >
         {step === 'loading' ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
         {step === 'loading' ? 'Validation…' : 'Valider & clôturer le contrat'}

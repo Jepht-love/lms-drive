@@ -21,7 +21,7 @@ export default async function MarketingPage({
   const { data: campaigns } = await query
 
   const tabStyle = (active: boolean) =>
-    `flex-shrink-0 text-[12px] font-medium px-4 py-2 rounded-2xl transition-colors ${
+    `flex-shrink-0 text-[12px] font-medium px-4 py-2.5 min-h-[44px] flex items-center justify-center rounded-2xl transition-colors ${
       active ? 'bg-[#111111] text-white' : 'bg-white border border-gray-200 text-gray-600'
     }`
 
@@ -64,6 +64,9 @@ export default async function MarketingPage({
           </div>
           <p className="text-[14px] font-medium text-gray-500 mb-1">Aucune campagne</p>
           <p className="text-[12px] text-gray-400">Créez votre première campagne marketing.</p>
+          <Link href="/marketing/new" className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-700 hover:text-gray-900 transition-colors">
+            Créer une campagne →
+          </Link>
         </div>
       ) : (
         <AnimatedList className="space-y-3">
