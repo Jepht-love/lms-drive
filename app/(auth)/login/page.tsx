@@ -33,14 +33,13 @@ export default function LoginPage() {
       <div className="hidden lg:flex flex-col justify-between w-[45%] p-14" style={{ background: '#0A0A0A', borderRight: '1px solid #1E1E1E' }}>
         <div>
           <Image
-            src="/logo.png"
+            src="/logo.webp"
             alt="LMS Drive"
             width={180}
             height={66}
             className="object-contain"
             style={{ filter: 'invert(1)', mixBlendMode: 'screen' }}
             priority
-            unoptimized
           />
         </div>
 
@@ -62,14 +61,13 @@ export default function LoginPage() {
         {/* Logo mobile uniquement */}
         <div className="lg:hidden mb-12">
           <Image
-            src="/logo.png"
+            src="/logo.webp"
             alt="LMS Drive"
             width={130}
             height={50}
             className="object-contain"
             style={{ filter: 'invert(1)', mixBlendMode: 'screen' }}
             priority
-            unoptimized
           />
         </div>
 

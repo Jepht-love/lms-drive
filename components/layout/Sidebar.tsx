@@ -64,14 +64,13 @@ export default function Sidebar({ profile, unreadCount = 0 }: SidebarProps) {
   const LogoBlock = ({ compact = false }: { compact?: boolean }) => (
     <div className={compact ? 'flex items-center h-8' : 'flex items-center h-10'}>
       <Image
-        src="/logo.png"
+        src="/logo.webp"
         alt="LMS Drive"
         width={compact ? 90 : 120}
         height={compact ? 32 : 40}
         className="object-contain"
         style={{ filter: 'invert(1)', mixBlendMode: 'screen', marginTop: '-8px' }}
         priority
-        unoptimized
       />
     </div>
   )

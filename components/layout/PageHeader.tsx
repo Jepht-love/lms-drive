@@ -24,14 +24,13 @@ export default function PageHeader({ title }: PageHeaderProps) {
 
         {/* Centre : logo blanc */}
         <Image
-          src="/logo-white.png"
+          src="/logo-white.webp"
           alt="LMS Drive"
-          width={543}
-          height={300}
+          width={200}
+          height={110}
           className="object-contain"
           style={{ height: 48, width: 'auto', maxWidth: 200 }}
           priority
-          unoptimized
         />
 
         {/* Droite : espace symétrique pour centrer le logo (cloche retirée —
