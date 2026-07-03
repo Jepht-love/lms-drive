@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, FileText } from 'lucide-react'
 import BackButton from '@/components/ui/BackButton'
 import { formatPrice, formatDate } from '@/lib/utils'
 import { SINISTRE_STATUS } from '@/lib/incidents'
@@ -42,6 +42,13 @@ export default async function SinistreDetailPage({
     const { data: p } = await supabase.from('profiles').select('full_name').eq('id', acc.internal_user_id).single()
     internalName = p?.full_name ?? null
   }
+
+  const { data: docs } = await supabase
+    .from('documents')
+    .select('id, name, file_url, file_type')
+    .eq('entity_id', acc.vehicle_id)
+    .eq('subcategory', 'pv_expertise')
+    .order('created_at', { ascending: false })
 
   return (
     <div className="space-y-4">
@@ -91,6 +98,21 @@ export default async function SinistreDetailPage({
         <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4">
           <p className="text-[11px] font-bold uppercase tracking-widest text-amber-700/70 mb-1.5">Notes</p>
           <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">{acc.notes}</p>
+        </div>
+      )}
+
+      {docs && docs.length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-3">Justificatifs</p>
+          <div className="space-y-2">
+            {docs.map(doc => (
+              <a key={doc.id} href={doc.file_url} target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-2.5 text-sm text-blue-700 hover:text-blue-900 transition-colors">
+                <FileText className="w-4 h-4 flex-shrink-0" />
+                <span className="truncate">{doc.name}</span>
+              </a>
+            ))}
+          </div>
         </div>
       )}
     </div>

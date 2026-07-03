@@ -152,6 +152,21 @@ export default async function AnalyticsPage() {
       : null,
   })).filter(c => c.budget > 0)
 
+  // C9 — CA par canal d'acquisition
+  const clientChannelMap = new Map((clients ?? []).map(c => [c.id, c.acquisition_channel]))
+  const revenueByChannel = new Map<string, { count: number; revenue: number }>()
+  reservations?.forEach(r => {
+    const channel = clientChannelMap.get(r.client_id)
+    if (!channel) return
+    const e = revenueByChannel.get(channel) ?? { count: 0, revenue: 0 }
+    e.count++
+    e.revenue += r.total_price ?? 0
+    revenueByChannel.set(channel, e)
+  })
+  const roiByChannel = [...revenueByChannel.entries()]
+    .sort((a, b) => b[1].revenue - a[1].revenue)
+    .slice(0, 6)
+
   // C8 — Habitudes de consommation : durée moyenne de location, fréquence par client
   const durations = (reservations ?? []).map(r =>
     Math.max(1, Math.round((new Date(r.end_datetime).getTime() - new Date(r.start_datetime).getTime()) / 86400000)),
@@ -315,6 +330,28 @@ export default async function AnalyticsPage() {
                 <span className="text-[13px] font-black text-[#111111]">
                   {c.costPerClient != null ? formatPrice(c.costPerClient) : '—'} / client
                 </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* C9 — CA par canal d'acquisition */}
+      {roiByChannel.length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1">CA par canal d'acquisition</p>
+          <p className="text-[11px] text-gray-400 mb-4">Revenus des locations terminées, groupés par canal client</p>
+          <div className="space-y-3">
+            {roiByChannel.map(([channel, e]) => (
+              <div key={channel} className="flex items-center justify-between">
+                <div>
+                  <p className="text-[13px] font-medium text-[#111111] capitalize">{channel}</p>
+                  <p className="text-[11px] text-gray-400">{e.count} location{e.count > 1 ? 's' : ''}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[13px] font-black text-[#111111]">{formatPrice(e.revenue)}</p>
+                  <p className="text-[11px] text-gray-400">{formatPrice(e.count > 0 ? e.revenue / e.count : 0)} / loc.</p>
+                </div>
               </div>
             ))}
           </div>

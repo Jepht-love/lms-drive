@@ -78,6 +78,32 @@ export async function createInfraction(formData: FormData) {
     } catch { /* archivage non bloquant */ }
   }
 
+  // Justificatif optionnel (avis, photo, scan…) → Documents › Véhicule
+  const justificatif = formData.get('justificatif') as File | null
+  if (justificatif && justificatif.size > 0) {
+    const ext = justificatif.name.split('.').pop() || 'pdf'
+    const path = `vehicule/infraction/${Date.now()}-${vehicleId}.${ext}`
+    const ab = await justificatif.arrayBuffer()
+    const { error: upErr } = await supabase.storage.from('documents').upload(path, ab, { contentType: justificatif.type })
+    if (!upErr) {
+      const { data: { publicUrl } } = supabase.storage.from('documents').getPublicUrl(path)
+      const { data: veh } = await supabase.from('vehicles').select('brand, model, plate').eq('id', vehicleId).single()
+      const vehLabel = veh ? `${veh.brand} ${veh.model}${veh.plate ? ` (${veh.plate})` : ''}` : ''
+      await supabase.from('documents').insert({
+        category: 'vehicule',
+        subcategory: 'infraction',
+        name: `Infraction ${infractionDate} — ${vehLabel}`,
+        file_url: publicUrl,
+        file_type: justificatif.type,
+        file_size: justificatif.size,
+        entity_id: vehicleId,
+        entity_type: 'vehicle',
+        is_auto_generated: false,
+        created_by: user.id,
+      })
+    }
+  }
+
   revalidatePath('/incidents/infractions')
   return { success: true, id: data.id }
 }
