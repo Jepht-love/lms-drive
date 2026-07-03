@@ -95,7 +95,7 @@ export default function ContractPreviewClient({ contract, reservation, vehicle, 
 
     // Retour naturel à la liste des réservations (replace : « retour » ne rouvre
     // pas le contrat qu'on vient de signer).
-    setTimeout(() => router.replace('/reservations'), 2000)
+    setTimeout(() => router.replace(reservation?.id ? `/reservations/${reservation.id}` : '/reservations'), 2000)
   }
 
   if (done) {

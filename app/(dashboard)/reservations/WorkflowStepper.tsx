@@ -54,6 +54,14 @@ export default function WorkflowStepper({
       active: !step1Done,
       resetAction: null as ((() => Promise<void>) | null),
       resetLabel: null as string | null,
+      action: step1Done && contractId ? (
+        <Link
+          href={`/contracts/${contractId}`}
+          className="text-xs text-emerald-600 hover:underline font-medium mt-1 block"
+        >
+          Voir le contrat →
+        </Link>
+      ) : null,
     },
     {
       num: 2,

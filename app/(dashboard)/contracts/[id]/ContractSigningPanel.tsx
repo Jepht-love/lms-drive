@@ -68,7 +68,7 @@ export default function ContractSigningPanel({ contract, reservation, vehicle, c
     } else {
       // Retour naturel à la liste des réservations. `replace` (et non `push`)
       // pour que le bouton « retour » ne rouvre pas le contrat qu'on vient d'envoyer.
-      router.replace('/reservations')
+      router.replace(reservation?.id ? `/reservations/${reservation.id}` : '/reservations')
     }
   }
 
