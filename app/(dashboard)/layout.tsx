@@ -6,6 +6,7 @@ import PageTransition from '@/components/layout/PageTransition'
 import ContentWrapper from '@/app/(dashboard)/ContentWrapper'
 import AlertCountProvider from '@/components/layout/AlertCountProvider'
 import { ToastProvider } from '@/components/Toast'
+import OfflineBanner from '@/components/layout/OfflineBanner'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -49,6 +50,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             overflow: 'hidden',
           }}
         >
+          <OfflineBanner />
           <PageHeader />
           <main style={{ overflowY: 'auto', overscrollBehavior: 'none', WebkitOverflowScrolling: 'touch', minHeight: 0 } as React.CSSProperties}>
             <PageTransition>

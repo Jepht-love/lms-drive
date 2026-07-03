@@ -38,12 +38,17 @@ if (isLocalDev) {
   // ═════════════════════════════════════════════════════════════════════════
   // PROD — Cache PWA
   // ═════════════════════════════════════════════════════════════════════════
-  const CACHE_VERSION = 'v29'
+  const CACHE_VERSION = 'v30'
   const STATIC_CACHE = `lms-static-${CACHE_VERSION}`
   const PAGES_CACHE = `lms-pages-${CACHE_VERSION}`
   const ALL_CACHES = [STATIC_CACHE, PAGES_CACHE]
 
-  const PRECACHE_PAGES = ['/', '/menu', '/calendar', '/vehicles', '/clients', '/reservations', '/offline']
+  const PRECACHE_PAGES = [
+    '/', '/menu', '/offline',
+    '/reservations', '/vehicles', '/clients',
+    '/calendrier', '/alertes', '/incidents',
+    '/maintenance', '/documents', '/equipe',
+  ]
 
   self.addEventListener('install', (event) => {
     event.waitUntil(
