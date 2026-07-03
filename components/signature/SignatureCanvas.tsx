@@ -101,16 +101,16 @@ export default function SignatureCanvas({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <label className="text-sm font-medium text-slate-700">{label}</label>
+        <label className="text-sm font-medium text-gray-700">{label}</label>
         <button
           type="button"
           onClick={clear}
-          className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-red-600 transition-colors px-2 py-1 rounded-lg hover:bg-red-50"
+          className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-red-600 transition-colors px-2 py-1 rounded-lg hover:bg-red-50"
         >
           <Trash2 className="w-3.5 h-3.5" /> Effacer
         </button>
       </div>
-      <div className="border-2 border-dashed border-slate-200 rounded-xl overflow-hidden bg-slate-50 relative">
+      <div className="border-2 border-dashed border-gray-200 rounded-xl overflow-hidden bg-gray-50 relative">
         <canvas
           ref={canvasRef}
           width={width}
@@ -124,11 +124,11 @@ export default function SignatureCanvas({
         />
         {!hasDrawn.current && !existingSig && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <p className="text-slate-300 text-sm">Signez ici</p>
+            <p className="text-gray-300 text-sm">Signez ici</p>
           </div>
         )}
       </div>
-      <p className="text-xs text-slate-400 text-center">Utilisez votre doigt ou un stylet</p>
+      <p className="text-xs text-gray-400 text-center">Utilisez votre doigt ou un stylet</p>
     </div>
   )
 }

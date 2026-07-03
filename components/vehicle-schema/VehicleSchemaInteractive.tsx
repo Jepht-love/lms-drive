@@ -161,7 +161,7 @@ export default function VehicleSchemaInteractive({ damagedZones, onZoneClick }: 
             {intState.severity}
           </span>
         ) : (
-          <span className="text-xs text-slate-400">Appuyer pour signaler</span>
+          <span className="text-xs text-gray-400">Appuyer pour signaler</span>
         )}
       </button>
     </div>

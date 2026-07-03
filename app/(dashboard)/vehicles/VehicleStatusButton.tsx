@@ -24,7 +24,7 @@ export default function VehicleStatusButton({ vehicleId, currentStatus }: {
 
   return (
     <div className="space-y-2">
-      <p className="text-xs text-slate-500 mb-2">Changer le statut manuellement :</p>
+      <p className="text-xs text-gray-500 mb-2">Changer le statut manuellement :</p>
       {STATUSES.map(s => (
         <button
           key={s}
@@ -33,14 +33,14 @@ export default function VehicleStatusButton({ vehicleId, currentStatus }: {
           className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl border text-sm font-medium transition-all disabled:opacity-50 ${
             s === status
               ? getVehicleStatusColor(s) + ' cursor-default'
-              : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+              : 'border-gray-200 text-gray-600 hover:bg-gray-50'
           }`}
         >
           <span className="capitalize">{getVehicleStatusLabel(s)}</span>
           {s === status && <span className="text-xs">● Actuel</span>}
         </button>
       ))}
-      {loading && <p className="text-xs text-slate-400 text-center">Mise à jour...</p>}
+      {loading && <p className="text-xs text-gray-400 text-center">Mise à jour...</p>}
     </div>
   )
 }

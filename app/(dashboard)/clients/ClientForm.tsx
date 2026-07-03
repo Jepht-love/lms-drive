@@ -50,14 +50,14 @@ function PhotoUpload({ label, name, existingUrl }: { label: string; name: string
   return (
     <div>
       <div className="min-h-[2.5rem] flex items-end mb-1.5">
-        <label className="text-xs font-medium text-slate-600 uppercase tracking-wide">{label}</label>
+        <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">{label}</label>
       </div>
       <input ref={inputRef} type="file" name={name} accept="image/*" capture="environment" className="hidden" onChange={handleChange} />
       <button
         type="button"
         onClick={() => inputRef.current?.click()}
         className={`w-full h-28 rounded-xl border-2 border-dashed transition-all flex flex-col items-center justify-center gap-2 ${
-          preview ? 'border-green-300 bg-green-50' : 'border-slate-200 bg-slate-50 hover:border-slate-300'
+          preview ? 'border-green-300 bg-green-50' : 'border-gray-200 bg-gray-50 hover:border-gray-300'
         }`}
       >
         {preview ? (
@@ -69,8 +69,8 @@ function PhotoUpload({ label, name, existingUrl }: { label: string; name: string
           </div>
         ) : (
           <>
-            <Camera className="w-6 h-6 text-slate-300" />
-            <span className="text-xs text-slate-400 text-center px-2">Appuyer pour prendre une photo ou importer</span>
+            <Camera className="w-6 h-6 text-gray-300" />
+            <span className="text-xs text-gray-400 text-center px-2">Appuyer pour prendre une photo ou importer</span>
           </>
         )}
       </button>
@@ -171,7 +171,7 @@ export default function ClientForm({ action, client: c }: ClientFormProps) {
           <PhotoUpload label="Permis de conduire (verso)" name="license_back" existingUrl={c?.license_back_path} />
           <PhotoUpload label="Justificatif de domicile" name="proof_of_address" existingUrl={c?.proof_of_address_path} />
         </div>
-        <p className="text-xs text-slate-400 mt-2 flex items-center gap-1.5">
+        <p className="text-xs text-gray-400 mt-2 flex items-center gap-1.5">
           <Upload className="w-3 h-3" />
           Les documents sont stockés de façon sécurisée et accessibles uniquement aux membres autorisés.
         </p>
@@ -192,20 +192,20 @@ export default function ClientForm({ action, client: c }: ClientFormProps) {
           <Field label="Canal d'acquisition" name="acquisition_channel" defaultValue={c?.acquisition_channel ?? ''} placeholder="Bouche à oreille, Internet…" />
         </div>
         <div className="mt-4">
-          <label className="block text-xs font-medium text-slate-600 mb-1.5 uppercase tracking-wide">Notes internes</label>
+          <label className="block text-xs font-medium text-gray-600 mb-1.5 uppercase tracking-wide">Notes internes</label>
           <textarea
             name="internal_notes"
             defaultValue={c?.internal_notes ?? ''}
             rows={3}
             placeholder="Préférences, historique, remarques…"
-            className="w-full px-4 py-3 rounded-xl border border-slate-200 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 text-sm resize-none"
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 text-sm resize-none"
           />
         </div>
       </Section>
 
       <button
         type="submit" disabled={pending}
-        className="px-6 py-3 bg-slate-900 hover:bg-slate-800 disabled:bg-slate-300 text-white font-semibold rounded-xl transition-colors text-sm"
+        className="px-6 py-3 bg-[#111111] hover:bg-gray-800 disabled:bg-gray-300 text-white font-semibold rounded-xl transition-colors text-sm"
       >
         {pending ? (
         <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Enregistrement…</span>
@@ -217,8 +217,8 @@ export default function ClientForm({ action, client: c }: ClientFormProps) {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-      <h3 className="font-semibold text-slate-800 mb-4 text-base">{title}</h3>
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+      <h3 className="font-semibold text-gray-800 mb-4 text-base">{title}</h3>
       {children}
     </div>
   )
@@ -230,11 +230,11 @@ function Field({ label, name, type = 'text', defaultValue = '', required = false
 }) {
   return (
     <div>
-      <label htmlFor={name} className="block text-xs font-medium text-slate-600 mb-1.5 uppercase tracking-wide">{label}</label>
+      <label htmlFor={name} className="block text-xs font-medium text-gray-600 mb-1.5 uppercase tracking-wide">{label}</label>
       <input
         id={name} name={name} type={type} defaultValue={defaultValue}
         required={required} placeholder={placeholder} step={step}
-        className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 text-sm"
+        className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 text-sm"
       />
     </div>
   )
@@ -246,10 +246,10 @@ function SelectField({ label, name, defaultValue, options, labels }: {
 }) {
   return (
     <div>
-      <label htmlFor={name} className="block text-xs font-medium text-slate-600 mb-1.5 uppercase tracking-wide">{label}</label>
+      <label htmlFor={name} className="block text-xs font-medium text-gray-600 mb-1.5 uppercase tracking-wide">{label}</label>
       <select
         id={name} name={name} defaultValue={defaultValue ?? ''}
-        className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900 text-sm bg-white"
+        className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 text-sm bg-white"
       >
         <option value="">— Choisir —</option>
         {options.map(o => <option key={o} value={o}>{labels?.[o] ?? o}</option>)}

@@ -27,17 +27,17 @@ export default async function ContractPage({ params }: { params: Promise<{ id: s
   return (
     <div className="space-y-6">
       <div className="flex items-start gap-4">
-        <BackButton fallbackHref={reservation?.id ? `/reservations/${reservation.id}` : '/reservations'} className="p-2 rounded-xl hover:bg-slate-100 transition-colors mt-1">
-          <ArrowLeft className="w-5 h-5 text-slate-600" />
+        <BackButton fallbackHref={reservation?.id ? `/reservations/${reservation.id}` : '/reservations'} className="p-2 rounded-xl hover:bg-gray-100 transition-colors mt-1">
+          <ArrowLeft className="w-5 h-5 text-gray-600" />
         </BackButton>
         <div className="flex-1">
           <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-2xl font-bold text-slate-900">{contract.contract_number}</h1>
+            <h1 className="text-2xl font-bold text-gray-900">{contract.contract_number}</h1>
             <span className={`text-sm px-3 py-1 rounded-full font-medium ${
               contract.status === 'cloture'  ? 'bg-emerald-100 text-emerald-700' :
               contract.status === 'signe'    ? 'bg-green-100 text-green-700' :
               contract.status === 'a_signer' ? 'bg-amber-100 text-amber-700' :
-              'bg-slate-100 text-slate-600'
+              'bg-gray-100 text-gray-600'
             }`}>
               {contract.status === 'cloture' ? 'Clôturé' :
                contract.status === 'signe'   ? 'Signé' :
@@ -56,45 +56,45 @@ export default async function ContractPage({ params }: { params: Promise<{ id: s
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Contract preview */}
         <div className="space-y-4">
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
             {/* Header */}
-            <div className="flex items-start justify-between mb-6 pb-4 border-b border-slate-100">
+            <div className="flex items-start justify-between mb-6 pb-4 border-b border-gray-100">
               <div>
-                <h2 className="text-xl font-bold text-slate-900">LMS Drive</h2>
-                <p className="text-sm text-slate-500">Contrat de location de véhicule</p>
+                <h2 className="text-xl font-bold text-gray-900">LMS Drive</h2>
+                <p className="text-sm text-gray-500">Contrat de location de véhicule</p>
               </div>
               <div className="text-right">
-                <p className="font-mono text-sm font-bold text-slate-700">{contract.contract_number}</p>
-                <p className="text-xs text-slate-400">Réf. {reservation?.reservation_number}</p>
+                <p className="font-mono text-sm font-bold text-gray-700">{contract.contract_number}</p>
+                <p className="text-xs text-gray-400">Réf. {reservation?.reservation_number}</p>
               </div>
             </div>
 
             {/* Parties */}
             <div className="grid grid-cols-2 gap-4 mb-6">
               <div>
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Loueur</p>
-                <p className="font-semibold text-slate-900">LMS Drive</p>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Loueur</p>
+                <p className="font-semibold text-gray-900">LMS Drive</p>
               </div>
               <div>
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Locataire</p>
-                <p className="font-semibold text-slate-900">{client?.first_name} {client?.last_name}</p>
-                <p className="text-sm text-slate-500">{client?.phone}</p>
-                {client?.email && <p className="text-xs text-slate-400">{client?.email}</p>}
-                {client?.address && <p className="text-xs text-slate-400">{client?.address}</p>}
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Locataire</p>
+                <p className="font-semibold text-gray-900">{client?.first_name} {client?.last_name}</p>
+                <p className="text-sm text-gray-500">{client?.phone}</p>
+                {client?.email && <p className="text-xs text-gray-400">{client?.email}</p>}
+                {client?.address && <p className="text-xs text-gray-400">{client?.address}</p>}
                 {client?.license_number && (
-                  <p className="text-xs text-slate-400">Permis : {client?.license_number}</p>
+                  <p className="text-xs text-gray-400">Permis : {client?.license_number}</p>
                 )}
               </div>
             </div>
 
             {/* Vehicle */}
-            <div className="bg-slate-50 rounded-xl p-3 mb-4">
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Véhicule</p>
-              <p className="font-bold text-slate-900">{vehicle?.brand} {vehicle?.model} {vehicle?.version}</p>
+            <div className="bg-gray-50 rounded-xl p-3 mb-4">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Véhicule</p>
+              <p className="font-bold text-gray-900">{vehicle?.brand} {vehicle?.model} {vehicle?.version}</p>
               <div className="flex items-center gap-3 mt-1">
-                <span className="bg-slate-100 text-slate-500 text-[10px] font-mono px-2 py-0.5 rounded">{vehicle?.plate}</span>
-                {vehicle?.color && <span className="text-xs text-slate-500">{vehicle?.color}</span>}
-                {vehicle?.vin && <span className="text-xs text-slate-400">VIN: {vehicle?.vin}</span>}
+                <span className="bg-gray-100 text-gray-500 text-[10px] font-mono px-2 py-0.5 rounded">{vehicle?.plate}</span>
+                {vehicle?.color && <span className="text-xs text-gray-500">{vehicle?.color}</span>}
+                {vehicle?.vin && <span className="text-xs text-gray-400">VIN: {vehicle?.vin}</span>}
               </div>
             </div>
 
@@ -102,22 +102,22 @@ export default async function ContractPage({ params }: { params: Promise<{ id: s
             <div className="grid grid-cols-2 gap-3 mb-4">
               <div className="bg-blue-50 rounded-xl p-3">
                 <p className="text-xs text-blue-600 font-medium mb-1">Départ</p>
-                <p className="font-semibold text-slate-900 text-sm">{formatDateTime(reservation?.start_datetime)}</p>
+                <p className="font-semibold text-gray-900 text-sm">{formatDateTime(reservation?.start_datetime)}</p>
               </div>
               <div className="bg-purple-50 rounded-xl p-3">
                 <p className="text-xs text-purple-600 font-medium mb-1">Retour prévu</p>
-                <p className="font-semibold text-slate-900 text-sm">{formatDateTime(reservation?.end_datetime)}</p>
+                <p className="font-semibold text-gray-900 text-sm">{formatDateTime(reservation?.end_datetime)}</p>
               </div>
             </div>
 
             <div className="grid grid-cols-3 gap-2 mb-4 text-center">
-              <div className="bg-slate-50 rounded-xl p-2">
-                <p className="text-xs text-slate-500">Prix/jour</p>
-                <p className="font-bold text-slate-900">{formatPrice(reservation?.daily_price)}</p>
+              <div className="bg-gray-50 rounded-xl p-2">
+                <p className="text-xs text-gray-500">Prix/jour</p>
+                <p className="font-bold text-gray-900">{formatPrice(reservation?.daily_price)}</p>
               </div>
-              <div className="bg-slate-50 rounded-xl p-2">
-                <p className="text-xs text-slate-500">KM inclus</p>
-                <p className="font-bold text-slate-900">{reservation?.km_included ?? '∞'}</p>
+              <div className="bg-gray-50 rounded-xl p-2">
+                <p className="text-xs text-gray-500">KM inclus</p>
+                <p className="font-bold text-gray-900">{reservation?.km_included ?? '∞'}</p>
               </div>
               <div className="bg-green-50 rounded-xl p-2">
                 <p className="text-xs text-green-700">Total</p>
@@ -139,21 +139,21 @@ export default async function ContractPage({ params }: { params: Promise<{ id: s
 
             {/* Signatures display */}
             {contract.client_signature_svg && (
-              <div className="mt-4 pt-4 border-t border-slate-100">
+              <div className="mt-4 pt-4 border-t border-gray-100">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-xs text-slate-500 mb-1">Signature client</p>
-                    <img src={contract.client_signature_svg} alt="Signature client" className="border border-slate-200 rounded-lg w-full h-20 object-contain bg-white" />
+                    <p className="text-xs text-gray-500 mb-1">Signature client</p>
+                    <img src={contract.client_signature_svg} alt="Signature client" className="border border-gray-200 rounded-lg w-full h-20 object-contain bg-white" />
                   </div>
                   {contract.agent_signature_svg && (
                     <div>
-                      <p className="text-xs text-slate-500 mb-1">Signature agent</p>
-                      <img src={contract.agent_signature_svg} alt="Signature agent" className="border border-slate-200 rounded-lg w-full h-20 object-contain bg-white" />
+                      <p className="text-xs text-gray-500 mb-1">Signature agent</p>
+                      <img src={contract.agent_signature_svg} alt="Signature agent" className="border border-gray-200 rounded-lg w-full h-20 object-contain bg-white" />
                     </div>
                   )}
                 </div>
                 {contract.signed_at && (
-                  <p className="text-xs text-slate-400 mt-2 text-center">
+                  <p className="text-xs text-gray-400 mt-2 text-center">
                     Signé le {formatDateTime(contract.signed_at)}
                   </p>
                 )}

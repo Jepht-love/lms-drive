@@ -79,9 +79,11 @@ export default function VehicleForm({ action, vehicle }: VehicleFormProps) {
           defaultValue={v?.notes ?? ''}
           rows={3}
           placeholder="Observations, historique..."
-          className="w-full px-4 py-3 rounded-xl border border-slate-200 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none"
+          className="w-full px-4 py-3 rounded-xl border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm resize-none"
         />
       </Section>
+
+      <p className="text-[11px] text-gray-400">* Champ obligatoire</p>
 
       <div className="flex gap-3">
         <button
@@ -98,8 +100,8 @@ export default function VehicleForm({ action, vehicle }: VehicleFormProps) {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-      <h3 className="font-semibold text-slate-800 mb-4">{title}</h3>
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+      <h3 className="font-semibold text-gray-800 mb-4">{title}</h3>
       {children}
     </div>
   )
@@ -115,7 +117,7 @@ function Field({
 }) {
   return (
     <div>
-      <label htmlFor={name} className="block text-xs font-medium text-slate-600 mb-1.5 uppercase tracking-wide">
+      <label htmlFor={name} className="block text-xs font-medium text-gray-600 mb-1.5 uppercase tracking-wide">
         {label}
       </label>
       <input
@@ -128,7 +130,7 @@ function Field({
         min={min}
         max={max}
         step={step}
-        className={`w-full px-3 py-2.5 rounded-xl border border-slate-200 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${className ?? ''}`}
+        className={`w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm ${className ?? ''}`}
       />
     </div>
   )
@@ -141,14 +143,14 @@ function SelectField({
 }) {
   return (
     <div>
-      <label htmlFor={name} className="block text-xs font-medium text-slate-600 mb-1.5 uppercase tracking-wide">
+      <label htmlFor={name} className="block text-xs font-medium text-gray-600 mb-1.5 uppercase tracking-wide">
         {label}
       </label>
       <select
         id={name}
         name={name}
         defaultValue={defaultValue ?? ''}
-        className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white"
+        className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white"
       >
         <option value="">— Choisir —</option>
         {options.map(o => (

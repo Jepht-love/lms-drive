@@ -29,8 +29,8 @@ export default function DashboardKPIs({ currentPeriod }: { currentPeriod: string
           onClick={() => changePeriod(p.value)}
           className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
             currentPeriod === p.value
-              ? 'bg-slate-900 text-white'
-              : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+              ? 'bg-[#111111] text-white'
+              : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
           }`}
         >
           {p.label}

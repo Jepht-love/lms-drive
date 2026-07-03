@@ -165,26 +165,26 @@ export default async function VehiclePage({ params }: { params: Promise<{ id: st
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-start gap-4">
-        <BackButton fallbackHref="/vehicles" className="p-2 rounded-xl hover:bg-slate-100 transition-colors mt-1">
-          <ArrowLeft className="w-5 h-5 text-slate-600" />
+        <BackButton fallbackHref="/vehicles" className="p-2 rounded-xl hover:bg-gray-100 transition-colors mt-1">
+          <ArrowLeft className="w-5 h-5 text-gray-600" />
         </BackButton>
         <div className="flex-1">
           <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-2xl font-bold text-slate-900">{vehicle.brand} {vehicle.model}</h1>
-            <span className="bg-slate-100 text-slate-500 text-xs font-mono font-medium px-2.5 py-1 rounded-lg tracking-wider">
+            <h1 className="text-2xl font-bold text-gray-900">{vehicle.brand} {vehicle.model}</h1>
+            <span className="bg-gray-100 text-gray-500 text-xs font-mono font-medium px-2.5 py-1 rounded-lg tracking-wider">
               {vehicle.plate}
             </span>
             <span className={`text-sm font-medium px-3 py-1 rounded-full border ${getVehicleStatusColor(vehicle.status)}`}>
               {getVehicleStatusLabel(vehicle.status)}
             </span>
           </div>
-          {vehicle.version && <p className="text-slate-500 mt-0.5">{vehicle.version} {vehicle.year ? `· ${vehicle.year}` : ''}</p>}
+          {vehicle.version && <p className="text-gray-500 mt-0.5">{vehicle.version} {vehicle.year ? `· ${vehicle.year}` : ''}</p>}
         </div>
         <div className="flex items-center gap-2">
-          <Link href={`/maintenance/${id}`} className="flex items-center gap-2 px-4 py-2.5 border border-slate-200 rounded-xl text-slate-700 text-sm font-medium hover:bg-slate-50 transition-colors">
+          <Link href={`/maintenance/${id}`} className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 rounded-xl text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors">
             <Wrench className="w-4 h-4" /> Entretien
           </Link>
-          <Link href={`/vehicles/${id}/edit`} className="flex items-center gap-2 px-4 py-2.5 border border-slate-200 rounded-xl text-slate-700 text-sm font-medium hover:bg-slate-50 transition-colors">
+          <Link href={`/vehicles/${id}/edit`} className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 rounded-xl text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors">
             <Edit className="w-4 h-4" /> Modifier
           </Link>
           <DeleteButton
@@ -235,16 +235,16 @@ export default async function VehiclePage({ params }: { params: Promise<{ id: st
           {isManager && (
           <InfoCard title="Performance commerciale">
             <div className="grid grid-cols-2 gap-3 mb-3">
-              <div className="bg-slate-50 rounded-xl p-3">
-                <p className="text-xs text-slate-400 uppercase tracking-wide">CA généré</p>
-                <p className="text-xl font-black text-slate-900 mt-0.5">{formatPrice(caGenere)}</p>
-                <p className="text-[10px] text-slate-400 mt-0.5">{completedRentals ?? 0} location{(completedRentals ?? 0) > 1 ? 's' : ''} terminée{(completedRentals ?? 0) > 1 ? 's' : ''}</p>
+              <div className="bg-gray-50 rounded-xl p-3">
+                <p className="text-xs text-gray-400 uppercase tracking-wide">CA généré</p>
+                <p className="text-xl font-black text-gray-900 mt-0.5">{formatPrice(caGenere)}</p>
+                <p className="text-[10px] text-gray-400 mt-0.5">{completedRentals ?? 0} location{(completedRentals ?? 0) > 1 ? 's' : ''} terminée{(completedRentals ?? 0) > 1 ? 's' : ''}</p>
               </div>
-              <div className="bg-slate-50 rounded-xl p-3">
-                <p className="text-xs text-slate-400 uppercase tracking-wide">Occupation 90j</p>
-                <p className="text-xl font-black text-slate-900 mt-0.5">{occupation90}%</p>
-                <div className="w-full h-1.5 bg-slate-200 rounded-full mt-2">
-                  <div className="h-full bg-slate-900 rounded-full" style={{ width: `${occupation90}%` }} />
+              <div className="bg-gray-50 rounded-xl p-3">
+                <p className="text-xs text-gray-400 uppercase tracking-wide">Occupation 90j</p>
+                <p className="text-xl font-black text-gray-900 mt-0.5">{occupation90}%</p>
+                <div className="w-full h-1.5 bg-gray-200 rounded-full mt-2">
+                  <div className="h-full bg-[#111111] rounded-full" style={{ width: `${occupation90}%` }} />
                 </div>
               </div>
             </div>
@@ -253,7 +253,7 @@ export default async function VehiclePage({ params }: { params: Promise<{ id: st
               { label: 'Autres charges', value: formatPrice(autresCharges) },
             ]} />
             <div className={`mt-3 flex items-center justify-between rounded-xl px-4 py-3 ${rentabilite >= 0 ? 'bg-green-50' : 'bg-red-50'}`}>
-              <span className="flex items-center gap-2 text-sm font-bold text-slate-700">
+              <span className="flex items-center gap-2 text-sm font-bold text-gray-700">
                 <TrendingUp className={`w-4 h-4 ${rentabilite >= 0 ? 'text-green-600' : 'text-red-500'}`} /> Rentabilité
               </span>
               <span className={`text-lg font-black ${rentabilite >= 0 ? 'text-green-600' : 'text-red-500'}`}>
@@ -268,7 +268,7 @@ export default async function VehiclePage({ params }: { params: Promise<{ id: st
             <InfoCard title="Photos du véhicule">
               <div className="grid grid-cols-3 gap-2">
                 {photoUrls.map((url, i) => (
-                  <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="block aspect-square rounded-xl overflow-hidden bg-slate-100">
+                  <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="block aspect-square rounded-xl overflow-hidden bg-gray-100">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={url} alt={`Véhicule ${i + 1}`} className="w-full h-full object-cover" />
                   </a>
@@ -292,7 +292,7 @@ export default async function VehiclePage({ params }: { params: Promise<{ id: st
 
           {vehicle.notes && (
             <InfoCard title="Notes">
-              <p className="text-sm text-slate-700 whitespace-pre-wrap">{vehicle.notes}</p>
+              <p className="text-sm text-gray-700 whitespace-pre-wrap">{vehicle.notes}</p>
             </InfoCard>
           )}
         </div>
@@ -315,20 +315,20 @@ export default async function VehiclePage({ params }: { params: Promise<{ id: st
                       <span className={`text-[10px] font-bold uppercase tracking-wide ${activeReservation.status === 'en_retard' ? 'text-red-600' : 'text-green-700'}`}>
                         {activeReservation.status === 'en_retard' ? 'En retard' : 'En cours'}
                       </span>
-                      <span className="text-xs font-mono text-slate-400">{activeReservation.reservation_number}</span>
+                      <span className="text-xs font-mono text-gray-400">{activeReservation.reservation_number}</span>
                     </div>
-                    <p className="text-sm font-semibold text-slate-800 mt-1">
+                    <p className="text-sm font-semibold text-gray-800 mt-1">
                       {(activeReservation.client as any)?.first_name} {(activeReservation.client as any)?.last_name}
                     </p>
-                    <p className="text-xs text-slate-400">Retour prévu : {formatDate(activeReservation.end_datetime)}</p>
+                    <p className="text-xs text-gray-400">Retour prévu : {formatDate(activeReservation.end_datetime)}</p>
                   </Link>
                 ) : (
-                  <p className="text-xs text-slate-400">Pas de location en cours</p>
+                  <p className="text-xs text-gray-400">Pas de location en cours</p>
                 )}
 
                 {futureReservations && futureReservations.length > 0 && (
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1.5">Réservé ensuite</p>
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Réservé ensuite</p>
                     <div className="space-y-1.5">
                       {futureReservations.map(r => (
                         <Link key={r.id} href={`/reservations/${r.id}`} className="block p-2 rounded-xl bg-blue-50 hover:bg-blue-100 transition-colors">
@@ -362,21 +362,21 @@ export default async function VehiclePage({ params }: { params: Promise<{ id: st
           {/* Historique des locations */}
           <InfoCard title="Historique des locations">
             {recentReservations?.length === 0 ? (
-              <p className="text-sm text-slate-400">Aucune réservation</p>
+              <p className="text-sm text-gray-400">Aucune réservation</p>
             ) : (
               <div className="space-y-2">
                 {recentReservations?.map(r => (
-                  <Link key={r.id} href={`/reservations/${r.id}`} className="block p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors">
+                  <Link key={r.id} href={`/reservations/${r.id}`} className="block p-2.5 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-mono text-slate-500">{r.reservation_number}</span>
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${r.status === 'en_cours' ? 'bg-green-100 text-green-700' : r.status === 'terminee' ? 'bg-slate-100 text-slate-600' : 'bg-blue-100 text-blue-700'}`}>
+                      <span className="text-xs font-mono text-gray-500">{r.reservation_number}</span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${r.status === 'en_cours' ? 'bg-green-100 text-green-700' : r.status === 'terminee' ? 'bg-gray-100 text-gray-600' : 'bg-blue-100 text-blue-700'}`}>
                         {r.status}
                       </span>
                     </div>
-                    <p className="text-sm font-medium text-slate-800 mt-1">
+                    <p className="text-sm font-medium text-gray-800 mt-1">
                       {(r.client as any)?.first_name} {(r.client as any)?.last_name}
                     </p>
-                    <p className="text-xs text-slate-400">{formatDate(r.start_datetime)} → {formatDate(r.end_datetime)}</p>
+                    <p className="text-xs text-gray-400">{formatDate(r.start_datetime)} → {formatDate(r.end_datetime)}</p>
                   </Link>
                 ))}
               </div>
@@ -391,10 +391,10 @@ export default async function VehiclePage({ params }: { params: Promise<{ id: st
             <InfoCard title="Utilisations internes">
               <div className="space-y-2">
                 {vInternalTrips?.map((t: any) => (
-                  <div key={t.id} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50">
+                  <div key={t.id} className="flex items-center justify-between p-2.5 rounded-xl bg-gray-50">
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-slate-800 capitalize truncate">{t.purpose}</p>
-                      <p className="text-xs text-slate-400">{t.user?.full_name} · {formatDate(t.start_datetime)}</p>
+                      <p className="text-sm font-medium text-gray-800 capitalize truncate">{t.purpose}</p>
+                      <p className="text-xs text-gray-400">{t.user?.full_name} · {formatDate(t.start_datetime)}</p>
                     </div>
                     {!t.end_datetime && (
                       <span className="text-xs font-bold text-green-600 flex-shrink-0">En cours</span>
@@ -413,12 +413,12 @@ export default async function VehiclePage({ params }: { params: Promise<{ id: st
             <InfoCard title="Mises à disposition inter-agences">
               <div className="space-y-2">
                 {vInterAgencyOps?.map((op: any) => (
-                  <Link key={op.id} href={`/partnerships/${op.id}`} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors">
+                  <Link key={op.id} href={`/partnerships/${op.id}`} className="flex items-center justify-between p-2.5 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-slate-800 truncate">
+                      <p className="text-sm font-medium text-gray-800 truncate">
                         {op.direction === 'out' ? '→' : '←'} {op.partner_agency?.name ?? 'Partenaire'}
                       </p>
-                      <p className="text-xs text-slate-400">{formatDate(op.start_date)} → {formatDate(op.end_date_expected)}</p>
+                      <p className="text-xs text-gray-400">{formatDate(op.start_date)} → {formatDate(op.end_date_expected)}</p>
                     </div>
                     <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-blue-100 text-blue-700 flex-shrink-0">{op.status}</span>
                   </Link>
@@ -434,25 +434,25 @@ export default async function VehiclePage({ params }: { params: Promise<{ id: st
           {isManager && (
           <InfoCard title="Incidents">
             {(vInfractions?.length ?? 0) === 0 && (vAccidents?.length ?? 0) === 0 ? (
-              <p className="text-sm text-slate-400">Aucun incident</p>
+              <p className="text-sm text-gray-400">Aucun incident</p>
             ) : (
               <div className="space-y-2">
                 {vInfractions?.map((inf: any) => (
-                  <Link key={inf.id} href={`/incidents/infractions/${inf.id}`} className="flex items-center gap-2.5 p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors">
+                  <Link key={inf.id} href={`/incidents/infractions/${inf.id}`} className="flex items-center gap-2.5 p-2.5 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
                     <AlertTriangle className="w-4 h-4 text-orange-500 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-800 truncate">Amende · {inf.type}</p>
-                      <p className="text-xs text-slate-400">{formatDate(inf.infraction_date)}</p>
+                      <p className="text-sm font-medium text-gray-800 truncate">Amende · {inf.type}</p>
+                      <p className="text-xs text-gray-400">{formatDate(inf.infraction_date)}</p>
                     </div>
-                    {inf.amount > 0 && <span className="text-xs font-bold text-slate-600 flex-shrink-0">{formatPrice(inf.amount)}</span>}
+                    {inf.amount > 0 && <span className="text-xs font-bold text-gray-600 flex-shrink-0">{formatPrice(inf.amount)}</span>}
                   </Link>
                 ))}
                 {vAccidents?.map((acc: any) => (
                   <Link key={acc.id} href={`/incidents/sinistres/${acc.id}`} className="flex items-center gap-2.5 p-2.5 rounded-xl bg-red-50 hover:bg-red-100 transition-colors">
                     <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-800 truncate">Sinistre · {acc.description}</p>
-                      <p className="text-xs text-slate-400">{formatDate(acc.accident_date)} · {acc.status}</p>
+                      <p className="text-sm font-medium text-gray-800 truncate">Sinistre · {acc.description}</p>
+                      <p className="text-xs text-gray-400">{formatDate(acc.accident_date)} · {acc.status}</p>
                     </div>
                   </Link>
                 ))}
@@ -464,15 +464,15 @@ export default async function VehiclePage({ params }: { params: Promise<{ id: st
           {/* Documents administratifs */}
           <InfoCard title="Documents">
             {(vDocuments?.length ?? 0) === 0 ? (
-              <p className="text-sm text-slate-400">Aucun document rattaché</p>
+              <p className="text-sm text-gray-400">Aucun document rattaché</p>
             ) : (
               <div className="space-y-2">
                 {vDocuments?.map((doc: any) => (
-                  <a key={doc.id} href={doc.file_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors">
-                    <FileText className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                  <a key={doc.id} href={doc.file_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 p-2.5 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
+                    <FileText className="w-4 h-4 text-gray-400 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-800 truncate">{doc.name}</p>
-                      <p className="text-xs text-slate-400 capitalize">
+                      <p className="text-sm font-medium text-gray-800 truncate">{doc.name}</p>
+                      <p className="text-xs text-gray-400 capitalize">
                         {doc.subcategory}
                         {doc.expiry_date && ` · exp. ${formatDate(doc.expiry_date)}`}
                       </p>
@@ -493,8 +493,8 @@ export default async function VehiclePage({ params }: { params: Promise<{ id: st
 
 function InfoCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
-      <h3 className="font-semibold text-slate-800 text-sm mb-3">{title}</h3>
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+      <h3 className="font-semibold text-gray-800 text-sm mb-3">{title}</h3>
       {children}
     </div>
   )
@@ -506,8 +506,8 @@ function InfoGrid({ items }: { items: { label: string; value?: string | null }[]
     <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5">
       {visible.map(({ label, value }) => (
         <div key={label}>
-          <dt className="text-xs text-slate-400 uppercase tracking-wide">{label}</dt>
-          <dd className="text-sm font-medium text-slate-800 mt-0.5 capitalize">{value}</dd>
+          <dt className="text-xs text-gray-400 uppercase tracking-wide">{label}</dt>
+          <dd className="text-sm font-medium text-gray-800 mt-0.5 capitalize">{value}</dd>
         </div>
       ))}
     </dl>

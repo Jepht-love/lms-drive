@@ -29,40 +29,40 @@ export default async function SettingsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <Settings className="w-6 h-6 text-slate-700" />
+        <Settings className="w-6 h-6 text-gray-700" />
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Paramètres</h1>
-          <p className="text-slate-500 mt-0.5">Administration — Gérant uniquement</p>
+          <h1 className="text-2xl font-bold text-gray-900">Paramètres</h1>
+          <p className="text-gray-500 mt-0.5">Administration — Gérant uniquement</p>
         </div>
       </div>
 
       {/* Informations agence */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-        <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
           <Building2 className="w-4 h-4" /> Informations agence
         </h3>
         <AgencySettingsForm settings={agency} />
       </div>
 
       {/* Team */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-        <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
           <Users className="w-4 h-4" /> Équipe ({profiles?.length ?? 0})
         </h3>
         <div className="space-y-2">
           {profiles?.map(p => (
-            <div key={p.id} className="flex items-center gap-3 p-3 rounded-xl bg-slate-50">
+            <div key={p.id} className="flex items-center gap-3 p-3 rounded-xl bg-gray-50">
               <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center">
                 <span className="text-blue-700 font-bold text-sm">{p.full_name.charAt(0).toUpperCase()}</span>
               </div>
               <div className="flex-1">
-                <p className="font-medium text-slate-900 text-sm">{p.full_name}</p>
-                {p.phone && <p className="text-xs text-slate-400">{p.phone}</p>}
+                <p className="font-medium text-gray-900 text-sm">{p.full_name}</p>
+                {p.phone && <p className="text-xs text-gray-400">{p.phone}</p>}
               </div>
               <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
                 p.role === 'gerant' ? 'bg-purple-100 text-purple-700' :
                 p.role === 'associe' ? 'bg-blue-100 text-blue-700' :
-                'bg-slate-100 text-slate-600'
+                'bg-gray-100 text-gray-600'
               }`}>
                 {p.role}
               </span>
@@ -76,8 +76,8 @@ export default async function SettingsPage() {
       <NotificationSettings />
 
       {/* Journal d'audit — français lisible, filtrable par employé */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-        <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
           <FileClock className="w-4 h-4" /> Journal d'audit
         </h3>
         <AuditLogList logs={auditLogs ?? []} profiles={profiles ?? []} />

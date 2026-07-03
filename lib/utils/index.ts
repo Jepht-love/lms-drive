@@ -110,7 +110,7 @@ export function getReservationStatusColor(status: string): string {
     option: 'bg-gray-100 text-gray-700',
     confirmee: 'bg-blue-100 text-blue-700',
     en_cours: 'bg-green-100 text-green-700',
-    terminee: 'bg-slate-100 text-slate-700',
+    terminee: 'bg-gray-100 text-gray-700',
     annulee: 'bg-red-100 text-red-700',
     en_retard: 'bg-orange-100 text-orange-700',
   }

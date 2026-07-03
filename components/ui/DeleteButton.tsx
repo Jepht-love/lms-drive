@@ -26,7 +26,7 @@ export default function DeleteButton({ onConfirm, label = 'Supprimer', confirmMe
       <button
         onClick={() => setOpen(true)}
         className={variant === 'icon'
-          ? 'p-2 rounded-xl text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all opacity-40 group-hover:opacity-100'
+          ? 'p-2 rounded-xl text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all opacity-40 group-hover:opacity-100'
           : 'flex items-center gap-2 px-4 py-2.5 text-red-600 hover:bg-red-50 rounded-xl text-sm font-medium transition-colors w-full'
         }
         title={label}
@@ -43,12 +43,12 @@ export default function DeleteButton({ onConfirm, label = 'Supprimer', confirmMe
                 <AlertTriangle className="w-5 h-5 text-red-500" />
               </div>
               <div>
-                <h3 className="font-bold text-slate-900">{label}</h3>
-                <p className="text-sm text-slate-500 mt-1">{confirmMessage}</p>
+                <h3 className="font-bold text-gray-900">{label}</h3>
+                <p className="text-sm text-gray-500 mt-1">{confirmMessage}</p>
               </div>
             </div>
             <div className="flex gap-3 mt-5">
-              <button onClick={() => setOpen(false)} className="flex-1 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50">
+              <button onClick={() => setOpen(false)} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50">
                 Annuler
               </button>
               <button onClick={handleConfirm} disabled={loading} className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-semibold disabled:opacity-50">

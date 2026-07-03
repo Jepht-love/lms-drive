@@ -66,9 +66,9 @@ export default function NotificationsList({ initialNotifications }: { initialNot
 
   if (notifications.length === 0) {
     return (
-      <div className="bg-white rounded-2xl border border-slate-100 p-12 text-center">
-        <Bell className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-        <p className="text-slate-500 font-medium">Aucune notification</p>
+      <div className="bg-white rounded-2xl border border-gray-100 p-12 text-center">
+        <Bell className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+        <p className="text-gray-500 font-medium">Aucune notification</p>
       </div>
     )
   }
@@ -86,27 +86,27 @@ export default function NotificationsList({ initialNotifications }: { initialNot
         </button>
       )}
 
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden divide-y divide-slate-50">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden divide-y divide-gray-50">
         {notifications.map(n => {
           const Icon = ICONS[n.type] ?? Bell
-          const color = COLORS[n.type] ?? 'bg-slate-50 text-slate-600'
+          const color = COLORS[n.type] ?? 'bg-gray-50 text-gray-600'
           return (
             <Link
               key={n.id}
               href={entityLink(n)}
               onClick={() => !n.is_read && markAsRead(n.id)}
-              className={`flex items-start gap-3 px-4 py-4 hover:bg-slate-50 transition-colors ${!n.is_read ? 'bg-blue-50/30' : ''}`}
+              className={`flex items-start gap-3 px-4 py-4 hover:bg-gray-50 transition-colors ${!n.is_read ? 'bg-blue-50/30' : ''}`}
             >
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${color}`}>
                 <Icon className="w-5 h-5" />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <p className="font-semibold text-slate-900 text-sm">{n.title}</p>
+                  <p className="font-semibold text-gray-900 text-sm">{n.title}</p>
                   {!n.is_read && <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />}
                 </div>
-                {n.body && <p className="text-sm text-slate-500 mt-0.5">{n.body}</p>}
-                <p className="text-xs text-slate-400 mt-1">{formatRelative(n.created_at)}</p>
+                {n.body && <p className="text-sm text-gray-500 mt-0.5">{n.body}</p>}
+                <p className="text-xs text-gray-400 mt-1">{formatRelative(n.created_at)}</p>
               </div>
             </Link>
           )

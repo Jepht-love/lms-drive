@@ -117,7 +117,7 @@ export default function ProlongReservation({
               <input
                 type="number" min="1" step="1" value={days}
                 onChange={e => setDays(Math.max(1, Math.floor(Number(e.target.value))))}
-                className="w-full px-3 py-2 rounded-xl border border-blue-200 bg-white text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                className="w-full px-3 py-2 rounded-xl border border-blue-200 bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-400"
               />
             </div>
             <div>
@@ -127,24 +127,24 @@ export default function ProlongReservation({
               <input
                 type="number" min="0" step="0.01" value={price}
                 onChange={e => setPrice(Number(e.target.value))}
-                className="w-full px-3 py-2 rounded-xl border border-blue-200 bg-white text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                className="w-full px-3 py-2 rounded-xl border border-blue-200 bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-400"
               />
             </div>
           </div>
 
           <div className="bg-white border border-blue-200 rounded-xl px-3 py-2.5 space-y-1.5">
-            <div className="flex items-center justify-between text-xs text-slate-500">
+            <div className="flex items-center justify-between text-xs text-gray-500">
               <span>Nouvelle fin</span>
-              <span className="font-semibold text-slate-800">{formatDateTime(newEnd)}</span>
+              <span className="font-semibold text-gray-800">{formatDateTime(newEnd)}</span>
             </div>
             {addedKm > 0 && (
-              <div className="flex items-center justify-between text-xs text-slate-500">
+              <div className="flex items-center justify-between text-xs text-gray-500">
                 <span>Km inclus en plus ({kmIncludedDaily} km/j × {days})</span>
-                <span className="font-semibold text-slate-800">+{addedKm.toLocaleString('fr-FR')} km</span>
+                <span className="font-semibold text-gray-800">+{addedKm.toLocaleString('fr-FR')} km</span>
               </div>
             )}
-            <div className="flex items-center justify-between text-xs border-t border-slate-100 pt-1.5">
-              <span className="text-slate-500">Nouveau total ({totalDays} j)</span>
+            <div className="flex items-center justify-between text-xs border-t border-gray-100 pt-1.5">
+              <span className="text-gray-500">Nouveau total ({totalDays} j)</span>
               <span className="font-bold text-blue-700 text-sm">{formatPrice(newTotal)}</span>
             </div>
             {added !== 0 && (

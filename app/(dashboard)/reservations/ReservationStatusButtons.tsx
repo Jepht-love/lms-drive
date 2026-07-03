@@ -95,7 +95,7 @@ export default function ReservationStatusButtons({
       {status === 'en_cours' && contractId && (
         <button
           onClick={() => router.push(`/inspections/arrival/${contractId}`)}
-          className="w-full py-2.5 px-3 rounded-xl text-sm font-semibold bg-slate-800 text-white hover:bg-slate-900 flex items-center justify-center gap-2 transition-all"
+          className="w-full py-2.5 px-3 rounded-xl text-sm font-semibold bg-[#111111] text-white hover:bg-gray-900 flex items-center justify-center gap-2 transition-all"
         >
           <ClipboardList className="w-4 h-4" />
           État des lieux retour — rendre le véhicule
@@ -111,7 +111,7 @@ export default function ReservationStatusButtons({
           </div>
           <button
             onClick={() => router.push(`/inspections/arrival/${contractId}`)}
-            className="w-full py-2.5 px-3 rounded-xl text-sm font-semibold bg-slate-800 text-white hover:bg-slate-900 flex items-center justify-center gap-2 transition-all"
+            className="w-full py-2.5 px-3 rounded-xl text-sm font-semibold bg-[#111111] text-white hover:bg-gray-900 flex items-center justify-center gap-2 transition-all"
           >
             <ClipboardList className="w-4 h-4" />
             État des lieux retour — rendre le véhicule
@@ -133,7 +133,7 @@ export default function ReservationStatusButtons({
             </div>
           </div>
         ) : (
-          <p className="text-xs text-slate-400 text-center py-1">
+          <p className="text-xs text-gray-400 text-center py-1">
             Véhicule rendu — validez le contrat ci-dessous pour libérer la caution
           </p>
         )
@@ -141,7 +141,7 @@ export default function ReservationStatusButtons({
 
       {/* Annulée */}
       {status === 'annulee' && (
-        <p className="text-xs text-slate-400 text-center py-1">Réservation annulée</p>
+        <p className="text-xs text-gray-400 text-center py-1">Réservation annulée</p>
       )}
     </div>
   )

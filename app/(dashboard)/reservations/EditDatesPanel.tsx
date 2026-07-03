@@ -95,7 +95,7 @@ export default function EditDatesPanel({
             type="datetime-local"
             value={start}
             onChange={e => setStart(e.target.value)}
-            className="w-full px-3 py-2 rounded-xl border border-amber-200 bg-white text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-400"
+            className="w-full px-3 py-2 rounded-xl border border-amber-200 bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-400"
           />
         </div>
         <div>
@@ -107,7 +107,7 @@ export default function EditDatesPanel({
             value={end}
             onChange={e => setEnd(e.target.value)}
             min={start}
-            className="w-full px-3 py-2 rounded-xl border border-amber-200 bg-white text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-400"
+            className="w-full px-3 py-2 rounded-xl border border-amber-200 bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-400"
           />
         </div>
       </div>
@@ -124,9 +124,9 @@ export default function EditDatesPanel({
             step="0.01"
             value={price}
             onChange={e => setPrice(Number(e.target.value))}
-            className="w-full px-3 py-2 rounded-xl border border-amber-200 bg-white text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-400 pr-8"
+            className="w-full px-3 py-2 rounded-xl border border-amber-200 bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-400 pr-8"
           />
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">€</span>
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">€</span>
         </div>
         {weeklyPrice && (
           <p className="text-xs text-amber-600 mt-0.5">
@@ -138,9 +138,9 @@ export default function EditDatesPanel({
       {/* Récapitulatif */}
       {days > 0 && (
         <div className="bg-white border border-amber-200 rounded-xl px-3 py-2.5 space-y-1.5">
-          <div className="flex items-center justify-between text-xs text-slate-500">
+          <div className="flex items-center justify-between text-xs text-gray-500">
             <span>{days} jour{days > 1 ? 's' : ''} × {formatPrice(price)}</span>
-            <span className="font-bold text-slate-800 text-sm">{formatPrice(newTotal)}</span>
+            <span className="font-bold text-gray-800 text-sm">{formatPrice(newTotal)}</span>
           </div>
           {newTotal !== currentTotal && (
             <div className={`flex items-center gap-1.5 text-xs font-medium ${delta > 0 ? 'text-emerald-600' : 'text-orange-600'}`}>

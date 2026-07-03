@@ -8,8 +8,8 @@ export default function NewClientPage() {
       <div className="flex items-center gap-3">
         <BackButton fallbackHref="/clients" />
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Nouveau client</h1>
-          <p className="text-slate-500 mt-0.5">Créez la fiche d'un nouveau client</p>
+          <h1 className="text-2xl font-bold text-gray-900">Nouveau client</h1>
+          <p className="text-gray-500 mt-0.5">Créez la fiche d'un nouveau client</p>
         </div>
       </div>
       <ClientForm action={createClientAction} />

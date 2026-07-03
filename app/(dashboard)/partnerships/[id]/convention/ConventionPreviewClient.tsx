@@ -71,8 +71,8 @@ export default function ConventionPreviewClient({ operationId, contract, operati
       <div className="min-h-screen flex items-center justify-center bg-[#F2F2F7]">
         <div className="bg-white rounded-2xl shadow-sm border border-green-200 p-10 text-center max-w-sm">
           <CheckCircle2 className="w-14 h-14 text-green-500 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-slate-900 mb-2">Convention signée !</h2>
-          <p className="text-slate-500 text-sm">Retour à l&apos;opération…</p>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Convention signée !</h2>
+          <p className="text-gray-500 text-sm">Retour à l&apos;opération…</p>
         </div>
       </div>
     )
@@ -80,13 +80,13 @@ export default function ConventionPreviewClient({ operationId, contract, operati
 
   return (
     <div className="min-h-screen bg-[#F2F2F7]">
-      <div className="sticky top-0 z-10 bg-white/95 backdrop-blur border-b border-slate-100 px-4 py-3 flex items-center gap-3">
-        <Link href={`/partnerships/${operationId}`} className="p-2 rounded-xl hover:bg-slate-100 transition-colors">
-          <ArrowLeft className="w-5 h-5 text-slate-600" />
+      <div className="sticky top-0 z-10 bg-white/95 backdrop-blur border-b border-gray-100 px-4 py-3 flex items-center gap-3">
+        <Link href={`/partnerships/${operationId}`} className="p-2 rounded-xl hover:bg-gray-100 transition-colors">
+          <ArrowLeft className="w-5 h-5 text-gray-600" />
         </Link>
         <div className="flex-1 min-w-0">
-          <h1 className="font-bold text-slate-900 truncate">{contract.contract_number}</h1>
-          <p className="text-xs text-slate-500">Convention de mise à disposition</p>
+          <h1 className="font-bold text-gray-900 truncate">{contract.contract_number}</h1>
+          <p className="text-xs text-gray-500">Convention de mise à disposition</p>
         </div>
         <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${isSigned ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
           {isSigned ? 'Signée' : 'À signer'}
@@ -94,44 +94,44 @@ export default function ConventionPreviewClient({ operationId, contract, operati
       </div>
 
       <div className="max-w-3xl mx-auto px-4 py-6 space-y-4">
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
-          <div className="flex items-start justify-between mb-6 pb-4 border-b border-slate-100">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <div className="flex items-start justify-between mb-6 pb-4 border-b border-gray-100">
             <div>
               <Image src="/logo.png" alt="Logo agence" width={140} height={48} className="object-contain mb-2" />
-              {agency?.siret && <p className="text-xs text-slate-400">SIRET : {agency.siret}</p>}
-              {agency?.address && <p className="text-xs text-slate-400">{agency.address}</p>}
-              {agency?.phone && <p className="text-xs text-slate-400">{agency.phone}</p>}
+              {agency?.siret && <p className="text-xs text-gray-400">SIRET : {agency.siret}</p>}
+              {agency?.address && <p className="text-xs text-gray-400">{agency.address}</p>}
+              {agency?.phone && <p className="text-xs text-gray-400">{agency.phone}</p>}
             </div>
             <div className="text-right">
-              <p className="font-mono font-bold text-slate-800">{contract.contract_number}</p>
-              <p className="text-xs text-slate-400">Convention de mise à disposition</p>
-              <p className="text-xs text-slate-400">inter-agences</p>
+              <p className="font-mono font-bold text-gray-800">{contract.contract_number}</p>
+              <p className="text-xs text-gray-400">Convention de mise à disposition</p>
+              <p className="text-xs text-gray-400">inter-agences</p>
             </div>
           </div>
 
           {/* Parties */}
           <div className="grid grid-cols-2 gap-4 mb-5">
-            <div className="bg-slate-50 rounded-xl p-3">
-              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-2">Propriétaire</p>
-              <p className="font-semibold text-slate-900">{agency?.company_name ?? 'LMS Drive'}</p>
-              {agency?.address && <p className="text-xs text-slate-500 mt-0.5">{agency.address}</p>}
+            <div className="bg-gray-50 rounded-xl p-3">
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Propriétaire</p>
+              <p className="font-semibold text-gray-900">{agency?.company_name ?? 'LMS Drive'}</p>
+              {agency?.address && <p className="text-xs text-gray-500 mt-0.5">{agency.address}</p>}
             </div>
-            <div className="bg-slate-50 rounded-xl p-3">
-              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-2">Bénéficiaire (agence partenaire)</p>
-              <p className="font-semibold text-slate-900">{partnerName}</p>
-              {partner?.contact_name && <p className="text-xs text-slate-500">{partner.contact_name}</p>}
-              {partner?.phone && <p className="text-xs text-slate-500">{partner.phone}</p>}
-              {partner?.siret && <p className="text-xs text-slate-400">SIRET : {partner.siret}</p>}
+            <div className="bg-gray-50 rounded-xl p-3">
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Bénéficiaire (agence partenaire)</p>
+              <p className="font-semibold text-gray-900">{partnerName}</p>
+              {partner?.contact_name && <p className="text-xs text-gray-500">{partner.contact_name}</p>}
+              {partner?.phone && <p className="text-xs text-gray-500">{partner.phone}</p>}
+              {partner?.siret && <p className="text-xs text-gray-400">SIRET : {partner.siret}</p>}
             </div>
           </div>
 
           {/* Véhicule */}
-          <div className="bg-slate-900 rounded-xl p-4 mb-4 text-white">
-            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-2">Véhicule mis à disposition</p>
+          <div className="bg-[#111111] rounded-xl p-4 mb-4 text-white">
+            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Véhicule mis à disposition</p>
             <p className="font-bold text-lg">{vehicle?.brand} {vehicle?.model} {vehicle?.version}</p>
             <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-              <span className="bg-slate-700 text-slate-300 font-mono text-xs px-2 py-0.5 rounded">{vehicle?.plate}</span>
-              {vehicle?.color && <span className="text-slate-300 text-sm">{vehicle?.color}</span>}
+              <span className="bg-gray-700 text-gray-300 font-mono text-xs px-2 py-0.5 rounded">{vehicle?.plate}</span>
+              {vehicle?.color && <span className="text-gray-300 text-sm">{vehicle?.color}</span>}
             </div>
           </div>
 
@@ -139,18 +139,18 @@ export default function ConventionPreviewClient({ operationId, contract, operati
           <div className="grid grid-cols-2 gap-3 mb-4">
             <div className="bg-blue-50 rounded-xl p-3">
               <p className="text-xs text-blue-600 font-medium mb-1">Départ</p>
-              <p className="font-semibold text-slate-900">{formatDateTime(operation?.start_date)}</p>
+              <p className="font-semibold text-gray-900">{formatDateTime(operation?.start_date)}</p>
             </div>
             <div className="bg-purple-50 rounded-xl p-3">
               <p className="text-xs text-purple-600 font-medium mb-1">Retour prévu</p>
-              <p className="font-semibold text-slate-900">{formatDateTime(operation?.end_date_expected)}</p>
+              <p className="font-semibold text-gray-900">{formatDateTime(operation?.end_date_expected)}</p>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-2 mb-1 text-center">
-            <div className="bg-slate-50 rounded-xl p-2">
-              <p className="text-xs text-slate-500">Montant convenu</p>
-              <p className="font-bold text-slate-900">{formatPrice(operation?.rental_cost)}</p>
+            <div className="bg-gray-50 rounded-xl p-2">
+              <p className="text-xs text-gray-500">Montant convenu</p>
+              <p className="font-bold text-gray-900">{formatPrice(operation?.rental_cost)}</p>
             </div>
             <div className="bg-amber-50 rounded-xl p-2">
               <p className="text-xs text-amber-700">Caution</p>
@@ -160,13 +160,13 @@ export default function ConventionPreviewClient({ operationId, contract, operati
         </div>
 
         {/* Conditions */}
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
-          <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-5">Conditions de la mise à disposition</h2>
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-5">Conditions de la mise à disposition</h2>
           <div className="space-y-5">
             {clauses.map((art, i) => (
               <div key={i}>
-                <h3 className="text-xs font-bold text-slate-800 mb-1.5">Art. {art.title}</h3>
-                <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-line">{art.body}</p>
+                <h3 className="text-xs font-bold text-gray-800 mb-1.5">Art. {art.title}</h3>
+                <p className="text-xs text-gray-600 leading-relaxed whitespace-pre-line">{art.body}</p>
               </div>
             ))}
           </div>
@@ -174,27 +174,27 @@ export default function ConventionPreviewClient({ operationId, contract, operati
 
         {/* Signature */}
         {!isSigned ? (
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-            <h2 className="font-semibold text-slate-800 mb-1">Signature du représentant de {partnerName}</h2>
-            <p className="text-xs text-slate-500 mb-4">
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+            <h2 className="font-semibold text-gray-800 mb-1">Signature du représentant de {partnerName}</h2>
+            <p className="text-xs text-gray-500 mb-4">
               En signant, le représentant de l&apos;agence partenaire reconnaît avoir lu et accepté les conditions de la mise à disposition.
             </p>
             <SignatureCanvas label="Signature du représentant *" onSign={setSig} onClear={() => setSig(null)} existingSig={sig} height={160} />
 
-            <div className="mt-6 pt-5 border-t border-slate-100 grid grid-cols-2 gap-6">
+            <div className="mt-6 pt-5 border-t border-gray-100 grid grid-cols-2 gap-6">
               <div className="text-center">
-                <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-2">Représentant partenaire</p>
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-2">Représentant partenaire</p>
                 {sig ? (
-                  <img src={sig} alt="Signature" className="h-16 w-full object-contain border border-slate-200 rounded-lg bg-white" />
+                  <img src={sig} alt="Signature" className="h-16 w-full object-contain border border-gray-200 rounded-lg bg-white" />
                 ) : (
-                  <div className="h-16 border-2 border-dashed border-slate-200 rounded-lg flex items-center justify-center">
-                    <span className="text-xs text-slate-300">En attente</span>
+                  <div className="h-16 border-2 border-dashed border-gray-200 rounded-lg flex items-center justify-center">
+                    <span className="text-xs text-gray-300">En attente</span>
                   </div>
                 )}
               </div>
               <div className="text-center">
-                <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-2">Cachet & Visa propriétaire</p>
-                <div className="h-16 flex items-center justify-center border border-slate-200 rounded-lg bg-slate-50">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-2">Cachet & Visa propriétaire</p>
+                <div className="h-16 flex items-center justify-center border border-gray-200 rounded-lg bg-gray-50">
                   <Image src="/logo.png" alt="Cachet agence" width={120} height={48} className="object-contain max-h-full" />
                 </div>
               </div>
@@ -209,7 +209,7 @@ export default function ConventionPreviewClient({ operationId, contract, operati
             <button
               onClick={sign}
               disabled={signing || !sig}
-              className="mt-5 w-full py-4 bg-green-600 hover:bg-green-700 disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold rounded-xl transition-colors text-sm flex items-center justify-center gap-2"
+              className="mt-5 w-full py-4 bg-green-600 hover:bg-green-700 disabled:bg-gray-200 disabled:text-gray-400 text-white font-bold rounded-xl transition-colors text-sm flex items-center justify-center gap-2"
             >
               {signing ? (
                 <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Signature en cours…</>

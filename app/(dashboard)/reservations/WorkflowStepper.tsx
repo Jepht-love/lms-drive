@@ -123,8 +123,8 @@ export default function WorkflowStepper({
   ]
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
-      <h3 className="font-semibold text-slate-800 text-sm mb-4">Suivi de la location</h3>
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+      <h3 className="font-semibold text-gray-800 text-sm mb-4">Suivi de la location</h3>
 
       <div className="space-y-3">
         {steps.map((step, i) => (
@@ -134,7 +134,7 @@ export default function WorkflowStepper({
               <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${
                 step.done ? 'bg-emerald-100 text-emerald-600'
                 : step.active ? 'bg-blue-100 text-blue-600 ring-2 ring-blue-200'
-                : 'bg-slate-100 text-slate-400'
+                : 'bg-gray-100 text-gray-400'
               }`}>
                 {step.done
                   ? <CheckCircle2 className="w-4 h-4" />
@@ -143,7 +143,7 @@ export default function WorkflowStepper({
                     : step.icon}
               </div>
               {i < steps.length - 1 && (
-                <div className={`w-0.5 mt-1 h-4 ${step.done ? 'bg-emerald-200' : 'bg-slate-100'}`} />
+                <div className={`w-0.5 mt-1 h-4 ${step.done ? 'bg-emerald-200' : 'bg-gray-100'}`} />
               )}
             </div>
 
@@ -152,8 +152,8 @@ export default function WorkflowStepper({
               <div className="flex items-center justify-between gap-2">
                 <p className={`text-sm font-medium ${
                   step.done ? 'text-emerald-700'
-                  : step.active ? 'text-slate-900'
-                  : 'text-slate-400'
+                  : step.active ? 'text-gray-900'
+                  : 'text-gray-400'
                 }`}>
                   {step.label}
                 </p>
@@ -173,8 +173,8 @@ export default function WorkflowStepper({
               </div>
               <p className={`text-xs mt-0.5 ${
                 step.done ? 'text-emerald-600/70'
-                : step.active ? 'text-slate-500'
-                : 'text-slate-300'
+                : step.active ? 'text-gray-500'
+                : 'text-gray-300'
               }`}>
                 {step.sublabel}
               </p>
@@ -186,14 +186,14 @@ export default function WorkflowStepper({
 
       {/* Bouton de validation */}
       {canValidate && contractId && (
-        <div className="mt-4 pt-4 border-t border-slate-100">
+        <div className="mt-4 pt-4 border-t border-gray-100">
           <ValidateContractButton contractId={contractId} />
         </div>
       )}
 
       {/* Contrat clôturé : message */}
       {step4Done && (
-        <div className="mt-4 pt-4 border-t border-slate-100 flex items-center gap-2 text-emerald-700">
+        <div className="mt-4 pt-4 border-t border-gray-100 flex items-center gap-2 text-emerald-700">
           <ShieldCheck className="w-4 h-4 flex-shrink-0" />
           <p className="text-xs font-medium">Contrat clôturé — la caution peut être libérée</p>
         </div>

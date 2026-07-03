@@ -43,9 +43,9 @@ export default function VehicleMaintenanceCard({
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
-      <h3 className="font-semibold text-slate-800 text-sm mb-3 flex items-center gap-2">
-        <Wrench className="w-4 h-4 text-slate-400" /> État mécanique
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+      <h3 className="font-semibold text-gray-800 text-sm mb-3 flex items-center gap-2">
+        <Wrench className="w-4 h-4 text-gray-400" /> État mécanique
       </h3>
 
       {nothing ? (
@@ -68,19 +68,19 @@ export default function VehicleMaintenanceCard({
           {/* Dégradations actives */}
           {flags.length > 0 && (
             <div className="space-y-1.5">
-              <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Dégradations</p>
+              <p className="text-[11px] font-bold uppercase tracking-wide text-gray-400">Dégradations</p>
               {flags.map(f => (
-                <div key={f.id} className="flex items-center justify-between gap-2 p-2 rounded-xl bg-slate-50">
+                <div key={f.id} className="flex items-center justify-between gap-2 p-2 rounded-xl bg-gray-50">
                   <div className="flex items-center gap-2 min-w-0">
                     <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
                       f.severity === 'dommage' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
                     }`}>{f.severity}</span>
-                    <span className="text-sm text-slate-700 truncate">{f.label}</span>
+                    <span className="text-sm text-gray-700 truncate">{f.label}</span>
                   </div>
                   <button
                     onClick={() => resolve(f.id)}
                     disabled={pending}
-                    className="text-xs font-semibold text-slate-500 hover:text-green-600 flex items-center gap-1 flex-shrink-0 disabled:opacity-40"
+                    className="text-xs font-semibold text-gray-500 hover:text-green-600 flex items-center gap-1 flex-shrink-0 disabled:opacity-40"
                   >
                     <Check className="w-3.5 h-3.5" /> Résoudre
                   </button>

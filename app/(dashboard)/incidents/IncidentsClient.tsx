@@ -18,7 +18,7 @@ const STATUS_COLORS: Record<string, string> = {
   en_cours: 'bg-amber-100 text-amber-700',
   resolu: 'bg-green-100 text-green-700',
   litigieux: 'bg-purple-100 text-purple-700',
-  classe: 'bg-slate-100 text-slate-600',
+  classe: 'bg-gray-100 text-gray-600',
 }
 
 const STATUSES = ['ouvert', 'en_cours', 'resolu', 'litigieux', 'classe']
@@ -52,22 +52,22 @@ export default function IncidentsClient({ incidents, vehicles }: { incidents: In
       </button>
 
       {incidents.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-slate-100 p-12 text-center">
-          <AlertTriangle className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-          <p className="text-slate-500 font-medium">Aucun incident signalé</p>
+        <div className="bg-white rounded-2xl border border-gray-100 p-12 text-center">
+          <AlertTriangle className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+          <p className="text-gray-500 font-medium">Aucun incident signalé</p>
         </div>
       ) : (
         <div className="space-y-3">
           {incidents.map(i => (
-            <div key={i.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+            <div key={i.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1.5">
-                    <span className="font-bold text-slate-900 text-sm">{i.vehicle?.brand} {i.vehicle?.model}</span>
-                    <span className="text-xs font-mono text-slate-400">{i.vehicle?.plate}</span>
+                    <span className="font-bold text-gray-900 text-sm">{i.vehicle?.brand} {i.vehicle?.model}</span>
+                    <span className="text-xs font-mono text-gray-400">{i.vehicle?.plate}</span>
                   </div>
-                  <p className="text-sm text-slate-700">{i.description}</p>
-                  <p className="text-xs text-slate-400 mt-1.5">{formatDate(i.created_at)}</p>
+                  <p className="text-sm text-gray-700">{i.description}</p>
+                  <p className="text-xs text-gray-400 mt-1.5">{formatDate(i.created_at)}</p>
                 </div>
                 <select
                   value={i.status}
@@ -85,15 +85,15 @@ export default function IncidentsClient({ incidents, vehicles }: { incidents: In
       <Drawer open={showForm} onClose={() => setShowForm(false)} title="Signaler un incident">
         <form action={handleCreate} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Véhicule *</label>
-            <select name="vehicle_id" required className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white">
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Véhicule *</label>
+            <select name="vehicle_id" required className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white">
               <option value="">— Choisir —</option>
               {vehicles.map(v => <option key={v.id} value={v.id}>{v.brand} {v.model} — {v.plate}</option>)}
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Description *</label>
-            <textarea name="description" required rows={4} placeholder="Décrivez l'incident..." className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm resize-none" />
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Description *</label>
+            <textarea name="description" required rows={4} placeholder="Décrivez l'incident..." className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm resize-none" />
           </div>
           {error && <div className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{error}</div>}
           <button type="submit" disabled={loading} className="w-full py-3 bg-[#111111] text-white rounded-xl font-semibold disabled:opacity-50 transition-colors active:scale-[.97]">

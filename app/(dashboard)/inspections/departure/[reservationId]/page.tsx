@@ -62,12 +62,12 @@ export default async function DepartureInspectionPage({ params }: { params: Prom
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <BackButton fallbackHref={`/reservations/${reservationId}`} className="p-2 rounded-xl hover:bg-slate-100">
-          <ArrowLeft className="w-5 h-5 text-slate-600" />
+        <BackButton fallbackHref={`/reservations/${reservationId}`} className="p-2 rounded-xl hover:bg-gray-100">
+          <ArrowLeft className="w-5 h-5 text-gray-600" />
         </BackButton>
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">État des lieux de départ</h1>
-          <p className="text-slate-500">{vehicle?.brand} {vehicle?.model} — {vehicle?.plate} · {client?.first_name} {client?.last_name}</p>
+          <h1 className="text-2xl font-bold text-gray-900">État des lieux de départ</h1>
+          <p className="text-gray-500">{vehicle?.brand} {vehicle?.model} — {vehicle?.plate} · {client?.first_name} {client?.last_name}</p>
         </div>
       </div>
       <InspectionFlow

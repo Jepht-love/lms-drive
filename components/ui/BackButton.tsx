@@ -23,9 +23,9 @@ export default function BackButton({ fallbackHref, label = 'Retour', className, 
       type="button"
       onClick={handleClick}
       aria-label={label}
-      className={className ?? 'p-2 rounded-xl hover:bg-slate-100 transition-colors mt-1 flex-shrink-0'}
+      className={className ?? 'p-2 rounded-xl hover:bg-gray-100 transition-colors mt-1 flex-shrink-0'}
     >
-      {children ?? <ArrowLeft className="w-5 h-5 text-slate-600" />}
+      {children ?? <ArrowLeft className="w-5 h-5 text-gray-600" />}
     </button>
   )
 }

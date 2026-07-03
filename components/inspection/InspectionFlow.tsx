@@ -55,7 +55,7 @@ const CLEANLINESS_LEVELS = [
 function CleanlinessPicker({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-slate-700 mb-2">
+      <label className="block text-sm font-medium text-gray-700 mb-2">
         {label} : <strong>{CLEANLINESS_LEVELS.find(l => l.value === value)?.label}</strong>
       </label>
       <div className="flex gap-1.5">
@@ -66,7 +66,7 @@ function CleanlinessPicker({ label, value, onChange }: { label: string; value: n
             onClick={() => onChange(l.value)}
             aria-label={l.label}
             className={`flex-1 h-10 rounded-lg transition-all ${l.bg} ${
-              value === l.value ? 'ring-2 ring-offset-2 ring-slate-900 scale-105' : 'opacity-35'
+              value === l.value ? 'ring-2 ring-offset-2 ring-gray-900 scale-105' : 'opacity-35'
             }`}
           />
         ))}
@@ -358,14 +358,14 @@ export default function InspectionFlow({
     const totalExtra = (computedFees?.lateFeeAmount ?? 0) + (computedFees?.extraKmAmount ?? 0) + (computedFees?.damageFeeAmount ?? 0)
     return (
       <div className="space-y-4">
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-10 text-center">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-10 text-center">
           <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-slate-900 mb-2">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
             État des lieux {type === 'depart' ? 'de départ' : 'de retour'} enregistré
           </h2>
-          <p className="text-slate-500">KM : {kmReading.toLocaleString('fr-FR')} · {damagedZoneCount} zone(s) signalée(s)</p>
+          <p className="text-gray-500">KM : {kmReading.toLocaleString('fr-FR')} · {damagedZoneCount} zone(s) signalée(s)</p>
           {type === 'arrivee' && previousDamagedZones.length > 0 && (
-            <p className="text-sm text-slate-400 mt-1">
+            <p className="text-sm text-gray-400 mt-1">
               dont {stillPresentZoneIds.length} déjà signalée(s) au départ
               {newDamageZoneIds.length > 0 && <span className="text-red-500 font-semibold"> · {newDamageZoneIds.length} nouvelle(s)</span>}
             </p>
@@ -378,7 +378,7 @@ export default function InspectionFlow({
             <div className="bg-amber-50 px-5 py-3 border-b border-amber-100">
               <p className="font-semibold text-amber-800 text-sm">Frais complémentaires calculés</p>
             </div>
-            <div className="divide-y divide-slate-50">
+            <div className="divide-y divide-gray-50">
               {computedFees.lateFeeAmount > 0 && (
                 <div className="flex items-center justify-between px-5 py-4">
                   <div className="flex items-center gap-3">
@@ -386,8 +386,8 @@ export default function InspectionFlow({
                       <Clock className="w-4 h-4 text-red-600" />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-slate-900">Frais de retard</p>
-                      <p className="text-xs text-slate-400">
+                      <p className="text-sm font-semibold text-gray-900">Frais de retard</p>
+                      <p className="text-xs text-gray-400">
                         {computedFees.lateMinutes} min · tolérance 60 min · {vehicleCategory === 'sportif' ? '150' : '50'} €/h
                       </p>
                     </div>
@@ -402,8 +402,8 @@ export default function InspectionFlow({
                       <Gauge className="w-4 h-4 text-orange-600" />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-slate-900">Dépassement kilométrique</p>
-                      <p className="text-xs text-slate-400">{computedFees.extraKmCount} km × {extraKmPrice} €/km</p>
+                      <p className="text-sm font-semibold text-gray-900">Dépassement kilométrique</p>
+                      <p className="text-xs text-gray-400">{computedFees.extraKmCount} km × {extraKmPrice} €/km</p>
                     </div>
                   </div>
                   <span className="text-base font-bold text-orange-600">+{computedFees.extraKmAmount.toLocaleString('fr-FR')} €</span>
@@ -416,16 +416,16 @@ export default function InspectionFlow({
                       <AlertTriangle className="w-4 h-4 text-red-600" />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-slate-900">Dommages constatés</p>
-                      <p className="text-xs text-slate-400">{newDamageZoneIds.length} nouvelle(s) zone(s) endommagée(s)</p>
+                      <p className="text-sm font-semibold text-gray-900">Dommages constatés</p>
+                      <p className="text-xs text-gray-400">{newDamageZoneIds.length} nouvelle(s) zone(s) endommagée(s)</p>
                     </div>
                   </div>
                   <span className="text-base font-bold text-red-600">+{computedFees.damageFeeAmount.toLocaleString('fr-FR')} €</span>
                 </div>
               )}
-              <div className="flex items-center justify-between px-5 py-4 bg-slate-50">
-                <span className="text-sm font-bold text-slate-700">Total frais supplémentaires</span>
-                <span className="text-lg font-bold text-slate-900">{totalExtra.toLocaleString('fr-FR')} €</span>
+              <div className="flex items-center justify-between px-5 py-4 bg-gray-50">
+                <span className="text-sm font-bold text-gray-700">Total frais supplémentaires</span>
+                <span className="text-lg font-bold text-gray-900">{totalExtra.toLocaleString('fr-FR')} €</span>
               </div>
             </div>
           </div>
@@ -443,10 +443,10 @@ export default function InspectionFlow({
         {/* Contrat de restitution : contrat + EDL départ + EDL retour → envoi au locataire.
             Masqué en mode convention inter-agences (pas de locataire/réservation). */}
         {type === 'arrivee' && reservationId && (
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-3">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-3">
             <div>
-              <h3 className="font-semibold text-slate-900">Contrat de restitution</h3>
-              <p className="text-sm text-slate-500 mt-0.5">
+              <h3 className="font-semibold text-gray-900">Contrat de restitution</h3>
+              <p className="text-sm text-gray-500 mt-0.5">
                 Le contrat complet (conditions + état des lieux de départ et de retour, signés) est prêt.
                 Faites-le relire et signer au locataire, puis envoyez-lui une copie par email.
               </p>
@@ -460,7 +460,7 @@ export default function InspectionFlow({
               <button
                 onClick={finalizeAndEmail}
                 disabled={emailState === 'sending'}
-                className="w-full py-3 bg-slate-900 text-white rounded-xl font-medium hover:bg-slate-800 transition-colors disabled:opacity-60"
+                className="w-full py-3 bg-[#111111] text-white rounded-xl font-medium hover:bg-gray-800 transition-colors disabled:opacity-60"
               >
                 {emailState === 'sending' ? 'Envoi du contrat…' : 'Envoyer le contrat de restitution au client'}
               </button>
@@ -493,14 +493,14 @@ export default function InspectionFlow({
               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${
                 step === s ? 'bg-blue-600 text-white' :
                 i < currentIdx ? 'bg-green-500 text-white' :
-                'bg-slate-100 text-slate-400'
+                'bg-gray-100 text-gray-400'
               }`}>
                 {i < currentIdx ? '✓' : i + 1}
               </div>
-              <span className={`text-xs hidden sm:block ${step === s ? 'font-medium text-slate-900' : 'text-slate-400'}`}>
+              <span className={`text-xs hidden sm:block ${step === s ? 'font-medium text-gray-900' : 'text-gray-400'}`}>
                 {['Infos', 'Zones', 'Photos', 'Signature'][i]}
               </span>
-              {i < 3 && <div className="flex-1 h-0.5 bg-slate-100" />}
+              {i < 3 && <div className="flex-1 h-0.5 bg-gray-100" />}
             </div>
           )
         })}
@@ -508,28 +508,28 @@ export default function InspectionFlow({
 
       {/* Étape : Infos */}
       {step === 'info' && (
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-5">
-          <h3 className="font-semibold text-slate-800">Informations de base</h3>
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-5">
+          <h3 className="font-semibold text-gray-800">Informations de base</h3>
 
           {/* ── Relevé de bord : kilométrage + carburant ── */}
-          <div className="bg-slate-900 rounded-2xl p-4 space-y-3">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Relevé de bord</p>
+          <div className="bg-[#111111] rounded-2xl p-4 space-y-3">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Relevé de bord</p>
 
             <div className="grid grid-cols-2 gap-3">
               {/* Kilométrage */}
-              <div className="bg-slate-800 rounded-xl p-3 space-y-2">
+              <div className="bg-[#111111] rounded-xl p-3 space-y-2">
                 <div className="flex items-center gap-1.5">
                   <Gauge className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Kilométrage</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Kilométrage</p>
                 </div>
                 <input
                   type="number"
                   value={kmReading}
                   onChange={e => setKmReading(Number(e.target.value))}
                   min={vehicleKm}
-                  className="w-full bg-slate-700 text-white text-xl font-bold px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 text-center tracking-widest"
+                  className="w-full bg-gray-700 text-white text-xl font-bold px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 text-center tracking-widest"
                 />
-                <p className="text-[10px] text-slate-500 text-center">
+                <p className="text-[10px] text-gray-500 text-center">
                   {type === 'arrivee' && kmReading > (kmAtDeparture ?? vehicleKm) ? (
                     <>
                       +{(kmReading - (kmAtDeparture ?? vehicleKm)).toLocaleString('fr-FR')} km
@@ -546,19 +546,19 @@ export default function InspectionFlow({
               </div>
 
               {/* Carburant */}
-              <div className="bg-slate-800 rounded-xl p-3 space-y-2">
+              <div className="bg-[#111111] rounded-xl p-3 space-y-2">
                 <div className="flex items-center gap-1.5">
                   <Fuel className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Autonomie (km)</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Autonomie (km)</p>
                 </div>
                 <input
                   type="number"
                   value={fuelRangeKm}
                   onChange={e => setFuelRangeKm(Number(e.target.value))}
                   min={0}
-                  className="w-full bg-slate-700 text-white text-xl font-bold px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 text-center tracking-widest"
+                  className="w-full bg-gray-700 text-white text-xl font-bold px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 text-center tracking-widest"
                 />
-                <p className="text-[10px] text-slate-500 text-center">
+                <p className="text-[10px] text-gray-500 text-center">
                   {type === 'arrivee' && fuelRangeAtDeparture != null ? (
                     fuelRangeKm < fuelRangeAtDeparture ? (
                       <>
@@ -579,9 +579,9 @@ export default function InspectionFlow({
 
             {/* Rappel km inclus — EDL retour uniquement */}
             {type === 'arrivee' && (
-              <div className="bg-slate-800 rounded-xl px-3 py-2 flex items-center gap-2">
+              <div className="bg-[#111111] rounded-xl px-3 py-2 flex items-center gap-2">
                 <Gauge className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
-                <p className="text-[10px] text-slate-300">
+                <p className="text-[10px] text-gray-300">
                   Départ : <strong className="text-white">{(kmAtDeparture ?? vehicleKm).toLocaleString('fr-FR')} km</strong>
                   {' · '}Inclus : <strong className="text-white">{kmIncluded.toLocaleString('fr-FR')} km</strong>
                   {' · '}Sup : <strong className="text-white">{extraKmPrice} €/km</strong>
@@ -607,7 +607,7 @@ export default function InspectionFlow({
       {/* Étape : Schéma */}
       {step === 'schema' && (
         <div className="space-y-4">
-          <p className="text-sm text-slate-500 text-center">Appuyez sur une zone pour signaler un dommage</p>
+          <p className="text-sm text-gray-500 text-center">Appuyez sur une zone pour signaler un dommage</p>
 
           {type === 'arrivee' && previousDamagedZones.length > 0 && (
             <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4">
@@ -633,8 +633,8 @@ export default function InspectionFlow({
           />
 
           {damagedZoneCount > 0 && (
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
-              <h4 className="font-medium text-slate-700 mb-3 flex items-center gap-2">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+              <h4 className="font-medium text-gray-700 mb-3 flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 text-amber-500" />
                 {damagedZoneCount} zone(s) · {damageCount} dommage(s)
               </h4>
@@ -645,7 +645,7 @@ export default function InspectionFlow({
                     const zone = NEW_ZONES.find(z => z.id === zoneId)
                     const isNew = type === 'arrivee' && !previousZoneIds.has(zoneId)
                     return (
-                      <div key={zoneId} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 gap-2">
+                      <div key={zoneId} className="flex items-center justify-between p-2.5 rounded-xl bg-gray-50 gap-2">
                         <div className="flex-1 min-w-0">
                           <span className={`text-xs px-2 py-0.5 rounded-full mr-2 font-medium ${
                             entries[0].severity === 'dommage'   ? 'bg-red-100 text-red-700' :
@@ -654,14 +654,14 @@ export default function InspectionFlow({
                           }`}>
                             {entries.length > 1 ? `${entries.length}×` : graviteLabel(entries[0].severity)}
                           </span>
-                          <span className="text-sm font-medium text-slate-800">{zone?.label ?? zoneId}</span>
+                          <span className="text-sm font-medium text-gray-800">{zone?.label ?? zoneId}</span>
                           {type === 'arrivee' && (
                             isNew
                               ? <span className="ml-2 text-[10px] font-bold uppercase text-red-500">nouveau</span>
                               : <span className="ml-2 text-[10px] font-bold uppercase text-blue-500">déjà signalé au départ</span>
                           )}
                           {entries[0].comment && (
-                            <p className="text-xs text-slate-400 mt-0.5 truncate">{entries[0].comment}</p>
+                            <p className="text-xs text-gray-400 mt-0.5 truncate">{entries[0].comment}</p>
                           )}
                         </div>
                         {isNew && (
@@ -672,9 +672,9 @@ export default function InspectionFlow({
                               step="0.01"
                               value={priceForZone(zoneId)}
                               onChange={e => setDamagePrices(prev => ({ ...prev, [zoneId]: Number(e.target.value) }))}
-                              className="w-20 text-sm text-right bg-white border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-blue-400"
+                              className="w-20 text-sm text-right bg-white border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-blue-400"
                             />
-                            <span className="text-xs text-slate-400">€</span>
+                            <span className="text-xs text-gray-400">€</span>
                           </div>
                         )}
                         <button
@@ -685,15 +685,15 @@ export default function InspectionFlow({
                           })}
                           className="p-1 hover:bg-red-50 rounded-lg flex-shrink-0"
                         >
-                          <X className="w-4 h-4 text-slate-400 hover:text-red-500" />
+                          <X className="w-4 h-4 text-gray-400 hover:text-red-500" />
                         </button>
                       </div>
                     )
                   })}
               </div>
               {type === 'arrivee' && exteriorDamageFee > 0 && (
-                <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100">
-                  <span className="text-sm font-bold text-slate-700">Sous-total carrosserie</span>
+                <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+                  <span className="text-sm font-bold text-gray-700">Sous-total carrosserie</span>
                   <span className="text-base font-bold text-red-600">{exteriorDamageFee.toLocaleString('fr-FR')} €</span>
                 </div>
               )}
@@ -702,12 +702,12 @@ export default function InspectionFlow({
 
           {/* Dégâts intérieurs à facturer (EDL retour uniquement) */}
           {type === 'arrivee' && (
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
-              <h4 className="font-medium text-slate-700 mb-1 flex items-center gap-2">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+              <h4 className="font-medium text-gray-700 mb-1 flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 text-amber-500" />
                 Dégâts intérieurs à facturer
               </h4>
-              <p className="text-xs text-slate-400 mb-3">Renseignez un montant pour chaque poste dégradé (laisser vide si aucun).</p>
+              <p className="text-xs text-gray-400 mb-3">Renseignez un montant pour chaque poste dégradé (laisser vide si aucun).</p>
               <div className="space-y-3">
                 {INTERIOR_DAMAGE_ITEMS.map(it => {
                   const val = interiorCharges[it.id]
@@ -715,7 +715,7 @@ export default function InspectionFlow({
                   return (
                     <div key={it.id} className="space-y-1.5">
                       <div className="flex items-center justify-between gap-3">
-                        <span className="text-sm text-slate-600 flex-1 min-w-0">{it.label}</span>
+                        <span className="text-sm text-gray-600 flex-1 min-w-0">{it.label}</span>
                         <div className="flex items-center gap-2 flex-shrink-0">
                           {/* Bouton photo — obligatoire si le poste est facturé, disponible toujours */}
                           <button
@@ -724,7 +724,7 @@ export default function InspectionFlow({
                             className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
                               pics.length > 0
                                 ? 'bg-green-100 text-green-600'
-                                : 'bg-slate-100 text-slate-400 hover:bg-blue-50 hover:text-blue-500'
+                                : 'bg-gray-100 text-gray-400 hover:bg-blue-50 hover:text-blue-500'
                             }`}
                             title={pics.length > 0 ? `${pics.length} photo(s) — ajouter` : 'Ajouter une photo'}
                           >
@@ -746,9 +746,9 @@ export default function InspectionFlow({
                                 return next
                               })
                             }}
-                            className="w-24 text-sm text-right bg-white border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-blue-400"
+                            className="w-24 text-sm text-right bg-white border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-blue-400"
                           />
-                          <span className="text-xs text-slate-400">€</span>
+                          <span className="text-xs text-gray-400">€</span>
                         </div>
                       </div>
                       {/* Vignettes des photos prises pour ce poste */}
@@ -756,7 +756,7 @@ export default function InspectionFlow({
                         <div className="flex gap-1.5 flex-wrap pl-1">
                           {pics.map((url, i) => (
                             <div key={i} className="relative w-14 h-14">
-                              <img src={url} alt="" className="w-full h-full object-cover rounded-lg border border-slate-200" />
+                              <img src={url} alt="" className="w-full h-full object-cover rounded-lg border border-gray-200" />
                               <button
                                 type="button"
                                 onClick={() => setInteriorPhotos(prev => ({
@@ -776,8 +776,8 @@ export default function InspectionFlow({
                 })}
               </div>
               {interiorDamageFee > 0 && (
-                <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100">
-                  <span className="text-sm font-bold text-slate-700">Sous-total intérieur</span>
+                <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+                  <span className="text-sm font-bold text-gray-700">Sous-total intérieur</span>
                   <span className="text-base font-bold text-red-600">{interiorDamageFee.toLocaleString('fr-FR')} €</span>
                 </div>
               )}
@@ -795,7 +795,7 @@ export default function InspectionFlow({
           <div className="flex gap-3">
             <button
               onClick={() => setStep('info')}
-              className="px-5 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-semibold hover:bg-slate-50 transition-colors flex items-center justify-center gap-1.5"
+              className="px-5 py-3 bg-white border border-gray-200 text-gray-600 rounded-xl font-semibold hover:bg-gray-50 transition-colors flex items-center justify-center gap-1.5"
             >
               <ChevronLeft className="w-4 h-4" /> Retour
             </button>
@@ -812,12 +812,12 @@ export default function InspectionFlow({
       {/* Étape : Photos */}
       {step === 'photos' && (
         <div className="space-y-4">
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
-            <h3 className="font-semibold text-slate-800 mb-1">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+            <h3 className="font-semibold text-gray-800 mb-1">
               Photos de l'état des lieux
-              <span className="ml-2 text-sm font-normal text-slate-500">({photoCount} prise{photoCount > 1 ? 's' : ''})</span>
+              <span className="ml-2 text-sm font-normal text-gray-500">({photoCount} prise{photoCount > 1 ? 's' : ''})</span>
             </h3>
-            <p className="text-xs text-slate-400 mb-3">Minimum 3 photos requises. Les emplacements ci-dessous indiquent où photographier (intérieur, extérieur, 4 côtés…).</p>
+            <p className="text-xs text-gray-400 mb-3">Minimum 3 photos requises. Les emplacements ci-dessous indiquent où photographier (intérieur, extérieur, 4 côtés…).</p>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
               {MANDATORY_PHOTOS.map(p => {
                 const taken = photos[p.type]
@@ -827,7 +827,7 @@ export default function InspectionFlow({
                     type="button"
                     onClick={() => triggerPhoto(p.type)}
                     className={`relative aspect-[4/3] rounded-xl overflow-hidden border-2 transition-all ${
-                      taken ? 'border-green-400' : 'border-dashed border-slate-200 hover:border-blue-400'
+                      taken ? 'border-green-400' : 'border-dashed border-gray-200 hover:border-blue-400'
                     }`}
                   >
                     {taken ? (
@@ -838,9 +838,9 @@ export default function InspectionFlow({
                         </div>
                       </>
                     ) : (
-                      <div className="flex flex-col items-center justify-center h-full bg-slate-50 gap-1.5 p-2">
-                        <Camera className="w-6 h-6 text-slate-300" />
-                        <span className="text-xs text-slate-400 text-center leading-tight">{p.label}</span>
+                      <div className="flex flex-col items-center justify-center h-full bg-gray-50 gap-1.5 p-2">
+                        <Camera className="w-6 h-6 text-gray-300" />
+                        <span className="text-xs text-gray-400 text-center leading-tight">{p.label}</span>
                       </div>
                     )}
                   </button>
@@ -868,14 +868,14 @@ export default function InspectionFlow({
           <div className="flex gap-3">
             <button
               onClick={() => setStep('schema')}
-              className="px-5 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-semibold hover:bg-slate-50 transition-colors flex items-center justify-center gap-1.5"
+              className="px-5 py-3 bg-white border border-gray-200 text-gray-600 rounded-xl font-semibold hover:bg-gray-50 transition-colors flex items-center justify-center gap-1.5"
             >
               <ChevronLeft className="w-4 h-4" /> Retour
             </button>
             <button
               onClick={() => setStep('signatures')}
               disabled={!mandatoryCompleted}
-              className="flex-1 py-3 bg-blue-600 disabled:bg-slate-200 disabled:text-slate-400 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+              className="flex-1 py-3 bg-blue-600 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
             >
               Suivant : Signatures <ChevronRight className="w-4 h-4" />
             </button>
@@ -886,8 +886,8 @@ export default function InspectionFlow({
       {/* Étape : Signatures */}
       {step === 'signatures' && (
         <div className="space-y-4">
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-5">
-            <h3 className="font-semibold text-slate-800">Signatures</h3>
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-5">
+            <h3 className="font-semibold text-gray-800">Signatures</h3>
             <SignatureCanvas
               label="Signature du client *"
               onSign={setClientSig}
@@ -895,8 +895,8 @@ export default function InspectionFlow({
               height={160}
             />
             <div>
-              <p className="text-sm font-medium text-slate-700 mb-2">Pour l&apos;agence</p>
-              <div className="flex items-center justify-center h-[120px] rounded-xl border-2 border-dashed border-slate-200 bg-slate-50">
+              <p className="text-sm font-medium text-gray-700 mb-2">Pour l&apos;agence</p>
+              <div className="flex items-center justify-center h-[120px] rounded-xl border-2 border-dashed border-gray-200 bg-gray-50">
                 <div className="border-2 border-blue-600/40 rounded-lg px-5 py-2.5 text-center">
                   <p className="text-sm font-black uppercase tracking-wide text-blue-600/80">Cachet de l&apos;entreprise</p>
                   <p className="text-[10px] uppercase tracking-widest text-blue-600/50 mt-0.5">Apposé automatiquement</p>
@@ -915,14 +915,14 @@ export default function InspectionFlow({
             <button
               onClick={() => setStep('photos')}
               disabled={saving}
-              className="px-5 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-semibold hover:bg-slate-50 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+              className="px-5 py-3 bg-white border border-gray-200 text-gray-600 rounded-xl font-semibold hover:bg-gray-50 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
             >
               <ChevronLeft className="w-4 h-4" /> Retour
             </button>
             <button
               onClick={handleSubmit}
               disabled={saving || !clientSig}
-              className="flex-1 py-3.5 bg-green-600 disabled:bg-slate-200 disabled:text-slate-400 text-white rounded-xl font-bold hover:bg-green-700 transition-colors"
+              className="flex-1 py-3.5 bg-green-600 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-xl font-bold hover:bg-green-700 transition-colors"
             >
               {saving ? 'Enregistrement...' : '✓ Valider l\'état des lieux'}
             </button>

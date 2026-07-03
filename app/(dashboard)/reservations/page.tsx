@@ -112,10 +112,10 @@ export default async function ReservationsPage({
       </form>
 
       {/* Filtres statut — scroll horizontal */}
-      <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+      <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}>
         <Link
           href="/reservations"
-          className={`px-3.5 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-colors flex-shrink-0 ${
+          className={`px-3.5 py-2 min-h-[44px] flex items-center rounded-xl text-sm font-semibold whitespace-nowrap transition-colors flex-shrink-0 ${
             !status ? 'bg-[#111111] text-white' : 'bg-white border border-gray-100 text-gray-600 hover:bg-gray-50 shadow-sm'
           }`}
         >
@@ -130,7 +130,7 @@ export default async function ReservationsPage({
             <Link
               key={s}
               href={`/reservations?status=${s}`}
-              className={`px-3.5 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-colors flex-shrink-0 ${
+              className={`px-3.5 py-2 min-h-[44px] flex items-center rounded-xl text-sm font-semibold whitespace-nowrap transition-colors flex-shrink-0 ${
                 status === s
                   ? 'bg-[#111111] text-white'
                   : 'bg-white border border-gray-100 text-gray-600 hover:bg-gray-50 shadow-sm'

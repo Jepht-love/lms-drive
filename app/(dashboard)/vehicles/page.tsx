@@ -186,10 +186,10 @@ export default async function VehiclesPage({
       </form>
 
       {/* Statut filters */}
-      <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+      <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}>
         <Link
           href="/vehicles"
-          className={`px-3.5 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-colors flex-shrink-0 ${
+          className={`px-3.5 py-2 min-h-[44px] flex items-center rounded-xl text-sm font-semibold whitespace-nowrap transition-colors flex-shrink-0 ${
             !status && !need ? 'bg-[#111111] text-white' : 'bg-white border border-gray-100 text-gray-600 hover:bg-gray-50 shadow-sm'
           }`}
         >
@@ -198,7 +198,7 @@ export default async function VehiclesPage({
         {immobilisesCount > 0 && (
           <Link
             href="/vehicles/immobilises"
-            className="px-3.5 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-colors flex-shrink-0 flex items-center gap-1.5 bg-white border border-orange-100 text-orange-600 hover:bg-orange-50 shadow-sm"
+            className="px-3.5 py-2 min-h-[44px] rounded-xl text-sm font-semibold whitespace-nowrap transition-colors flex-shrink-0 flex items-center gap-1.5 bg-white border border-orange-100 text-orange-600 hover:bg-orange-50 shadow-sm"
           >
             <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-orange-400" />
             Immobilisés ({immobilisesCount})
@@ -211,7 +211,7 @@ export default async function VehiclesPage({
             <Link
               key={s}
               href={`/vehicles?status=${s}`}
-              className={`px-3.5 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-colors flex-shrink-0 flex items-center gap-1.5 ${
+              className={`px-3.5 py-2 min-h-[44px] rounded-xl text-sm font-semibold whitespace-nowrap transition-colors flex-shrink-0 flex items-center gap-1.5 ${
                 status === s
                   ? 'bg-[#111111] text-white'
                   : 'bg-white border border-gray-100 text-gray-600 hover:bg-gray-50 shadow-sm'
@@ -227,7 +227,7 @@ export default async function VehiclesPage({
 
       {/* Filtres maintenance — quoi faire passer au garage / vidange / pneus / dégradé */}
       {hasNeeds && (
-        <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+        <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}>
           {MAINTENANCE_CATEGORIES.map(cat => {
             const count = needCounts[cat.id] ?? 0
             if (count === 0 && need !== cat.id) return null
@@ -236,7 +236,7 @@ export default async function VehiclesPage({
               <Link
                 key={cat.id}
                 href={active ? '/vehicles' : `/vehicles?need=${cat.id}`}
-                className={`px-3.5 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-colors flex-shrink-0 flex items-center gap-1.5 ${
+                className={`px-3.5 py-2 min-h-[44px] rounded-xl text-sm font-semibold whitespace-nowrap transition-colors flex-shrink-0 flex items-center gap-1.5 ${
                   active
                     ? 'bg-red-600 text-white'
                     : 'bg-white border border-red-100 text-red-600 hover:bg-red-50 shadow-sm'

@@ -19,8 +19,8 @@ export default function AgencySettingsForm({ settings }: { settings: AgencySetti
     })
   }
 
-  const input = 'w-full text-sm border border-slate-200 rounded-xl px-3 py-2.5 text-slate-900 focus:outline-none focus:border-slate-400 transition-colors'
-  const label = 'block text-[11px] font-bold uppercase tracking-wide text-slate-400 mb-1.5'
+  const input = 'w-full text-sm border border-gray-200 rounded-xl px-3 py-2.5 text-gray-900 focus:outline-none focus:border-gray-400 transition-colors'
+  const label = 'block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5'
 
   return (
     <form onSubmit={onSubmit} className="space-y-5">
@@ -50,7 +50,7 @@ export default function AgencySettingsForm({ settings }: { settings: AgencySetti
 
       {/* Tarifs par défaut */}
       <div>
-        <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-3">Tarifs par défaut</p>
+        <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-3">Tarifs par défaut</p>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           <div>
             <label className={label} htmlFor="extra_km_rate">Km sup. (€/km)</label>
@@ -83,7 +83,7 @@ export default function AgencySettingsForm({ settings }: { settings: AgencySetti
         <button
           type="submit"
           disabled={pending}
-          className="px-5 py-2.5 bg-[#111111] text-white rounded-xl font-semibold text-sm hover:bg-slate-800 transition-colors disabled:opacity-40 active:scale-[.97]"
+          className="px-5 py-2.5 bg-[#111111] text-white rounded-xl font-semibold text-sm hover:bg-gray-800 transition-colors disabled:opacity-40 active:scale-[.97]"
         >
           {pending ? 'Enregistrement…' : 'Enregistrer'}
         </button>

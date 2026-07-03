@@ -103,8 +103,8 @@ export default function ContractPreviewClient({ contract, reservation, vehicle, 
       <div className="min-h-screen flex items-center justify-center bg-[#F2F2F7]">
         <div className="bg-white rounded-2xl shadow-sm border border-green-200 p-10 text-center max-w-sm">
           <CheckCircle2 className="w-14 h-14 text-green-500 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-slate-900 mb-2">Contrat signé !</h2>
-          <p className="text-slate-500 text-sm">Le PDF a été généré et téléchargé. Redirection en cours…</p>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Contrat signé !</h2>
+          <p className="text-gray-500 text-sm">Le PDF a été généré et téléchargé. Redirection en cours…</p>
         </div>
       </div>
     )
@@ -113,13 +113,13 @@ export default function ContractPreviewClient({ contract, reservation, vehicle, 
   return (
     <div className="min-h-screen bg-[#F2F2F7]">
       {/* Sticky header */}
-      <div className="sticky top-0 z-10 bg-white/95 backdrop-blur border-b border-slate-100 px-4 py-3 flex items-center gap-3">
-        <Link href={`/contracts/${contract.id}`} className="p-2 rounded-xl hover:bg-slate-100 transition-colors">
-          <ArrowLeft className="w-5 h-5 text-slate-600" />
+      <div className="sticky top-0 z-10 bg-white/95 backdrop-blur border-b border-gray-100 px-4 py-3 flex items-center gap-3">
+        <Link href={`/contracts/${contract.id}`} className="p-2 rounded-xl hover:bg-gray-100 transition-colors">
+          <ArrowLeft className="w-5 h-5 text-gray-600" />
         </Link>
         <div className="flex-1 min-w-0">
-          <h1 className="font-bold text-slate-900 truncate">{contract.contract_number}</h1>
-          <p className="text-xs text-slate-500">Prévisualisation contrat</p>
+          <h1 className="font-bold text-gray-900 truncate">{contract.contract_number}</h1>
+          <p className="text-xs text-gray-500">Prévisualisation contrat</p>
         </div>
         <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
           isSigned ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
@@ -131,44 +131,44 @@ export default function ContractPreviewClient({ contract, reservation, vehicle, 
       <div className="max-w-3xl mx-auto px-4 py-6 space-y-4">
 
         {/* ── En-tête contrat ── */}
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
-          <div className="flex items-start justify-between mb-6 pb-4 border-b border-slate-100">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <div className="flex items-start justify-between mb-6 pb-4 border-b border-gray-100">
             <div>
               <Image src="/logo.png" alt="Logo agence" width={140} height={48} className="object-contain mb-2" />
-              {agency?.siret && <p className="text-xs text-slate-400">SIRET : {agency.siret}</p>}
-              {agency?.address && <p className="text-xs text-slate-400">{agency.address}</p>}
-              {agency?.phone && <p className="text-xs text-slate-400">{agency.phone}</p>}
+              {agency?.siret && <p className="text-xs text-gray-400">SIRET : {agency.siret}</p>}
+              {agency?.address && <p className="text-xs text-gray-400">{agency.address}</p>}
+              {agency?.phone && <p className="text-xs text-gray-400">{agency.phone}</p>}
             </div>
             <div className="text-right">
-              <p className="font-mono font-bold text-slate-800">{contract.contract_number}</p>
-              <p className="text-xs text-slate-400">Réf. {reservation?.reservation_number}</p>
-              <p className="text-xs text-slate-400">Contrat de location de véhicule</p>
+              <p className="font-mono font-bold text-gray-800">{contract.contract_number}</p>
+              <p className="text-xs text-gray-400">Réf. {reservation?.reservation_number}</p>
+              <p className="text-xs text-gray-400">Contrat de location de véhicule</p>
             </div>
           </div>
 
           {/* Parties */}
           <div className="grid grid-cols-2 gap-4 mb-5">
-            <div className="bg-slate-50 rounded-xl p-3">
-              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-2">Loueur</p>
-              <p className="font-semibold text-slate-900">{agency?.company_name ?? 'LMS Drive'}</p>
-              {agency?.address && <p className="text-xs text-slate-500 mt-0.5">{agency.address}</p>}
+            <div className="bg-gray-50 rounded-xl p-3">
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Loueur</p>
+              <p className="font-semibold text-gray-900">{agency?.company_name ?? 'LMS Drive'}</p>
+              {agency?.address && <p className="text-xs text-gray-500 mt-0.5">{agency.address}</p>}
             </div>
-            <div className="bg-slate-50 rounded-xl p-3">
-              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-2">Locataire</p>
-              <p className="font-semibold text-slate-900">{client?.first_name} {client?.last_name}</p>
-              <p className="text-xs text-slate-500">{client?.phone}</p>
-              {client?.email && <p className="text-xs text-slate-400">{client?.email}</p>}
-              {client?.license_number && <p className="text-xs text-slate-400">Permis : {client?.license_number}</p>}
+            <div className="bg-gray-50 rounded-xl p-3">
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Locataire</p>
+              <p className="font-semibold text-gray-900">{client?.first_name} {client?.last_name}</p>
+              <p className="text-xs text-gray-500">{client?.phone}</p>
+              {client?.email && <p className="text-xs text-gray-400">{client?.email}</p>}
+              {client?.license_number && <p className="text-xs text-gray-400">Permis : {client?.license_number}</p>}
             </div>
           </div>
 
           {/* Véhicule */}
-          <div className="bg-slate-900 rounded-xl p-4 mb-4 text-white">
-            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-2">Véhicule loué</p>
+          <div className="bg-[#111111] rounded-xl p-4 mb-4 text-white">
+            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Véhicule loué</p>
             <p className="font-bold text-lg">{vehicle?.brand} {vehicle?.model} {vehicle?.version}</p>
             <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-              <span className="bg-slate-700 text-slate-300 font-mono text-xs font-normal px-2 py-0.5 rounded">{vehicle?.plate}</span>
-              {vehicle?.color && <span className="text-slate-300 text-sm">{vehicle?.color}</span>}
+              <span className="bg-gray-700 text-gray-300 font-mono text-xs font-normal px-2 py-0.5 rounded">{vehicle?.plate}</span>
+              {vehicle?.color && <span className="text-gray-300 text-sm">{vehicle?.color}</span>}
               {vehicle?.category && (
                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                   isSport ? 'bg-red-900 text-red-300' : 'bg-blue-900 text-blue-300'
@@ -183,23 +183,23 @@ export default function ContractPreviewClient({ contract, reservation, vehicle, 
           <div className="grid grid-cols-2 gap-3 mb-4">
             <div className="bg-blue-50 rounded-xl p-3">
               <p className="text-xs text-blue-600 font-medium mb-1">Départ</p>
-              <p className="font-semibold text-slate-900">{formatDateTime(reservation?.start_datetime)}</p>
+              <p className="font-semibold text-gray-900">{formatDateTime(reservation?.start_datetime)}</p>
             </div>
             <div className="bg-purple-50 rounded-xl p-3">
               <p className="text-xs text-purple-600 font-medium mb-1">Retour prévu</p>
-              <p className="font-semibold text-slate-900">{formatDateTime(reservation?.end_datetime)}</p>
+              <p className="font-semibold text-gray-900">{formatDateTime(reservation?.end_datetime)}</p>
             </div>
           </div>
 
           {/* Tarification */}
           <div className="grid grid-cols-3 gap-2 mb-4 text-center">
-            <div className="bg-slate-50 rounded-xl p-2">
-              <p className="text-xs text-slate-500">Prix / jour</p>
-              <p className="font-bold text-slate-900">{formatPrice(reservation?.daily_price)}</p>
+            <div className="bg-gray-50 rounded-xl p-2">
+              <p className="text-xs text-gray-500">Prix / jour</p>
+              <p className="font-bold text-gray-900">{formatPrice(reservation?.daily_price)}</p>
             </div>
-            <div className="bg-slate-50 rounded-xl p-2">
-              <p className="text-xs text-slate-500">KM inclus</p>
-              <p className="font-bold text-slate-900">{reservation?.km_included ?? '∞'}</p>
+            <div className="bg-gray-50 rounded-xl p-2">
+              <p className="text-xs text-gray-500">KM inclus</p>
+              <p className="font-bold text-gray-900">{reservation?.km_included ?? '∞'}</p>
             </div>
             <div className="bg-green-50 rounded-xl p-2">
               <p className="text-xs text-green-700">Total TTC</p>
@@ -216,40 +216,40 @@ export default function ContractPreviewClient({ contract, reservation, vehicle, 
         </div>
 
         {/* ── Tableau des frais ── */}
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
-          <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-1">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-1">
             Tableau récapitulatif des frais
           </h2>
-          <p className="text-xs text-slate-400 mb-4">
+          <p className="text-xs text-gray-400 mb-4">
             Catégorie : {isSport ? 'Véhicule Sportif' : isSmartFortwo ? 'Smart Fortwo' : 'Citadine'}
           </p>
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-gray-100">
             {fees.rows.map((row, i) => (
               <div key={i} className={`flex items-center justify-between py-2.5 ${
                 i < 2 ? (isSport ? 'bg-red-50 -mx-2 px-2 rounded-lg' : 'bg-blue-50 -mx-2 px-2 rounded-lg') : ''
               }`}>
-                <span className="text-sm text-slate-700">{row.label}</span>
+                <span className="text-sm text-gray-700">{row.label}</span>
                 <span className={`text-sm font-semibold ${
-                  i < 2 ? (isSport ? 'text-red-700' : 'text-blue-700') : 'text-slate-900'
+                  i < 2 ? (isSport ? 'text-red-700' : 'text-blue-700') : 'text-gray-900'
                 }`}>{row.value}</span>
               </div>
             ))}
           </div>
-          <p className="text-[10px] text-slate-400 mt-3">
+          <p className="text-[10px] text-gray-400 mt-3">
             Montants TTC. La franchise est applicable par sinistre et par véhicule.
           </p>
         </div>
 
         {/* ── Conditions générales — 14 articles ── */}
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
-          <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-5">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-5">
             Conditions générales de location
           </h2>
           <div className="space-y-5">
             {articles.map((art, i) => (
               <div key={i}>
-                <h3 className="text-xs font-bold text-slate-800 mb-1.5">Art. {art.title}</h3>
-                <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-line">{art.body}</p>
+                <h3 className="text-xs font-bold text-gray-800 mb-1.5">Art. {art.title}</h3>
+                <p className="text-xs text-gray-600 leading-relaxed whitespace-pre-line">{art.body}</p>
               </div>
             ))}
           </div>
@@ -265,9 +265,9 @@ export default function ContractPreviewClient({ contract, reservation, vehicle, 
 
         {/* ── Signature client ── */}
         {!isSigned ? (
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-            <h2 className="font-semibold text-slate-800 mb-1">Signature du locataire</h2>
-            <p className="text-xs text-slate-500 mb-4">
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+            <h2 className="font-semibold text-gray-800 mb-1">Signature du locataire</h2>
+            <p className="text-xs text-gray-500 mb-4">
               En signant, vous reconnaissez avoir lu et accepté l'intégralité des conditions générales ci-dessus.
             </p>
 
@@ -280,21 +280,21 @@ export default function ContractPreviewClient({ contract, reservation, vehicle, 
             />
 
             {/* Cachet agence en regard */}
-            <div className="mt-6 pt-5 border-t border-slate-100">
+            <div className="mt-6 pt-5 border-t border-gray-100">
               <div className="grid grid-cols-2 gap-6">
                 <div className="text-center">
-                  <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-2">Signature du locataire</p>
+                  <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-2">Signature du locataire</p>
                   {clientSig ? (
-                    <img src={clientSig} alt="Signature" className="h-16 w-full object-contain border border-slate-200 rounded-lg bg-white" />
+                    <img src={clientSig} alt="Signature" className="h-16 w-full object-contain border border-gray-200 rounded-lg bg-white" />
                   ) : (
-                    <div className="h-16 border-2 border-dashed border-slate-200 rounded-lg flex items-center justify-center">
-                      <span className="text-xs text-slate-300">En attente</span>
+                    <div className="h-16 border-2 border-dashed border-gray-200 rounded-lg flex items-center justify-center">
+                      <span className="text-xs text-gray-300">En attente</span>
                     </div>
                   )}
                 </div>
                 <div className="text-center">
-                  <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-2">Cachet & Visa agence</p>
-                  <div className="h-16 flex items-center justify-center border border-slate-200 rounded-lg bg-slate-50">
+                  <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-2">Cachet & Visa agence</p>
+                  <div className="h-16 flex items-center justify-center border border-gray-200 rounded-lg bg-gray-50">
                     <Image src="/logo.png" alt="Cachet agence" width={120} height={48} className="object-contain max-h-full" />
                   </div>
                 </div>
@@ -311,7 +311,7 @@ export default function ContractPreviewClient({ contract, reservation, vehicle, 
             <button
               onClick={sign}
               disabled={signing || !clientSig}
-              className="mt-5 w-full py-4 bg-green-600 hover:bg-green-700 disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold rounded-xl transition-colors text-sm flex items-center justify-center gap-2"
+              className="mt-5 w-full py-4 bg-green-600 hover:bg-green-700 disabled:bg-gray-200 disabled:text-gray-400 text-white font-bold rounded-xl transition-colors text-sm flex items-center justify-center gap-2"
             >
               {signing ? (
                 <>
@@ -325,7 +325,7 @@ export default function ContractPreviewClient({ contract, reservation, vehicle, 
                 </>
               )}
             </button>
-            <p className="text-[10px] text-slate-400 text-center mt-2">
+            <p className="text-[10px] text-gray-400 text-center mt-2">
               La signature génère automatiquement le contrat PDF définitif.
             </p>
           </div>

@@ -78,14 +78,14 @@ export default function ContractSigningPanel({ contract, reservation, vehicle, c
       {/* Statut signature */}
       {!isSigned ? (
         <div className="bg-white rounded-2xl border border-amber-200 shadow-sm p-5">
-          <h3 className="font-semibold text-slate-800 mb-1">Signature du contrat</h3>
-          <p className="text-sm text-slate-500 mb-4">
+          <h3 className="font-semibold text-gray-800 mb-1">Signature du contrat</h3>
+          <p className="text-sm text-gray-500 mb-4">
             Présentez la prévisualisation au client pour qu'il lise les conditions et signe en bas de page.
           </p>
 
           {/* Cachet agence */}
-          <div className="mb-4 rounded-xl border border-slate-200 p-4 bg-slate-50">
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Cachet agence</p>
+          <div className="mb-4 rounded-xl border border-gray-200 p-4 bg-gray-50">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Cachet agence</p>
             <div className="flex items-center justify-center h-16">
               <Image
                 src="/logo.png"
@@ -95,7 +95,7 @@ export default function ContractSigningPanel({ contract, reservation, vehicle, c
                 className="object-contain max-h-full"
               />
             </div>
-            <p className="text-[10px] text-slate-400 text-center mt-2">Apposé automatiquement sur le contrat PDF</p>
+            <p className="text-[10px] text-gray-400 text-center mt-2">Apposé automatiquement sur le contrat PDF</p>
           </div>
 
           <Link
@@ -120,7 +120,7 @@ export default function ContractSigningPanel({ contract, reservation, vehicle, c
           {/* Affichage signature client */}
           {contract.client_signature_svg && (
             <div className="bg-white rounded-xl p-3 border border-green-200">
-              <p className="text-xs text-slate-500 mb-1">Signature du client</p>
+              <p className="text-xs text-gray-500 mb-1">Signature du client</p>
               <img
                 src={contract.client_signature_svg}
                 alt="Signature client"
@@ -132,13 +132,13 @@ export default function ContractSigningPanel({ contract, reservation, vehicle, c
       )}
 
       {/* Actions PDF */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-        <h3 className="font-semibold text-slate-800 mb-4">Actions</h3>
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <h3 className="font-semibold text-gray-800 mb-4">Actions</h3>
         <div className="space-y-3">
           <button
             onClick={generatePDF}
             disabled={generating}
-            className="w-full flex items-center justify-center gap-2 py-3 border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl text-sm font-medium transition-colors disabled:opacity-50"
+            className="w-full flex items-center justify-center gap-2 py-3 border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-xl text-sm font-medium transition-colors disabled:opacity-50"
           >
             <FileDown className="w-4 h-4" />
             {generating ? 'Génération...' : 'Télécharger le PDF'}
@@ -147,7 +147,7 @@ export default function ContractSigningPanel({ contract, reservation, vehicle, c
           <button
             onClick={sendEmail}
             disabled={sending || !client?.email}
-            className="w-full flex items-center justify-center gap-2 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 text-white rounded-xl text-sm font-medium transition-colors"
+            className="w-full flex items-center justify-center gap-2 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-xl text-sm font-medium transition-colors"
           >
             <Send className="w-4 h-4" />
             {sending ? 'Envoi...' : `Envoyer par email${client?.email ? '' : " (pas d'email)"}`}

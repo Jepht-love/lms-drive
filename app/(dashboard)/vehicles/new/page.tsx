@@ -8,8 +8,8 @@ export default function NewVehiclePage() {
       <div className="flex items-center gap-3">
         <BackButton fallbackHref="/vehicles" />
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Nouveau véhicule</h1>
-          <p className="text-slate-500 mt-0.5">Ajoutez un véhicule à la flotte</p>
+          <h1 className="text-2xl font-bold text-gray-900">Nouveau véhicule</h1>
+          <p className="text-gray-500 mt-0.5">Ajoutez un véhicule à la flotte</p>
         </div>
       </div>
       <VehicleForm action={createVehicle} />

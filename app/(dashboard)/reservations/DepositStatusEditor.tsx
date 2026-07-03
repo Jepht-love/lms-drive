@@ -9,8 +9,8 @@ const DEPOSIT_STATUSES = [
     value: 'en_attente',
     label: 'En attente',
     description: 'Caution encaissée, non encore restituée',
-    color: 'bg-slate-100 text-slate-700 border-slate-200',
-    dot: 'bg-slate-400',
+    color: 'bg-gray-100 text-gray-700 border-gray-200',
+    dot: 'bg-gray-400',
   },
   {
     value: 'liberee',
@@ -74,7 +74,7 @@ export default function DepositStatusEditor({ reservationId, currentStatus, cont
       </div>
 
       {/* Changer le statut */}
-      <p className="text-xs text-slate-400 font-medium uppercase tracking-wide">Modifier le statut</p>
+      <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">Modifier le statut</p>
       <div className="grid grid-cols-1 gap-1.5">
         {DEPOSIT_STATUSES.filter(s => s.value !== status).map(s => {
           const isLocked = s.value === 'liberee' && !contractClosed
@@ -86,17 +86,17 @@ export default function DepositStatusEditor({ reservationId, currentStatus, cont
               title={isLocked ? 'Le contrat doit être validé avant de libérer la caution' : undefined}
               className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium transition-all border flex items-center gap-2.5 ${
                 isLocked
-                  ? 'border-slate-100 bg-slate-50 text-slate-300 cursor-not-allowed'
-                  : 'border-slate-100 bg-white text-slate-600 hover:bg-slate-50 hover:border-slate-200 disabled:opacity-50'
+                  ? 'border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed'
+                  : 'border-gray-100 bg-white text-gray-600 hover:bg-gray-50 hover:border-gray-200 disabled:opacity-50'
               }`}
             >
               {isLocked
-                ? <Lock className="w-3.5 h-3.5 flex-shrink-0 text-slate-300" />
+                ? <Lock className="w-3.5 h-3.5 flex-shrink-0 text-gray-300" />
                 : <div className={`w-2 h-2 rounded-full flex-shrink-0 ${s.dot}`} />}
               <span>{s.label}</span>
               {isLocked
-                ? <span className="text-xs text-slate-300 ml-auto hidden sm:block">Contrat à valider d'abord</span>
-                : <span className="text-xs text-slate-400 ml-auto hidden sm:block">{s.description}</span>}
+                ? <span className="text-xs text-gray-300 ml-auto hidden sm:block">Contrat à valider d'abord</span>
+                : <span className="text-xs text-gray-400 ml-auto hidden sm:block">{s.description}</span>}
             </button>
           )
         })}

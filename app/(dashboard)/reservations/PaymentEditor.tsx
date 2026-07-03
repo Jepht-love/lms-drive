@@ -10,7 +10,7 @@ type PaymentStatus = 'en_attente' | 'paye' | 'partiel' | 'impaye'
 type PaymentMethodType = 'especes' | 'virement' | 'cb' | 'cheque'
 
 const PAYMENT_STATUSES = [
-  { value: 'en_attente', label: 'En attente', description: 'Paiement non encore reçu', color: 'bg-slate-100 text-slate-700 border-slate-200', dot: 'bg-slate-400' },
+  { value: 'en_attente', label: 'En attente', description: 'Paiement non encore reçu', color: 'bg-gray-100 text-gray-700 border-gray-200', dot: 'bg-gray-400' },
   { value: 'paye',       label: 'Payé',        description: 'Paiement intégral reçu',   color: 'bg-green-50 text-green-800 border-green-200', dot: 'bg-green-500' },
   { value: 'partiel',    label: 'Partiel',      description: 'Paiement partiel reçu',   color: 'bg-amber-50 text-amber-800 border-amber-200', dot: 'bg-amber-500' },
   { value: 'impaye',     label: 'Impayé',       description: 'Aucun paiement reçu',     color: 'bg-red-50 text-red-800 border-red-200', dot: 'bg-red-500' },
@@ -72,7 +72,7 @@ export default function PaymentEditor({ reservationId, totalPrice, currentStatus
 
       {/* Statuts */}
       <div>
-        <p className="text-xs text-slate-400 font-medium uppercase tracking-wide mb-2">Statut paiement</p>
+        <p className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-2">Statut paiement</p>
         <div className="grid grid-cols-2 gap-1.5">
           {PAYMENT_STATUSES.map(s => (
             <button
@@ -81,7 +81,7 @@ export default function PaymentEditor({ reservationId, totalPrice, currentStatus
               className={`px-3 py-2 rounded-xl text-xs font-medium border transition-all flex items-center gap-1.5 ${
                 status === s.value
                   ? s.color + ' ring-1 ring-offset-1 ring-current'
-                  : 'border-slate-100 bg-white text-slate-500 hover:bg-slate-50'
+                  : 'border-gray-100 bg-white text-gray-500 hover:bg-gray-50'
               }`}
             >
               <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${s.dot}`} />
@@ -93,7 +93,7 @@ export default function PaymentEditor({ reservationId, totalPrice, currentStatus
 
       {/* Mode de paiement */}
       <div>
-        <p className="text-xs text-slate-400 font-medium uppercase tracking-wide mb-2">Mode de paiement</p>
+        <p className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-2">Mode de paiement</p>
         <div className="grid grid-cols-4 gap-1.5">
           {PAYMENT_METHODS.map(m => (
             <button
@@ -102,7 +102,7 @@ export default function PaymentEditor({ reservationId, totalPrice, currentStatus
               className={`flex flex-col items-center gap-1 py-2 px-1 rounded-xl text-xs font-medium border transition-all ${
                 method === m.value
                   ? 'border-blue-400 bg-blue-50 text-blue-700'
-                  : 'border-slate-100 bg-white text-slate-500 hover:bg-slate-50'
+                  : 'border-gray-100 bg-white text-gray-500 hover:bg-gray-50'
               }`}
             >
               {m.icon}
@@ -115,23 +115,23 @@ export default function PaymentEditor({ reservationId, totalPrice, currentStatus
       {/* Montant + référence */}
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <label className="block text-xs text-slate-400 font-medium uppercase tracking-wide mb-1">Montant reçu</label>
+          <label className="block text-xs text-gray-400 font-medium uppercase tracking-wide mb-1">Montant reçu</label>
           <input
             type="number"
             value={amount}
             onChange={e => setAmount(e.target.value)}
             placeholder={totalPrice.toString()}
-            className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
         <div>
-          <label className="block text-xs text-slate-400 font-medium uppercase tracking-wide mb-1">Référence</label>
+          <label className="block text-xs text-gray-400 font-medium uppercase tracking-wide mb-1">Référence</label>
           <input
             type="text"
             value={ref}
             onChange={e => setRef(e.target.value)}
             placeholder="N° transaction…"
-            className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
       </div>

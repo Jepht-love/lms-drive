@@ -61,8 +61,8 @@ export default function NotificationSettings() {
   return (
     <div className="space-y-4">
       {/* Types d'alertes */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-        <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
           <Bell className="w-4 h-4" /> Alertes push actives
         </h3>
         <Toggle label="Nouvelle réservation" value={settings.new_reservation_alert} onChange={v => save({ new_reservation_alert: v })} />
@@ -73,8 +73,8 @@ export default function NotificationSettings() {
       </div>
 
       {/* Fenêtre horaire */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-        <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
           <Clock className="w-4 h-4" /> Fenêtre de réception
         </h3>
         <p className="text-xs text-gray-400 mb-3">Aucune notification ne sera envoyée en dehors de cette plage horaire.</p>
@@ -107,8 +107,8 @@ export default function NotificationSettings() {
       </div>
 
       {/* Seuil retard */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-        <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
           <AlertTriangle className="w-4 h-4" /> Seuil retour en retard
         </h3>
         <p className="text-xs text-gray-400 mb-3">Délai après lequel un retour non effectué déclenche une alerte.</p>

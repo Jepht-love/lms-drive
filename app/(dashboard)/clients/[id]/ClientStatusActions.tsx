@@ -26,7 +26,7 @@ export default function ClientStatusActions({ clientId, status }: { clientId: st
             type="button"
             disabled={pending}
             onClick={() => setStatus('vip')}
-            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50"
+            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
           >
             <Star className="w-4 h-4" /> Marquer VIP
           </button>
@@ -46,7 +46,7 @@ export default function ClientStatusActions({ clientId, status }: { clientId: st
             type="button"
             disabled={pending}
             onClick={() => setStatus('standard')}
-            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 text-sm font-semibold text-slate-500 hover:bg-slate-50 transition-colors disabled:opacity-50"
+            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-500 hover:bg-gray-50 transition-colors disabled:opacity-50"
           >
             <RotateCcw className="w-4 h-4" /> Retirer le statut
           </button>
@@ -60,14 +60,14 @@ export default function ClientStatusActions({ clientId, status }: { clientId: st
             value={reason}
             onChange={e => setReason(e.target.value)}
             rows={2}
-            className="w-full px-3 py-2 rounded-lg border border-red-200 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-red-400"
+            className="w-full px-3 py-2 rounded-lg border border-red-200 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-400"
             placeholder="Impayé, dégradation, comportement…"
           />
           <div className="flex gap-2">
             <button
               type="button"
               onClick={() => setShowReasonInput(false)}
-              className="flex-1 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100 rounded-lg"
+              className="flex-1 py-2 text-sm font-medium text-gray-500 hover:bg-gray-100 rounded-lg"
             >
               Annuler
             </button>
