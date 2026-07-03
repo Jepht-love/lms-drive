@@ -102,6 +102,8 @@ export default function InspectionFlow({
   const [damagePrices, setDamagePrices] = useState<Record<string, number>>({})
   // Dégâts intérieurs facturés à l'EDL retour (poste → montant libre en €)
   const [interiorCharges, setInteriorCharges] = useState<Record<string, number>>({})
+  // Photos des dégâts intérieurs : id du poste → liste de data URLs base64
+  const [interiorPhotos, setInteriorPhotos] = useState<Record<string, string[]>>({})
   const [photos, setPhotos] = useState<Record<string, string>>({})
   const [clientSig, setClientSig] = useState<string | null>(null)
   // Signature agent supprimée pour l'EDL — remplacée par le cachet entreprise
@@ -190,7 +192,14 @@ export default function InspectionFlow({
     const file = e.target.files?.[0]
     if (!file || !currentPhotoType) return
     const compressed = await compressImageToBase64(file)
-    setPhotos(prev => ({ ...prev, [currentPhotoType]: compressed }))
+    if (currentPhotoType.startsWith('interior:')) {
+      // Photo d'un dégât intérieur — stockée inline base64 (même modèle que les
+      // photos de dommages extérieurs sur le plan 3D).
+      const itemId = currentPhotoType.slice('interior:'.length)
+      setInteriorPhotos(prev => ({ ...prev, [itemId]: [...(prev[itemId] ?? []), compressed] }))
+    } else {
+      setPhotos(prev => ({ ...prev, [currentPhotoType]: compressed }))
+    }
     e.target.value = ''
   }
 
@@ -229,7 +238,7 @@ export default function InspectionFlow({
                 type: 'interieur',
                 kind: 'interieur',
                 description: 'Dégât intérieur',
-                photos: [] as string[],
+                photos: interiorPhotos[it.id] ?? [],
                 price: interiorCharges[it.id],
               }))
           : []),
@@ -699,33 +708,69 @@ export default function InspectionFlow({
                 Dégâts intérieurs à facturer
               </h4>
               <p className="text-xs text-slate-400 mb-3">Renseignez un montant pour chaque poste dégradé (laisser vide si aucun).</p>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {INTERIOR_DAMAGE_ITEMS.map(it => {
                   const val = interiorCharges[it.id]
+                  const pics = interiorPhotos[it.id] ?? []
                   return (
-                    <div key={it.id} className="flex items-center justify-between gap-3">
-                      <span className="text-sm text-slate-600 flex-1 min-w-0">{it.label}</span>
-                      <div className="flex items-center gap-1 flex-shrink-0">
-                        <input
-                          type="number"
-                          min={0}
-                          step="0.01"
-                          inputMode="decimal"
-                          placeholder="0"
-                          value={val != null ? String(val) : ''}
-                          onChange={e => {
-                            const n = e.target.value === '' ? NaN : Number(e.target.value)
-                            setInteriorCharges(prev => {
-                              const next = { ...prev }
-                              if (!Number.isFinite(n) || n <= 0) delete next[it.id]
-                              else next[it.id] = n
-                              return next
-                            })
-                          }}
-                          className="w-24 text-sm text-right bg-white border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-blue-400"
-                        />
-                        <span className="text-xs text-slate-400">€</span>
+                    <div key={it.id} className="space-y-1.5">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-sm text-slate-600 flex-1 min-w-0">{it.label}</span>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          {/* Bouton photo — obligatoire si le poste est facturé, disponible toujours */}
+                          <button
+                            type="button"
+                            onClick={() => triggerPhoto(`interior:${it.id}`)}
+                            className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
+                              pics.length > 0
+                                ? 'bg-green-100 text-green-600'
+                                : 'bg-slate-100 text-slate-400 hover:bg-blue-50 hover:text-blue-500'
+                            }`}
+                            title={pics.length > 0 ? `${pics.length} photo(s) — ajouter` : 'Ajouter une photo'}
+                          >
+                            <Camera className="w-4 h-4" />
+                          </button>
+                          <input
+                            type="number"
+                            min={0}
+                            step="0.01"
+                            inputMode="decimal"
+                            placeholder="0"
+                            value={val != null ? String(val) : ''}
+                            onChange={e => {
+                              const n = e.target.value === '' ? NaN : Number(e.target.value)
+                              setInteriorCharges(prev => {
+                                const next = { ...prev }
+                                if (!Number.isFinite(n) || n <= 0) delete next[it.id]
+                                else next[it.id] = n
+                                return next
+                              })
+                            }}
+                            className="w-24 text-sm text-right bg-white border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-blue-400"
+                          />
+                          <span className="text-xs text-slate-400">€</span>
+                        </div>
                       </div>
+                      {/* Vignettes des photos prises pour ce poste */}
+                      {pics.length > 0 && (
+                        <div className="flex gap-1.5 flex-wrap pl-1">
+                          {pics.map((url, i) => (
+                            <div key={i} className="relative w-14 h-14">
+                              <img src={url} alt="" className="w-full h-full object-cover rounded-lg border border-slate-200" />
+                              <button
+                                type="button"
+                                onClick={() => setInteriorPhotos(prev => ({
+                                  ...prev,
+                                  [it.id]: (prev[it.id] ?? []).filter((_, j) => j !== i),
+                                }))}
+                                className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center"
+                              >
+                                <X className="w-2.5 h-2.5" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )
                 })}
