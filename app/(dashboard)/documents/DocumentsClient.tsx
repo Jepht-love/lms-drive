@@ -1,15 +1,7 @@
 'use client'
 
 import { useState, useTransition, useMemo } from 'react'
-import {
-  MagnifyingGlassIcon,
-  EyeIcon,
-  ArrowDownTrayIcon,
-  PrinterIcon,
-  PlusIcon,
-  PaperClipIcon,
-  TrashIcon,
-} from '@heroicons/react/24/outline'
+import { Search, Eye, Download, Printer, Plus, Paperclip, Trash2 } from 'lucide-react'
 import {
   DOCUMENT_CATEGORIES,
   DOCUMENT_SUBCATEGORIES,
@@ -115,7 +107,6 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
   const [showUpload,  setShowUpload]  = useState(false)
   const [isPending,   startTransition] = useTransition()
 
-  // URL effective : URL signée (bucket privé contracts-pdf) si dispo, sinon file_url.
   const urlFor = (doc: Document) => docSignedUrls[doc.id] ?? doc.file_url
 
   const [uploadCat,   setUploadCat]   = useState<DocumentCategory | ''>('')
@@ -225,11 +216,10 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
           onClick={() => setShowUpload(true)}
           className="flex items-center gap-1.5 px-4 py-2.5 bg-[#111111] text-white rounded-xl font-semibold text-sm active:scale-[.97]"
         >
-          <PlusIcon className="w-4 h-4" /> Ajouter
+          <Plus className="w-4 h-4" /> Ajouter
         </button>
       </div>
 
-      {/* Onglets */}
       <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
         {categoryTabs.map(cat => (
           <button
@@ -246,9 +236,8 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
         ))}
       </div>
 
-      {/* Recherche */}
       <div className="relative">
-        <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
         <input
           type="search"
           placeholder="Rechercher un document, une réservation, un client..."
@@ -258,7 +247,6 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
         />
       </div>
 
-      {/* ── Onglet Réservations ─────────────────────────────── */}
       {category === 'reservations' ? (
         filteredReservations.length === 0 ? (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 text-center">
@@ -289,7 +277,7 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
                       rel="noopener noreferrer"
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-xl text-[11px] font-semibold text-gray-700 transition-colors"
                     >
-                      <ArrowDownTrayIcon className="w-3.5 h-3.5" />
+                      <Download className="w-3.5 h-3.5" />
                       Contrat {r.contract_number}
                     </a>
                   ) : (
@@ -304,7 +292,7 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
                       rel="noopener noreferrer"
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 rounded-xl text-[11px] font-semibold text-blue-700 transition-colors"
                     >
-                      <ArrowDownTrayIcon className="w-3.5 h-3.5" />
+                      <Download className="w-3.5 h-3.5" />
                       Facture {r.invoice_number}
                     </a>
                   )}
@@ -314,7 +302,6 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
           </div>
         )
       ) : (
-        /* ── Onglets Documents ─────────────────────────────── */
         grouped.size === 0 ? (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 text-center">
             <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
@@ -348,41 +335,22 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
                           </p>
                         </div>
                         <div className="flex items-center gap-1 flex-shrink-0">
-                          <a
-                            href={urlFor(doc)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100"
-                            title="Visualiser"
-                          >
-                            <EyeIcon className="w-4 h-4 text-gray-400" />
+                          <a href={urlFor(doc)} target="_blank" rel="noopener noreferrer"
+                            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100" title="Visualiser">
+                            <Eye className="w-4 h-4 text-gray-400" />
                           </a>
-                          <a
-                            href={urlFor(doc)}
-                            download
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100"
-                            title="Télécharger"
-                          >
-                            <ArrowDownTrayIcon className="w-4 h-4 text-gray-400" />
+                          <a href={urlFor(doc)} download target="_blank" rel="noopener noreferrer"
+                            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100" title="Télécharger">
+                            <Download className="w-4 h-4 text-gray-400" />
                           </a>
-                          <a
-                            href={urlFor(doc)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100"
-                            title="Imprimer (ouvre le PDF — Ctrl/Cmd+P)"
-                          >
-                            <PrinterIcon className="w-4 h-4 text-gray-400" />
+                          <a href={urlFor(doc)} target="_blank" rel="noopener noreferrer"
+                            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100" title="Imprimer">
+                            <Printer className="w-4 h-4 text-gray-400" />
                           </a>
                           {!doc.is_auto_generated && (
-                            <button
-                              onClick={() => handleDelete(doc)}
-                              disabled={isPending}
-                              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 disabled:opacity-40"
-                            >
-                              <TrashIcon className="w-4 h-4 text-red-400" />
+                            <button onClick={() => handleDelete(doc)} disabled={isPending}
+                              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 disabled:opacity-40">
+                              <Trash2 className="w-4 h-4 text-red-400" />
                             </button>
                           )}
                         </div>
@@ -396,28 +364,19 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
         )
       )}
 
-      {/* ── Drawer Upload ─────────────────────────────────────── */}
       <Drawer open={showUpload} onClose={resetUpload} title="Ajouter un document">
         <div>
-          <select
-            value={uploadCat}
-            onChange={e => { setUploadCat(e.target.value as DocumentCategory | ''); setUploadSub(''); setEntityId('') }}
-            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px] mb-3"
-          >
+          <select value={uploadCat} onChange={e => { setUploadCat(e.target.value as DocumentCategory | ''); setUploadSub(''); setEntityId('') }}
+            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px] mb-3">
             <option value="">Catégorie...</option>
             {DOCUMENT_CATEGORIES.filter(c => visibleCats.includes(c.id)).map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
           </select>
 
           {uploadCat && (
-            <select
-              value={uploadSub}
-              onChange={e => setUploadSub(e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px] mb-3"
-            >
+            <select value={uploadSub} onChange={e => setUploadSub(e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px] mb-3">
               <option value="">Sous-catégorie...</option>
-              {DOCUMENT_SUBCATEGORIES[uploadCat].map(s => (
-                <option key={s.id} value={s.id}>{s.label}</option>
-              ))}
+              {DOCUMENT_SUBCATEGORIES[uploadCat].map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
             </select>
           )}
 
@@ -440,44 +399,28 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
             </select>
           )}
 
-          <input
-            type="text"
-            placeholder="Nom du document..."
-            value={docName}
-            onChange={e => setDocName(e.target.value)}
-            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px] mb-3"
-          />
+          <input type="text" placeholder="Nom du document..." value={docName} onChange={e => setDocName(e.target.value)}
+            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px] mb-3" />
 
           <div className="mb-3">
             <label className="block text-[11px] font-medium text-gray-400 uppercase tracking-wide mb-1">Date d'expiration (optionnel)</label>
-            <input
-              type="date"
-              value={expiryDate}
-              onChange={e => setExpiryDate(e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px]"
-            />
+            <input type="date" value={expiryDate} onChange={e => setExpiryDate(e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px]" />
           </div>
 
           <label className="flex items-center gap-3 border-2 border-dashed border-gray-300 rounded-xl px-4 py-4 cursor-pointer mb-4 hover:border-gray-400">
-            <PaperClipIcon className="w-5 h-5 text-gray-400 flex-shrink-0" />
+            <Paperclip className="w-5 h-5 text-gray-400 flex-shrink-0" />
             <span className="text-[13px] text-gray-500 truncate">
               {file ? file.name : 'Sélectionner un fichier (PDF, image...)'}
             </span>
-            <input
-              type="file"
-              accept=".pdf,image/*,.doc,.docx"
-              className="hidden"
-              onChange={e => setFile(e.target.files?.[0] ?? null)}
-            />
+            <input type="file" accept=".pdf,image/*,.doc,.docx" className="hidden"
+              onChange={e => setFile(e.target.files?.[0] ?? null)} />
           </label>
 
           {uploadError && <p className="text-[12px] text-red-500 mb-3">{uploadError}</p>}
 
-          <button
-            onClick={handleUpload}
-            disabled={!file || !docName || !uploadCat || !uploadSub || isPending}
-            className="w-full py-4 rounded-2xl bg-[#111111] text-white text-[14px] font-medium disabled:opacity-40 active:scale-[.97]"
-          >
+          <button onClick={handleUpload} disabled={!file || !docName || !uploadCat || !uploadSub || isPending}
+            className="w-full py-4 rounded-2xl bg-[#111111] text-white text-[14px] font-medium disabled:opacity-40 active:scale-[.97]">
             {isPending ? 'Enregistrement...' : 'Enregistrer'}
           </button>
         </div>

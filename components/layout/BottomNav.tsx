@@ -3,40 +3,29 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useAlertCount } from './AlertCountProvider'
-import {
-  HomeIcon, TruckIcon, CalendarDaysIcon, BellIcon, Squares2X2Icon,
-  ClipboardDocumentListIcon,
-} from '@heroicons/react/24/outline'
-import {
-  HomeIcon as HomeSolid, TruckIcon as TruckSolid,
-  CalendarDaysIcon as CalendarDaysSolid,
-  BellIcon as BellSolid, Squares2X2Icon as Squares2X2Solid,
-  ClipboardDocumentListIcon as ClipboardSolid,
-} from '@heroicons/react/24/solid'
+import { Home, Truck, CalendarDays, Bell, LayoutGrid, ClipboardList } from 'lucide-react'
 
 const TABS = [
-  { label: 'Accueil',   href: '/',             tabKey: 'dashboard',    Icon: HomeIcon,                   ActiveIcon: HomeSolid },
-  { label: 'Véhicules', href: '/vehicles',     tabKey: 'vehicles',     Icon: TruckIcon,                  ActiveIcon: TruckSolid },
-  { label: 'Réservations', href: '/reservations', tabKey: 'reservations', Icon: ClipboardDocumentListIcon,  ActiveIcon: ClipboardSolid },
-  { label: 'Calendrier',href: '/calendrier',   tabKey: 'calendrier',   Icon: CalendarDaysIcon,           ActiveIcon: CalendarDaysSolid },
-  { label: 'Alertes',   href: '/alerts',       tabKey: null,           Icon: BellIcon,                   ActiveIcon: BellSolid, badge: true },
-  { label: 'Menu',      href: '/menu',         tabKey: null,           Icon: Squares2X2Icon,             ActiveIcon: Squares2X2Solid },
+  { label: 'Accueil',      href: '/',             tabKey: 'dashboard',    Icon: Home },
+  { label: 'Véhicules',    href: '/vehicles',     tabKey: 'vehicles',     Icon: Truck },
+  { label: 'Réservations', href: '/reservations', tabKey: 'reservations', Icon: ClipboardList },
+  { label: 'Calendrier',   href: '/calendrier',   tabKey: 'calendrier',   Icon: CalendarDays },
+  { label: 'Alertes',      href: '/alerts',       tabKey: null,           Icon: Bell, badge: true },
+  { label: 'Menu',         href: '/menu',         tabKey: null,           Icon: LayoutGrid },
 ]
 
 export default function BottomNav({ allowedTabs }: { allowedTabs?: string[] | null }) {
   const pathname = usePathname()
   const alertCount = useAlertCount()
 
-  // Membre restreint : on masque les onglets non autorisés (Alertes/Menu restent).
   const visibleTabs = (!allowedTabs || allowedTabs.length === 0)
     ? TABS
     : TABS.filter(t => !t.tabKey || allowedTabs.includes(t.tabKey))
 
   return (
     <nav className="shrink-0 bg-[#111111]" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 8px)' }}>
-      {/* Items de navigation */}
       <div className="flex items-center h-[60px] px-1">
-        {visibleTabs.map(({ label, href, Icon, ActiveIcon, badge }) => {
+        {visibleTabs.map(({ label, href, Icon, badge }) => {
           const isActive = pathname === href || (href !== '/' && pathname.startsWith(href))
           return (
             <Link
@@ -50,10 +39,10 @@ export default function BottomNav({ allowedTabs }: { allowedTabs?: string[] | nu
               )}
               <div className="relative z-10 flex flex-col items-center gap-1">
                 <div className="relative">
-                  {isActive
-                    ? <ActiveIcon className="w-5 h-5 text-white" />
-                    : <Icon className="w-5 h-5 text-white/40" />
-                  }
+                  <Icon
+                    className={`w-5 h-5 ${isActive ? 'text-white' : 'text-white/40'}`}
+                    strokeWidth={isActive ? 2.5 : 1.5}
+                  />
                   {badge && alertCount > 0 && (
                     <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-[14px] bg-red-500 rounded-full text-white text-[9px] font-black flex items-center justify-center px-0.5">
                       {alertCount > 9 ? '9+' : alertCount}
