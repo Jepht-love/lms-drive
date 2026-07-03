@@ -30,7 +30,10 @@ export async function deleteClient(id: string) {
   if (!user) return { error: 'Non authentifié' }
 
   const { error } = await supabase.from('clients').delete().eq('id', id)
-  if (error) return { error: error.message }
+  if (error) {
+    if (error.code === '23503') return { error: 'Ce client a des réservations ou documents associés — suppression impossible. Archivez ou supprimez-les d\'abord.' }
+    return { error: error.message }
+  }
 
   await supabase.from('audit_logs').insert({
     user_id: user.id, action: 'client_deleted',
