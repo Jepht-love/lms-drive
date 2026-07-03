@@ -5,6 +5,7 @@ import { FileDown, Send, CheckCircle2, Eye } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
+import { useToast } from '@/components/Toast'
 
 interface Props {
   contract: any
@@ -15,6 +16,7 @@ interface Props {
 
 export default function ContractSigningPanel({ contract, reservation, vehicle, client }: Props) {
   const router = useRouter()
+  const { show } = useToast()
   const [generating, setGenerating] = useState(false)
   const [sending, setSending] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
@@ -66,6 +68,7 @@ export default function ContractSigningPanel({ contract, reservation, vehicle, c
       setError(data.error)
       setSending(false)
     } else {
+      show('Email envoyé au client', 'success')
       // Retour naturel à la liste des réservations. `replace` (et non `push`)
       // pour que le bouton « retour » ne rouvre pas le contrat qu'on vient d'envoyer.
       router.replace(reservation?.id ? `/reservations/${reservation.id}` : '/reservations')

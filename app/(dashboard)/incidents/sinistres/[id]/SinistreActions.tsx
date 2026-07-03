@@ -5,13 +5,14 @@ import { useRouter } from 'next/navigation'
 import { ArrowRight, Wrench, Lock, FileDown } from 'lucide-react'
 import { SINISTRE_FLOW, SINISTRE_STATUS } from '@/lib/incidents'
 import { updateAccidentStatus, addAccidentToVehicle } from '@/lib/actions/incidents'
+import { useToast } from '@/components/Toast'
 
 export default function SinistreActions({ id, status }: { id: string; status: string }) {
   const router = useRouter()
+  const { show } = useToast()
   const [pending, startTransition] = useTransition()
   const [pdfPending, setPdfPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [msg, setMsg] = useState<string | null>(null)
 
   async function downloadPdf() {
     setPdfPending(true)
@@ -33,11 +34,11 @@ export default function SinistreActions({ id, status }: { id: string; status: st
   }
 
   function run(fn: () => Promise<{ error?: string; success?: boolean }>, okMsg: string) {
-    setError(null); setMsg(null)
+    setError(null)
     startTransition(async () => {
       const res = await fn()
       if (res?.error) setError(res.error)
-      else { setMsg(okMsg); router.refresh() }
+      else { show(okMsg, 'success'); router.refresh() }
     })
   }
 
@@ -69,7 +70,6 @@ export default function SinistreActions({ id, status }: { id: string; status: st
       </button>
 
       {error && <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2">{error}</p>}
-      {msg && <p className="text-sm text-green-600 font-medium">{msg}</p>}
     </div>
   )
 }

@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { Settings, Users, FileClock, Building2 } from 'lucide-react'
+import { Settings, Users, FileClock, Building2, ArrowLeft } from 'lucide-react'
+import Link from 'next/link'
 import { getAgencySettings } from '@/lib/contracts/agency'
 import AgencySettingsForm from './AgencySettingsForm'
 import AuditLogList from './AuditLogList'
@@ -28,6 +29,10 @@ export default async function SettingsPage() {
 
   return (
     <div className="space-y-6">
+      <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-gray-400 font-medium hover:text-gray-700 transition-colors mb-4">
+        <ArrowLeft className="w-4 h-4" /> Retour
+      </Link>
+
       <div className="flex items-center gap-3">
         <Settings className="w-6 h-6 text-gray-700" />
         <div>

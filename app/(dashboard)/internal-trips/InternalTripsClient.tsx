@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { startTrip, endTrip } from '@/lib/actions/internal-trips'
+import { useToast } from '@/components/Toast'
 import { formatDateTime, formatPrice } from '@/lib/utils'
 import { Plus, Navigation, Clock, CheckCircle2 } from 'lucide-react'
 import Drawer from '@/components/Drawer'
@@ -35,6 +36,7 @@ export default function InternalTripsClient({ vehicles, trips, isManager, curren
   currentUserId: string
 }) {
   const router = useRouter()
+  const { show } = useToast()
   const [showStartForm, setShowStartForm] = useState(false)
   const [endingTrip, setEndingTrip] = useState<Trip | null>(null)
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null)
@@ -48,6 +50,7 @@ export default function InternalTripsClient({ vehicles, trips, isManager, curren
     setLoading(true); setError(null)
     const result = await startTrip(formData)
     if (result?.error) { setError(result.error); setLoading(false); return }
+    show('Déplacement démarré', 'success')
     setShowStartForm(false); setSelectedVehicle(null); setLoading(false)
     router.refresh()
   }
@@ -57,6 +60,7 @@ export default function InternalTripsClient({ vehicles, trips, isManager, curren
     setLoading(true); setError(null)
     const result = await endTrip(endingTrip.id, formData)
     if (result?.error) { setError(result.error); setLoading(false); return }
+    show('Déplacement terminé', 'success')
     setEndingTrip(null); setLoading(false)
     router.refresh()
   }
@@ -176,16 +180,18 @@ export default function InternalTripsClient({ vehicles, trips, isManager, curren
               name="km_start"
               required
               defaultValue={selectedVehicle?.current_km}
+              inputMode="numeric"
+              enterKeyHint="next"
               className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm"
             />
           </div>
           <div>
             <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Autonomie carburant (km)</label>
-            <input type="number" name="fuel_start" min="0" placeholder="Autonomie en km" inputMode="numeric" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm" />
+            <input type="number" name="fuel_start" min="0" placeholder="Autonomie en km" inputMode="numeric" enterKeyHint="next" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm" />
           </div>
           <div>
             <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Notes</label>
-            <input type="text" name="purpose_notes" placeholder="Détails..." className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm" />
+            <input type="text" name="purpose_notes" placeholder="Détails..." enterKeyHint="done" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm" />
           </div>
           {error && <div className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{error}</div>}
           <p className="text-[11px] text-gray-400">* Champ obligatoire</p>
@@ -202,20 +208,20 @@ export default function InternalTripsClient({ vehicles, trips, isManager, curren
             <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">
               KM retour * <span className="text-gray-400 font-normal">(départ: {endingTrip?.km_start.toLocaleString('fr-FR')})</span>
             </label>
-            <input type="number" name="km_end" required min={endingTrip?.km_start} defaultValue={endingTrip?.km_start} className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm font-bold" />
+            <input type="number" name="km_end" required min={endingTrip?.km_start} defaultValue={endingTrip?.km_start} inputMode="numeric" enterKeyHint="next" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm font-bold" />
           </div>
           <div>
             <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Autonomie carburant (km)</label>
-            <input type="number" name="fuel_end" min="0" placeholder="Autonomie en km" inputMode="numeric" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm" />
+            <input type="number" name="fuel_end" min="0" placeholder="Autonomie en km" inputMode="numeric" enterKeyHint="next" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Péages (€)</label>
-              <input type="number" name="tolls_amount" step="0.01" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm" />
+              <input type="number" name="tolls_amount" step="0.01" inputMode="decimal" enterKeyHint="next" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm" />
             </div>
             <div>
               <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Dépenses (€)</label>
-              <input type="number" name="expenses_amount" step="0.01" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm" />
+              <input type="number" name="expenses_amount" step="0.01" inputMode="decimal" enterKeyHint="done" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm" />
             </div>
           </div>
           {error && <div className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{error}</div>}

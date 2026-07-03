@@ -524,6 +524,7 @@ export default function InspectionFlow({
                 </div>
                 <input
                   type="number"
+                  inputMode="numeric"
                   value={kmReading}
                   onChange={e => setKmReading(Number(e.target.value))}
                   min={vehicleKm}
@@ -553,6 +554,7 @@ export default function InspectionFlow({
                 </div>
                 <input
                   type="number"
+                  inputMode="numeric"
                   value={fuelRangeKm}
                   onChange={e => setFuelRangeKm(Number(e.target.value))}
                   min={0}
@@ -597,7 +599,7 @@ export default function InspectionFlow({
 
           <button
             onClick={() => setStep('schema')}
-            className="w-full py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+            className="w-full py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors active:scale-[.97] transition-transform flex items-center justify-center gap-2"
           >
             Suivant : État des zones <ChevronRight className="w-4 h-4" />
           </button>
@@ -795,13 +797,13 @@ export default function InspectionFlow({
           <div className="flex gap-3">
             <button
               onClick={() => setStep('info')}
-              className="px-5 py-3 bg-white border border-gray-200 text-gray-600 rounded-xl font-semibold hover:bg-gray-50 transition-colors flex items-center justify-center gap-1.5"
+              className="px-5 py-3 bg-white border border-gray-200 text-gray-600 rounded-xl font-semibold hover:bg-gray-50 transition-colors active:scale-[.97] transition-transform flex items-center justify-center gap-1.5"
             >
               <ChevronLeft className="w-4 h-4" /> Retour
             </button>
             <button
               onClick={() => setStep('photos')}
-              className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+              className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors active:scale-[.97] transition-transform flex items-center justify-center gap-2"
             >
               Suivant : Photos ({photoCount} prise{photoCount > 1 ? 's' : ''}) <ChevronRight className="w-4 h-4" />
             </button>
@@ -868,14 +870,14 @@ export default function InspectionFlow({
           <div className="flex gap-3">
             <button
               onClick={() => setStep('schema')}
-              className="px-5 py-3 bg-white border border-gray-200 text-gray-600 rounded-xl font-semibold hover:bg-gray-50 transition-colors flex items-center justify-center gap-1.5"
+              className="px-5 py-3 bg-white border border-gray-200 text-gray-600 rounded-xl font-semibold hover:bg-gray-50 transition-colors active:scale-[.97] transition-transform flex items-center justify-center gap-1.5"
             >
               <ChevronLeft className="w-4 h-4" /> Retour
             </button>
             <button
               onClick={() => setStep('signatures')}
               disabled={!mandatoryCompleted}
-              className="flex-1 py-3 bg-blue-600 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+              className="flex-1 py-3 bg-blue-600 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors active:scale-[.97] transition-transform flex items-center justify-center gap-2"
             >
               Suivant : Signatures <ChevronRight className="w-4 h-4" />
             </button>
@@ -915,16 +917,24 @@ export default function InspectionFlow({
             <button
               onClick={() => setStep('photos')}
               disabled={saving}
-              className="px-5 py-3 bg-white border border-gray-200 text-gray-600 rounded-xl font-semibold hover:bg-gray-50 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+              className="px-5 py-3 bg-white border border-gray-200 text-gray-600 rounded-xl font-semibold hover:bg-gray-50 transition-colors active:scale-[.97] transition-transform flex items-center justify-center gap-1.5 disabled:opacity-50"
             >
               <ChevronLeft className="w-4 h-4" /> Retour
             </button>
             <button
               onClick={handleSubmit}
               disabled={saving || !clientSig}
-              className="flex-1 py-3.5 bg-green-600 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-xl font-bold hover:bg-green-700 transition-colors"
+              className="flex-1 py-3.5 bg-green-600 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-xl font-bold hover:bg-green-700 transition-colors active:scale-[.97] transition-transform"
             >
-              {saving ? 'Enregistrement...' : '✓ Valider l\'état des lieux'}
+              {saving ? (
+                <span className="flex items-center justify-center gap-2">
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                  </svg>
+                  Enregistrement…
+                </span>
+              ) : 'Valider l\'état des lieux'}
             </button>
           </div>
         </div>

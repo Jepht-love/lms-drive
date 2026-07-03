@@ -3,6 +3,7 @@
 import { useRef, useState, useTransition } from 'react'
 import { Camera, Upload, X, Check, Loader2 } from 'lucide-react'
 import type { Client } from '@/types/database'
+import { useToast } from '@/components/Toast'
 
 interface ClientFormProps {
   action: (formData: FormData) => Promise<{ error: string } | void>
@@ -89,6 +90,7 @@ const PHOTO_SLOTS = ['id_doc_front', 'id_doc_back', 'license_front', 'license_ba
 export default function ClientForm({ action, client: c }: ClientFormProps) {
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+  const { show } = useToast()
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -109,7 +111,11 @@ export default function ClientForm({ action, client: c }: ClientFormProps) {
     startTransition(async () => {
       try {
         const result = await action(compressed)
-        if (result?.error) setError(result.error)
+        if (result?.error) {
+          setError(result.error)
+        } else {
+          show(c ? 'Client mis à jour' : 'Client créé', 'success')
+        }
       } catch (err: any) {
         // redirect() lève une erreur spéciale Next.js — la laisser se propager
         if (err?.digest?.startsWith?.('NEXT_REDIRECT') || err?.message === 'NEXT_REDIRECT') throw err
@@ -129,11 +135,11 @@ export default function ClientForm({ action, client: c }: ClientFormProps) {
       {/* Identité */}
       <Section title="Identité">
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Field label="Prénom *" name="first_name" defaultValue={c?.first_name} required />
-          <Field label="Nom *" name="last_name" defaultValue={c?.last_name} required />
-          <Field label="Téléphone *" name="phone" type="tel" defaultValue={c?.phone} required placeholder="+33 6 12 34 56 78" />
-          <Field label="Email" name="email" type="email" defaultValue={c?.email ?? ''} />
-          <Field label="Date de naissance" name="birth_date" type="date" defaultValue={c?.birth_date ?? ''} />
+          <Field label="Prénom *" name="first_name" defaultValue={c?.first_name} required autoComplete="given-name" enterKeyHint="next" />
+          <Field label="Nom *" name="last_name" defaultValue={c?.last_name} required autoComplete="family-name" enterKeyHint="next" />
+          <Field label="Téléphone *" name="phone" type="tel" defaultValue={c?.phone} required placeholder="+33 6 12 34 56 78" inputMode="tel" autoComplete="tel" enterKeyHint="next" />
+          <Field label="Email" name="email" type="email" defaultValue={c?.email ?? ''} inputMode="email" autoComplete="email" autoCapitalize="off" enterKeyHint="next" />
+          <Field label="Date de naissance" name="birth_date" type="date" defaultValue={c?.birth_date ?? ''} enterKeyHint="next" />
         </div>
       </Section>
 
@@ -141,10 +147,10 @@ export default function ClientForm({ action, client: c }: ClientFormProps) {
       <Section title="Adresse">
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-2">
-            <Field label="Adresse" name="address" defaultValue={c?.address ?? ''} />
+            <Field label="Adresse" name="address" defaultValue={c?.address ?? ''} autoComplete="street-address" enterKeyHint="next" />
           </div>
-          <Field label="Code postal" name="postal_code" defaultValue={c?.postal_code ?? ''} />
-          <Field label="Ville" name="city" defaultValue={c?.city ?? ''} />
+          <Field label="Code postal" name="postal_code" defaultValue={c?.postal_code ?? ''} autoComplete="postal-code" enterKeyHint="next" />
+          <Field label="Ville" name="city" defaultValue={c?.city ?? ''} autoComplete="address-level2" enterKeyHint="next" />
         </div>
       </Section>
 
@@ -187,9 +193,9 @@ export default function ClientForm({ action, client: c }: ClientFormProps) {
             options={PAYMENT_METHODS}
             labels={{ especes: 'Espèces', virement: 'Virement', cb: 'Carte bancaire', cheque: 'Chèque' }}
           />
-          <Field label="Caution habituelle (€)" name="usual_deposit" type="number" defaultValue={c?.usual_deposit?.toString() ?? ''} step="0.01" />
-          <Field label="Remise fidélité (%)" name="discount_percent" type="number" defaultValue={c?.discount_percent?.toString() ?? ''} step="1" placeholder="0" />
-          <Field label="Canal d'acquisition" name="acquisition_channel" defaultValue={c?.acquisition_channel ?? ''} placeholder="Bouche à oreille, Internet…" />
+          <Field label="Caution habituelle (€)" name="usual_deposit" type="number" defaultValue={c?.usual_deposit?.toString() ?? ''} step="0.01" inputMode="decimal" enterKeyHint="next" />
+          <Field label="Remise fidélité (%)" name="discount_percent" type="number" defaultValue={c?.discount_percent?.toString() ?? ''} step="1" placeholder="0" inputMode="numeric" enterKeyHint="next" />
+          <Field label="Canal d'acquisition" name="acquisition_channel" defaultValue={c?.acquisition_channel ?? ''} placeholder="Bouche à oreille, Internet…" enterKeyHint="done" />
         </div>
         <div className="mt-4">
           <label className="block text-xs font-medium text-gray-600 mb-1.5 uppercase tracking-wide">Notes internes</label>
@@ -206,7 +212,7 @@ export default function ClientForm({ action, client: c }: ClientFormProps) {
       <p className="text-[11px] text-gray-400">* Champ obligatoire</p>
       <button
         type="submit" disabled={pending}
-        className="px-6 py-3 bg-[#111111] hover:bg-gray-800 disabled:opacity-40 text-white font-semibold rounded-xl transition-colors text-sm"
+        className="px-6 py-3 bg-[#111111] hover:bg-gray-800 disabled:opacity-40 text-white font-semibold rounded-xl transition-all active:scale-[.97] text-sm"
       >
         {pending ? (
         <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Enregistrement…</span>
@@ -225,9 +231,13 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   )
 }
 
-function Field({ label, name, type = 'text', defaultValue = '', required = false, placeholder, step }: {
+function Field({ label, name, type = 'text', defaultValue = '', required = false, placeholder, step,
+  inputMode, autoComplete, autoCapitalize, autoCorrect, enterKeyHint }: {
   label: string; name: string; type?: string; defaultValue?: string
   required?: boolean; placeholder?: string; step?: string
+  inputMode?: 'decimal' | 'email' | 'none' | 'numeric' | 'search' | 'tel' | 'text' | 'url'
+  autoComplete?: string; autoCapitalize?: string; autoCorrect?: string
+  enterKeyHint?: 'done' | 'enter' | 'go' | 'next' | 'previous' | 'search' | 'send'
 }) {
   return (
     <div>
@@ -235,6 +245,9 @@ function Field({ label, name, type = 'text', defaultValue = '', required = false
       <input
         id={name} name={name} type={type} defaultValue={defaultValue}
         required={required} placeholder={placeholder} step={step}
+        inputMode={inputMode} autoComplete={autoComplete}
+        autoCapitalize={autoCapitalize} autoCorrect={autoCorrect}
+        enterKeyHint={enterKeyHint}
         className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm"
       />
     </div>

@@ -375,7 +375,7 @@ export default async function DashboardPage() {
           </div>
 
           {/* PARC TOTAL — noir */}
-          <Link href="/vehicles" className="block">
+          <Link href="/vehicles" className="block active:scale-[.99] transition-transform">
             <div className="bg-[#111111] rounded-3xl p-4">
               <div className="flex items-end justify-between">
                 <div>
@@ -405,14 +405,14 @@ export default async function DashboardPage() {
 
           {/* DISPONIBLES + EN LOCATION */}
           <div className="grid grid-cols-2 gap-3">
-            <Link href="/vehicles?status=disponible">
+            <Link href="/vehicles?status=disponible" className="active:scale-[.99] transition-transform">
               <div className="bg-white rounded-3xl p-4 border border-gray-100 shadow-sm flex flex-col gap-2.5">
                 <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">DISPONIBLES</span>
                 <p className="font-black text-gray-900 leading-none" style={{ fontSize: 28 }}>{disponibles}</p>
               </div>
             </Link>
 
-            <Link href="/vehicles?status=loue">
+            <Link href="/vehicles?status=loue" className="active:scale-[.99] transition-transform">
               <div className="bg-white rounded-3xl p-4 border border-gray-100 shadow-sm flex flex-col gap-2.5">
                 <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">EN LOCATION</span>
                 <p className="font-black text-gray-900 leading-none" style={{ fontSize: 28 }}>{enLocation}</p>
@@ -421,7 +421,7 @@ export default async function DashboardPage() {
           </div>
 
           {/* IMMOBILISÉS */}
-          <Link href="/vehicles/immobilises" className="block">
+          <Link href="/vehicles/immobilises" className="block active:scale-[.99] transition-transform">
             <div className={`rounded-3xl px-5 py-4 flex items-center justify-between border shadow-sm ${
               immobilises > 0 ? 'bg-orange-50 border-orange-100' : 'bg-white border-gray-100'
             }`}>
@@ -907,7 +907,7 @@ export default async function DashboardPage() {
             </span>
           </div>
 
-          <Link href="/alerts" className="block bg-white rounded-2xl border border-gray-100 shadow-sm p-4 hover:bg-gray-50 transition-colors">
+          <Link href="/alerts" className="block bg-white rounded-2xl border border-gray-100 shadow-sm p-4 hover:bg-gray-50 transition-colors active:scale-[.99] transition-transform">
             <div className="flex items-center gap-2 flex-wrap mb-3">
               {ALERT_GROUPS.map(group => {
                 const count = alerts.filter(a => a.type === group.type).length

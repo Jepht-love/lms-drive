@@ -181,6 +181,12 @@ export default async function VehiclePage({ params }: { params: Promise<{ id: st
           {vehicle.version && <p className="text-gray-500 mt-0.5">{vehicle.version} {vehicle.year ? `· ${vehicle.year}` : ''}</p>}
         </div>
         <div className="flex items-center gap-2">
+          <Link
+            href={`/reservations/new?vehicle_id=${vehicle.id}`}
+            className="flex items-center gap-2 px-4 py-2.5 bg-[#111111] text-white rounded-xl text-[13px] font-semibold active:scale-[.97] transition-transform"
+          >
+            + Nouvelle réservation
+          </Link>
           <Link href={`/maintenance/${id}`} className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 rounded-xl text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors">
             <Wrench className="w-4 h-4" /> Entretien
           </Link>

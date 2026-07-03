@@ -2,6 +2,7 @@
 
 import { useActionState, useState, useEffect } from 'react'
 import { calculateRentalDays, calculateRentalPrice, formatPrice } from '@/lib/utils'
+import { useToast } from '@/components/Toast'
 
 function toDatetimeLocal(d: Date): string {
   const pad = (n: number) => String(n).padStart(2, '0')
@@ -28,8 +29,11 @@ interface Props {
 }
 
 export default function ReservationForm({ action, vehicles, clients, defaultClientId, defaultVehicleId }: Props) {
+  const { show } = useToast()
   const [state, formAction, pending] = useActionState(async (_prev: any, formData: FormData) => {
-    return action(formData)
+    const result = await action(formData)
+    if (!result?.error) show('Réservation créée', 'success')
+    return result
   }, null)
 
   const [selectedVehicleId, setSelectedVehicleId] = useState(defaultVehicleId ?? '')
@@ -117,11 +121,11 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
             </div>
             {creatingNewClient ? (
               <div className="grid grid-cols-3 gap-2">
-                <input name="new_client_first_name" placeholder="Prénom" required
+                <input name="new_client_first_name" placeholder="Prénom" required enterKeyHint="next"
                   className="px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm" />
-                <input name="new_client_last_name" placeholder="Nom" required
+                <input name="new_client_last_name" placeholder="Nom" required enterKeyHint="next"
                   className="px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm" />
-                <input name="new_client_phone" type="tel" placeholder="Téléphone" required
+                <input name="new_client_phone" type="tel" placeholder="Téléphone" required inputMode="tel" autoComplete="tel" enterKeyHint="done"
                   className="px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm" />
               </div>
             ) : (
@@ -221,6 +225,8 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
               required
               step="0.01"
               min="0"
+              inputMode="decimal"
+              enterKeyHint="next"
               className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm"
             />
           </div>
@@ -230,6 +236,8 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
               type="number"
               name="km_included"
               defaultValue={selectedVehicle?.km_included_daily?.toString() ?? ''}
+              inputMode="numeric"
+              enterKeyHint="next"
               className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm"
             />
           </div>
@@ -240,6 +248,8 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
               name="extra_km_price"
               defaultValue={selectedVehicle?.extra_km_price?.toString() ?? ''}
               step="0.01"
+              inputMode="decimal"
+              enterKeyHint="next"
               className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm"
             />
           </div>
@@ -250,6 +260,8 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
               name="deposit_amount"
               defaultValue={selectedVehicle?.deposit_amount?.toString() ?? ''}
               step="0.01"
+              inputMode="decimal"
+              enterKeyHint="next"
               className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm"
             />
           </div>
@@ -271,6 +283,7 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
             <input
               type="text"
               name="deposit_ref"
+              enterKeyHint="next"
               className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm"
             />
           </div>
@@ -284,6 +297,8 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
               step="0.01"
               min="0"
               placeholder="0"
+              inputMode="decimal"
+              enterKeyHint="done"
               className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm"
             />
           </div>
@@ -320,7 +335,7 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
       <button
         type="submit"
         disabled={pending}
-        className="px-6 py-3 bg-[#111111] hover:bg-gray-800 disabled:opacity-40 text-white font-semibold rounded-xl transition-colors text-sm"
+        className="px-6 py-3 bg-[#111111] hover:bg-gray-800 disabled:opacity-40 text-white font-semibold rounded-xl transition-all active:scale-[.97] text-sm"
       >
         {pending ? 'Création...' : 'Créer la réservation'}
       </button>

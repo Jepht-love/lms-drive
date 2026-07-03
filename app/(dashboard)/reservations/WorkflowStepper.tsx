@@ -1,3 +1,6 @@
+'use client'
+
+import { useState } from 'react'
 import { CheckCircle2, Circle, Lock, ClipboardList, FileSignature, ShieldCheck, CalendarCheck, RotateCcw } from 'lucide-react'
 import Link from 'next/link'
 import ValidateContractButton from './ValidateContractButton'
@@ -26,6 +29,8 @@ export default function WorkflowStepper({
   reservationStatus,
   inspections,
 }: Props) {
+  // null = idle, number = numéro de l'étape en attente de confirmation
+  const [confirmReset, setConfirmReset] = useState<number | null>(null)
   const depInsp = inspections.find(i => i.type === 'depart')
   const arrInsp = inspections.find(i => i.type === 'arrivee')
 
@@ -157,18 +162,40 @@ export default function WorkflowStepper({
                 }`}>
                   {step.label}
                 </p>
-                {/* Bouton corriger EDL */}
+                {/* Bouton corriger EDL — pattern idle → confirm */}
                 {step.resetAction && (
-                  <form action={step.resetAction}>
+                  confirmReset === step.num ? (
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs text-gray-500">Sûr ?</span>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmReset(null)}
+                        className="text-xs text-gray-400 hover:text-gray-600 font-medium transition-colors"
+                      >
+                        Annuler
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          setConfirmReset(null)
+                          if (step.resetAction) await step.resetAction()
+                        }}
+                        className="text-xs text-red-600 hover:text-red-700 font-semibold transition-colors"
+                      >
+                        Confirmer
+                      </button>
+                    </div>
+                  ) : (
                     <button
-                      type="submit"
+                      type="button"
+                      onClick={() => setConfirmReset(step.num)}
                       className="flex items-center gap-1 text-xs text-orange-500 hover:text-orange-700 font-medium transition-colors"
                       title={step.resetLabel ?? ''}
                     >
                       <RotateCcw className="w-3 h-3" />
                       Corriger
                     </button>
-                  </form>
+                  )
                 )}
               </div>
               <p className={`text-xs mt-0.5 ${

@@ -161,7 +161,7 @@ export default function NewInfractionPage() {
         {error && <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2">{error}</p>}
 
         <button type="submit" disabled={pending}
-          className="w-full py-3.5 bg-[#111111] text-white rounded-2xl font-bold text-sm hover:bg-gray-800 transition-colors active:scale-[.99] disabled:opacity-40">
+          className="w-full py-3.5 bg-[#111111] text-white rounded-2xl font-bold text-sm hover:bg-gray-800 transition-all active:scale-[.97] disabled:opacity-40">
           {pending ? 'Enregistrement…' : 'Enregistrer l\'infraction'}
         </button>
       </form>

@@ -357,7 +357,7 @@ export default async function ClientPage({
       {/* ─── Action principale ─── */}
       <Link
         href={`/reservations/new?client=${id}`}
-        className="flex items-center justify-center gap-2 w-full py-3.5 bg-[#111111] text-white rounded-2xl font-bold text-sm hover:bg-gray-800 transition-colors active:scale-[.99]"
+        className="flex items-center justify-center gap-2 w-full py-3.5 bg-[#111111] text-white rounded-2xl font-bold text-sm hover:bg-gray-800 transition-all active:scale-[.97]"
       >
         <Plus className="w-4 h-4" /> Nouvelle réservation
       </Link>
@@ -368,14 +368,14 @@ export default async function ClientPage({
         <div>
           {client.phone && (
             <InfoRow label="Téléphone">
-              <a href={`tel:${client.phone}`} className="text-blue-600 flex items-center gap-1.5">
+              <a href={`tel:${client.phone}`} className="text-[#111111] font-semibold flex items-center gap-1.5">
                 <Phone className="w-3.5 h-3.5" /> {client.phone}
               </a>
             </InfoRow>
           )}
           {client.email && (
             <InfoRow label="Email">
-              <a href={`mailto:${client.email}`} className="text-blue-600 flex items-center gap-1.5">
+              <a href={`mailto:${client.email}`} className="text-[#111111] font-semibold flex items-center gap-1.5">
                 <Mail className="w-3.5 h-3.5" />
                 <span className="truncate max-w-[180px]">{client.email}</span>
               </a>

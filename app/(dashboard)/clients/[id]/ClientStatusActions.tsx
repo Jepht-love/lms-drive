@@ -4,15 +4,23 @@ import { useState, useTransition } from 'react'
 import { Star, Ban, RotateCcw } from 'lucide-react'
 import { updateClientStatus } from '@/lib/actions/clients'
 import type { ClientStatus } from '@/types/database'
+import { useToast } from '@/components/Toast'
 
 export default function ClientStatusActions({ clientId, status }: { clientId: string; status: ClientStatus }) {
   const [pending, startTransition] = useTransition()
   const [showReasonInput, setShowReasonInput] = useState(false)
   const [reason, setReason] = useState('')
+  const { show } = useToast()
 
   function setStatus(next: ClientStatus, blacklistReason?: string) {
     startTransition(async () => {
       await updateClientStatus(clientId, next, blacklistReason)
+      const messages: Record<ClientStatus, string> = {
+        vip: 'Client marqué VIP',
+        blackliste: 'Client blacklisté',
+        standard: 'Statut réinitialisé',
+      }
+      show(messages[next] ?? 'Statut mis à jour', 'success')
       setShowReasonInput(false)
       setReason('')
     })

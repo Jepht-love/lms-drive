@@ -2,6 +2,7 @@
 
 import { useActionState } from 'react'
 import type { Vehicle } from '@/types/database'
+import { useToast } from '@/components/Toast'
 
 interface VehicleFormProps {
   action: (formData: FormData) => Promise<{ error: string } | void>
@@ -13,8 +14,11 @@ const CATEGORIES = ['citadine', 'berline', 'suv', 'utilitaire']
 const TRANSMISSIONS = ['manuelle', 'automatique']
 
 export default function VehicleForm({ action, vehicle }: VehicleFormProps) {
+  const { show } = useToast()
   const [state, formAction, pending] = useActionState(async (_prev: any, formData: FormData) => {
-    return action(formData)
+    const result = await action(formData)
+    if (!result?.error) show(vehicle ? 'Véhicule mis à jour' : 'Véhicule créé', 'success')
+    return result
   }, null)
 
   const v = vehicle
@@ -30,32 +34,32 @@ export default function VehicleForm({ action, vehicle }: VehicleFormProps) {
       {/* Identification */}
       <Section title="Identification">
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Field label="Immatriculation *" name="plate" defaultValue={v?.plate} required placeholder="AA-123-BB" className="uppercase" />
-          <Field label="Marque *" name="brand" defaultValue={v?.brand} required placeholder="Renault" />
-          <Field label="Modèle *" name="model" defaultValue={v?.model} required placeholder="Clio" />
-          <Field label="Version" name="version" defaultValue={v?.version ?? ''} placeholder="1.5 dCi 90ch" />
-          <Field label="Année" name="year" type="number" defaultValue={v?.year?.toString() ?? ''} placeholder="2022" min="1990" max="2030" />
-          <Field label="Couleur" name="color" defaultValue={v?.color ?? ''} placeholder="Blanc" />
-          <Field label="VIN / N° de série" name="vin" defaultValue={v?.vin ?? ''} placeholder="VF1AB..." />
+          <Field label="Immatriculation *" name="plate" defaultValue={v?.plate} required placeholder="AA-123-BB" className="uppercase" autoCapitalize="characters" autoCorrect="off" enterKeyHint="next" />
+          <Field label="Marque *" name="brand" defaultValue={v?.brand} required placeholder="Renault" enterKeyHint="next" />
+          <Field label="Modèle *" name="model" defaultValue={v?.model} required placeholder="Clio" enterKeyHint="next" />
+          <Field label="Version" name="version" defaultValue={v?.version ?? ''} placeholder="1.5 dCi 90ch" enterKeyHint="next" />
+          <Field label="Année" name="year" type="number" defaultValue={v?.year?.toString() ?? ''} placeholder="2022" min="1990" max="2030" inputMode="numeric" enterKeyHint="next" />
+          <Field label="Couleur" name="color" defaultValue={v?.color ?? ''} placeholder="Blanc" enterKeyHint="next" />
+          <Field label="VIN / N° de série" name="vin" defaultValue={v?.vin ?? ''} placeholder="VF1AB..." enterKeyHint="next" />
           <SelectField label="Carburant" name="fuel_type" defaultValue={v?.fuel_type ?? ''} options={FUEL_TYPES} />
           <SelectField label="Catégorie" name="category" defaultValue={v?.category ?? ''} options={CATEGORIES} />
           <SelectField label="Transmission" name="transmission" defaultValue={v?.transmission ?? ''} options={TRANSMISSIONS} />
-          <Field label="Places" name="seats" type="number" defaultValue={v?.seats?.toString() ?? '5'} min="1" max="9" />
-          <Field label="Portes" name="doors" type="number" defaultValue={v?.doors?.toString() ?? '5'} min="2" max="6" />
-          <Field label="Puissance fiscale (CV)" name="fiscal_power" type="number" defaultValue={v?.fiscal_power?.toString() ?? ''} />
-          <Field label="Puissance moteur (ch)" name="engine_power" type="number" defaultValue={v?.engine_power?.toString() ?? ''} />
-          <Field label="KM actuels" name="current_km" type="number" defaultValue={v?.current_km?.toString() ?? '0'} min="0" />
+          <Field label="Places" name="seats" type="number" defaultValue={v?.seats?.toString() ?? '5'} min="1" max="9" inputMode="numeric" enterKeyHint="next" />
+          <Field label="Portes" name="doors" type="number" defaultValue={v?.doors?.toString() ?? '5'} min="2" max="6" inputMode="numeric" enterKeyHint="next" />
+          <Field label="Puissance fiscale (CV)" name="fiscal_power" type="number" defaultValue={v?.fiscal_power?.toString() ?? ''} inputMode="numeric" enterKeyHint="next" />
+          <Field label="Puissance moteur (ch)" name="engine_power" type="number" defaultValue={v?.engine_power?.toString() ?? ''} inputMode="numeric" enterKeyHint="next" />
+          <Field label="KM actuels" name="current_km" type="number" defaultValue={v?.current_km?.toString() ?? '0'} min="0" inputMode="numeric" enterKeyHint="next" />
         </div>
       </Section>
 
       {/* Tarification */}
       <Section title="Tarification">
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Field label="Prix/jour (€)" name="daily_price" type="number" defaultValue={v?.daily_price?.toString() ?? ''} placeholder="50" step="0.01" />
-          <Field label="Prix/semaine (€)" name="weekly_price" type="number" defaultValue={v?.weekly_price?.toString() ?? ''} placeholder="300" step="0.01" />
-          <Field label="Caution (€)" name="deposit_amount" type="number" defaultValue={v?.deposit_amount?.toString() ?? ''} placeholder="500" step="0.01" />
-          <Field label="KM inclus/jour" name="km_included_daily" type="number" defaultValue={v?.km_included_daily?.toString() ?? ''} placeholder="200" />
-          <Field label="Supplément KM (€/km)" name="extra_km_price" type="number" defaultValue={v?.extra_km_price?.toString() ?? ''} placeholder="0.15" step="0.01" />
+          <Field label="Prix/jour (€)" name="daily_price" type="number" defaultValue={v?.daily_price?.toString() ?? ''} placeholder="50" step="0.01" inputMode="decimal" enterKeyHint="next" />
+          <Field label="Prix/semaine (€)" name="weekly_price" type="number" defaultValue={v?.weekly_price?.toString() ?? ''} placeholder="300" step="0.01" inputMode="decimal" enterKeyHint="next" />
+          <Field label="Caution (€)" name="deposit_amount" type="number" defaultValue={v?.deposit_amount?.toString() ?? ''} placeholder="500" step="0.01" inputMode="decimal" enterKeyHint="next" />
+          <Field label="KM inclus/jour" name="km_included_daily" type="number" defaultValue={v?.km_included_daily?.toString() ?? ''} placeholder="200" inputMode="numeric" enterKeyHint="next" />
+          <Field label="Supplément KM (€/km)" name="extra_km_price" type="number" defaultValue={v?.extra_km_price?.toString() ?? ''} placeholder="0.15" step="0.01" inputMode="decimal" enterKeyHint="next" />
           <Field label="Date de mise en location" name="rental_start_date" type="date" defaultValue={v?.rental_start_date ?? ''} />
         </div>
       </Section>
@@ -63,11 +67,11 @@ export default function VehicleForm({ action, vehicle }: VehicleFormProps) {
       {/* Assurance & entretien */}
       <Section title="Assurance & entretien">
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Field label="Assureur" name="insurance_company" defaultValue={v?.insurance_company ?? ''} />
-          <Field label="N° contrat assurance" name="insurance_contract_ref" defaultValue={v?.insurance_contract_ref ?? ''} />
+          <Field label="Assureur" name="insurance_company" defaultValue={v?.insurance_company ?? ''} enterKeyHint="next" />
+          <Field label="N° contrat assurance" name="insurance_contract_ref" defaultValue={v?.insurance_contract_ref ?? ''} enterKeyHint="next" />
           <Field label="Expiration assurance" name="insurance_expiry" type="date" defaultValue={v?.insurance_expiry ?? ''} />
           <Field label="Contrôle technique" name="ct_date" type="date" defaultValue={v?.ct_date ?? ''} />
-          <Field label="Prochain entretien KM" name="next_service_km" type="number" defaultValue={v?.next_service_km?.toString() ?? ''} />
+          <Field label="Prochain entretien KM" name="next_service_km" type="number" defaultValue={v?.next_service_km?.toString() ?? ''} inputMode="numeric" enterKeyHint="done" />
           <Field label="Prochain entretien date" name="next_service_date" type="date" defaultValue={v?.next_service_date ?? ''} />
         </div>
       </Section>
@@ -89,7 +93,7 @@ export default function VehicleForm({ action, vehicle }: VehicleFormProps) {
         <button
           type="submit"
           disabled={pending}
-          className="px-6 py-3 bg-[#111111] hover:bg-gray-800 disabled:opacity-40 text-white font-semibold rounded-xl transition-colors text-sm"
+          className="px-6 py-3 bg-[#111111] hover:bg-gray-800 disabled:opacity-40 text-white font-semibold rounded-xl transition-all active:scale-[.97] text-sm"
         >
           {pending ? 'Enregistrement...' : (vehicle ? 'Mettre à jour' : 'Créer le véhicule')}
         </button>
@@ -109,11 +113,14 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 function Field({
   label, name, type = 'text', defaultValue = '', required = false,
-  placeholder, min, max, step, className
+  placeholder, min, max, step, className, inputMode, autoCapitalize, autoCorrect, enterKeyHint
 }: {
   label: string; name: string; type?: string; defaultValue?: string
   required?: boolean; placeholder?: string; min?: string; max?: string
   step?: string; className?: string
+  inputMode?: 'decimal' | 'email' | 'none' | 'numeric' | 'search' | 'tel' | 'text' | 'url'
+  autoCapitalize?: string; autoCorrect?: string
+  enterKeyHint?: 'done' | 'enter' | 'go' | 'next' | 'previous' | 'search' | 'send'
 }) {
   return (
     <div>
@@ -130,6 +137,10 @@ function Field({
         min={min}
         max={max}
         step={step}
+        inputMode={inputMode}
+        autoCapitalize={autoCapitalize}
+        autoCorrect={autoCorrect}
+        enterKeyHint={enterKeyHint}
         className={`w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm ${className ?? ''}`}
       />
     </div>

@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { User } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
-import { logout } from '@/lib/actions/auth'
+import LogoutButton from './LogoutButton'
 
 export default async function ProfilePage() {
   const supabase = await createClient()
@@ -61,11 +61,7 @@ export default async function ProfilePage() {
         </dl>
       </div>
 
-      <form action={logout}>
-        <button type="submit" className="px-6 py-3 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl font-medium transition-colors text-sm">
-          Se déconnecter
-        </button>
-      </form>
+      <LogoutButton />
     </div>
   )
 }
