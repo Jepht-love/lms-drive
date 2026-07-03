@@ -87,7 +87,7 @@ export default function VehicleForm({ action, vehicle }: VehicleFormProps) {
         <button
           type="submit"
           disabled={pending}
-          className="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold rounded-xl transition-colors text-sm"
+          className="px-6 py-3 bg-[#111111] hover:bg-gray-800 disabled:opacity-60 text-white font-semibold rounded-xl transition-colors text-sm"
         >
           {pending ? 'Enregistrement...' : (vehicle ? 'Mettre à jour' : 'Créer le véhicule')}
         </button>

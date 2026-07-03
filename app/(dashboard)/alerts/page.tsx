@@ -103,7 +103,7 @@ export default async function NotificationsPage() {
       {alerts.length === 0 ? (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 text-center">
           <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-5">
-            <span className="text-4xl">✓</span>
+            <svg className="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
           </div>
           <p className="text-lg font-black text-gray-700">Tout est à jour</p>
           <p className="text-sm text-gray-400 mt-2">Aucune alerte active pour le moment</p>

@@ -75,7 +75,7 @@ export default async function ClientsPage({
           <Link
             key={f.label}
             href={f.value ? `/clients?status=${f.value}` : '/clients'}
-            className={`px-3.5 py-1.5 rounded-xl text-sm font-semibold transition-colors ${
+            className={`px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-colors min-h-[44px] flex items-center ${
               status === f.value || (!status && !f.value)
                 ? 'bg-[#111111] text-white'
                 : 'bg-white border border-gray-100 text-gray-600 hover:bg-gray-50 shadow-sm'

@@ -36,7 +36,7 @@
     },
     {
       "name": "Calendrier",
-      "url": "/calendar",
+      "url": "/calendrier",
       "description": "Vue planning flotte"
     }
   ]

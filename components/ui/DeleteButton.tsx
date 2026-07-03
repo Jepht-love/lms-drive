@@ -26,7 +26,7 @@ export default function DeleteButton({ onConfirm, label = 'Supprimer', confirmMe
       <button
         onClick={() => setOpen(true)}
         className={variant === 'icon'
-          ? 'p-2 rounded-xl text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100'
+          ? 'p-2 rounded-xl text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all opacity-40 group-hover:opacity-100'
           : 'flex items-center gap-2 px-4 py-2.5 text-red-600 hover:bg-red-50 rounded-xl text-sm font-medium transition-colors w-full'
         }
         title={label}
