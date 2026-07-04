@@ -1,16 +1,16 @@
 # Graph Report - lms-drive  (2026-07-04)
 
 ## Corpus Check
-- 370 files · ~578,462 words
+- 371 files · ~579,762 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1412 nodes · 2708 edges · 127 communities (109 shown, 18 thin omitted)
-- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 27 edges (avg confidence: 0.8)
+- 1416 nodes · 2717 edges · 124 communities (108 shown, 16 thin omitted)
+- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 28 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `11d63ca4`
+- Built from commit: `46c1434c`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -100,28 +100,24 @@
 - [[_COMMUNITY_Community 89|Community 89]]
 - [[_COMMUNITY_Community 90|Community 90]]
 - [[_COMMUNITY_Community 91|Community 91]]
-- [[_COMMUNITY_Community 92|Community 92]]
 - [[_COMMUNITY_Community 93|Community 93]]
 - [[_COMMUNITY_Community 94|Community 94]]
 - [[_COMMUNITY_Community 95|Community 95]]
 - [[_COMMUNITY_Community 96|Community 96]]
 - [[_COMMUNITY_Community 97|Community 97]]
+- [[_COMMUNITY_Community 99|Community 99]]
 - [[_COMMUNITY_Community 101|Community 101]]
 - [[_COMMUNITY_Community 104|Community 104]]
 - [[_COMMUNITY_Community 107|Community 107]]
 - [[_COMMUNITY_Community 108|Community 108]]
-- [[_COMMUNITY_Community 109|Community 109]]
-- [[_COMMUNITY_Community 111|Community 111]]
 - [[_COMMUNITY_Community 112|Community 112]]
 - [[_COMMUNITY_Community 116|Community 116]]
-- [[_COMMUNITY_Community 117|Community 117]]
-- [[_COMMUNITY_Community 120|Community 120]]
 
 ## God Nodes (most connected - your core abstractions)
 1. `createClient()` - 105 edges
 2. `formatPrice()` - 40 edges
 3. `formatDate()` - 38 edges
-4. `createAdminClient()` - 25 edges
+4. `createAdminClient()` - 26 edges
 5. `CalendarEvent` - 24 edges
 6. `useToast()` - 21 edges
 7. `CalendarResource` - 17 edges
@@ -134,61 +130,65 @@
   app/(dashboard)/accounting/export/pdf/route.ts → lib/contracts/agency.ts
 - `ClientPage()` --calls--> `formatDate()`  [INFERRED]
   app/(dashboard)/clients/[id]/page.tsx → lib/utils/index.ts
+- `SinistreDetailPage()` --calls--> `formatDate()`  [INFERRED]
+  app/(dashboard)/incidents/sinistres/[id]/page.tsx → lib/utils/index.ts
 - `OperationDetailPage()` --calls--> `formatDate()`  [INFERRED]
   app/(dashboard)/partnerships/[id]/page.tsx → lib/utils/index.ts
-- `NewTransactionPage()` --calls--> `expenseCategoriesByFamily()`  [INFERRED]
-  app/(dashboard)/accounting/new/page.tsx → lib/accounting/categories.ts
-- `TaskCard()` --calls--> `formatDate()`  [EXTRACTED]
-  app/(dashboard)/calendar/tasks/page.tsx → lib/utils/index.ts
+- `DailyClosingPage()` --calls--> `formatDate()`  [EXTRACTED]
+  app/(dashboard)/accounting/close/daily/page.tsx → lib/utils/index.ts
 
 ## Import Cycles
 - None detected.
 
-## Communities (127 total, 18 thin omitted)
+## Communities (124 total, 16 thin omitted)
 
 ### Community 0 - "Community 0"
-Cohesion: 0.16
-Nodes (10): ContractPDF(), DamagedZone, fmtDate(), fmtDT(), fmtMoney(), InspectionPage(), InspectionPDFData, s (+2 more)
+Cohesion: 0.13
+Nodes (17): getFeesTable(), getLegalArticles(), LegalArticlesParams, ContractPDF(), DamagedZone, fmtDate(), fmtDT(), fmtMoney() (+9 more)
 
 ### Community 1 - "Community 1"
-Cohesion: 0.26
-Nodes (7): NotificationsPage(), GET(), syncAlertsToCalendar(), GET(), resendTo(), AppAlert, fetchAllAlerts()
+Cohesion: 0.30
+Nodes (6): NotificationsPage(), GET(), syncAlertsToCalendar(), GET(), AppAlert, fetchAllAlerts()
 
 ### Community 2 - "Community 2"
-Cohesion: 0.17
-Nodes (9): DailyClosingPage(), InfractionDetailPage(), SinistreDetailPage(), Vehicle, INFRACTION_STATUS, infractionTypeLabel(), SINISTRE_STATUS, formatDate() (+1 more)
+Cohesion: 0.06
+Nodes (28): addAccidentToVehicle(), closeInfraction(), createAccident(), createInfraction(), lookupDriver(), markInfractionPaid(), num(), updateAccidentStatus() (+20 more)
 
 ### Community 3 - "Community 3"
-Cohesion: 0.13
-Nodes (8): deleteClient(), PAYMENT_LABELS, DOCS, Props, ClientPage(), STATUS_LABELS, STATUS_RES, DeleteButtonProps
+Cohesion: 0.17
+Nodes (7): deleteClient(), PAYMENT_LABELS, DOCS, Props, ClientPage(), STATUS_LABELS, STATUS_RES
 
 ### Community 4 - "Community 4"
 Cohesion: 0.05
 Nodes (42): dependencies, class-variance-authority, clsx, date-fns, @dnd-kit/core, @dnd-kit/sortable, @dnd-kit/utilities, framer-motion (+34 more)
 
 ### Community 5 - "Community 5"
-Cohesion: 0.05
-Nodes (31): logout(), managerItems, navItems, SidebarProps, ProfilePage(), Profile, Badge(), BadgeProps (+23 more)
+Cohesion: 0.15
+Nodes (10): Badge(), BadgeProps, badgeVariants, Input, Label, labelVariants, PopoverContent, Textarea (+2 more)
 
 ### Community 6 - "Community 6"
-Cohesion: 0.43
-Nodes (6): markRestitutionInvoiceSent(), renderContractInvoiceAttachment(), EmailType, logEmail(), LogEmailParams, POST()
+Cohesion: 0.27
+Nodes (12): transmitInfractionToClient(), generateInvoiceDraft(), markRestitutionInvoiceSent(), nextInvoiceNumber(), renderContractInvoiceAttachment(), sendInvoice(), SupabaseServer, resendTo() (+4 more)
 
 ### Community 7 - "Community 7"
-Cohesion: 0.06
-Nodes (42): createMaintenanceRecord(), expenseCategoryFor(), GARAGE_TYPES, markMaintenancePaid(), loadFlags(), NewIssue, reportVehicleIssues(), resolveVehicleIssue() (+34 more)
+Cohesion: 0.11
+Nodes (24): Candidate, computeVehicleNeeds(), dateCandidate(), fmtKm(), groupNeedsForBadges(), kmCandidate(), LastByType, LastIntervention (+16 more)
 
 ### Community 8 - "Community 8"
-Cohesion: 0.12
-Nodes (17): AccountingTransactions(), updateClientStatus(), COLORS, ICONS, NotificationsList(), ClientForm(), Toast, ToastContext (+9 more)
+Cohesion: 0.05
+Nodes (35): AccountingTransactions(), applyCommercialPerks(), applyDiscount(), buildBasePayload(), createClientAction(), parseDiscount(), updateClientAction(), updateClientNotes() (+27 more)
 
 ### Community 9 - "Community 9"
-Cohesion: 0.11
-Nodes (16): deleteDocument(), sendDocumentByEmail(), uploadDocument(), DOCUMENT_SUBCATEGORIES, DocumentCategory, isExpiringSoon(), SENSITIVE_SUBCATEGORIES, ActiveTab (+8 more)
+Cohesion: 0.10
+Nodes (18): deleteDocument(), replaceDocument(), sendDocumentByEmail(), uploadDocument(), isExpiringSoon(), ActiveTab, Client, DocStatus (+10 more)
 
 ### Community 10 - "Community 10"
-Cohesion: 0.25
-Nodes (8): applyCommercialPerks(), applyDiscount(), buildBasePayload(), createClientAction(), parseDiscount(), updateClientAction(), updateClientNotes(), uploadClientDoc()
+Cohesion: 0.15
+Nodes (14): Tx, assertPeriodOpen(), SB, closeAnnualAccounting(), closeDailyAccounting(), closeMonthlyAccounting(), reopen(), reopenAnnualClosing() (+6 more)
+
+### Community 11 - "Community 11"
+Cohesion: 0.16
+Nodes (6): endTrip(), startTrip(), PURPOSE_LABELS, syncTripToCalendar(), ResourceRow, createAdminClient()
 
 ### Community 12 - "Community 12"
 Cohesion: 0.10
@@ -199,52 +199,52 @@ Cohesion: 0.15
 Nodes (9): calculateExtraKm(), calculateLateFee(), FuelGaugeProps, CLEANLINESS_LEVELS, ComputedFees, Props, Step, buildDamageFlag() (+1 more)
 
 ### Community 14 - "Community 14"
-Cohesion: 0.06
-Nodes (8): STATUS_CONFIG, ROLE_CONFIG, deleteTask(), STATUSES, TYPES, updateTask(), createClient(), DriverResult
+Cohesion: 0.08
+Nodes (6): STATUS_CONFIG, deleteTask(), STATUSES, TYPES, updateTask(), createClient()
 
 ### Community 15 - "Community 15"
 Cohesion: 0.15
 Nodes (17): CalendarGrid(), CalendarGridProps, rangeFor(), SlotContext, CalendarSidebarProps, CalendarToolbar(), CalendarToolbarProps, rangeLabel() (+9 more)
 
 ### Community 16 - "Community 16"
-Cohesion: 0.18
-Nodes (6): resetInspection(), postRentalRevenue(), validateContract(), logAudit(), InspectionInfo, Props
+Cohesion: 0.20
+Nodes (9): createReservation(), DIACRITICS_RE, isNameBlacklisted(), normalizeName(), postRentalRevenue(), validateContract(), logAudit(), broadcastPushToManagers() (+1 more)
 
 ### Community 17 - "Community 17"
 Cohesion: 0.10
 Nodes (19): AuditLog, Contract, ContractStatus, DamagedZone, DepositStatus, Document, DocumentCategory, Incident (+11 more)
 
 ### Community 18 - "Community 18"
-Cohesion: 0.16
-Nodes (9): deleteContract(), deleteReservation(), deleteVehicle(), updateDepositInfo(), updateDepositStatus(), removeReservationFromCalendar(), METHOD_LABELS, Props (+1 more)
+Cohesion: 0.12
+Nodes (10): deleteContract(), deleteReservation(), deleteVehicle(), resetInspection(), updateDepositStatus(), removeReservationFromCalendar(), DEPOSIT_STATUSES, InspectionInfo (+2 more)
 
 ### Community 19 - "Community 19"
-Cohesion: 0.17
-Nodes (10): PhotoLightbox(), PhotoLightboxProps, EDL_ZONES, Zone2D, zoneBox(), DamageSeverity, BadgeType, RANK (+2 more)
+Cohesion: 0.20
+Nodes (10): PhotoLightbox(), PhotoLightboxProps, compressImageToBase64(), EDL_ZONES, Zone2D, zoneBox(), DAMAGE_TYPES, graviteLabel() (+2 more)
 
 ### Community 20 - "Community 20"
-Cohesion: 0.17
-Nodes (9): DrawerProps, DamageDrawerProps, SEVERITY_ACTIVE, SEVERITY_STYLES, DamageEntry, DamageZone, VehicleInspectionMapProps, PreviousZone (+1 more)
+Cohesion: 0.19
+Nodes (10): DamageComparisonProps, DamageDrawerProps, SEVERITY_ACTIVE, SEVERITY_STYLES, DamageEntry, DamageZone, VehicleInspectionMapProps, PreviousZone (+2 more)
 
 ### Community 21 - "Community 21"
-Cohesion: 0.16
-Nodes (18): createReservation(), DIACRITICS_RE, isNameBlacklisted(), normalizeName(), prolongReservation(), updateReservationDates(), EditDatesPanel(), Props (+10 more)
+Cohesion: 0.21
+Nodes (13): prolongReservation(), updateReservationDates(), EditDatesPanel(), Props, toInputValue(), ProlongReservation(), Props, Client (+5 more)
 
 ### Community 22 - "Community 22"
 Cohesion: 0.11
 Nodes (20): AlertPanelProps, ALERT_RULES, EVENT_COLORS, EVENT_STATUS_LABELS, EVENT_TYPE_LABELS, STATUS_COLORS, CreateMenuProps, OPTIONS (+12 more)
 
 ### Community 23 - "Community 23"
-Cohesion: 0.17
-Nodes (6): ClientFormProps, DISCOUNT_PRESETS, DOC_TYPES, PAYMENT_METHODS, PHOTO_SLOTS, Client
+Cohesion: 0.36
+Nodes (13): aggregate(), buildAnalysisData(), dateLabel(), pctDelta(), previousRange(), Tx, getFamilyLabel(), periodRange() (+5 more)
 
 ### Community 24 - "Community 24"
-Cohesion: 0.20
-Nodes (9): DOCUMENT_CATEGORIES, ALL_DOC_KEYS, Props, ALL_TAB_KEYS, APP_TABS, AppTab, ALL_DOC_KEYS, COLORS (+1 more)
+Cohesion: 0.16
+Nodes (12): DOCUMENT_CATEGORIES, ALL_DOC_KEYS, Props, ALL_TAB_KEYS, APP_TABS, AppTab, ALL_DOC_KEYS, COLORS (+4 more)
 
 ### Community 25 - "Community 25"
-Cohesion: 0.15
-Nodes (10): bookOperationTransaction(), createAgency(), createOperation(), num(), parseExternalVehicle(), recordReturn(), startEntrantRental(), updateOperationStatus() (+2 more)
+Cohesion: 0.07
+Nodes (19): bookOperationTransaction(), createAgency(), createOperation(), num(), parseExternalVehicle(), recordReturn(), startEntrantRental(), updateOperationStatus() (+11 more)
 
 ### Community 26 - "Community 26"
 Cohesion: 0.15
@@ -263,16 +263,16 @@ Cohesion: 0.18
 Nodes (8): ALERT_GROUPS, AlertGroup, CAL_EVENT_COLORS, DashboardPage(), getVehicle(), TASK_STATUS_BADGE, TASK_STATUS_LABEL, TASK_TYPE_LABELS
 
 ### Community 30 - "Community 30"
-Cohesion: 0.27
-Nodes (7): closeInfraction(), createAccident(), createInfraction(), markInfractionPaid(), num(), transmitInfractionToClient(), InfractionActions()
+Cohesion: 0.18
+Nodes (13): EXPENSE_CATEGORIES, expenseCategoriesByFamily(), PAYMENT_METHODS, createTransaction(), createDueDate(), createRecurringDueDates(), deleteDueDate(), markDuePaid() (+5 more)
 
 ### Community 31 - "Community 31"
-Cohesion: 0.06
-Nodes (45): aggregate(), buildAnalysisData(), dateLabel(), pctDelta(), previousRange(), Tx, ALL, CostNature (+37 more)
+Cohesion: 0.13
+Nodes (14): ALL, CostNature, EXPENSE_CAT_BY_ID, EXPENSE_FAMILIES, ExpenseCategory, expenseNature(), FAMILY_BY_ID, getCategoryLabel() (+6 more)
 
 ### Community 32 - "Community 32"
 Cohesion: 0.18
-Nodes (8): addAccidentToVehicle(), updateAccidentStatus(), SinistreActions(), Incident, STATUS_COLORS, STATUSES, Vehicle, SINISTRE_FLOW
+Nodes (3): Props, M, BackButtonProps
 
 ### Community 33 - "Community 33"
 Cohesion: 0.16
@@ -303,8 +303,8 @@ Cohesion: 0.33
 Nodes (6): fmt(), fmtDate(), s, SinistrePDF(), SinistrePDFData, STATUS_LABELS
 
 ### Community 40 - "Community 40"
-Cohesion: 0.18
-Nodes (15): generateInvoiceDraft(), nextInvoiceNumber(), sendInvoice(), SupabaseServer, updateInvoiceLines(), loadLogoDataUrl(), InvoiceData, InvoiceLineItem (+7 more)
+Cohesion: 0.27
+Nodes (7): updateInvoiceLines(), InvoiceData, InvoiceLineItem, InvoicePDF(), LEGAL_LINES(), s, Invoice
 
 ### Community 41 - "Community 41"
 Cohesion: 0.15
@@ -313,10 +313,6 @@ Nodes (3): inter, metadata, viewport
 ### Community 42 - "Community 42"
 Cohesion: 0.22
 Nodes (8): name, private, scripts, build, dev, lint, start, version
-
-### Community 43 - "Community 43"
-Cohesion: 0.28
-Nodes (4): createTask(), TYPES, broadcastPushToManagers(), PATCH()
 
 ### Community 44 - "Community 44"
 Cohesion: 0.22
@@ -331,16 +327,16 @@ Cohesion: 0.23
 Nodes (5): createVehicle(), updateVehicle(), updateVehicleStatus(), VehicleStatus, STATUSES
 
 ### Community 47 - "Community 47"
-Cohesion: 0.17
-Nodes (6): MONTHS, IMMOBILISES_STATUSES, OpenAccident, RecentMaintenance, STATUS_LABEL, BackButtonProps
+Cohesion: 0.14
+Nodes (13): createMaintenanceRecord(), expenseCategoryFor(), GARAGE_TYPES, markMaintenancePaid(), IMMOBILISES_STATUSES, OpenAccident, RecentMaintenance, STATUS_LABEL (+5 more)
 
 ### Community 48 - "Community 48"
-Cohesion: 0.40
-Nodes (3): COLUMNS, Task, TaskCard()
+Cohesion: 0.36
+Nodes (6): loadFlags(), NewIssue, reportVehicleIssues(), resolveVehicleIssue(), setVehicleRepairStatus(), MaintenanceFlag
 
 ### Community 49 - "Community 49"
-Cohesion: 0.15
-Nodes (12): closeCampaign(), createCampaign(), updateCampaignStatus(), CampaignDetailPage(), TRANSITIONS, calcCAC(), calcROI(), CAMPAIGN_STATUSES (+4 more)
+Cohesion: 0.29
+Nodes (7): expenseFamily, GARAGE_TYPES, overlapDays(), PANNE_TYPES, PERIODS, RENTED_STATUSES, VehicleKpiPage()
 
 ### Community 50 - "Community 50"
 Cohesion: 0.17
@@ -355,16 +351,16 @@ Cohesion: 0.40
 Nodes (3): supabase, INITIAL_VEHICLES, SeedVehicle
 
 ### Community 53 - "Community 53"
-Cohesion: 0.29
+Cohesion: 0.22
 Nodes (4): setWeeklyAvailability(), DAYS, Profile, Slot
 
 ### Community 54 - "Community 54"
-Cohesion: 0.27
-Nodes (6): updateAgencySettings(), AGENCY_DEFAULTS, AgencySettings, getAgencySettings(), ContractPreviewPage(), SettingsPage()
+Cohesion: 0.22
+Nodes (8): updateAgencySettings(), AGENCY_DEFAULTS, AgencySettings, getAgencySettings(), ConventionPage(), ContractPreviewPage(), SettingsPage(), formatDateTime()
 
 ### Community 55 - "Community 55"
-Cohesion: 0.25
-Nodes (4): CATEGORIES, FUEL_TYPES, TRANSMISSIONS, VehicleForm()
+Cohesion: 0.22
+Nodes (6): Vehicle, CATEGORIES, FUEL_TYPES, TRANSMISSIONS, VehicleForm(), VehicleFormProps
 
 ### Community 56 - "Community 56"
 Cohesion: 0.33
@@ -375,44 +371,52 @@ Cohesion: 0.36
 Nodes (6): Props, ZONE_COLORS, DamagedZone, MANDATORY_PHOTOS, VEHICLE_ZONES, ZoneId
 
 ### Community 60 - "Community 60"
-Cohesion: 0.18
-Nodes (11): DamageComparisonProps, VIEW_BOXES, DAMAGE_TYPE_PRICES, DAMAGE_TYPES, damageTypeLabel(), defaultDamagePrice(), GRAVITES, INTERIOR_DAMAGE_ITEMS (+3 more)
+Cohesion: 0.15
+Nodes (12): VIEW_BOXES, DAMAGE_TYPE_PRICES, DamageSeverity, damageTypeLabel(), defaultDamagePrice(), GRAVITES, VEHICLE_ZONES, VehicleView (+4 more)
 
 ### Community 62 - "Community 62"
 Cohesion: 0.50
 Nodes (3): permissions, allow, defaultMode
 
 ### Community 70 - "Community 70"
-Cohesion: 0.21
-Nodes (4): PAYMENT_METHODS, Vehicle, Props, createClient()
+Cohesion: 0.07
+Nodes (19): updateDepositDeducted(), updateDepositInfo(), updatePaymentInfo(), Props, METHOD_LABELS, Props, DepositSettlement(), fmt() (+11 more)
 
 ### Community 76 - "Community 76"
-Cohesion: 0.33
-Nodes (4): lookupDriver(), Driver, Vehicle, findDriverAtDate()
+Cohesion: 0.25
+Nodes (7): SelectContent, SelectItem, SelectLabel, SelectScrollDownButton, SelectScrollUpButton, SelectSeparator, SelectTrigger
 
 ### Community 77 - "Community 77"
-Cohesion: 0.36
-Nodes (7): POST(), buildContractPdfData(), BuiltContractData, fetchPhotoAsDataUrl(), loadEdlSchemaDataUrl(), SupabaseServer, ContractData
+Cohesion: 0.29
+Nodes (9): POST(), buildContractPdfData(), BuiltContractData, fetchPhotoAsDataUrl(), loadEdlSchemaDataUrl(), loadLogoDataUrl(), SupabaseServer, ContractData (+1 more)
 
 ### Community 80 - "Community 80"
-Cohesion: 0.36
-Nodes (5): ConventionPage(), IaDepartureInspectionPage(), DepartureInspectionPage(), generateContractNumber(), recomputeVehicleStatus()
+Cohesion: 0.48
+Nodes (4): IaDepartureInspectionPage(), DepartureInspectionPage(), generateContractNumber(), recomputeVehicleStatus()
 
 ### Community 81 - "Community 81"
-Cohesion: 0.53
-Nodes (4): endTrip(), startTrip(), PURPOSE_LABELS, syncTripToCalendar()
+Cohesion: 0.43
+Nodes (4): VehiclePage(), buildLastByType(), getVehicleStatusColor(), getVehicleStatusLabel()
 
 ### Community 83 - "Community 83"
-Cohesion: 0.18
-Nodes (4): OperationDetailPage(), Props, OPERATION_FLOW, OPERATION_STATUS
+Cohesion: 0.29
+Nodes (6): Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle
 
 ### Community 84 - "Community 84"
 Cohesion: 0.40
-Nodes (3): Driver, Vehicle, INFRACTION_TYPES
+Nodes (4): managerItems, navItems, SidebarProps, Profile
 
 ### Community 85 - "Community 85"
-Cohesion: 0.29
-Nodes (3): EmailLog, TYPE_CONTENT, TYPE_LABELS
+Cohesion: 0.18
+Nodes (5): EmailLog, TYPE_CONTENT, TYPE_LABELS, TYPE_LABELS, TYPES
+
+### Community 87 - "Community 87"
+Cohesion: 0.40
+Nodes (3): DOCUMENT_SUBCATEGORIES, DocumentCategory, SENSITIVE_SUBCATEGORIES
+
+### Community 88 - "Community 88"
+Cohesion: 0.22
+Nodes (3): Props, MONTHS, VehicleSchedule
 
 ### Community 89 - "Community 89"
 Cohesion: 0.25
@@ -427,28 +431,24 @@ Cohesion: 0.36
 Nodes (6): AccountingPdf(), AccountingPdfData, fmt(), s, GET(), MONTHS
 
 ### Community 93 - "Community 93"
-Cohesion: 0.40
-Nodes (5): adminModules, MenuPage(), modules, ROLE_LABELS, allowedHrefSet()
-
-### Community 94 - "Community 94"
-Cohesion: 0.25
-Nodes (6): updatePaymentInfo(), PAYMENT_METHODS, PAYMENT_STATUSES, PaymentMethodType, PaymentStatus, Props
+Cohesion: 0.22
+Nodes (6): logout(), adminModules, MenuPage(), modules, ROLE_LABELS, allowedHrefSet()
 
 ### Community 95 - "Community 95"
 Cohesion: 0.17
 Nodes (12): updateReservationStatus(), PAYMENT_LABELS, ReservationForSync, DEPOSIT_STATUS_LABELS, ReservationPage(), STATUS_CONFIG, ReservationStatusButtons(), PaymentMethod (+4 more)
 
 ### Community 96 - "Community 96"
-Cohesion: 0.40
-Nodes (5): updateDepositDeducted(), DepositSettlement(), fmt(), Props, SEIZURE
+Cohesion: 0.50
+Nodes (3): Button, ButtonProps, buttonVariants
 
 ### Community 97 - "Community 97"
 Cohesion: 0.06
-Nodes (27): Tx, assertPeriodOpen(), SB, closeAnnualAccounting(), closeDailyAccounting(), closeMonthlyAccounting(), createTransaction(), reopen() (+19 more)
+Nodes (28): closeCampaign(), createCampaign(), updateCampaignStatus(), AnimatedList(), AnimatedListItem(), AnimatedTabsProps, Tab, SwipeableRowProps (+20 more)
 
 ### Community 101 - "Community 101"
-Cohesion: 0.18
-Nodes (8): BODY_OUTLINE, LABEL, LAYOUT, Props, VIEW_VB, VIEWS, ZONE_COORDS, ZoneCoord
+Cohesion: 0.20
+Nodes (7): BODY_OUTLINE, LABEL, LAYOUT, VIEW_VB, VIEWS, ZONE_COORDS, ZoneCoord
 
 ### Community 104 - "Community 104"
 Cohesion: 0.53
@@ -459,44 +459,32 @@ Cohesion: 0.31
 Nodes (6): DAY_ABBR, detectOverlaps(), formatDateHeader(), getEventPosition(), HOURS, ResourceColumnProps
 
 ### Community 108 - "Community 108"
-Cohesion: 0.08
-Nodes (13): paymentMethodLabel(), TYPE_LABELS, TYPES, VehiclePage(), PURPOSES, Trip, Vehicle, Tab (+5 more)
-
-### Community 109 - "Community 109"
-Cohesion: 0.39
-Nodes (7): getFeesTable(), getLegalArticles(), LegalArticlesParams, ContractPreviewClient(), formatDateTime(), formatPrice(), Props
-
-### Community 111 - "Community 111"
-Cohesion: 0.33
-Nodes (4): Vehicle, Agency, Client, Reservation
+Cohesion: 0.32
+Nodes (3): paymentMethodLabel(), DailyClosingPage(), formatPrice()
 
 ### Community 112 - "Community 112"
 Cohesion: 0.29
 Nodes (4): MemberProfilePage(), ROLE_CONFIG, STATUS_BADGE, STATUS_LABEL
 
-### Community 117 - "Community 117"
-Cohesion: 0.67
-Nodes (3): config, matchTab(), proxy()
-
 ## Knowledge Gaps
-- **423 isolated node(s):** `version`, `configurations`, `PreToolUse`, `defaultMode`, `allow` (+418 more)
+- **424 isolated node(s):** `version`, `configurations`, `PreToolUse`, `defaultMode`, `allow` (+419 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **18 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **16 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `createClient()` connect `Community 14` to `Community 1`, `Community 2`, `Community 3`, `Community 5`, `Community 6`, `Community 7`, `Community 9`, `Community 10`, `Community 11`, `Community 18`, `Community 21`, `Community 25`, `Community 29`, `Community 30`, `Community 31`, `Community 34`, `Community 39`, `Community 40`, `Community 43`, `Community 46`, `Community 47`, `Community 49`, `Community 53`, `Community 54`, `Community 77`, `Community 80`, `Community 81`, `Community 83`, `Community 88`, `Community 89`, `Community 91`, `Community 92`, `Community 93`, `Community 95`, `Community 97`, `Community 104`, `Community 108`, `Community 112`, `Community 120`?**
-  _High betweenness centrality (0.139) - this node is a cross-community bridge._
-- **Why does `createClient()` connect `Community 70` to `Community 96`, `Community 97`, `Community 8`, `Community 76`, `Community 13`, `Community 111`, `Community 48`, `Community 18`, `Community 84`, `Community 22`, `Community 94`?**
-  _High betweenness centrality (0.021) - this node is a cross-community bridge._
-- **Why does `formatDate()` connect `Community 2` to `Community 32`, `Community 97`, `Community 3`, `Community 5`, `Community 7`, `Community 9`, `Community 108`, `Community 47`, `Community 48`, `Community 49`, `Community 83`, `Community 88`, `Community 25`, `Community 31`?**
+- **Why does `createClient()` connect `Community 14` to `Community 1`, `Community 2`, `Community 3`, `Community 6`, `Community 7`, `Community 8`, `Community 9`, `Community 10`, `Community 11`, `Community 16`, `Community 18`, `Community 23`, `Community 25`, `Community 29`, `Community 30`, `Community 31`, `Community 32`, `Community 34`, `Community 39`, `Community 43`, `Community 46`, `Community 47`, `Community 48`, `Community 49`, `Community 53`, `Community 54`, `Community 77`, `Community 80`, `Community 81`, `Community 85`, `Community 88`, `Community 89`, `Community 91`, `Community 92`, `Community 93`, `Community 94`, `Community 95`, `Community 97`, `Community 104`, `Community 108`, `Community 112`?**
+  _High betweenness centrality (0.136) - this node is a cross-community bridge._
+- **Why does `createClient()` connect `Community 70` to `Community 97`, `Community 2`, `Community 8`, `Community 13`, `Community 22`, `Community 25`, `Community 30`?**
+  _High betweenness centrality (0.023) - this node is a cross-community bridge._
+- **Why does `CalendarEvent` connect `Community 33` to `Community 107`, `Community 45`, `Community 15`, `Community 22`, `Community 89`?**
   _High betweenness centrality (0.019) - this node is a cross-community bridge._
 - **Are the 6 inferred relationships involving `formatDate()` (e.g. with `CampaignDetailPage()` and `ClientPage()`) actually correct?**
   _`formatDate()` has 6 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `version`, `configurations`, `PreToolUse` to the rest of the system?**
-  _423 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `Community 3` be split into smaller, more focused modules?**
-  _Cohesion score 0.13333333333333333 - nodes in this community are weakly interconnected._
-- **Should `Community 4` be split into smaller, more focused modules?**
-  _Cohesion score 0.047619047619047616 - nodes in this community are weakly interconnected._
+  _424 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Should `Community 0` be split into smaller, more focused modules?**
+  _Cohesion score 0.12666666666666668 - nodes in this community are weakly interconnected._
+- **Should `Community 2` be split into smaller, more focused modules?**
+  _Cohesion score 0.0611764705882353 - nodes in this community are weakly interconnected._

@@ -36,8 +36,10 @@ export default async function DocumentsPage() {
     { data: allInvoices },
   ] = await Promise.all([
     supabase
+      // select('*') : tolérant aux colonnes de la migration 050 (status, version,
+      // supersedes_id, is_current) tant qu'elle n'a pas été exécutée à la main.
       .from('documents')
-      .select('id, category, subcategory, name, file_url, file_type, file_size, entity_id, entity_type, is_auto_generated, expiry_date, created_at, tags')
+      .select('*')
       .order('created_at', { ascending: false }),
     supabase
       .from('vehicles')

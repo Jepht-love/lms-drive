@@ -51,6 +51,68 @@ export async function uploadDocument(formData: FormData) {
   revalidatePath('/documents')
 }
 
+/**
+ * Remplace un document par une nouvelle version : téléverse le nouveau fichier,
+ * crée une ligne v(n+1) liée à l'ancienne (supersedes_id) marquée courante, et
+ * archive l'ancienne (is_current=false, status='archive') sans la supprimer.
+ * Nécessite la migration 050 (colonnes version / supersedes_id / is_current).
+ */
+export async function replaceDocument(existingId: string, formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Non authentifié')
+
+  const file       = formData.get('file') as File
+  const expiryDate = formData.get('expiryDate') as string | null
+  if (!file) throw new Error('Fichier requis')
+
+  const { data: old, error: fetchErr } = await supabase
+    .from('documents')
+    .select('*')
+    .eq('id', existingId)
+    .single()
+  if (fetchErr || !old) throw new Error('Document introuvable')
+  if (old.is_auto_generated) throw new Error('Un document auto-généré ne peut pas être versionné')
+
+  const fileExt  = file.name.split('.').pop()
+  const fileName = `${old.category}/${old.subcategory}/${Date.now()}-${old.entity_id ?? 'global'}.${fileExt}`
+  const arrayBuffer = await file.arrayBuffer()
+  const { error: uploadError } = await supabase.storage
+    .from('documents')
+    .upload(fileName, arrayBuffer, { contentType: file.type })
+  if (uploadError) throw new Error(`Upload échoué : ${uploadError.message}`)
+
+  const { data: { publicUrl } } = supabase.storage.from('documents').getPublicUrl(fileName)
+
+  const { error: insertErr } = await supabase.from('documents').insert({
+    category:     old.category,
+    subcategory:  old.subcategory,
+    name:         old.name,
+    file_url:     publicUrl,
+    file_type:    file.type,
+    file_size:    file.size,
+    entity_id:    old.entity_id,
+    entity_type:  old.entity_type,
+    reservation_id: old.reservation_id,
+    tags:         old.tags,
+    expiry_date:  expiryDate || old.expiry_date,
+    is_auto_generated: false,
+    created_by:   user.id,
+    version:      (old.version ?? 1) + 1,
+    supersedes_id: old.id,
+    is_current:   true,
+    status:       'valide',
+  })
+  if (insertErr) throw new Error(`Nouvelle version échouée : ${insertErr.message}`)
+
+  // Ancienne version conservée mais retirée de la liste courante.
+  await supabase.from('documents')
+    .update({ is_current: false, status: 'archive' })
+    .eq('id', old.id)
+
+  revalidatePath('/documents')
+}
+
 export async function deleteDocument(documentId: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

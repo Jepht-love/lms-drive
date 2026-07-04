@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { syncTripToCalendar } from '@/lib/calendar/syncInternalTrip'
 
 export async function startTrip(formData: FormData) {
@@ -66,15 +67,20 @@ export async function endTrip(tripId: string, formData: FormData) {
 
   if (error) return { error: error.message }
 
-  // Update vehicle km
-  await supabase.from('vehicles').update({ current_km: kmEnd }).eq('id', trip.vehicle_id)
+  // Écritures cross-module réservées au gérant/associé par RLS (vehicles_write_managers,
+  // ft_managers). Un employé peut clôturer son déplacement → on passe par le client admin
+  // pour que le km ET la compta soient réellement écrits (sinon échec silencieux).
+  const admin = createAdminClient()
+
+  // Mise à jour du km véhicule
+  await admin.from('vehicles').update({ current_km: kmEnd }).eq('id', trip.vehicle_id)
 
   // Transmission auto en comptabilité : péages + frais du déplacement interne
   // deviennent des charges (anti-doublon par `reference` si endTrip rejoué).
   const today = new Date().toISOString().slice(0, 10)
   const tollsRef = `trip-tolls:${tripId}`
   const expRef = `trip-exp:${tripId}`
-  const { data: alreadyBooked } = await supabase
+  const { data: alreadyBooked } = await admin
     .from('financial_transactions').select('reference').in('reference', [tollsRef, expRef])
   const booked = new Set((alreadyBooked ?? []).map(r => r.reference))
   const charges = []
@@ -88,7 +94,10 @@ export async function endTrip(tripId: string, formData: FormData) {
       vehicle_id: trip.vehicle_id, reference: expRef,
       notes: 'Frais — déplacement interne', created_by: user.id })
   }
-  if (charges.length) await supabase.from('financial_transactions').insert(charges)
+  if (charges.length) {
+    const { error: chargeErr } = await admin.from('financial_transactions').insert(charges)
+    if (chargeErr) console.error('endTrip — écritures compta échouées:', chargeErr.message)
+  }
 
   await syncTripToCalendar(tripId)
 

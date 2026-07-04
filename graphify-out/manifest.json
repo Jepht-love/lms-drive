@@ -185,13 +185,13 @@
     "semantic_hash": ""
   },
   "app/(dashboard)/documents/DocumentsClient.tsx": {
-    "mtime": 1783080149.501653,
-    "ast_hash": "6b71f05bce332665f217efc20bf14dec",
+    "mtime": 1783188673.9589117,
+    "ast_hash": "6e74d13533de2a6964e7d3e3b370927c",
     "semantic_hash": ""
   },
   "app/(dashboard)/documents/page.tsx": {
-    "mtime": 1783009425.0309544,
-    "ast_hash": "06228015e8f71efe4198121aa9e02182",
+    "mtime": 1783188561.0648046,
+    "ast_hash": "8f3d0377c5ee748d33210cd9ed9fdbcb",
     "semantic_hash": ""
   },
   "app/(dashboard)/equipe/[id]/MemberTabsEditor.tsx": {
@@ -810,8 +810,8 @@
     "semantic_hash": ""
   },
   "lib/actions/documents.ts": {
-    "mtime": 1782903161.3054233,
-    "ast_hash": "2b82d90118076ef62a494add4f57b6f7",
+    "mtime": 1783188553.6130795,
+    "ast_hash": "90140730dc99b7f8ffd2372b8e370a75",
     "semantic_hash": ""
   },
   "lib/actions/incidents.ts": {
@@ -820,8 +820,8 @@
     "semantic_hash": ""
   },
   "lib/actions/internal-trips.ts": {
-    "mtime": 1782686449.6307724,
-    "ast_hash": "ac300cd21ba98dfa914cdf97c6c07e25",
+    "mtime": 1783188905.374683,
+    "ast_hash": "4edec2e7520890b5f56a7cbdb41c7bee",
     "semantic_hash": ""
   },
   "lib/actions/maintenance.ts": {
@@ -985,8 +985,8 @@
     "semantic_hash": ""
   },
   "public/sw.js": {
-    "mtime": 1783186863.77373,
-    "ast_hash": "0b72137ca06f02cb187de9f661bbf2d3",
+    "mtime": 1783188930.7594824,
+    "ast_hash": "f34e1a5b8a2cf15e27fd3497586c148c",
     "semantic_hash": ""
   },
   "scripts/seed-vehicles.ts": {
@@ -2012,6 +2012,11 @@
   "supabase/migrations/049_clients_commercial_perks.sql": {
     "mtime": 1783186549.3995206,
     "ast_hash": "89761791faa9184dd6751c57dbac3489",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/050_documents_status_versions.sql": {
+    "mtime": 1783188539.6792479,
+    "ast_hash": "62f7e58214e6c31272c6b6bb7d48ea8e",
     "semantic_hash": ""
   }
 }

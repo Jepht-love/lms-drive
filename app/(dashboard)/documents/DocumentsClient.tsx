@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition, useMemo } from 'react'
-import { Search, Eye, Download, Printer, Plus, Paperclip, Trash2 } from 'lucide-react'
+import { Search, Eye, Download, Printer, Plus, Paperclip, Trash2, RefreshCw, History, ChevronDown } from 'lucide-react'
 import {
   DOCUMENT_CATEGORIES,
   DOCUMENT_SUBCATEGORIES,
@@ -11,7 +11,7 @@ import {
 } from '@/lib/documents/categories'
 import Drawer from '@/components/Drawer'
 import { AnimatedList, AnimatedListItem } from '@/components/AnimatedList'
-import { uploadDocument, deleteDocument } from '@/lib/actions/documents'
+import { uploadDocument, deleteDocument, replaceDocument } from '@/lib/actions/documents'
 import { formatDate } from '@/lib/utils'
 
 type Document = {
@@ -28,6 +28,11 @@ type Document = {
   expiry_date: string | null
   created_at: string
   tags: string[] | null
+  // Migration 050 (optionnels tant qu'elle n'est pas exécutée)
+  status?: string | null
+  version?: number | null
+  supersedes_id?: string | null
+  is_current?: boolean | null
 }
 
 type Vehicle  = { id: string; plate: string; brand: string; model: string }
@@ -99,6 +104,33 @@ function fmtDate(s: string) {
   return new Date(s).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' })
 }
 
+// Statut effectif : « archive » stocké prime ; sinon dérivé de l'expiration.
+type DocStatus = 'valide' | 'a_renouveler' | 'expire' | 'archive'
+function docStatus(doc: Document): DocStatus {
+  if (doc.status === 'archive' || doc.is_current === false) return 'archive'
+  if (doc.expiry_date) {
+    if (new Date(doc.expiry_date) < new Date()) return 'expire'
+    if (isExpiringSoon(doc.expiry_date)) return 'a_renouveler'
+  }
+  return 'valide'
+}
+
+const STATUS_STYLE: Record<DocStatus, { label: string; cls: string }> = {
+  valide:       { label: 'Valide',       cls: 'bg-green-100 text-green-700' },
+  a_renouveler: { label: 'À renouveler', cls: 'bg-amber-100 text-amber-700' },
+  expire:       { label: 'Expiré',       cls: 'bg-red-100 text-red-600' },
+  archive:      { label: 'Archivé',      cls: 'bg-gray-100 text-gray-500' },
+}
+
+// Pastille de statut : masquée pour un doc « valide » v1 (liste calme) ; affichée
+// dès qu'il y a un signal (à renouveler / expiré / archivé).
+function StatusBadge({ doc }: { doc: Document }) {
+  const st = docStatus(doc)
+  if (st === 'valide') return null
+  const s = STATUS_STYLE[st]
+  return <span className={`ml-2 text-[10px] font-semibold px-2 py-0.5 rounded-full ${s.cls}`}>{s.label}</span>
+}
+
 export default function DocumentsClient({ documents, vehicles, clients, partners, userRole, visibleCategories, reservationDocs, docSignedUrls }: Props) {
   const allCatIds = ['entreprise', 'vehicule', 'client', 'partenaire']
   const visibleCats = visibleCategories ?? allCatIds
@@ -117,11 +149,31 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
   const [file,        setFile]        = useState<File | null>(null)
   const [uploadError, setUploadError] = useState('')
 
+  // Versionnement : cible de remplacement + fichier + expiration, et lignes dépliées
+  const [replaceTarget, setReplaceTarget] = useState<Document | null>(null)
+  const [replaceFile,   setReplaceFile]   = useState<File | null>(null)
+  const [replaceExpiry, setReplaceExpiry] = useState('')
+  const [replaceError,  setReplaceError]  = useState('')
+  const [expandedHistory, setExpandedHistory] = useState<Set<string>>(new Set())
+
   const canSeeSensitive = ['gerant', 'associe'].includes(userRole)
+
+  // Index global (toutes versions) pour reconstituer l'historique d'un document
+  // en remontant la chaîne supersedes_id.
+  const byId = useMemo(() => new Map(documents.map(d => [d.id, d])), [documents])
+  const historyOf = (doc: Document): Document[] => {
+    const chain: Document[] = []
+    const seen = new Set<string>()
+    let cur = doc.supersedes_id ? byId.get(doc.supersedes_id) : undefined
+    while (cur && !seen.has(cur.id)) { seen.add(cur.id); chain.push(cur); cur = cur.supersedes_id ? byId.get(cur.supersedes_id) : undefined }
+    return chain
+  }
 
   const filtered = useMemo(() => {
     const q = searchQuery.toLowerCase()
     return documents.filter(doc => {
+      // Versions archivées masquées de la liste (visibles via l'historique).
+      if (doc.is_current === false) return false
       if (!canSeeSensitive && SENSITIVE_SUBCATEGORIES.includes(doc.subcategory)) return false
       if (category !== 'all' && category !== 'reservations' && doc.category !== category) return false
       if (!q) return true
@@ -153,11 +205,12 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
   }, [reservationDocs, searchQuery])
 
   function getCategoryLabel(cat: string) {
-    if (cat === 'all') return `Tous (${documents.filter(d => canSeeSensitive || !SENSITIVE_SUBCATEGORIES.includes(d.subcategory)).length})`
+    const current = documents.filter(d => d.is_current !== false)
+    if (cat === 'all') return `Tous (${current.filter(d => canSeeSensitive || !SENSITIVE_SUBCATEGORIES.includes(d.subcategory)).length})`
     if (cat === 'reservations') return `Réservations (${reservationDocs.length})`
     const found = DOCUMENT_CATEGORIES.find(c => c.id === cat)
     if (!found) return cat
-    const count = documents.filter(d => d.category === cat && (canSeeSensitive || !SENSITIVE_SUBCATEGORIES.includes(d.subcategory))).length
+    const count = current.filter(d => d.category === cat && (canSeeSensitive || !SENSITIVE_SUBCATEGORIES.includes(d.subcategory))).length
     return `${found.label} (${count})`
   }
 
@@ -202,6 +255,30 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
     startTransition(async () => {
       try { await deleteDocument(doc.id) }
       catch (e: any) { alert(e.message) }
+    })
+  }
+
+  function resetReplace() {
+    setReplaceTarget(null); setReplaceFile(null); setReplaceExpiry(''); setReplaceError('')
+  }
+
+  async function handleReplace() {
+    if (!replaceTarget || !replaceFile) return
+    setReplaceError('')
+    const fd = new FormData()
+    fd.append('file', replaceFile)
+    if (replaceExpiry) fd.append('expiryDate', replaceExpiry)
+    startTransition(async () => {
+      try { await replaceDocument(replaceTarget.id, fd); resetReplace() }
+      catch (e: any) { setReplaceError(e.message ?? 'Erreur remplacement') }
+    })
+  }
+
+  function toggleHistory(id: string) {
+    setExpandedHistory(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
     })
   }
 
@@ -319,43 +396,90 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
                     <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400">{getSubLabel(sub)}</p>
                   </div>
                   <div className="divide-y divide-gray-50">
-                    {docs.map(doc => (
-                      <div key={doc.id} className="flex items-center gap-3 px-4 py-3">
-                        <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0">
-                          <span className="text-[10px] font-bold text-gray-500">{fileExt(doc)}</span>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[13px] font-medium text-[#111111] truncate">{doc.name}</p>
-                          <p className="text-[11px] text-gray-400 flex flex-wrap items-center">
-                            {formatDate(doc.created_at)}
-                            {doc.expiry_date && <ExpiryBadge date={doc.expiry_date} />}
-                            {doc.is_auto_generated && (
-                              <span className="ml-2 text-blue-400">· Auto-généré</span>
+                    {docs.map(doc => {
+                      const history = historyOf(doc)
+                      const isOpen = expandedHistory.has(doc.id)
+                      return (
+                      <div key={doc.id}>
+                        <div className="flex items-center gap-3 px-4 py-3">
+                          <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0">
+                            <span className="text-[10px] font-bold text-gray-500">{fileExt(doc)}</span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[13px] font-medium text-[#111111] truncate">
+                              {doc.name}
+                              {(doc.version ?? 1) > 1 && (
+                                <span className="ml-1.5 text-[10px] font-bold text-gray-400">v{doc.version}</span>
+                              )}
+                            </p>
+                            <p className="text-[11px] text-gray-400 flex flex-wrap items-center">
+                              {formatDate(doc.created_at)}
+                              <StatusBadge doc={doc} />
+                              {doc.expiry_date && <ExpiryBadge date={doc.expiry_date} />}
+                              {doc.is_auto_generated && (
+                                <span className="ml-2 text-blue-400">· Auto-généré</span>
+                              )}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <a href={urlFor(doc)} target="_blank" rel="noopener noreferrer"
+                              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100" title="Visualiser">
+                              <Eye className="w-4 h-4 text-gray-400" />
+                            </a>
+                            <a href={urlFor(doc)} download target="_blank" rel="noopener noreferrer"
+                              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100" title="Télécharger">
+                              <Download className="w-4 h-4 text-gray-400" />
+                            </a>
+                            <a href={urlFor(doc)} target="_blank" rel="noopener noreferrer"
+                              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100" title="Imprimer">
+                              <Printer className="w-4 h-4 text-gray-400" />
+                            </a>
+                            {!doc.is_auto_generated && (
+                              <button onClick={() => setReplaceTarget(doc)} disabled={isPending}
+                                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 disabled:opacity-40" title="Remplacer par une nouvelle version">
+                                <RefreshCw className="w-4 h-4 text-gray-400" />
+                              </button>
                             )}
-                          </p>
+                            {!doc.is_auto_generated && (
+                              <button onClick={() => handleDelete(doc)} disabled={isPending}
+                                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 disabled:opacity-40">
+                                <Trash2 className="w-4 h-4 text-red-400" />
+                              </button>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1 flex-shrink-0">
-                          <a href={urlFor(doc)} target="_blank" rel="noopener noreferrer"
-                            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100" title="Visualiser">
-                            <Eye className="w-4 h-4 text-gray-400" />
-                          </a>
-                          <a href={urlFor(doc)} download target="_blank" rel="noopener noreferrer"
-                            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100" title="Télécharger">
-                            <Download className="w-4 h-4 text-gray-400" />
-                          </a>
-                          <a href={urlFor(doc)} target="_blank" rel="noopener noreferrer"
-                            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100" title="Imprimer">
-                            <Printer className="w-4 h-4 text-gray-400" />
-                          </a>
-                          {!doc.is_auto_generated && (
-                            <button onClick={() => handleDelete(doc)} disabled={isPending}
-                              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 disabled:opacity-40">
-                              <Trash2 className="w-4 h-4 text-red-400" />
+
+                        {history.length > 0 && (
+                          <div className="px-4 pb-2">
+                            <button onClick={() => toggleHistory(doc.id)}
+                              className="flex items-center gap-1.5 text-[11px] font-semibold text-gray-400 hover:text-gray-600">
+                              <History className="w-3.5 h-3.5" />
+                              {history.length} version{history.length > 1 ? 's' : ''} précédente{history.length > 1 ? 's' : ''}
+                              <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                             </button>
-                          )}
-                        </div>
+                            {isOpen && (
+                              <div className="mt-1.5 pl-5 border-l-2 border-gray-100 space-y-1.5">
+                                {history.map(h => (
+                                  <div key={h.id} className="flex items-center gap-2">
+                                    <span className="text-[10px] font-bold text-gray-400 w-7">v{h.version ?? 1}</span>
+                                    <span className="text-[11px] text-gray-400 flex-1 min-w-0 truncate">{formatDate(h.created_at)}</span>
+                                    <a href={urlFor(h)} target="_blank" rel="noopener noreferrer"
+                                      className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100" title="Visualiser">
+                                      <Eye className="w-3.5 h-3.5 text-gray-400" />
+                                    </a>
+                                    <a href={urlFor(h)} download target="_blank" rel="noopener noreferrer"
+                                      className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100" title="Télécharger">
+                                      <Download className="w-3.5 h-3.5 text-gray-400" />
+                                    </a>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 </div>
               </AnimatedListItem>
@@ -422,6 +546,41 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
           <button onClick={handleUpload} disabled={!file || !docName || !uploadCat || !uploadSub || isPending}
             className="w-full py-4 rounded-2xl bg-[#111111] text-white text-[14px] font-medium disabled:opacity-40 active:scale-[.97]">
             {isPending ? 'Enregistrement...' : 'Enregistrer'}
+          </button>
+        </div>
+      </Drawer>
+
+      <Drawer open={!!replaceTarget} onClose={resetReplace} title="Remplacer par une nouvelle version">
+        <div>
+          {replaceTarget && (
+            <div className="mb-3 p-3 rounded-xl bg-gray-50 border border-gray-100">
+              <p className="text-[13px] font-semibold text-[#111111] truncate">{replaceTarget.name}</p>
+              <p className="text-[11px] text-gray-400">
+                Version actuelle v{replaceTarget.version ?? 1} · sera archivée et conservée dans l&apos;historique.
+              </p>
+            </div>
+          )}
+
+          <div className="mb-3">
+            <label className="block text-[11px] font-medium text-gray-400 uppercase tracking-wide mb-1">Nouvelle date d&apos;expiration (optionnel)</label>
+            <input type="date" value={replaceExpiry} onChange={e => setReplaceExpiry(e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px]" />
+          </div>
+
+          <label className="flex items-center gap-3 border-2 border-dashed border-gray-300 rounded-xl px-4 py-4 cursor-pointer mb-4 hover:border-gray-400">
+            <Paperclip className="w-5 h-5 text-gray-400 flex-shrink-0" />
+            <span className="text-[13px] text-gray-500 truncate">
+              {replaceFile ? replaceFile.name : 'Nouveau fichier (PDF, image...)'}
+            </span>
+            <input type="file" accept=".pdf,image/*,.doc,.docx" className="hidden"
+              onChange={e => setReplaceFile(e.target.files?.[0] ?? null)} />
+          </label>
+
+          {replaceError && <p className="text-[12px] text-red-500 mb-3">{replaceError}</p>}
+
+          <button onClick={handleReplace} disabled={!replaceFile || isPending}
+            className="w-full py-4 rounded-2xl bg-[#111111] text-white text-[14px] font-medium disabled:opacity-40 active:scale-[.97]">
+            {isPending ? 'Remplacement...' : 'Créer la nouvelle version'}
           </button>
         </div>
       </Drawer>
