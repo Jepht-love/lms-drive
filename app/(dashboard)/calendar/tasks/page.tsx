@@ -103,7 +103,7 @@ export default function TasksKanban() {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
-        <BackButton fallbackHref="/calendar" className="p-2 hover:bg-white rounded-xl transition-colors min-h-[auto]">
+        <BackButton fallbackHref="/calendrier" className="p-2 hover:bg-white rounded-xl transition-colors min-h-[auto]">
           <ArrowLeft className="w-5 h-5 text-gray-600" />
         </BackButton>
         <div>

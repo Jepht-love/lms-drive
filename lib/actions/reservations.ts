@@ -43,9 +43,10 @@ export async function updatePaymentInfo(
     if (!periodLocked) {
       const cl = res?.clients && !Array.isArray(res.clients) ? res.clients : Array.isArray(res?.clients) ? res.clients[0] : null
       const clientName = cl ? `${cl.first_name} ${cl.last_name}`.trim() : null
+      const adminTx = createAdminClient()
 
-      await supabase.from('financial_transactions').delete().eq('reference', txRef)
-      await supabase.from('financial_transactions').insert({
+      await adminTx.from('financial_transactions').delete().eq('reference', txRef)
+      await adminTx.from('financial_transactions').insert({
         date: today,
         type: 'recette',
         category: 'location',
@@ -61,7 +62,7 @@ export async function updatePaymentInfo(
     }
   } else {
     // Paiement annulé ou impayé → retirer la transaction comptable
-    await supabase.from('financial_transactions').delete().eq('reference', txRef)
+    await createAdminClient().from('financial_transactions').delete().eq('reference', txRef)
   }
 
   revalidatePath(`/reservations/${reservationId}`)
@@ -282,7 +283,6 @@ export async function createReservation(formData: FormData) {
 
   revalidatePath('/')
   revalidatePath('/reservations')
-  revalidatePath('/calendar')
   revalidatePath('/calendrier')
   redirect(`/reservations/${data.id}`)
 }
@@ -443,7 +443,6 @@ export async function updateReservationDates(
   revalidatePath('/')
   revalidatePath(`/reservations/${id}`)
   revalidatePath('/reservations')
-  revalidatePath('/calendar')
   revalidatePath('/calendrier')
   return { success: true, totalPrice, days }
 }
@@ -540,7 +539,6 @@ export async function prolongReservation(
   revalidatePath('/')
   revalidatePath(`/reservations/${id}`)
   revalidatePath('/reservations')
-  revalidatePath('/calendar')
   revalidatePath('/calendrier')
   return { success: true, newEnd, newTotalPrice, totalDays }
 }
@@ -587,12 +585,14 @@ export async function validateContract(contractId: string) {
   if (contractCloseError) return { error: contractCloseError.message }
 
   if (contract.reservation_id) {
-    const { data: closedRes } = await supabase
+    const admin = createAdminClient()
+    const { data: closedRes, error: resUpdateError } = await admin
       .from('reservations')
       .update({ status: 'terminee' })
       .eq('id', contract.reservation_id)
       .select('vehicle_id')
       .single()
+    if (resUpdateError) return { error: resUpdateError.message }
     // CA intégré automatiquement en comptabilité à la clôture du contrat
     await postRentalRevenue(contract.reservation_id, user.id)
     await syncReservationToCalendar(contract.reservation_id)

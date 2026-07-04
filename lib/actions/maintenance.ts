@@ -96,7 +96,7 @@ export async function createMaintenanceRecord(formData: FormData) {
       })
 
       if (isUpcoming && vehicle.status === 'disponible') {
-        await supabase.from('vehicles').update({ status: 'maintenance' }).eq('id', vehicleId)
+        await admin.from('vehicles').update({ status: 'maintenance' }).eq('id', vehicleId)
       }
     }
   }
@@ -182,11 +182,12 @@ export async function markMaintenancePaid(recordId: string, method: string) {
   const amount = rec.amount ?? 0
   const reference = `maintenance:${rec.id}`
   if (amount > 0) {
-    const { data: dup } = await supabase
+    const admin = createAdminClient()
+    const { data: dup } = await admin
       .from('financial_transactions').select('id').eq('reference', reference).maybeSingle()
     if (!dup) {
       const { label } = maintenanceType(rec.type)
-      const { error: txError } = await supabase.from('financial_transactions').insert({
+      const { error: txError } = await admin.from('financial_transactions').insert({
         date: today,
         type: 'depense',
         category: expenseCategoryFor(rec.type),

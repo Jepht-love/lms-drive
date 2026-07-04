@@ -16,7 +16,7 @@ import type { Profile } from '@/types/database'
 
 const navItems = [
   { key: 'dashboard',      href: '/',               label: 'Dashboard',    icon: BarChart3 },
-  { key: 'calendar',       href: '/calendar',       label: 'Calendrier',   icon: Calendar },
+  { key: 'calendar',       href: '/calendrier',     label: 'Calendrier',   icon: Calendar },
   { key: 'reservations',   href: '/reservations',   label: 'Réservations', icon: ClipboardList },
   { key: 'clients',        href: '/clients',        label: 'Clients',      icon: Users },
   { key: 'vehicles',       href: '/vehicles',       label: 'Véhicules',    icon: Car },

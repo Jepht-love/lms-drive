@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { recomputeVehicleStatus } from '@/lib/vehicles/vehicleStatus'
 import type { ClientStatus } from '@/types/database'
 
 async function uploadClientDoc(
@@ -159,6 +160,28 @@ export async function updateClientStatus(id: string, status: ClientStatus, black
   }).eq('id', id)
 
   if (error) return { error: error.message }
+
+  // Blacklist → annuler les réservations en attente + libérer les véhicules
+  if (status === 'blackliste') {
+    const { data: pendingRes } = await supabase
+      .from('reservations')
+      .select('id, vehicle_id')
+      .eq('client_id', id)
+      .in('status', ['option', 'confirmee'])
+
+    if (pendingRes && pendingRes.length > 0) {
+      await supabase.from('reservations')
+        .update({ status: 'annulee' })
+        .in('id', pendingRes.map(r => r.id))
+
+      const vehicleIds = [...new Set(pendingRes.map(r => r.vehicle_id).filter(Boolean))] as string[]
+      for (const vid of vehicleIds) await recomputeVehicleStatus(supabase, vid)
+
+      revalidatePath('/reservations')
+      revalidatePath('/calendrier')
+      revalidatePath('/vehicles')
+    }
+  }
 
   await supabase.from('audit_logs').insert({
     user_id: user.id,

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { addDays, addMonths, addWeeks, subDays, subMonths, subWeeks } from 'date-fns'
-import type { CalendarEvent, CalendarResource, CalendarView } from '@/types/calendar'
+import type { CalendarEvent, CalendarResource, CalendarView, EventType } from '@/types/calendar'
 import type { UserRole } from '@/types/database'
 import { RESOURCE_PALETTE, UNASSIGNED_RESOURCE_ID } from '@/lib/calendar/constants'
 import { getWeekDates, getMonthDates, getColumnWindow } from '@/lib/calendar/dateUtils'
@@ -13,6 +13,7 @@ import MonthView from './MonthView'
 import EventDrawer from './EventDrawer'
 import AlertPanel from './AlertPanel'
 import CalendarBottomBar from './CalendarBottomBar'
+import CreateMenu from './CreateMenu'
 
 interface SlotContext {
   resource: CalendarResource
@@ -59,6 +60,8 @@ export default function CalendarPage() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [slotContext, setSlotContext] = useState<SlotContext | null>(null)
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
+  const [presetType, setPresetType] = useState<EventType | null>(null)
+  const [createMenuOpen, setCreateMenuOpen] = useState(false)
 
   const [alertCount, setAlertCount] = useState(0)
   const [alertPanelOpen, setAlertPanelOpen] = useState(false)
@@ -183,19 +186,27 @@ export default function CalendarPage() {
 
   const handleSlotClick = (resource: CalendarResource, date: Date, hour: number) => {
     setSelectedEvent(null)
+    setPresetType(null)
     setSlotContext({ resource, date, hour })
     setDrawerOpen(true)
   }
 
   const handleEventClick = (event: CalendarEvent) => {
     setSelectedEvent(event)
+    setPresetType(null)
     setSlotContext(null)
     setDrawerOpen(true)
   }
 
+  // "+" → menu contextuel (Réservation / Tâche / RDV…) plutôt qu'un formulaire vide.
   const handleCreateNew = () => {
+    setCreateMenuOpen(true)
+  }
+
+  const handlePickCreateType = (type: EventType) => {
     setSelectedEvent(null)
     setSlotContext(null)
+    setPresetType(type)
     setDrawerOpen(true)
   }
 
@@ -280,9 +291,16 @@ export default function CalendarPage() {
         event={selectedEvent}
         slotContext={slotContext}
         resources={resources}
+        presetType={presetType}
         onClose={() => setDrawerOpen(false)}
         onSave={() => { loadEvents(); loadAlertCount() }}
         onDelete={() => { loadEvents(); setSelectedEvent(null) }}
+      />
+
+      <CreateMenu
+        open={createMenuOpen}
+        onClose={() => setCreateMenuOpen(false)}
+        onPickType={handlePickCreateType}
       />
 
       <AlertPanel

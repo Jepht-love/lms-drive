@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { assertPeriodOpen } from '@/lib/accounting/period-lock'
 
 export async function createTransaction(formData: FormData) {
@@ -22,7 +23,7 @@ export async function createTransaction(formData: FormData) {
   const locked = await assertPeriodOpen(supabase, date)
   if (locked) return { error: locked }
 
-  const { error } = await supabase.from('financial_transactions').insert({
+  const { error } = await createAdminClient().from('financial_transactions').insert({
     date,
     type,
     category,

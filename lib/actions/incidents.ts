@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { findDriverAtDate } from '@/lib/utils/findDriverAtDate'
 import { logEmail } from '@/lib/email/log'
 import { RESEND_FROM, resendTo } from '@/lib/email/config'
@@ -179,7 +180,7 @@ export async function markInfractionPaid(id: string, paidBy: 'client' | 'agence'
     .from('infractions').select('amount, admin_fees, vehicle_id, type, infraction_date').eq('id', id).single()
   const amount = (inf?.amount ?? 0) + (inf?.admin_fees ?? 0)
   if (inf && amount > 0 && paidBy === 'agence') {
-    const { error: txError } = await supabase.from('financial_transactions').insert({
+    const { error: txError } = await createAdminClient().from('financial_transactions').insert({
       date: today, type: 'depense', category: 'amendes', amount,
       vehicle_id: inf.vehicle_id,
       notes: `Amende ${inf.type} — ${inf.infraction_date}`,
@@ -234,8 +235,8 @@ export async function createAccident(formData: FormData) {
   const { data, error } = await supabase.from('accidents').insert(payload).select('id').single()
   if (error) return { error: error.message }
 
-  // B4 — passer le véhicule « en vérification »
-  await supabase.from('vehicles').update({ status: 'en_verification' }).eq('id', vehicleId)
+  // B4 — passer le véhicule « en vérification » (admin : vehicles.status est RLS gérant)
+  await createAdminClient().from('vehicles').update({ status: 'en_verification' }).eq('id', vehicleId)
 
   // Justificatif optionnel (constat, PV d'expertise, photos) → Documents › Véhicule
   // si un fichier est réellement joint (même logique que l'entretien).
@@ -288,17 +289,18 @@ export async function updateAccidentStatus(id: string, status: string) {
       .select('vehicle_id, repair_cost, insurance_covered, insurance_amount, deposit_retained, accident_date, dossier_number')
       .eq('id', id).single()
     if (acc?.vehicle_id) {
-      const { error: vehicleError } = await supabase.from('vehicles').update({ status: 'disponible' }).eq('id', acc.vehicle_id)
+      const admin = createAdminClient()
+      const { error: vehicleError } = await admin.from('vehicles').update({ status: 'disponible' }).eq('id', acc.vehicle_id)
       if (vehicleError) return { error: vehicleError.message }
 
       const insurance = acc.insurance_covered ? (acc.insurance_amount ?? 0) : 0
       const net = Math.max(0, (acc.repair_cost ?? 0) - insurance - (acc.deposit_retained ?? 0))
       const reference = `accident:${id}`
       if (net > 0) {
-        const { data: dup } = await supabase
+        const { data: dup } = await admin
           .from('financial_transactions').select('id').eq('reference', reference).maybeSingle()
         if (!dup) {
-          const { error: txError } = await supabase.from('financial_transactions').insert({
+          const { error: txError } = await admin.from('financial_transactions').insert({
             date: new Date().toISOString().slice(0, 10),
             type: 'depense', category: 'sinistre', amount: net,
             vehicle_id: acc.vehicle_id, reference,

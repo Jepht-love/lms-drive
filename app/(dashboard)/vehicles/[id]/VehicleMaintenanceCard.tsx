@@ -33,7 +33,7 @@ export default function VehicleMaintenanceCard({
     startTransition(async () => {
       setErrorMsg(null)
       const result = await resolveVehicleIssue(vehicleId, flagId)
-      if (result && 'error' in result) { setErrorMsg(result.error); return }
+      if (result && 'error' in result) { setErrorMsg(result.error ?? null); return }
       router.refresh()
     })
   }
@@ -42,7 +42,7 @@ export default function VehicleMaintenanceCard({
     startTransition(async () => {
       setErrorMsg(null)
       const result = await setVehicleRepairStatus(vehicleId, !inRepair)
-      if (result && 'error' in result) { setErrorMsg(result.error); return }
+      if (result && 'error' in result) { setErrorMsg(result.error ?? null); return }
       router.refresh()
     })
   }

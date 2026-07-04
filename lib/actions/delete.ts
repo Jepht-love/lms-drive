@@ -102,6 +102,14 @@ export async function deleteContract(id: string) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non authentifié' }
 
+  // Récupérer reservation_id pour revalider la page réservation après suppression
+  const { data: contract } = await supabase
+    .from('contracts')
+    .select('reservation_id')
+    .eq('id', id)
+    .maybeSingle()
+  const reservationId = contract?.reservation_id ?? null
+
   // Récupérer les inspections liées
   const { data: inspections } = await supabase
     .from('inspections')
@@ -127,6 +135,7 @@ export async function deleteContract(id: string) {
 
   revalidatePath('/contracts')
   revalidatePath('/reservations')
+  if (reservationId) revalidatePath(`/reservations/${reservationId}`)
   redirect('/contracts')
 }
 
@@ -182,6 +191,35 @@ export async function updateDepositDeducted(reservationId: string, amount: numbe
     .eq('id', reservationId)
 
   if (error) return { error: error.message }
+
+  // Sync comptabilité : si la réservation est clôturée, mettre à jour l'écriture dégâts
+  const { data: res } = await supabase
+    .from('reservations')
+    .select('status, reservation_number, vehicle_id')
+    .eq('id', reservationId)
+    .single()
+
+  if (res?.status === 'terminee') {
+    const admin = createAdminClient()
+    await admin.from('financial_transactions')
+      .delete()
+      .eq('reservation_id', reservationId)
+      .eq('category', 'degats')
+    if (amount > 0) {
+      await admin.from('financial_transactions').insert({
+        date: new Date().toISOString().slice(0, 10),
+        type: 'recette',
+        category: 'degats',
+        amount,
+        vehicle_id: res.vehicle_id,
+        reservation_id: reservationId,
+        reference: res.reservation_number,
+        notes: `Caution retenue ${res.reservation_number}`,
+        created_by: user.id,
+      })
+    }
+    revalidatePath('/accounting')
+  }
 
   await supabase.from('audit_logs').insert({
     user_id: user.id, action: 'deposit_deducted_updated',

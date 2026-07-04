@@ -38,13 +38,13 @@ export async function PATCH(
     await broadcastPushToManagers({
       title: 'Départ confirmé',
       body: eventTitle,
-      url: '/calendar',
+      url: '/calendrier',
     })
   } else if (status === 'termine') {
     await broadcastPushToManagers({
       title: 'Retour effectué',
       body: eventTitle,
-      url: '/calendar',
+      url: '/calendrier',
     })
   }
 

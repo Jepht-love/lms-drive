@@ -32,6 +32,10 @@ export interface CalendarEvent {
   created_by: string | null
   color_override: string | null
   notes: string | null
+  // Renseigné quand l'événement est synchronisé depuis un autre module
+  // (déplacement interne "trip-…", alerte véhicule "ct-…"). Combiné à
+  // reservation_id, sert à verrouiller les champs structurels (voir EventDrawer).
+  source_key?: string | null
   // Joins enrichis (colonnes réelles : vehicles.brand/model, clients.first_name/last_name)
   vehicles?: { id: string; plate: string; brand: string; model: string }[]
   client?: { id: string; first_name: string; last_name: string } | null

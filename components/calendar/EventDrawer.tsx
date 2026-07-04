@@ -1,10 +1,48 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { format } from 'date-fns'
+import { ExternalLink, ClipboardCheck, User, Car, Lock } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { CalendarEvent, CalendarResource, EventStatus, EventType } from '@/types/calendar'
 import { EVENT_TYPE_LABELS, EVENT_COLORS, EVENT_STATUS_LABELS, STATUS_COLORS, UNASSIGNED_RESOURCE_ID } from '@/lib/calendar/constants'
+
+// Un événement synchronisé depuis un autre module ne se modifie pas ici : sa
+// source (réservation, déplacement, alerte) est la vérité. On garde le statut,
+// l'assignation et les notes éditables (utile pour piloter depuis le calendrier)
+// mais on verrouille les champs structurels (type, dates, véhicules, client).
+const RESERVATION_DERIVED: EventType[] = ['reservation', 'depart_vehicule', 'retour_vehicule']
+
+function syncInfo(event: CalendarEvent | null): { label: string } | null {
+  if (!event) return null
+  const key = event.source_key ?? ''
+  if (key.startsWith('trip-')) return { label: 'Synchronisé depuis un déplacement interne' }
+  if (key.startsWith('ct-')) return { label: 'Alerte véhicule automatique' }
+  if (key) return { label: 'Événement synchronisé' }
+  if (event.reservation_id && RESERVATION_DERIVED.includes(event.event_type)) {
+    return { label: 'Synchronisé depuis la réservation' }
+  }
+  return null
+}
+
+// Raccourcis contextuels : un événement lié à une réservation / un client / un
+// véhicule doit ouvrir l'objet métier en un clic — le calendrier devient un
+// point d'entrée d'action, pas un simple miroir.
+function eventLinks(event: CalendarEvent | null) {
+  if (!event) return []
+  const links: { href: string; label: string; Icon: typeof ExternalLink }[] = []
+  const vehicleLinkId = event.vehicles?.[0]?.id ?? event.vehicle_ids?.[0] ?? null
+  if (event.reservation_id) {
+    links.push({ href: `/reservations/${event.reservation_id}`, label: 'Ouvrir la réservation', Icon: ExternalLink })
+    if (event.event_type === 'depart_vehicule') {
+      links.push({ href: `/inspections/departure/${event.reservation_id}`, label: "Faire l'EDL de départ", Icon: ClipboardCheck })
+    }
+  }
+  if (event.client_id) links.push({ href: `/clients/${event.client_id}`, label: 'Fiche client', Icon: User })
+  if (vehicleLinkId) links.push({ href: `/vehicles/${vehicleLinkId}`, label: 'Fiche véhicule', Icon: Car })
+  return links
+}
 
 interface SlotContext {
   resource: CalendarResource
@@ -17,6 +55,8 @@ interface EventDrawerProps {
   event: CalendarEvent | null
   slotContext: SlotContext | null
   resources: CalendarResource[]
+  // Type présélectionné via le menu de création contextuel ("+" → Tâche / RDV…)
+  presetType?: EventType | null
   onClose: () => void
   onSave: () => void
   onDelete: () => void
@@ -36,8 +76,11 @@ function assigneeValue(e: CalendarEvent | null): string {
   return ''
 }
 
-export default function EventDrawer({ open, event, slotContext, resources, onClose, onSave, onDelete }: EventDrawerProps) {
+export default function EventDrawer({ open, event, slotContext, resources, presetType, onClose, onSave, onDelete }: EventDrawerProps) {
   const isEdit = !!event
+  const links = eventLinks(event)
+  const sync = syncInfo(event)
+  const locked = !!sync
 
   const [title, setTitle] = useState('')
   const [eventType, setEventType] = useState<EventType>('tache')
@@ -72,7 +115,7 @@ export default function EventDrawer({ open, event, slotContext, resources, onClo
       setNotes(event.notes ?? '')
     } else {
       setTitle('')
-      setEventType('tache')
+      setEventType(presetType ?? 'tache')
       setStatus('a_faire')
       setVehicleIds([])
       setClientId('')
@@ -98,7 +141,7 @@ export default function EventDrawer({ open, event, slotContext, resources, onClo
         setAssignee('')
       }
     }
-  }, [open, event, slotContext])
+  }, [open, event, slotContext, presetType])
 
   useEffect(() => {
     if (!open) return
@@ -199,12 +242,43 @@ export default function EventDrawer({ open, event, slotContext, resources, onClo
 
         {/* Scrollable form */}
         <div className="flex-1 overflow-y-auto px-4 py-3">
+          {/* Raccourcis vers les objets métier liés */}
+          {links.length > 0 && (
+            <div className="mb-4">
+              <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Raccourcis</label>
+              <div className="grid grid-cols-1 gap-1.5">
+                {links.map(({ href, label, Icon }) => (
+                  <Link
+                    key={href}
+                    href={href}
+                    onClick={onClose}
+                    className="flex items-center gap-2.5 px-3 h-10 rounded-xl bg-gray-50 border border-gray-100 text-[13px] font-medium text-gray-800 hover:bg-gray-100 active:scale-[.99] transition"
+                  >
+                    <Icon className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                    <span className="flex-1">{label}</span>
+                    <span className="text-gray-300 text-[16px] leading-none">›</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {sync && (
+            <div className="mb-4 flex items-start gap-2 rounded-xl bg-amber-50 border border-amber-100 px-3 py-2.5">
+              <Lock className="w-3.5 h-3.5 text-amber-500 flex-shrink-0 mt-0.5" />
+              <p className="text-[12px] text-amber-700 leading-snug">
+                {sync.label}. Type, dates et liens se modifient depuis la source ; ici vous pouvez ajuster le statut, l&apos;assignation et les notes.
+              </p>
+            </div>
+          )}
+
           <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1">Titre</label>
           <input
             type="text"
             value={title}
             onChange={e => setTitle(e.target.value)}
-            className="w-full border border-gray-200 rounded-lg px-3 h-9 text-[13px] mb-3"
+            disabled={locked}
+            className="w-full border border-gray-200 rounded-lg px-3 h-9 text-[13px] mb-3 disabled:bg-gray-50 disabled:text-gray-400"
             placeholder="Ex : RDV client signature contrat"
           />
 
@@ -214,7 +288,8 @@ export default function EventDrawer({ open, event, slotContext, resources, onClo
             <select
               value={eventType}
               onChange={e => setEventType(e.target.value as EventType)}
-              className="flex-1 border border-gray-200 rounded-lg px-3 h-9 text-[13px]"
+              disabled={locked}
+              className="flex-1 border border-gray-200 rounded-lg px-3 h-9 text-[13px] disabled:bg-gray-50 disabled:text-gray-400"
             >
               {Object.entries(EVENT_TYPE_LABELS).map(([key, label]) => (
                 <option key={key} value={key}>{label}</option>
@@ -251,7 +326,8 @@ export default function EventDrawer({ open, event, slotContext, resources, onClo
                 type="datetime-local"
                 value={startAt}
                 onChange={e => setStartAt(e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-2 h-9 text-[12px]"
+                disabled={locked}
+                className="w-full border border-gray-200 rounded-lg px-2 h-9 text-[12px] disabled:bg-gray-50 disabled:text-gray-400"
               />
             </div>
             <div>
@@ -260,7 +336,8 @@ export default function EventDrawer({ open, event, slotContext, resources, onClo
                 type="datetime-local"
                 value={endAt}
                 onChange={e => setEndAt(e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-2 h-9 text-[12px]"
+                disabled={locked}
+                className="w-full border border-gray-200 rounded-lg px-2 h-9 text-[12px] disabled:bg-gray-50 disabled:text-gray-400"
               />
             </div>
           </div>
@@ -301,10 +378,11 @@ export default function EventDrawer({ open, event, slotContext, resources, onClo
                   <input
                     type="checkbox"
                     checked={checked}
+                    disabled={locked}
                     onChange={() => setVehicleIds(ids =>
                       checked ? ids.filter(id => id !== v.id) : [...ids, v.id]
                     )}
-                    className="w-4 h-4 accent-[#111111] flex-shrink-0"
+                    className="w-4 h-4 accent-[#111111] flex-shrink-0 disabled:opacity-40"
                   />
                   <span>
                     {v.brand} {v.model}
@@ -319,7 +397,8 @@ export default function EventDrawer({ open, event, slotContext, resources, onClo
           <select
             value={clientId}
             onChange={e => setClientId(e.target.value)}
-            className="w-full border border-gray-200 rounded-lg px-3 h-9 text-[13px] mb-3"
+            disabled={locked}
+            className="w-full border border-gray-200 rounded-lg px-3 h-9 text-[13px] mb-3 disabled:bg-gray-50 disabled:text-gray-400"
           >
             <option value="">— Aucun —</option>
             {clients.map(c => (
@@ -352,7 +431,7 @@ export default function EventDrawer({ open, event, slotContext, resources, onClo
             {saving ? 'Enregistrement…' : 'Enregistrer'}
           </button>
 
-          {isEdit && (
+          {isEdit && !locked && (
             confirmingDelete ? (
               <div className="flex gap-2">
                 <button

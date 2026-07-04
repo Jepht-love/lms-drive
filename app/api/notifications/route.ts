@@ -232,7 +232,7 @@ export async function GET(request: NextRequest) {
           title: 'Retour en retard', body,
           entity_type: 'calendar_events', entity_id: ev.id,
         })
-        await broadcastPushToManagers({ title: 'Retour en retard', body, url: '/calendar' })
+        await broadcastPushToManagers({ title: 'Retour en retard', body, url: '/calendrier' })
         created.push(ev.id)
       }
     }

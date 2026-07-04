@@ -1,11 +1,49 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { Bell, X } from 'lucide-react'
 import type { CalendarAlert } from '@/types/calendar'
 import { ALERT_RULES } from '@/lib/calendar/constants'
+
+// Chaque alerte pointe vers l'action qui la résout (EDL, caution, documents…)
+// plutôt que d'ouvrir un événement vide : le calendrier devient actionnable.
+function alertActionLink(alert: CalendarAlert): { href: string; label: string } | null {
+  const ev = alert.event
+  if (!ev) return null
+  const resa = ev.reservation_id
+  const clientId = ev.client_id
+  const vehId = ev.vehicles?.[0]?.id ?? ev.vehicle_ids?.[0] ?? null
+
+  switch (alert.alert_type) {
+    case 'depart_1h':
+    case 'etat_lieux':
+      if (resa) return { href: `/inspections/departure/${resa}`, label: "Faire l'EDL" }
+      break
+    case 'retour_today':
+      if (resa) return { href: `/reservations/${resa}`, label: 'Ouvrir la réservation' }
+      break
+    case 'paiement_caution':
+      if (resa) return { href: `/reservations/${resa}`, label: 'Régler la caution' }
+      break
+    case 'document_manquant':
+      if (clientId) return { href: `/clients/${clientId}`, label: 'Compléter les documents' }
+      break
+    case 'rdv_client_30min':
+      if (clientId) return { href: `/clients/${clientId}`, label: 'Fiche client' }
+      break
+    case 'lavage_prerental':
+    case 'rdv_garage_today':
+      if (vehId) return { href: `/vehicles/${vehId}`, label: 'Fiche véhicule' }
+      break
+  }
+  if (resa) return { href: `/reservations/${resa}`, label: 'Ouvrir' }
+  if (clientId) return { href: `/clients/${clientId}`, label: 'Fiche client' }
+  if (vehId) return { href: `/vehicles/${vehId}`, label: 'Fiche véhicule' }
+  return null
+}
 
 interface AlertPanelProps {
   open: boolean
@@ -62,20 +100,32 @@ export default function AlertPanel({ open, onClose, onOpenEvent, onDismissed }: 
               {format(new Date(alert.trigger_at), "dd MMM 'à' HH:mm", { locale: fr })}
               {alert.event?.title ? ` — ${alert.event.title}` : ''}
             </p>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2">
+              {(() => {
+                const action = alertActionLink(alert)
+                return action ? (
+                  <Link
+                    href={action.href}
+                    onClick={onClose}
+                    className="text-[11px] font-semibold text-white bg-[#111111] rounded-full px-2.5 h-6 flex items-center"
+                  >
+                    {action.label}
+                  </Link>
+                ) : null
+              })()}
               {alert.event && (
                 <button
                   type="button"
                   onClick={() => onOpenEvent(alert.event!.id)}
-                  className="text-[11px] text-[#111111] font-medium"
+                  className="text-[11px] text-gray-500 font-medium"
                 >
-                  Voir l&apos;événement
+                  Détails
                 </button>
               )}
               <button
                 type="button"
                 onClick={() => dismiss(alert.id)}
-                className="text-[11px] text-gray-400"
+                className="text-[11px] text-gray-400 ml-auto"
               >
                 Ignorer
               </button>
