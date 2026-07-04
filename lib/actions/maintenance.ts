@@ -186,7 +186,7 @@ export async function markMaintenancePaid(recordId: string, method: string) {
       .from('financial_transactions').select('id').eq('reference', reference).maybeSingle()
     if (!dup) {
       const { label } = maintenanceType(rec.type)
-      await supabase.from('financial_transactions').insert({
+      const { error: txError } = await supabase.from('financial_transactions').insert({
         date: today,
         type: 'depense',
         category: expenseCategoryFor(rec.type),
@@ -197,6 +197,7 @@ export async function markMaintenancePaid(recordId: string, method: string) {
         reference,
         created_by: user.id,
       })
+      if (txError) return { error: txError.message }
     }
   }
 

@@ -143,9 +143,11 @@ export async function transmitInfractionToClient(id: string) {
     return { error: 'Échec de l\'envoi : ' + (e?.message ?? 'erreur inconnue') }
   }
 
-  await supabase.from('infractions')
+  const { error: updateError } = await supabase.from('infractions')
     .update({ status: 'transmis_client', transmission_date: new Date().toISOString().slice(0, 10) })
     .eq('id', id)
+  if (updateError) return { error: updateError.message }
+
   await logEmail({
     type: 'avis_infraction',
     recipient: client.email,
@@ -177,12 +179,13 @@ export async function markInfractionPaid(id: string, paidBy: 'client' | 'agence'
     .from('infractions').select('amount, admin_fees, vehicle_id, type, infraction_date').eq('id', id).single()
   const amount = (inf?.amount ?? 0) + (inf?.admin_fees ?? 0)
   if (inf && amount > 0 && paidBy === 'agence') {
-    await supabase.from('financial_transactions').insert({
+    const { error: txError } = await supabase.from('financial_transactions').insert({
       date: today, type: 'depense', category: 'amendes', amount,
       vehicle_id: inf.vehicle_id,
       notes: `Amende ${inf.type} — ${inf.infraction_date}`,
       reference: id, infraction_id: id, created_by: user.id,
     })
+    if (txError) return { error: txError.message }
   }
 
   revalidatePath(`/incidents/infractions/${id}`)
@@ -285,7 +288,8 @@ export async function updateAccidentStatus(id: string, status: string) {
       .select('vehicle_id, repair_cost, insurance_covered, insurance_amount, deposit_retained, accident_date, dossier_number')
       .eq('id', id).single()
     if (acc?.vehicle_id) {
-      await supabase.from('vehicles').update({ status: 'disponible' }).eq('id', acc.vehicle_id)
+      const { error: vehicleError } = await supabase.from('vehicles').update({ status: 'disponible' }).eq('id', acc.vehicle_id)
+      if (vehicleError) return { error: vehicleError.message }
 
       const insurance = acc.insurance_covered ? (acc.insurance_amount ?? 0) : 0
       const net = Math.max(0, (acc.repair_cost ?? 0) - insurance - (acc.deposit_retained ?? 0))
@@ -294,13 +298,14 @@ export async function updateAccidentStatus(id: string, status: string) {
         const { data: dup } = await supabase
           .from('financial_transactions').select('id').eq('reference', reference).maybeSingle()
         if (!dup) {
-          await supabase.from('financial_transactions').insert({
+          const { error: txError } = await supabase.from('financial_transactions').insert({
             date: new Date().toISOString().slice(0, 10),
             type: 'depense', category: 'sinistre', amount: net,
             vehicle_id: acc.vehicle_id, reference,
             notes: `Sinistre${acc.dossier_number ? ` (dossier ${acc.dossier_number})` : ''} — coût net agence (${acc.accident_date})`,
             created_by: user.id,
           })
+          if (txError) return { error: txError.message }
         }
       }
     }

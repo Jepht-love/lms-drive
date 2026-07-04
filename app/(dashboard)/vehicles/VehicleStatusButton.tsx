@@ -13,13 +13,19 @@ export default function VehicleStatusButton({ vehicleId, currentStatus }: {
 }) {
   const [status, setStatus] = useState<VehicleStatus>(currentStatus)
   const [loading, setLoading] = useState(false)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
   async function handleChange(newStatus: VehicleStatus) {
     if (newStatus === status) return
     setLoading(true)
+    setErrorMsg(null)
     const result = await updateVehicleStatus(vehicleId, newStatus)
-    if (!result?.error) setStatus(newStatus)
     setLoading(false)
+    if (result?.error) {
+      setErrorMsg(result.error)
+      return
+    }
+    setStatus(newStatus)
   }
 
   return (
@@ -41,6 +47,7 @@ export default function VehicleStatusButton({ vehicleId, currentStatus }: {
         </button>
       ))}
       {loading && <p className="text-xs text-gray-400 text-center">Mise à jour...</p>}
+      {errorMsg && <p className="text-xs text-red-500 text-center">{errorMsg}</p>}
     </div>
   )
 }

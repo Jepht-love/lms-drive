@@ -31,6 +31,7 @@ export default function WorkflowStepper({
 }: Props) {
   // null = idle, number = numéro de l'étape en attente de confirmation
   const [confirmReset, setConfirmReset] = useState<number | null>(null)
+  const [resetError, setResetError] = useState<string | null>(null)
   const depInsp = inspections.find(i => i.type === 'depart')
   const arrInsp = inspections.find(i => i.type === 'arrivee')
 
@@ -41,13 +42,15 @@ export default function WorkflowStepper({
 
   const canValidate = step1Done && step2Done && step3Done && !step4Done
 
-  // Actions reset (server actions bound) — cast as void for form action compatibility
-  const resetDep = depInsp?.id
-    ? (resetInspection.bind(null, depInsp.id, `/inspections/departure/${reservationId}`) as unknown as () => Promise<void>)
-    : null
-  const resetArr = arrInsp?.id && contractId
-    ? (resetInspection.bind(null, arrInsp.id, `/inspections/arrival/${contractId}`) as unknown as () => Promise<void>)
-    : null
+  const resetDep = depInsp?.id ? { id: depInsp.id, url: `/inspections/departure/${reservationId}` } : null
+  const resetArr = arrInsp?.id && contractId ? { id: arrInsp.id, url: `/inspections/arrival/${contractId}` } : null
+
+  async function handleReset(target: { id: string; url: string }) {
+    setConfirmReset(null)
+    setResetError(null)
+    const result = await resetInspection(target.id, target.url)
+    if (result && 'error' in result) setResetError(result.error)
+  }
 
   const steps = [
     {
@@ -57,7 +60,7 @@ export default function WorkflowStepper({
       sublabel: step1Done ? `N° ${contractId?.slice(-6).toUpperCase()}` : 'Démarrez l\'état des lieux de départ',
       done: step1Done,
       active: !step1Done,
-      resetAction: null as ((() => Promise<void>) | null),
+      resetTarget: null as ({ id: string; url: string } | null),
       resetLabel: null as string | null,
       action: step1Done && contractId ? (
         <Link
@@ -78,7 +81,7 @@ export default function WorkflowStepper({
       done: step2Done,
       active: step1Done && !step2Done,
       locked: !step1Done,
-      resetAction: (!step4Done && step2Done && resetDep) ? resetDep : null,
+      resetTarget: (!step4Done && step2Done && resetDep) ? resetDep : null,
       resetLabel: 'Corriger l\'état des lieux de départ',
       action: step1Done && !step2Done ? (
         <Link
@@ -99,7 +102,7 @@ export default function WorkflowStepper({
       done: step3Done,
       active: step2Done && !step3Done,
       locked: !step2Done,
-      resetAction: (!step4Done && step3Done && resetArr) ? resetArr : null,
+      resetTarget: (!step4Done && step3Done && resetArr) ? resetArr : null,
       resetLabel: 'Corriger l\'état des lieux de retour',
       action: step2Done && !step3Done && contractId ? (
         <Link
@@ -122,7 +125,7 @@ export default function WorkflowStepper({
       done: step4Done,
       active: canValidate,
       locked: !canValidate && !step4Done,
-      resetAction: null as ((() => Promise<void>) | null),
+      resetTarget: null as ({ id: string; url: string } | null),
       resetLabel: null as string | null,
     },
   ]
@@ -163,7 +166,7 @@ export default function WorkflowStepper({
                   {step.label}
                 </p>
                 {/* Bouton corriger EDL — pattern idle → confirm */}
-                {step.resetAction && (
+                {step.resetTarget && (
                   confirmReset === step.num ? (
                     <div className="flex items-center gap-1.5">
                       <span className="text-xs text-gray-500">Sûr ?</span>
@@ -176,10 +179,7 @@ export default function WorkflowStepper({
                       </button>
                       <button
                         type="button"
-                        onClick={async () => {
-                          setConfirmReset(null)
-                          if (step.resetAction) await step.resetAction()
-                        }}
+                        onClick={() => step.resetTarget && handleReset(step.resetTarget)}
                         className="text-xs text-red-600 hover:text-red-700 font-semibold transition-colors"
                       >
                         Confirmer
@@ -210,6 +210,10 @@ export default function WorkflowStepper({
           </div>
         ))}
       </div>
+
+      {resetError && (
+        <div className="px-3 py-2 rounded-xl text-xs text-red-600 bg-red-50 border border-red-100">{resetError}</div>
+      )}
 
       {/* Bouton de validation */}
       {canValidate && contractId && (

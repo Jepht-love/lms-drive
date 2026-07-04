@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { updateDepositDeducted } from '@/lib/actions/delete'
 import { Check, Loader2 } from 'lucide-react'
 
 const fmt = (n: number) => n.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })
@@ -16,14 +16,13 @@ interface Props {
   status: string
 }
 
-/** Saisie du montant retenu sur la caution + répartition CA / restitué. */
 export default function DepositSettlement({ reservationId, depositAmount, depositDeducted, status }: Props) {
   const router = useRouter()
-  const supabase = createClient()
-  const locked = status === 'saisie_totale' // saisie totale → tout est retenu
+  const locked = status === 'saisie_totale'
   const [amount, setAmount] = useState(String(locked ? depositAmount : depositDeducted || 0))
   const [loading, setLoading] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
   if (!SEIZURE.includes(status)) return null
 
@@ -34,8 +33,13 @@ export default function DepositSettlement({ reservationId, depositAmount, deposi
 
   async function save() {
     setLoading(true)
-    await supabase.from('reservations').update({ deposit_deducted: retenu }).eq('id', reservationId)
+    setErrorMsg(null)
+    const result = await updateDepositDeducted(reservationId, retenu)
     setLoading(false)
+    if (result?.error) {
+      setErrorMsg(result.error)
+      return
+    }
     setSaved(true)
     router.refresh()
     setTimeout(() => setSaved(false), 2000)
@@ -69,6 +73,10 @@ export default function DepositSettlement({ reservationId, depositAmount, deposi
           <p className="text-base font-black text-green-700">{fmt(restitue)}</p>
         </div>
       </div>
+
+      {errorMsg && (
+        <div className="px-3 py-2 rounded-xl text-sm text-red-600 bg-red-50 border border-red-100">{errorMsg}</div>
+      )}
 
       <button
         onClick={save}

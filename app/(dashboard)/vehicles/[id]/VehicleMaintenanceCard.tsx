@@ -1,6 +1,6 @@
 'use client'
 
-import { useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Wrench, Check, ShieldAlert, RotateCcw } from 'lucide-react'
 import { NEED_BADGE, type VehicleNeed } from '@/lib/maintenance-health'
@@ -20,6 +20,7 @@ export default function VehicleMaintenanceCard({
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
   const serviceNeeds = needs.filter(n => n.key !== 'degradation')
   // « En réparation » couvre aussi le passage au garage (statut `maintenance`,
@@ -30,14 +31,18 @@ export default function VehicleMaintenanceCard({
 
   function resolve(flagId: string) {
     startTransition(async () => {
-      await resolveVehicleIssue(vehicleId, flagId)
+      setErrorMsg(null)
+      const result = await resolveVehicleIssue(vehicleId, flagId)
+      if (result && 'error' in result) { setErrorMsg(result.error); return }
       router.refresh()
     })
   }
 
   function toggleRepair() {
     startTransition(async () => {
-      await setVehicleRepairStatus(vehicleId, !inRepair)
+      setErrorMsg(null)
+      const result = await setVehicleRepairStatus(vehicleId, !inRepair)
+      if (result && 'error' in result) { setErrorMsg(result.error); return }
       router.refresh()
     })
   }
@@ -105,6 +110,7 @@ export default function VehicleMaintenanceCard({
           ? (<><RotateCcw className="w-4 h-4" /> Réparation terminée — remettre en service</>)
           : (<><ShieldAlert className="w-4 h-4" /> Marquer à réparer</>)}
       </button>
+      {errorMsg && <p className="text-xs text-red-500 text-center mt-1">{errorMsg}</p>}
     </div>
   )
 }

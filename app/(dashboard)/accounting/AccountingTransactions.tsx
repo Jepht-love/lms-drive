@@ -52,7 +52,8 @@ export default function AccountingTransactions({ transactions }: { transactions:
 
   function onToggle(t: Tx) {
     startTransition(async () => {
-      await toggleTransparence(t.id, t.is_transparent)
+      const result = await toggleTransparence(t.id, t.is_transparent)
+      if (result?.error) { toast(result.error, 'error'); return }
       router.refresh()
       toast(t.is_transparent ? 'Transaction affichée' : 'Transaction masquée')
     })
@@ -96,7 +97,7 @@ export default function AccountingTransactions({ transactions }: { transactions:
                       <p className="text-[13px] font-medium text-gray-900 truncate">{getCategoryLabel(t.category)}{v?.plate ? <span className="text-gray-400 font-normal"> · {v.plate}</span> : null}</p>
                       <InlineEditField
                         value={t.notes ?? ''}
-                        onSave={async (val) => { await updateTransactionNotes(t.id, val); router.refresh() }}
+                        onSave={async (val) => { const r = await updateTransactionNotes(t.id, val); if (r?.error) return { error: r.error }; router.refresh() }}
                         placeholder={t.supplier_beneficiary ?? 'Note...'}
                         displayClassName="text-[11px] text-gray-400 truncate block w-full text-left"
                       />

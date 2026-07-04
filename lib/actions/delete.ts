@@ -170,3 +170,41 @@ export async function updateDepositStatus(reservationId: string, depositStatus: 
   revalidatePath(`/reservations/${reservationId}`)
   return { success: true }
 }
+
+export async function updateDepositDeducted(reservationId: string, amount: number) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié' }
+
+  const { error } = await supabase
+    .from('reservations')
+    .update({ deposit_deducted: amount })
+    .eq('id', reservationId)
+
+  if (error) return { error: error.message }
+
+  await supabase.from('audit_logs').insert({
+    user_id: user.id, action: 'deposit_deducted_updated',
+    entity_type: 'reservations', entity_id: reservationId,
+    metadata: { deposit_deducted: amount },
+  })
+
+  revalidatePath(`/reservations/${reservationId}`)
+  return { success: true }
+}
+
+export async function updateDepositInfo(reservationId: string, depositMethod: string | null, depositRef: string | null) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié' }
+
+  const { error } = await supabase
+    .from('reservations')
+    .update({ deposit_method: depositMethod, deposit_ref: depositRef })
+    .eq('id', reservationId)
+
+  if (error) return { error: error.message }
+
+  revalidatePath(`/reservations/${reservationId}`)
+  return { success: true }
+}

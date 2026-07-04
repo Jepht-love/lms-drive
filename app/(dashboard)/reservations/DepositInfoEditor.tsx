@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { updateDepositInfo } from '@/lib/actions/delete'
 import { Pencil, Check, X, Loader2 } from 'lucide-react'
 
 const METHOD_LABELS: Record<string, string> = {
@@ -20,20 +20,22 @@ interface Props {
 
 export default function DepositInfoEditor({ reservationId, depositMethod, depositRef }: Props) {
   const router = useRouter()
-  const supabase = createClient()
 
   const [editing, setEditing] = useState(false)
   const [method, setMethod] = useState(depositMethod ?? '')
   const [ref, setRef] = useState(depositRef ?? '')
   const [loading, setLoading] = useState(false)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
   async function handleSave() {
     setLoading(true)
-    await supabase.from('reservations').update({
-      deposit_method: method || null,
-      deposit_ref: ref || null,
-    }).eq('id', reservationId)
+    setErrorMsg(null)
+    const result = await updateDepositInfo(reservationId, method || null, ref || null)
     setLoading(false)
+    if (result?.error) {
+      setErrorMsg(result.error)
+      return
+    }
     setEditing(false)
     router.refresh()
   }
@@ -92,6 +94,9 @@ export default function DepositInfoEditor({ reservationId, depositMethod, deposi
           className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20"
         />
       </div>
+      {errorMsg && (
+        <div className="px-3 py-2 rounded-xl text-sm text-red-600 bg-red-50 border border-red-100">{errorMsg}</div>
+      )}
       <div className="flex gap-2">
         <button
           onClick={handleSave}
@@ -102,7 +107,7 @@ export default function DepositInfoEditor({ reservationId, depositMethod, deposi
           Enregistrer
         </button>
         <button
-          onClick={() => { setMethod(depositMethod ?? ''); setRef(depositRef ?? ''); setEditing(false) }}
+          onClick={() => { setMethod(depositMethod ?? ''); setRef(depositRef ?? ''); setEditing(false); setErrorMsg(null) }}
           className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors"
         >
           <X className="w-3.5 h-3.5" /> Annuler

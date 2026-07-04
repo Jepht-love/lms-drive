@@ -583,7 +583,8 @@ export async function validateContract(contractId: string) {
 
   if (!arrInsp) return { error: "L'état des lieux de retour signé est requis pour valider le contrat." }
 
-  await supabase.from('contracts').update({ status: 'cloture' }).eq('id', contractId)
+  const { error: contractCloseError } = await supabase.from('contracts').update({ status: 'cloture' }).eq('id', contractId)
+  if (contractCloseError) return { error: contractCloseError.message }
 
   if (contract.reservation_id) {
     const { data: closedRes } = await supabase
