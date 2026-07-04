@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { updatePaymentInfo } from '@/lib/actions/reservations'
 import { formatPrice } from '@/lib/utils'
 import { Banknote, CreditCard, ArrowLeftRight, FileText, Check, Loader2 } from 'lucide-react'
 
@@ -34,27 +34,32 @@ interface Props {
 
 export default function PaymentEditor({ reservationId, totalPrice, currentStatus, currentMethod, currentAmount, currentRef }: Props) {
   const router = useRouter()
-  const supabase = createClient()
   const [status, setStatus] = useState<PaymentStatus>(currentStatus ?? 'en_attente')
   const [method, setMethod] = useState<PaymentMethodType | ''>(currentMethod ?? '')
   const [amount, setAmount] = useState(currentAmount?.toString() ?? totalPrice.toString())
   const [ref, setRef] = useState(currentRef ?? '')
   const [loading, setLoading] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
   const current = PAYMENT_STATUSES.find(s => s.value === status) ?? PAYMENT_STATUSES[0]
 
   async function handleSave() {
     setLoading(true)
     setSaved(false)
-    await supabase.from('reservations').update({
+    setErrorMsg(null)
+    const result = await updatePaymentInfo(reservationId, {
       payment_status: status,
       payment_method: method || null,
       payment_amount: amount ? Number(amount) : null,
       payment_ref: ref || null,
       payment_date: status === 'paye' || status === 'partiel' ? new Date().toISOString() : null,
-    }).eq('id', reservationId)
+    })
     setLoading(false)
+    if (result?.error) {
+      setErrorMsg(result.error)
+      return
+    }
     setSaved(true)
     setTimeout(() => { setSaved(false); router.refresh() }, 1500)
   }
@@ -144,6 +149,9 @@ export default function PaymentEditor({ reservationId, totalPrice, currentStatus
         </div>
       )}
 
+      {errorMsg && (
+        <div className="px-3 py-2 rounded-xl text-sm text-red-600 bg-red-50 border border-red-100">{errorMsg}</div>
+      )}
       <button
         onClick={handleSave}
         disabled={loading}

@@ -21,16 +21,17 @@ export default function ReservationStatusButtons({
   const router = useRouter()
   const [status, setStatus] = useState<ReservationStatus>(currentStatus)
   const [loading, setLoading] = useState(false)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
-  // Sync local state when server re-renders with updated status
-  useEffect(() => {
-    setStatus(currentStatus)
-  }, [currentStatus])
+  useEffect(() => { setStatus(currentStatus) }, [currentStatus])
 
   async function handleChange(newStatus: ReservationStatus) {
     setLoading(true)
+    setErrorMsg(null)
     const result = await updateReservationStatus(reservationId, newStatus)
-    if (!result?.error) {
+    if (result?.error) {
+      setErrorMsg(result.error)
+    } else {
       setStatus(newStatus)
       router.refresh()
     }
@@ -39,6 +40,9 @@ export default function ReservationStatusButtons({
 
   return (
     <div className="space-y-2">
+      {errorMsg && (
+        <div className="px-3 py-2 rounded-xl text-sm text-red-600 bg-red-50 border border-red-100">{errorMsg}</div>
+      )}
       {/* Statut actuel */}
       <div className={`px-3 py-2 rounded-xl text-sm font-medium text-center ${getReservationStatusColor(status)}`}>
         {getReservationStatusLabel(status)}

@@ -14,7 +14,11 @@ export default function ClientStatusActions({ clientId, status }: { clientId: st
 
   function setStatus(next: ClientStatus, blacklistReason?: string) {
     startTransition(async () => {
-      await updateClientStatus(clientId, next, blacklistReason)
+      const result = await updateClientStatus(clientId, next, blacklistReason)
+      if (result?.error) {
+        show(result.error, 'error')
+        return
+      }
       const messages: Record<ClientStatus, string> = {
         vip: 'Client marqué VIP',
         blackliste: 'Client blacklisté',

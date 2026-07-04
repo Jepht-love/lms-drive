@@ -3,6 +3,31 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+
+export async function updatePaymentInfo(
+  reservationId: string,
+  data: {
+    payment_status: string
+    payment_method: string | null
+    payment_amount: number | null
+    payment_ref: string | null
+    payment_date: string | null
+  }
+) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié' }
+
+  const { error } = await supabase
+    .from('reservations')
+    .update(data)
+    .eq('id', reservationId)
+
+  if (error) return { error: error.message }
+
+  revalidatePath(`/reservations/${reservationId}`)
+  return { success: true }
+}
 import { logAudit } from '@/lib/audit/log'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { generateReservationNumber, generateContractNumber, calculateRentalDays, calculateRentalPrice } from '@/lib/utils'

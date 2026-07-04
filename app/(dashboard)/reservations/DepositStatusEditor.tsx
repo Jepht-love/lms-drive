@@ -46,6 +46,7 @@ export default function DepositStatusEditor({ reservationId, currentStatus, cont
   const [status, setStatus] = useState(currentStatus ?? 'en_attente')
   const [loading, setLoading] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
   const current = DEPOSIT_STATUSES.find(s => s.value === status) ?? DEPOSIT_STATUSES[0]
 
@@ -53,9 +54,14 @@ export default function DepositStatusEditor({ reservationId, currentStatus, cont
     if (newStatus === status) return
     setLoading(true)
     setSaved(false)
-    await updateDepositStatus(reservationId, newStatus)
-    setStatus(newStatus)
+    setErrorMsg(null)
+    const result = await updateDepositStatus(reservationId, newStatus)
     setLoading(false)
+    if (result?.error) {
+      setErrorMsg(result.error)
+      return
+    }
+    setStatus(newStatus)
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }
@@ -70,6 +76,7 @@ export default function DepositStatusEditor({ reservationId, currentStatus, cont
           <p className="text-xs opacity-70 mt-0.5">{current.description}</p>
         </div>
         {saved && <span className="text-xs text-green-600 font-medium">✓ Enregistré</span>}
+        {errorMsg && <span className="text-xs text-red-600 font-medium">⚠ {errorMsg}</span>}
         {loading && <span className="text-xs opacity-60">…</span>}
       </div>
 
