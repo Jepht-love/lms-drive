@@ -2018,5 +2018,70 @@
     "mtime": 1783188539.6792479,
     "ast_hash": "62f7e58214e6c31272c6b6bb7d48ea8e",
     "semantic_hash": ""
+  },
+  "app/fleetaxis/layout.tsx": {
+    "mtime": 1783189592.9676244,
+    "ast_hash": "f36b80887b33f496d17bc6327e9bc680",
+    "semantic_hash": ""
+  },
+  "app/fleetaxis/page.tsx": {
+    "mtime": 1783189602.741712,
+    "ast_hash": "0f8b39efde0e8a579aafd6958c1a1fc5",
+    "semantic_hash": ""
+  },
+  "components/fleetaxis/ComplianceSection.tsx": {
+    "mtime": 1783189546.2093105,
+    "ast_hash": "a08afd829bc0143d81cb02a761d8852f",
+    "semantic_hash": ""
+  },
+  "components/fleetaxis/ContactSection.tsx": {
+    "mtime": 1783189565.4701612,
+    "ast_hash": "4f0b15426e299af3fc9e3844976d203d",
+    "semantic_hash": ""
+  },
+  "components/fleetaxis/FeaturesSection.tsx": {
+    "mtime": 1783189519.5209584,
+    "ast_hash": "7698123232deeccbf4838e07c7a5a7b2",
+    "semantic_hash": ""
+  },
+  "components/fleetaxis/Footer.tsx": {
+    "mtime": 1783189571.8574538,
+    "ast_hash": "52105696705ef10a1984fd1e1ae63d51",
+    "semantic_hash": ""
+  },
+  "components/fleetaxis/HeroSection.tsx": {
+    "mtime": 1783189509.7140138,
+    "ast_hash": "235e30781b4cd366db459c13f7678b80",
+    "semantic_hash": ""
+  },
+  "components/fleetaxis/Navbar.tsx": {
+    "mtime": 1783189502.9470506,
+    "ast_hash": "6aacd15474245661bbaf6160cb301a92",
+    "semantic_hash": ""
+  },
+  "components/fleetaxis/PricingSection.tsx": {
+    "mtime": 1783189626.0685782,
+    "ast_hash": "7a95c43a4c3f13023bb5d7b9e2340e9e",
+    "semantic_hash": ""
+  },
+  "components/fleetaxis/StatsSection.tsx": {
+    "mtime": 1783189514.0409133,
+    "ast_hash": "4b4c43043938fda1ca87b8ff32ec9c92",
+    "semantic_hash": ""
+  },
+  "components/fleetaxis/TargetSection.tsx": {
+    "mtime": 1783189523.926684,
+    "ast_hash": "ee34aa610cd41df8f4393565d792a41c",
+    "semantic_hash": ""
+  },
+  "components/fleetaxis/VehicleGrid.tsx": {
+    "mtime": 1783189489.475114,
+    "ast_hash": "bfe8c88d4bfa0118d3848e5f79e1d6b5",
+    "semantic_hash": ""
+  },
+  "lib/fleetaxis-i18n.ts": {
+    "mtime": 1783189458.0474007,
+    "ast_hash": "db43c23b40da8d922d9beb4ff6e2537e",
+    "semantic_hash": ""
   }
 }
