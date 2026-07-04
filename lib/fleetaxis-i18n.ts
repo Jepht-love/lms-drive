@@ -113,7 +113,7 @@ export const translations = {
       brand: 'FleetAxis',
       mail: 'projobs01@gmail.com',
       links: ['Mentions légales', 'Politique de confidentialité', 'CGU'],
-      legal: '© 2026 FleetAxis — SIRET 933 351 041 00019',
+      legal: '© 2026 FleetAxis',
     },
   },
 
@@ -224,7 +224,7 @@ export const translations = {
       brand: 'FleetAxis',
       mail: 'projobs01@gmail.com',
       links: ['Legal notice', 'Privacy policy', 'Terms of use'],
-      legal: '© 2026 FleetAxis — SIRET 933 351 041 00019',
+      legal: '© 2026 FleetAxis',
     },
   },
 } as const
