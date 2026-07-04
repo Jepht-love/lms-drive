@@ -1,7 +1,7 @@
 # Graph Report - lms-drive  (2026-07-04)
 
 ## Corpus Check
-- 384 files · ~583,170 words
+- 384 files · ~583,191 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `881713f7`
+- Built from commit: `52e07ff4`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -206,7 +206,7 @@ Nodes (8): SlotContext, CalendarSidebarProps, RESOURCE_PALETTE, SlotContext, Res
 
 ### Community 16 - "Community 16"
 Cohesion: 0.24
-Nodes (6): createReservation(), DIACRITICS_RE, isNameBlacklisted(), normalizeName(), logAudit(), generateReservationNumber()
+Nodes (7): createReservation(), DIACRITICS_RE, isNameBlacklisted(), normalizeName(), postRentalRevenue(), validateContract(), logAudit()
 
 ### Community 17 - "Community 17"
 Cohesion: 0.10
@@ -242,7 +242,7 @@ Nodes (9): DOCUMENT_CATEGORIES, ALL_DOC_KEYS, Props, ALL_TAB_KEYS, APP_TABS, App
 
 ### Community 25 - "Community 25"
 Cohesion: 0.12
-Nodes (11): bookOperationTransaction(), createAgency(), createOperation(), num(), parseExternalVehicle(), recordReturn(), startEntrantRental(), updateOperationStatus() (+3 more)
+Nodes (12): bookOperationTransaction(), createAgency(), createOperation(), num(), parseExternalVehicle(), recordReturn(), startEntrantRental(), updateOperationStatus() (+4 more)
 
 ### Community 26 - "Community 26"
 Cohesion: 0.15
@@ -393,8 +393,8 @@ Cohesion: 0.36
 Nodes (7): POST(), buildContractPdfData(), BuiltContractData, fetchPhotoAsDataUrl(), loadEdlSchemaDataUrl(), SupabaseServer, ContractData
 
 ### Community 80 - "Community 80"
-Cohesion: 0.24
-Nodes (12): postRentalRevenue(), updateReservationStatus(), validateContract(), statusesFor(), syncReservationToCalendar(), syncWashTask(), upsertEvent(), ReservationPage() (+4 more)
+Cohesion: 0.27
+Nodes (10): updateReservationStatus(), statusesFor(), syncReservationToCalendar(), syncWashTask(), upsertEvent(), ReservationPage(), IaDepartureInspectionPage(), DepartureInspectionPage() (+2 more)
 
 ### Community 81 - "Community 81"
 Cohesion: 0.27

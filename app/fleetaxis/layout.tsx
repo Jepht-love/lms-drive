@@ -10,6 +10,14 @@ export const metadata: Metadata = {
   title: 'FleetAxis — Fleet Management Platform',
   description:
     'FleetAxis — logiciel de gestion de flotte institutionnelle : suivi des véhicules, traçabilité des déplacements, états des lieux numérisés. Institutional fleet management software for UN bodies, NGOs and public administrations.',
+  // Surcharge les métadonnées PWA héritées du layout racine (qui portent le nom
+  // « LMS Drive ») pour que la page FleetAxis n'expose aucune référence à LMS Drive.
+  applicationName: 'FleetAxis',
+  appleWebApp: { capable: true, statusBarStyle: 'black-translucent', title: 'FleetAxis' },
+  other: {
+    'apple-mobile-web-app-title': 'FleetAxis',
+    'application-name': 'FleetAxis',
+  },
 }
 
 export const viewport: Viewport = {
