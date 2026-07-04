@@ -300,7 +300,8 @@ export async function updateReservationStatus(id: string, status: ReservationSta
 
   if (!reservation) return { error: 'Réservation introuvable' }
 
-  await supabase.from('reservations').update({ status }).eq('id', id)
+  const { error: updateError } = await supabase.from('reservations').update({ status }).eq('id', id)
+  if (updateError) return { error: updateError.message }
 
   await recomputeVehicleStatus(supabase, reservation.vehicle_id)
 
