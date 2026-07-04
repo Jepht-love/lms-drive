@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { assertPeriodOpen } from '@/lib/accounting/period-lock'
 
 export async function updatePaymentInfo(
   reservationId: string,
@@ -18,14 +19,53 @@ export async function updatePaymentInfo(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non authentifié' }
 
+  // 1. Mettre à jour la réservation
   const { error } = await supabase
     .from('reservations')
     .update(data)
     .eq('id', reservationId)
-
   if (error) return { error: error.message }
 
+  // 2. Synchroniser la comptabilité
+  const txRef = `res_${reservationId}:paiement`
+  const isPaid = data.payment_status === 'paye' || data.payment_status === 'partiel'
+
+  if (isPaid && data.payment_amount && data.payment_amount > 0) {
+    const { data: res } = await supabase
+      .from('reservations')
+      .select('vehicle_id, reservation_number, clients(first_name, last_name)')
+      .eq('id', reservationId)
+      .single()
+
+    const today = new Date().toISOString().slice(0, 10)
+    const periodLocked = await assertPeriodOpen(supabase, today)
+
+    if (!periodLocked) {
+      const cl = res?.clients && !Array.isArray(res.clients) ? res.clients : Array.isArray(res?.clients) ? res.clients[0] : null
+      const clientName = cl ? `${cl.first_name} ${cl.last_name}`.trim() : null
+
+      await supabase.from('financial_transactions').delete().eq('reference', txRef)
+      await supabase.from('financial_transactions').insert({
+        date: today,
+        type: 'recette',
+        category: 'location',
+        amount: data.payment_amount,
+        vehicle_id: res?.vehicle_id ?? null,
+        reservation_id: reservationId,
+        supplier_beneficiary: clientName,
+        payment_method: data.payment_method,
+        reference: txRef,
+        notes: res?.reservation_number ? `Paiement — ${res.reservation_number}` : null,
+        created_by: user.id,
+      })
+    }
+  } else {
+    // Paiement annulé ou impayé → retirer la transaction comptable
+    await supabase.from('financial_transactions').delete().eq('reference', txRef)
+  }
+
   revalidatePath(`/reservations/${reservationId}`)
+  revalidatePath('/accounting')
   return { success: true }
 }
 import { logAudit } from '@/lib/audit/log'
