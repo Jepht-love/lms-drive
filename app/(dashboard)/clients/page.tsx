@@ -12,6 +12,10 @@ export default async function ClientsPage({
   const { q, status } = await searchParams
   const supabase = await createClient()
 
+  // « meilleurs » / « a_risque » sont des segments calculés (pas des statuts en
+  // base) → on ne les passe pas à un .eq(), on filtre en mémoire plus bas.
+  const isSegment = status === 'meilleurs' || status === 'a_risque'
+
   let query = supabase.from('clients').select('*').order('last_name')
 
   if (q) {
@@ -19,16 +23,50 @@ export default async function ClientsPage({
       `first_name.ilike.%${q}%,last_name.ilike.%${q}%,phone.ilike.%${q}%,email.ilike.%${q}%`
     )
   }
-  if (status) query = query.eq('status', status)
+  if (status && !isSegment) query = query.eq('status', status)
 
-  const { data: clients } = await query
+  const { data: clientsRaw } = await query
 
-  // Compteurs par statut
-  const { data: allClients } = await supabase.from('clients').select('status')
+  // Agrégats de fiabilité / valeur par client (locations soldées, impayés,
+  // litiges) — sert aux segments « meilleurs » et « à risque » + compteurs.
+  const { data: resAgg } = await supabase
+    .from('reservations')
+    .select('client_id, status, payment_status, deposit_status, total_price')
+
+  type Agg = { completed: number; unpaid: number; litige: number; ca: number }
+  const byClient = new Map<string, Agg>()
+  for (const r of resAgg ?? []) {
+    if (!r.client_id) continue
+    const a = byClient.get(r.client_id) ?? { completed: 0, unpaid: 0, litige: 0, ca: 0 }
+    if (r.status === 'terminee') { a.completed++; a.ca += r.total_price ?? 0 }
+    if (r.status === 'terminee' && r.payment_status && r.payment_status !== 'paye') a.unpaid++
+    if (r.deposit_status === 'litigieuse') a.litige++
+    byClient.set(r.client_id, a)
+  }
+
+  // À risque : blacklisté, ou au moins un impayé / litige avéré.
+  const isRisk = (c: { id: string; status: string }) => {
+    const a = byClient.get(c.id)
+    return c.status === 'blackliste' || (a ? a.unpaid > 0 || a.litige > 0 : false)
+  }
+  // Meilleurs : VIP, ou ≥ 3 locations soldées sans aucun impayé ni litige.
+  const isBest = (c: { id: string; status: string }) => {
+    const a = byClient.get(c.id)
+    return c.status === 'vip' || (a ? a.completed >= 3 && a.unpaid === 0 && a.litige === 0 : false)
+  }
+
+  let clients = clientsRaw ?? []
+  if (status === 'meilleurs') clients = clients.filter(isBest)
+  if (status === 'a_risque')  clients = clients.filter(isRisk)
+
+  // Compteurs par statut / segment (sur l'ensemble, indépendamment de la recherche)
+  const { data: allClients } = await supabase.from('clients').select('id, status')
   const counts = {
     total:      allClients?.length ?? 0,
     vip:        allClients?.filter(c => c.status === 'vip').length ?? 0,
     blackliste: allClients?.filter(c => c.status === 'blackliste').length ?? 0,
+    meilleurs:  allClients?.filter(isBest).length ?? 0,
+    aRisque:    allClients?.filter(isRisk).length ?? 0,
   }
 
   return (
@@ -70,6 +108,8 @@ export default async function ClientsPage({
         {[
           { label: 'Tous', value: undefined },
           { label: '★ VIP', value: 'vip' },
+          { label: `◆ Meilleurs${counts.meilleurs > 0 ? ` · ${counts.meilleurs}` : ''}`, value: 'meilleurs' },
+          { label: `▲ À risque${counts.aRisque > 0 ? ` · ${counts.aRisque}` : ''}`, value: 'a_risque' },
           { label: '⚠ Blacklisté', value: 'blackliste' },
         ].map(f => (
           <Link

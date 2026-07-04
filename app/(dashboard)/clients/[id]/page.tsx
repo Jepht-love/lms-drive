@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import {
   ArrowLeft, Edit, Phone, Mail, Star, AlertTriangle,
-  ChevronRight, CalendarDays, Car, CreditCard, FileText, Plus,
+  ChevronRight, CalendarDays, Car, CreditCard, FileText, Plus, RotateCcw,
 } from 'lucide-react'
 import { formatDate, formatPrice } from '@/lib/utils'
 import DeleteButton from '@/components/ui/DeleteButton'
@@ -78,7 +78,7 @@ export default async function ClientPage({
   const { data: reservations } = await supabase
     .from('reservations')
     .select(
-      'id, reservation_number, status, start_datetime, end_datetime, total_price, daily_price, payment_status, deposit_status, deposit_deducted, late_minutes, vehicle:vehicles(plate, brand, model)'
+      'id, reservation_number, status, start_datetime, end_datetime, total_price, daily_price, payment_status, deposit_amount, deposit_status, deposit_deducted, late_minutes, vehicle:vehicles(plate, brand, model)'
     )
     .eq('client_id', id)
     .order('start_datetime', { ascending: false })
@@ -121,6 +121,9 @@ export default async function ClientPage({
   const totalCA    = completed.reduce((s, r) => s + (r.total_price ?? 0), 0)
   const avgCA      = completed.length > 0 ? totalCA / completed.length : 0
   const totalAll   = reservations?.filter(r => r.status !== 'annulee').length ?? 0
+  // Annulations : signal de fiabilité commerciale (désistements, no-shows). Non
+  // comptées dans l'historique facturé mais suivies à part.
+  const annulations = reservations?.filter(r => r.status === 'annulee').length ?? 0
   // Impayés : réservations terminées non soldées
   const impayes    = completed.filter(r => r.payment_status && r.payment_status !== 'paye')
   const impayesCA  = impayes.reduce((s, r) => s + (r.total_price ?? 0), 0)
@@ -129,6 +132,18 @@ export default async function ClientPage({
     (r: any) => r.deposit_status === 'saisie_partielle' || r.deposit_status === 'saisie_totale'
   )
   const cautionRetenueTotal = cautionsRetenues.reduce((s, r: any) => s + (r.deposit_deducted ?? 0), 0)
+  // Remboursements en attente : caution d'une location terminée pas encore
+  // restituée (statut « en_attente ») ou partiellement retenue (solde à rendre).
+  const remboursements = (reservations ?? []).filter((r: any) =>
+    r.status === 'terminee' && (r.deposit_amount ?? 0) > 0 && (
+      r.deposit_status === 'en_attente' ||
+      (r.deposit_status === 'saisie_partielle' && (r.deposit_amount - (r.deposit_deducted ?? 0)) > 0)
+    )
+  )
+  const remboursementTotal = remboursements.reduce((s: number, r: any) =>
+    s + (r.deposit_status === 'saisie_partielle'
+      ? r.deposit_amount - (r.deposit_deducted ?? 0)
+      : r.deposit_amount), 0)
   // Litiges & retards
   const litiges = (reservations ?? []).filter((r: any) => r.deposit_status === 'litigieuse')
   const retards = (reservations ?? []).filter((r: any) => r.status === 'en_retard' || (r.late_minutes ?? 0) > 0)
@@ -276,6 +291,19 @@ export default async function ClientPage({
         </div>
       )}
 
+      {/* Remboursements en attente (caution à restituer) */}
+      {remboursements.length > 0 && (
+        <div className="bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <RotateCcw className="w-4 h-4 text-blue-500 flex-shrink-0" />
+            <span className="text-sm font-bold text-blue-700">
+              Caution à restituer · {remboursements.length} location{remboursements.length > 1 ? 's' : ''}
+            </span>
+          </div>
+          <span className="text-sm font-black text-blue-700">{formatPrice(remboursementTotal)}</span>
+        </div>
+      )}
+
       {/* ─── Historique & incidents ─── */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
         <div className="flex items-center justify-between mb-3">
@@ -290,19 +318,27 @@ export default async function ClientPage({
         {/* Compteurs */}
         <div className="grid grid-cols-3 gap-2 mb-3">
           {[
-            { label: 'Amendes', value: infractions?.length ?? 0, sub: totalAmendes > 0 ? formatPrice(totalAmendes) : null },
-            { label: 'Sinistres', value: accidents?.length ?? 0, sub: null },
-            { label: 'Retards', value: retards.length, sub: null },
-            { label: 'Caut. ret.', value: cautionsRetenues.length, sub: cautionRetenueTotal > 0 ? formatPrice(cautionRetenueTotal) : null },
-            { label: 'Litiges', value: litiges.length, sub: null },
-            { label: 'Impayés', value: impayes.length, sub: impayesCA > 0 ? formatPrice(impayesCA) : null },
-          ].map(s => (
-            <div key={s.label} className={`rounded-xl p-2.5 text-center ${s.value > 0 ? 'bg-red-50' : 'bg-gray-50'}`}>
-              <p className={`text-lg font-black ${s.value > 0 ? 'text-red-600' : 'text-gray-300'}`}>{s.value}</p>
-              <p className="text-[9px] font-bold uppercase tracking-wide text-gray-400 mt-0.5">{s.label}</p>
-              {s.sub && <p className="text-[9px] font-semibold text-red-400 mt-0.5">{s.sub}</p>}
-            </div>
-          ))}
+            { label: 'Amendes', value: infractions?.length ?? 0, sub: totalAmendes > 0 ? formatPrice(totalAmendes) : null, tone: 'red' as const },
+            { label: 'Sinistres', value: accidents?.length ?? 0, sub: null, tone: 'red' as const },
+            { label: 'Retards', value: retards.length, sub: null, tone: 'red' as const },
+            { label: 'Caut. ret.', value: cautionsRetenues.length, sub: cautionRetenueTotal > 0 ? formatPrice(cautionRetenueTotal) : null, tone: 'red' as const },
+            { label: 'Litiges', value: litiges.length, sub: null, tone: 'red' as const },
+            { label: 'Impayés', value: impayes.length, sub: impayesCA > 0 ? formatPrice(impayesCA) : null, tone: 'red' as const },
+            // Annulations : informationnel (ambre), pas une faute grave comme un impayé.
+            { label: 'Annulations', value: annulations, sub: null, tone: 'amber' as const },
+          ].map(s => {
+            const active = s.value > 0
+            const bg   = !active ? 'bg-gray-50' : s.tone === 'amber' ? 'bg-amber-50' : 'bg-red-50'
+            const num  = !active ? 'text-gray-300' : s.tone === 'amber' ? 'text-amber-600' : 'text-red-600'
+            const sub  = s.tone === 'amber' ? 'text-amber-400' : 'text-red-400'
+            return (
+              <div key={s.label} className={`rounded-xl p-2.5 text-center ${bg}`}>
+                <p className={`text-lg font-black ${num}`}>{s.value}</p>
+                <p className="text-[9px] font-bold uppercase tracking-wide text-gray-400 mt-0.5">{s.label}</p>
+                {s.sub && <p className={`text-[9px] font-semibold mt-0.5 ${sub}`}>{s.sub}</p>}
+              </div>
+            )
+          })}
         </div>
 
         {/* Détail amendes + sinistres */}
@@ -458,6 +494,11 @@ export default async function ClientPage({
           {(client.discount_percent ?? 0) > 0 && (
             <InfoRow label="Remise fidélité">
               <span className="text-green-600 font-bold">−{client.discount_percent}%</span>
+            </InfoRow>
+          )}
+          {client.commercial_perks && (
+            <InfoRow label="Avantages ciblés">
+              <span className="text-gray-700 text-right whitespace-pre-line">{client.commercial_perks}</span>
             </InfoRow>
           )}
           {completed.length > 0 && (

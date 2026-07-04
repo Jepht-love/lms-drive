@@ -152,9 +152,13 @@ export default async function DashboardPage() {
 
   const total          = vehicles?.length ?? 0
   const disponibles    = vehicles?.filter(v => v.status === 'disponible').length ?? 0
-  const enLocation     = vehicles?.filter(v => ['loue', 'reserve'].includes(v.status)).length ?? 0
+  // « mis_a_disposition » (chez partenaire) compte comme en exploitation : le
+  // véhicule est sorti et génère du revenu → il entre dans le taux d'occupation.
+  const enLocation     = vehicles?.filter(v => ['loue', 'reserve', 'mis_a_disposition'].includes(v.status)).length ?? 0
+  // « mis_a_disposition » exclu : chez partenaire ≠ immobilisé (aligné avec la
+  // page Flotte, où il a sa propre pastille « Chez partenaire »).
   const immobilises    = vehicles?.filter(v =>
-    ['maintenance', 'hors_service', 'en_verification', 'immobilise', 'mis_a_disposition', 'a_reparer'].includes(v.status)
+    ['maintenance', 'hors_service', 'en_verification', 'immobilise', 'a_reparer'].includes(v.status)
   ).length ?? 0
   const tauxOccupation = total > 0 ? Math.round((enLocation / total) * 100) : 0
 

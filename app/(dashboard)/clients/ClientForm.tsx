@@ -35,6 +35,50 @@ async function compressImage(file: File): Promise<Blob> {
 
 const DOC_TYPES = ['CNI', 'passeport', 'titre_sejour']
 const PAYMENT_METHODS = ['especes', 'virement', 'cb', 'cheque']
+const DISCOUNT_PRESETS = [0, 5, 10, 15, 20]
+
+/**
+ * Remise fidélité : boutons rapides (5 %, 10 %…) pour la valeur courante, plus
+ * une saisie libre pour un pourcentage sur-mesure. Écrit dans `discount_percent`.
+ */
+function DiscountField({ defaultValue }: { defaultValue?: number | null }) {
+  const [value, setValue] = useState<string>(defaultValue != null ? String(defaultValue) : '')
+  const current = value === '' ? null : Number(value)
+  return (
+    <div>
+      <label className="block text-xs font-medium text-gray-600 mb-1.5 uppercase tracking-wide">Remise fidélité (%)</label>
+      <div className="flex flex-wrap gap-1.5 mb-2">
+        {DISCOUNT_PRESETS.map(p => {
+          const active = current === p
+          return (
+            <button
+              key={p}
+              type="button"
+              onClick={() => setValue(String(p))}
+              className={`px-3 h-9 rounded-lg text-sm font-semibold border transition active:scale-95 ${
+                active ? 'bg-black text-white border-black' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              {p === 0 ? 'Aucune' : `${p}%`}
+            </button>
+          )
+        })}
+      </div>
+      <input
+        type="number"
+        name="discount_percent"
+        value={value}
+        onChange={e => setValue(e.target.value)}
+        min={0}
+        max={100}
+        step={1}
+        inputMode="numeric"
+        placeholder="Autre %…"
+        className="w-full px-4 py-3 rounded-xl border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm"
+      />
+    </div>
+  )
+}
 
 function PhotoUpload({ label, name, existingUrl }: { label: string; name: string; existingUrl?: string | null }) {
   const [preview, setPreview] = useState<string | null>(existingUrl ?? null)
@@ -194,9 +238,25 @@ export default function ClientForm({ action, client: c }: ClientFormProps) {
             labels={{ especes: 'Espèces', virement: 'Virement', cb: 'Carte bancaire', cheque: 'Chèque' }}
           />
           <Field label="Caution habituelle (€)" name="usual_deposit" type="number" defaultValue={c?.usual_deposit?.toString() ?? ''} step="0.01" inputMode="decimal" enterKeyHint="next" />
-          <Field label="Remise fidélité (%)" name="discount_percent" type="number" defaultValue={c?.discount_percent?.toString() ?? ''} step="1" placeholder="0" inputMode="numeric" enterKeyHint="next" />
           <Field label="Canal d'acquisition" name="acquisition_channel" defaultValue={c?.acquisition_channel ?? ''} placeholder="Bouche à oreille, Internet…" enterKeyHint="done" />
         </div>
+
+        {/* Bloc commercial : remise chiffrée + avantages qualitatifs ciblés */}
+        <div className="mt-4 grid sm:grid-cols-2 gap-4">
+          <DiscountField defaultValue={c?.discount_percent ?? null} />
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1.5 uppercase tracking-wide">Avantages ciblés</label>
+            <textarea
+              name="commercial_perks"
+              defaultValue={c?.commercial_perks ?? ''}
+              rows={3}
+              placeholder="Ex : 1 jour offert tous les 10 jours, surclassement gratuit, lavage inclus…"
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm resize-none"
+            />
+            <p className="text-[11px] text-gray-400 mt-1">Avantages non chiffrables en %, appliqués manuellement au cas par cas.</p>
+          </div>
+        </div>
+
         <div className="mt-4">
           <label className="block text-xs font-medium text-gray-600 mb-1.5 uppercase tracking-wide">Notes internes</label>
           <textarea

@@ -8,14 +8,15 @@ import { maintenanceType } from '@/lib/maintenance'
 // Statuts considérés « immobilisés » — identique au filtre de /vehicles, mais
 // cette page explique POURQUOI chaque véhicule l'est (sinistre en cours,
 // entretien en cours, ou statut posé manuellement sans dossier source).
-const IMMOBILISES_STATUSES = ['maintenance', 'hors_service', 'en_verification', 'immobilise', 'mis_a_disposition', 'a_reparer']
+// « mis_a_disposition » exclu : chez un partenaire ≠ immobilisé (génère du
+// revenu) → il vit dans son propre filtre « Chez partenaire » sur la flotte.
+const IMMOBILISES_STATUSES = ['maintenance', 'hors_service', 'en_verification', 'immobilise', 'a_reparer']
 
 const STATUS_LABEL: Record<string, string> = {
   maintenance:        'En entretien',
   hors_service:       'Hors service',
   en_verification:    'En vérification (sinistre)',
   immobilise:         'Immobilisé',
-  mis_a_disposition:  'Mis à disposition',
   a_reparer:          'À réparer',
 }
 

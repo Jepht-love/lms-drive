@@ -44,6 +44,19 @@ async function applyDiscount(
   } catch { /* colonne absente avant migration → ignoré */ }
 }
 
+// Avantages commerciaux ciblés (texte libre) — best-effort séparé, tolérant à
+// l'absence de la colonne commercial_perks avant sa migration.
+async function applyCommercialPerks(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  clientId: string,
+  raw: FormDataEntryValue | null,
+) {
+  const perks = (raw as string | null)?.trim() || null
+  try {
+    await supabase.from('clients').update({ commercial_perks: perks }).eq('id', clientId)
+  } catch { /* colonne absente avant migration → ignoré */ }
+}
+
 function buildBasePayload(formData: FormData) {
   return {
     first_name: formData.get('first_name') as string,
@@ -90,6 +103,7 @@ export async function createClientAction(formData: FormData) {
   }
 
   await applyDiscount(supabase, data.id, formData.get('discount_percent'))
+  await applyCommercialPerks(supabase, data.id, formData.get('commercial_perks'))
 
   await supabase.from('audit_logs').insert({
     user_id: user.id,
@@ -126,6 +140,7 @@ export async function updateClientAction(id: string, formData: FormData) {
   if (error) return { error: error.message }
 
   await applyDiscount(supabase, id, formData.get('discount_percent'))
+  await applyCommercialPerks(supabase, id, formData.get('commercial_perks'))
 
   await supabase.from('audit_logs').insert({
     user_id: user.id,

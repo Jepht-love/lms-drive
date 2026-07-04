@@ -165,13 +165,30 @@ export async function recordReturn(id: string, formData: FormData) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non authentifié' }
 
+  const returnKm = int(formData, 'return_km')
+
   const { error } = await supabase.from('inter_agency_rentals').update({
-    return_km:         int(formData, 'return_km'),
+    return_km:         returnKm,
     fuel_level_return: int(formData, 'fuel_level_return'),
     end_date_actual:   new Date().toISOString(),
     status:            'termine',
   }).eq('id', id)
   if (error) return { error: error.message }
+
+  // Le km relevé au retour remonte immédiatement sur le compteur du véhicule
+  // (opération sortante uniquement) — sans attendre la clôture, qui restait une
+  // 2e action manuelle souvent oubliée : le compteur ne reflétait pas la réalité.
+  if (returnKm != null && returnKm > 0) {
+    const { data: op } = await supabase
+      .from('inter_agency_rentals')
+      .select('direction, vehicle_id')
+      .eq('id', id).single()
+    if (op?.direction === 'out' && op.vehicle_id) {
+      await supabase.from('vehicles').update({ current_km: returnKm }).eq('id', op.vehicle_id)
+      revalidatePath('/vehicles')
+      revalidatePath(`/vehicles/${op.vehicle_id}`)
+    }
+  }
 
   await bookOperationTransaction(supabase, id, user.id)
 

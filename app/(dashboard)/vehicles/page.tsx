@@ -15,7 +15,9 @@ import {
 
 // Statuts considérés « immobilisés » (entretien · réparation · sinistre · CT · etc.)
 // — doit rester aligné avec le compteur IMMOBILISÉS du tableau de bord.
-const IMMOBILISES_STATUSES = ['maintenance', 'hors_service', 'en_verification', 'immobilise', 'mis_a_disposition', 'a_reparer']
+// « mis_a_disposition » (chez partenaire) est EXCLU : le véhicule n'est pas
+// immobilisé, il génère du revenu → il a sa propre pastille de filtre.
+const IMMOBILISES_STATUSES = ['maintenance', 'hors_service', 'en_verification', 'immobilise', 'a_reparer']
 
 // ─── Config statut (pour les filtres) ─────────────────────────────────────────
 const STATUS_CONFIG: Record<string, { label: string; dot: string }> = {

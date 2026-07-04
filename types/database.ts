@@ -121,6 +121,7 @@ export interface Client {
   internal_notes: string | null
   rating: number | null
   discount_percent: number | null
+  commercial_perks: string | null
   acquisition_channel: string | null
   created_by: string | null
   created_at: string
