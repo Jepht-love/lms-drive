@@ -119,7 +119,7 @@ export default async function ReservationPage({
   const { data: invoice } = contractClosed && contract
     ? await supabase
         .from('invoices')
-        .select('id, invoice_number, line_items, total_amount, sent_at, payment_term_days, due_date')
+        .select('id, invoice_number, line_items, total_amount, sent_at, cancelled_at, payment_term_days, due_date')
         .eq('contract_id', contract.id)
         .maybeSingle()
     : { data: null }

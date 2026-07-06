@@ -2,9 +2,9 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Receipt, Plus, Trash2, Mail, Check, Loader2, AlertTriangle, Eye } from 'lucide-react'
+import { Receipt, Plus, Trash2, Mail, Check, Loader2, AlertTriangle, Eye, Ban } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
-import { updateInvoiceLines, sendInvoice } from '@/lib/actions/invoices'
+import { updateInvoiceLines, sendInvoice, cancelInvoice } from '@/lib/actions/invoices'
 import type { InvoiceLineItem } from '@/lib/pdf/invoice-template'
 
 interface Invoice {
@@ -13,6 +13,7 @@ interface Invoice {
   line_items: InvoiceLineItem[]
   total_amount: number
   sent_at: string | null
+  cancelled_at?: string | null
   payment_term_days?: number
   due_date?: string | null
 }
@@ -23,8 +24,19 @@ export default function InvoiceCard({ invoice }: { invoice: Invoice }) {
   const [termDays, setTermDays] = useState(invoice.payment_term_days ?? 30)
   const [saving, startSaving] = useTransition()
   const [sending, startSending] = useTransition()
+  const [cancelling, startCancelling] = useTransition()
+  const [confirmCancel, setConfirmCancel] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [dirty, setDirty] = useState(false)
+
+  function onCancel() {
+    setError(null)
+    startCancelling(async () => {
+      const res = await cancelInvoice(invoice.id)
+      if (res?.error) setError(res.error)
+      else { setConfirmCancel(false); router.refresh() }
+    })
+  }
 
   const total = lines.reduce((s, l) => s + l.total, 0)
   const hasZeroPrice = lines.some(l => l.total <= 0)
@@ -70,6 +82,23 @@ export default function InvoiceCard({ invoice }: { invoice: Invoice }) {
 
   const input = 'text-sm border border-gray-200 rounded-lg px-2 py-1.5 text-gray-900 focus:outline-none focus:border-gray-400'
 
+  if (invoice.cancelled_at) {
+    return (
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <Receipt className="w-4 h-4 text-gray-400" />
+          <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Facture de restitution</span>
+        </div>
+        <div className="flex items-center gap-2 text-gray-500 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5">
+          <Ban className="w-4 h-4 flex-shrink-0" />
+          <p className="text-sm font-medium">
+            {invoice.invoice_number} annulée le {new Date(invoice.cancelled_at).toLocaleDateString('fr-FR')} — impact comptable retiré
+          </p>
+        </div>
+      </div>
+    )
+  }
+
   if (invoice.sent_at) {
     return (
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
@@ -84,6 +113,25 @@ export default function InvoiceCard({ invoice }: { invoice: Invoice }) {
             {invoice.due_date && <> · échéance {new Date(invoice.due_date).toLocaleDateString('fr-FR')}</>}
           </p>
         </div>
+
+        {confirmCancel ? (
+          <div className="mt-3 flex gap-2">
+            <button onClick={() => setConfirmCancel(false)} disabled={cancelling}
+              className="flex-1 py-2 rounded-xl text-sm font-semibold border border-gray-200 text-gray-600 disabled:opacity-40">
+              Retour
+            </button>
+            <button onClick={onCancel} disabled={cancelling}
+              className="flex-1 py-2 rounded-xl text-sm font-semibold bg-red-600 text-white disabled:opacity-40">
+              {cancelling ? 'Annulation...' : "Confirmer l'annulation"}
+            </button>
+          </div>
+        ) : (
+          <button onClick={() => setConfirmCancel(true)}
+            className="mt-3 w-full py-2 rounded-xl text-sm font-semibold border border-gray-200 text-red-600 hover:bg-red-50 hover:border-red-100 flex items-center justify-center gap-1.5 transition-colors">
+            <Ban className="w-4 h-4" /> Annuler la facture
+          </button>
+        )}
+        {error && <p className="text-xs text-red-600 bg-red-50 px-3 py-2 rounded-lg mt-2">{error}</p>}
       </div>
     )
   }

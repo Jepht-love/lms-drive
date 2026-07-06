@@ -406,3 +406,39 @@ export async function markRestitutionInvoiceSent(invoiceId: string, buffer: Buff
 
   revalidatePath(`/reservations/${invoice.reservation_id}`)
 }
+
+/**
+ * Annule une facture (on ne la supprime pas — traçabilité légale) : marque
+ * cancelled_at/cancelled_by et désactive son impact comptable en retirant
+ * l'échéance (créance) liée dans financial_due_dates.
+ */
+export async function cancelInvoice(invoiceId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié' }
+
+  const { data: invoice } = await supabase
+    .from('invoices')
+    .select('reservation_id, cancelled_at')
+    .eq('id', invoiceId)
+    .single()
+  if (!invoice) return { error: 'Facture introuvable' }
+  if (invoice.cancelled_at) return { error: 'Facture déjà annulée' }
+
+  const { error } = await supabase
+    .from('invoices')
+    .update({ cancelled_at: new Date().toISOString(), cancelled_by: user.id })
+    .eq('id', invoiceId)
+  if (error) return { error: error.message }
+
+  await createAdminClient().from('financial_due_dates').delete().eq('invoice_id', invoiceId)
+
+  await supabase.from('audit_logs').insert({
+    user_id: user.id, action: 'invoice_cancelled',
+    entity_type: 'invoices', entity_id: invoiceId, metadata: {},
+  })
+
+  revalidatePath('/accounting')
+  if (invoice.reservation_id) revalidatePath(`/reservations/${invoice.reservation_id}`)
+  return { success: true }
+}
