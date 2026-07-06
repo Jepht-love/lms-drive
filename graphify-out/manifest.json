@@ -230,8 +230,8 @@
     "semantic_hash": ""
   },
   "app/(dashboard)/incidents/infractions/[id]/InfractionActions.tsx": {
-    "mtime": 1783082643.766333,
-    "ast_hash": "38123981d226032f1b3513d446d8b704",
+    "mtime": 1783327064.2088077,
+    "ast_hash": "6e8db95a46cb0d93004b145edac56bc2",
     "semantic_hash": ""
   },
   "app/(dashboard)/incidents/infractions/[id]/page.tsx": {
@@ -255,8 +255,8 @@
     "semantic_hash": ""
   },
   "app/(dashboard)/incidents/sinistres/[id]/SinistreActions.tsx": {
-    "mtime": 1783082639.6503494,
-    "ast_hash": "764fbfb1154ba250d3b57082b9890548",
+    "mtime": 1783327091.2032394,
+    "ast_hash": "0410fcd283d4ae7c2d4283950fbb6a21",
     "semantic_hash": ""
   },
   "app/(dashboard)/incidents/sinistres/[id]/page.tsx": {
@@ -815,8 +815,8 @@
     "semantic_hash": ""
   },
   "lib/actions/incidents.ts": {
-    "mtime": 1783151826.20281,
-    "ast_hash": "20dc179e9f3879f2029a54bac2185c98",
+    "mtime": 1783327021.2256143,
+    "ast_hash": "e80af4a530977dcf849d4e5beff9de6a",
     "semantic_hash": ""
   },
   "lib/actions/internal-trips.ts": {

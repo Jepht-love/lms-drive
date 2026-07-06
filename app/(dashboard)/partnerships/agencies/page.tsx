@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { ArrowLeft, Plus, Building2, Phone } from 'lucide-react'
 import BackButton from '@/components/ui/BackButton'
+import DeleteAgencyButton from './DeleteAgencyButton'
 
 export default async function AgenciesPage() {
   const supabase = await createClient()
@@ -48,11 +49,14 @@ export default async function AgenciesPage() {
                       </a>
                     )}
                   </div>
-                  {n > 0 && (
-                    <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 flex-shrink-0">
-                      {n} op. active{n > 1 ? 's' : ''}
-                    </span>
-                  )}
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {n > 0 && (
+                      <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-blue-50 text-blue-700">
+                        {n} op. active{n > 1 ? 's' : ''}
+                      </span>
+                    )}
+                    <DeleteAgencyButton agencyId={a.id} />
+                  </div>
                 </div>
               </div>
             )

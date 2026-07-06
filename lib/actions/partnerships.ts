@@ -40,6 +40,45 @@ export async function createAgency(formData: FormData) {
   return { success: true, id: data.id }
 }
 
+/**
+ * Supprime une agence partenaire — bloqué s'il reste des opérations de mise à
+ * disposition ou des véhicules partenaires rattachés (sinon on orpheline des
+ * données). Il faut d'abord traiter/supprimer ces éléments liés.
+ */
+export async function deleteAgency(id: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié' }
+
+  const { count: opsCount } = await supabase
+    .from('inter_agency_rentals')
+    .select('id', { count: 'exact', head: true })
+    .eq('partner_agency_id', id)
+  if (opsCount && opsCount > 0) {
+    return { error: `Suppression impossible : ${opsCount} opération(s) de mise à disposition liée(s) à cette agence.` }
+  }
+
+  const { count: vehCount } = await supabase
+    .from('vehicles')
+    .select('id', { count: 'exact', head: true })
+    .eq('partner_agency_id', id)
+  if (vehCount && vehCount > 0) {
+    return { error: `Suppression impossible : ${vehCount} véhicule(s) partenaire(s) rattaché(s) à cette agence.` }
+  }
+
+  const { error } = await supabase.from('partner_agencies').delete().eq('id', id)
+  if (error) return { error: error.message }
+
+  await supabase.from('audit_logs').insert({
+    user_id: user.id, action: 'partner_agency_deleted',
+    entity_type: 'partner_agencies', entity_id: id, metadata: {},
+  })
+
+  revalidatePath('/partnerships')
+  revalidatePath('/partnerships/agencies')
+  return { success: true }
+}
+
 export async function createOperation(formData: FormData) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
