@@ -25,6 +25,23 @@ export async function createCampaign(formData: FormData) {
   return { success: true }
 }
 
+export async function deleteCampaign(id: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié' }
+
+  const { error } = await supabase.from('campaigns').delete().eq('id', id)
+  if (error) return { error: error.message }
+
+  await supabase.from('audit_logs').insert({
+    user_id: user.id, action: 'campaign_deleted',
+    entity_type: 'campaigns', entity_id: id, metadata: {},
+  })
+
+  revalidatePath('/marketing')
+  return { success: true }
+}
+
 export async function updateCampaignStatus(id: string, status: string) {
   const supabase = await createClient()
   const { error } = await supabase.from('campaigns').update({ status }).eq('id', id)

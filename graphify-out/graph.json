@@ -4,14 +4,174 @@
   "graph": {},
   "nodes": [
     {
+      "label": "AccountingTransactions.tsx",
+      "file_type": "code",
+      "source_file": "app/(dashboard)/accounting/AccountingTransactions.tsx",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "accounting_accountingtransactions",
+      "community": 32,
+      "norm_label": "accountingtransactions.tsx"
+    },
+    {
+      "label": "Tx",
+      "file_type": "code",
+      "source_file": "app/(dashboard)/accounting/AccountingTransactions.tsx",
+      "source_location": "L15",
+      "_origin": "ast",
+      "id": "accounting_accountingtransactions_tx",
+      "community": 32,
+      "norm_label": "tx"
+    },
+    {
+      "label": "AccountingTransactions()",
+      "file_type": "code",
+      "source_file": "app/(dashboard)/accounting/AccountingTransactions.tsx",
+      "source_location": "L28",
+      "_origin": "ast",
+      "id": "accounting_accountingtransactions_accountingtransactions",
+      "community": 3,
+      "norm_label": "accountingtransactions()"
+    },
+    {
+      "label": "accounting.ts",
+      "file_type": "code",
+      "source_file": "lib/actions/accounting.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "actions_accounting",
+      "community": 32,
+      "norm_label": "accounting.ts"
+    },
+    {
+      "label": "createTransaction()",
+      "file_type": "code",
+      "source_file": "lib/actions/accounting.ts",
+      "source_location": "L8",
+      "_origin": "ast",
+      "id": "actions_accounting_createtransaction",
+      "community": 32,
+      "norm_label": "createtransaction()"
+    },
+    {
+      "label": "deleteTransaction()",
+      "file_type": "code",
+      "source_file": "lib/actions/accounting.ts",
+      "source_location": "L49",
+      "_origin": "ast",
+      "id": "actions_accounting_deletetransaction",
+      "community": 32,
+      "norm_label": "deletetransaction()"
+    },
+    {
+      "label": "revenueByPaymentMethod()",
+      "file_type": "code",
+      "source_file": "lib/actions/accounting.ts",
+      "source_location": "L80",
+      "_origin": "ast",
+      "id": "actions_accounting_revenuebypaymentmethod",
+      "community": 32,
+      "norm_label": "revenuebypaymentmethod()"
+    },
+    {
+      "label": "closeDailyAccounting()",
+      "file_type": "code",
+      "source_file": "lib/actions/accounting.ts",
+      "source_location": "L90",
+      "_origin": "ast",
+      "id": "actions_accounting_closedailyaccounting",
+      "community": 32,
+      "norm_label": "closedailyaccounting()"
+    },
+    {
+      "label": "closeMonthlyAccounting()",
+      "file_type": "code",
+      "source_file": "lib/actions/accounting.ts",
+      "source_location": "L128",
+      "_origin": "ast",
+      "id": "actions_accounting_closemonthlyaccounting",
+      "community": 32,
+      "norm_label": "closemonthlyaccounting()"
+    },
+    {
+      "label": "closeAnnualAccounting()",
+      "file_type": "code",
+      "source_file": "lib/actions/accounting.ts",
+      "source_location": "L160",
+      "_origin": "ast",
+      "id": "actions_accounting_closeannualaccounting",
+      "community": 32,
+      "norm_label": "closeannualaccounting()"
+    },
+    {
+      "label": "updateTransactionNotes()",
+      "file_type": "code",
+      "source_file": "lib/actions/accounting.ts",
+      "source_location": "L193",
+      "_origin": "ast",
+      "id": "actions_accounting_updatetransactionnotes",
+      "community": 32,
+      "norm_label": "updatetransactionnotes()"
+    },
+    {
+      "label": "toggleTransparence()",
+      "file_type": "code",
+      "source_file": "lib/actions/accounting.ts",
+      "source_location": "L214",
+      "_origin": "ast",
+      "id": "actions_accounting_toggletransparence",
+      "community": 32,
+      "norm_label": "toggletransparence()"
+    },
+    {
+      "label": "reopen()",
+      "file_type": "code",
+      "source_file": "lib/actions/accounting.ts",
+      "source_location": "L236",
+      "_origin": "ast",
+      "id": "actions_accounting_reopen",
+      "community": 32,
+      "norm_label": "reopen()"
+    },
+    {
+      "label": "reopenDailyClosing()",
+      "file_type": "code",
+      "source_file": "lib/actions/accounting.ts",
+      "source_location": "L249",
+      "_origin": "ast",
+      "id": "actions_accounting_reopendailyclosing",
+      "community": 32,
+      "norm_label": "reopendailyclosing()"
+    },
+    {
+      "label": "reopenMonthlyClosing()",
+      "file_type": "code",
+      "source_file": "lib/actions/accounting.ts",
+      "source_location": "L252",
+      "_origin": "ast",
+      "id": "actions_accounting_reopenmonthlyclosing",
+      "community": 32,
+      "norm_label": "reopenmonthlyclosing()"
+    },
+    {
+      "label": "reopenAnnualClosing()",
+      "file_type": "code",
+      "source_file": "lib/actions/accounting.ts",
+      "source_location": "L255",
+      "_origin": "ast",
+      "id": "actions_accounting_reopenannualclosing",
+      "community": 32,
+      "norm_label": "reopenannualclosing()"
+    },
+    {
       "label": "InternalTripsClient.tsx",
       "file_type": "code",
       "source_file": "app/(dashboard)/internal-trips/InternalTripsClient.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "id": "internal_trips_internaltripsclient",
       "community": 1,
-      "norm_label": "internaltripsclient.tsx"
+      "norm_label": "internaltripsclient.tsx",
+      "id": "internal_trips_internaltripsclient"
     },
     {
       "label": "Vehicle",
@@ -19,9 +179,9 @@
       "source_file": "app/(dashboard)/internal-trips/InternalTripsClient.tsx",
       "source_location": "L11",
       "_origin": "ast",
-      "id": "internal_trips_internaltripsclient_vehicle",
       "community": 1,
-      "norm_label": "vehicle"
+      "norm_label": "vehicle",
+      "id": "internal_trips_internaltripsclient_vehicle"
     },
     {
       "label": "Member",
@@ -29,9 +189,9 @@
       "source_file": "app/(dashboard)/internal-trips/InternalTripsClient.tsx",
       "source_location": "L12",
       "_origin": "ast",
-      "id": "internal_trips_internaltripsclient_member",
       "community": 1,
-      "norm_label": "member"
+      "norm_label": "member",
+      "id": "internal_trips_internaltripsclient_member"
     },
     {
       "label": "Trip",
@@ -39,9 +199,9 @@
       "source_file": "app/(dashboard)/internal-trips/InternalTripsClient.tsx",
       "source_location": "L13",
       "_origin": "ast",
-      "id": "internal_trips_internaltripsclient_trip",
       "community": 1,
-      "norm_label": "trip"
+      "norm_label": "trip",
+      "id": "internal_trips_internaltripsclient_trip"
     },
     {
       "label": "PURPOSES",
@@ -49,9 +209,9 @@
       "source_file": "app/(dashboard)/internal-trips/InternalTripsClient.tsx",
       "source_location": "L25",
       "_origin": "ast",
-      "id": "internal_trips_internaltripsclient_purposes",
       "community": 1,
-      "norm_label": "purposes"
+      "norm_label": "purposes",
+      "id": "internal_trips_internaltripsclient_purposes"
     },
     {
       "label": "InternalTripsClient()",
@@ -59,9 +219,9 @@
       "source_file": "app/(dashboard)/internal-trips/InternalTripsClient.tsx",
       "source_location": "L34",
       "_origin": "ast",
-      "id": "internal_trips_internaltripsclient_internaltripsclient",
-      "community": 3,
-      "norm_label": "internaltripsclient()"
+      "community": 1,
+      "norm_label": "internaltripsclient()",
+      "id": "internal_trips_internaltripsclient_internaltripsclient"
     },
     {
       "label": "VehiclesGridSwipeable.tsx",
@@ -69,9 +229,9 @@
       "source_file": "app/(dashboard)/vehicles/VehiclesGridSwipeable.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "id": "vehicles_vehiclesgridswipeable",
       "community": 7,
-      "norm_label": "vehiclesgridswipeable.tsx"
+      "norm_label": "vehiclesgridswipeable.tsx",
+      "id": "vehicles_vehiclesgridswipeable"
     },
     {
       "label": "STATUS_CONFIG",
@@ -79,9 +239,9 @@
       "source_file": "app/(dashboard)/vehicles/VehiclesGridSwipeable.tsx",
       "source_location": "L11",
       "_origin": "ast",
-      "id": "vehicles_vehiclesgridswipeable_status_config",
       "community": 7,
-      "norm_label": "status_config"
+      "norm_label": "status_config",
+      "id": "vehicles_vehiclesgridswipeable_status_config"
     },
     {
       "label": "VehiclesGridSwipeable()",
@@ -89,9 +249,9 @@
       "source_file": "app/(dashboard)/vehicles/VehiclesGridSwipeable.tsx",
       "source_location": "L23",
       "_origin": "ast",
-      "id": "vehicles_vehiclesgridswipeable_vehiclesgridswipeable",
       "community": 7,
-      "norm_label": "vehiclesgridswipeable()"
+      "norm_label": "vehiclesgridswipeable()",
+      "id": "vehicles_vehiclesgridswipeable_vehiclesgridswipeable"
     },
     {
       "label": "internal-trips.ts",
@@ -99,9 +259,9 @@
       "source_file": "lib/actions/internal-trips.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "id": "actions_internal_trips",
       "community": 1,
-      "norm_label": "internal-trips.ts"
+      "norm_label": "internal-trips.ts",
+      "id": "actions_internal_trips"
     },
     {
       "label": "startTrip()",
@@ -109,9 +269,9 @@
       "source_file": "lib/actions/internal-trips.ts",
       "source_location": "L8",
       "_origin": "ast",
-      "id": "actions_internal_trips_starttrip",
       "community": 1,
-      "norm_label": "starttrip()"
+      "norm_label": "starttrip()",
+      "id": "actions_internal_trips_starttrip"
     },
     {
       "label": "endTrip()",
@@ -119,9 +279,9 @@
       "source_file": "lib/actions/internal-trips.ts",
       "source_location": "L50",
       "_origin": "ast",
-      "id": "actions_internal_trips_endtrip",
       "community": 1,
-      "norm_label": "endtrip()"
+      "norm_label": "endtrip()",
+      "id": "actions_internal_trips_endtrip"
     },
     {
       "label": "getRole()",
@@ -129,9 +289,9 @@
       "source_file": "lib/actions/internal-trips.ts",
       "source_location": "L131",
       "_origin": "ast",
-      "id": "actions_internal_trips_getrole",
       "community": 1,
-      "norm_label": "getrole()"
+      "norm_label": "getrole()",
+      "id": "actions_internal_trips_getrole"
     },
     {
       "label": "isManagerRole()",
@@ -139,9 +299,9 @@
       "source_file": "lib/actions/internal-trips.ts",
       "source_location": "L136",
       "_origin": "ast",
-      "id": "actions_internal_trips_ismanagerrole",
       "community": 1,
-      "norm_label": "ismanagerrole()"
+      "norm_label": "ismanagerrole()",
+      "id": "actions_internal_trips_ismanagerrole"
     },
     {
       "label": "planTrip()",
@@ -149,9 +309,9 @@
       "source_file": "lib/actions/internal-trips.ts",
       "source_location": "L144",
       "_origin": "ast",
-      "id": "actions_internal_trips_plantrip",
       "community": 1,
-      "norm_label": "plantrip()"
+      "norm_label": "plantrip()",
+      "id": "actions_internal_trips_plantrip"
     },
     {
       "label": "assignTrip()",
@@ -159,9 +319,9 @@
       "source_file": "lib/actions/internal-trips.ts",
       "source_location": "L193",
       "_origin": "ast",
-      "id": "actions_internal_trips_assigntrip",
       "community": 1,
-      "norm_label": "assigntrip()"
+      "norm_label": "assigntrip()",
+      "id": "actions_internal_trips_assigntrip"
     },
     {
       "label": "startPlannedTrip()",
@@ -169,9 +329,9 @@
       "source_file": "lib/actions/internal-trips.ts",
       "source_location": "L223",
       "_origin": "ast",
-      "id": "actions_internal_trips_startplannedtrip",
       "community": 1,
-      "norm_label": "startplannedtrip()"
+      "norm_label": "startplannedtrip()",
+      "id": "actions_internal_trips_startplannedtrip"
     },
     {
       "label": "cancelTrip()",
@@ -179,9 +339,9 @@
       "source_file": "lib/actions/internal-trips.ts",
       "source_location": "L258",
       "_origin": "ast",
-      "id": "actions_internal_trips_canceltrip",
       "community": 1,
-      "norm_label": "canceltrip()"
+      "norm_label": "canceltrip()",
+      "id": "actions_internal_trips_canceltrip"
     },
     {
       "label": "deleteTrip()",
@@ -189,9 +349,9 @@
       "source_file": "lib/actions/internal-trips.ts",
       "source_location": "L288",
       "_origin": "ast",
-      "id": "actions_internal_trips_deletetrip",
       "community": 1,
-      "norm_label": "deletetrip()"
+      "norm_label": "deletetrip()",
+      "id": "actions_internal_trips_deletetrip"
     },
     {
       "label": "launch.json",
@@ -449,7 +609,7 @@
       "source_file": "app/(dashboard)/accounting/AccountingCustomPeriod.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 108,
+      "community": 140,
       "norm_label": "accountingcustomperiod.tsx",
       "id": "accounting_accountingcustomperiod"
     },
@@ -459,39 +619,9 @@
       "source_file": "app/(dashboard)/accounting/AccountingCustomPeriod.tsx",
       "source_location": "L6",
       "_origin": "ast",
-      "community": 108,
+      "community": 140,
       "norm_label": "accountingcustomperiod()",
       "id": "accounting_accountingcustomperiod_accountingcustomperiod"
-    },
-    {
-      "label": "AccountingTransactions.tsx",
-      "file_type": "code",
-      "source_file": "app/(dashboard)/accounting/AccountingTransactions.tsx",
-      "source_location": "L1",
-      "_origin": "ast",
-      "community": 97,
-      "norm_label": "accountingtransactions.tsx",
-      "id": "accounting_accountingtransactions"
-    },
-    {
-      "label": "Tx",
-      "file_type": "code",
-      "source_file": "app/(dashboard)/accounting/AccountingTransactions.tsx",
-      "source_location": "L15",
-      "_origin": "ast",
-      "community": 97,
-      "norm_label": "tx",
-      "id": "accounting_accountingtransactions_tx"
-    },
-    {
-      "label": "AccountingTransactions()",
-      "file_type": "code",
-      "source_file": "app/(dashboard)/accounting/AccountingTransactions.tsx",
-      "source_location": "L27",
-      "_origin": "ast",
-      "community": 3,
-      "norm_label": "accountingtransactions()",
-      "id": "accounting_accountingtransactions_accountingtransactions"
     },
     {
       "label": "page.tsx",
@@ -669,7 +799,7 @@
       "source_file": "app/(dashboard)/accounting/close/CloseButton.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 77,
+      "community": 32,
       "norm_label": "closebutton.tsx",
       "id": "close_closebutton"
     },
@@ -679,7 +809,7 @@
       "source_file": "app/(dashboard)/accounting/close/CloseButton.tsx",
       "source_location": "L8",
       "_origin": "ast",
-      "community": 77,
+      "community": 32,
       "norm_label": "closebutton()",
       "id": "close_closebutton_closebutton"
     },
@@ -749,7 +879,7 @@
       "source_file": "app/(dashboard)/accounting/close/annual/page.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 77,
+      "community": 32,
       "norm_label": "page.tsx",
       "id": "annual_page"
     },
@@ -759,7 +889,7 @@
       "source_file": "app/(dashboard)/accounting/close/annual/page.tsx",
       "source_location": "L11",
       "_origin": "ast",
-      "community": 77,
+      "community": 32,
       "norm_label": "months",
       "id": "annual_page_months"
     },
@@ -769,7 +899,7 @@
       "source_file": "app/(dashboard)/accounting/close/annual/page.tsx",
       "source_location": "L13",
       "_origin": "ast",
-      "community": 77,
+      "community": 32,
       "norm_label": "annualclosingpage()",
       "id": "annual_page_annualclosingpage"
     },
@@ -799,7 +929,7 @@
       "source_file": "app/(dashboard)/accounting/close/monthly/page.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 108,
+      "community": 77,
       "norm_label": "page.tsx",
       "id": "monthly_page"
     },
@@ -809,7 +939,7 @@
       "source_file": "app/(dashboard)/accounting/close/monthly/page.tsx",
       "source_location": "L12",
       "_origin": "ast",
-      "community": 108,
+      "community": 77,
       "norm_label": "months",
       "id": "monthly_page_months"
     },
@@ -819,7 +949,7 @@
       "source_file": "app/(dashboard)/accounting/close/monthly/page.tsx",
       "source_location": "L14",
       "_origin": "ast",
-      "community": 108,
+      "community": 77,
       "norm_label": "monthlyclosingpage()",
       "id": "monthly_page_monthlyclosingpage"
     },
@@ -899,7 +1029,7 @@
       "source_file": "app/(dashboard)/accounting/due-dates/DueDatesClient.tsx",
       "source_location": "L24",
       "_origin": "ast",
-      "community": 56,
+      "community": 108,
       "norm_label": "duedatesclient()",
       "id": "due_dates_duedatesclient_duedatesclient"
     },
@@ -1149,7 +1279,7 @@
       "source_file": "app/(dashboard)/accounting/new/page.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 56,
+      "community": 108,
       "norm_label": "page.tsx",
       "id": "app_dashboard_accounting_new_page_tsx_new_page"
     },
@@ -1159,7 +1289,7 @@
       "source_file": "app/(dashboard)/accounting/new/page.tsx",
       "source_location": "L12",
       "_origin": "ast",
-      "community": 56,
+      "community": 108,
       "norm_label": "vehicle",
       "id": "app_dashboard_accounting_new_page_tsx_new_page_vehicle"
     },
@@ -1169,7 +1299,7 @@
       "source_file": "app/(dashboard)/accounting/new/page.tsx",
       "source_location": "L14",
       "_origin": "ast",
-      "community": 56,
+      "community": 108,
       "norm_label": "newtransactionpage()",
       "id": "new_page_newtransactionpage"
     },
@@ -1179,7 +1309,7 @@
       "source_file": "app/(dashboard)/accounting/page.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 108,
+      "community": 140,
       "norm_label": "page.tsx",
       "id": "accounting_page"
     },
@@ -1189,7 +1319,7 @@
       "source_file": "app/(dashboard)/accounting/page.tsx",
       "source_location": "L11",
       "_origin": "ast",
-      "community": 108,
+      "community": 140,
       "norm_label": "periods",
       "id": "accounting_page_periods"
     },
@@ -1199,7 +1329,7 @@
       "source_file": "app/(dashboard)/accounting/page.tsx",
       "source_location": "L21",
       "_origin": "ast",
-      "community": 108,
+      "community": 140,
       "norm_label": "accountingpage()",
       "id": "accounting_page_accountingpage"
     },
@@ -1459,7 +1589,7 @@
       "source_file": "app/(dashboard)/calendar/tasks/new/TaskTypeField.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 118,
+      "community": 117,
       "norm_label": "tasktypefield.tsx",
       "id": "new_tasktypefield"
     },
@@ -1469,7 +1599,7 @@
       "source_file": "app/(dashboard)/calendar/tasks/new/TaskTypeField.tsx",
       "source_location": "L5",
       "_origin": "ast",
-      "community": 118,
+      "community": 117,
       "norm_label": "types",
       "id": "new_tasktypefield_types"
     },
@@ -1479,7 +1609,7 @@
       "source_file": "app/(dashboard)/calendar/tasks/new/TaskTypeField.tsx",
       "source_location": "L22",
       "_origin": "ast",
-      "community": 118,
+      "community": 117,
       "norm_label": "tasktypefield()",
       "id": "new_tasktypefield_tasktypefield"
     },
@@ -1489,7 +1619,7 @@
       "source_file": "app/(dashboard)/calendar/tasks/new/page.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 118,
+      "community": 117,
       "norm_label": "page.tsx",
       "id": "app_dashboard_calendar_tasks_new_page_tsx_new_page"
     },
@@ -1499,7 +1629,7 @@
       "source_file": "app/(dashboard)/calendar/tasks/new/page.tsx",
       "source_location": "L10",
       "_origin": "ast",
-      "community": 118,
+      "community": 117,
       "norm_label": "createtask()",
       "id": "new_page_createtask"
     },
@@ -1509,7 +1639,7 @@
       "source_file": "app/(dashboard)/calendar/tasks/new/page.tsx",
       "source_location": "L43",
       "_origin": "ast",
-      "community": 118,
+      "community": 117,
       "norm_label": "newtaskpage()",
       "id": "new_page_newtaskpage"
     },
@@ -1779,7 +1909,7 @@
       "source_file": "app/(dashboard)/clients/ClientForm.tsx",
       "source_location": "L134",
       "_origin": "ast",
-      "community": 3,
+      "community": 114,
       "norm_label": "clientform()",
       "id": "clients_clientform_clientform"
     },
@@ -2139,7 +2269,7 @@
       "source_file": "app/(dashboard)/contracts/[id]/preview/ContractPreviewClient.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 0,
+      "community": 111,
       "norm_label": "contractpreviewclient.tsx",
       "id": "preview_contractpreviewclient"
     },
@@ -2149,7 +2279,7 @@
       "source_file": "app/(dashboard)/contracts/[id]/preview/ContractPreviewClient.tsx",
       "source_location": "L11",
       "_origin": "ast",
-      "community": 0,
+      "community": 111,
       "norm_label": "props",
       "id": "preview_contractpreviewclient_props"
     },
@@ -2159,7 +2289,7 @@
       "source_file": "app/(dashboard)/contracts/[id]/preview/ContractPreviewClient.tsx",
       "source_location": "L19",
       "_origin": "ast",
-      "community": 0,
+      "community": 111,
       "norm_label": "formatdatetime()",
       "id": "preview_contractpreviewclient_formatdatetime"
     },
@@ -2169,7 +2299,7 @@
       "source_file": "app/(dashboard)/contracts/[id]/preview/ContractPreviewClient.tsx",
       "source_location": "L29",
       "_origin": "ast",
-      "community": 0,
+      "community": 111,
       "norm_label": "formatprice()",
       "id": "preview_contractpreviewclient_formatprice"
     },
@@ -2179,7 +2309,7 @@
       "source_file": "app/(dashboard)/contracts/[id]/preview/ContractPreviewClient.tsx",
       "source_location": "L34",
       "_origin": "ast",
-      "community": 0,
+      "community": 111,
       "norm_label": "contractpreviewclient()",
       "id": "preview_contractpreviewclient_contractpreviewclient"
     },
@@ -2559,7 +2689,7 @@
       "source_file": "app/(dashboard)/emails/page.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 14,
+      "community": 85,
       "norm_label": "page.tsx",
       "id": "emails_page"
     },
@@ -2569,7 +2699,7 @@
       "source_file": "app/(dashboard)/emails/page.tsx",
       "source_location": "L6",
       "_origin": "ast",
-      "community": 14,
+      "community": 85,
       "norm_label": "type_labels",
       "id": "emails_page_type_labels"
     },
@@ -2579,7 +2709,7 @@
       "source_file": "app/(dashboard)/emails/page.tsx",
       "source_location": "L14",
       "_origin": "ast",
-      "community": 14,
+      "community": 85,
       "norm_label": "types",
       "id": "emails_page_types"
     },
@@ -2589,7 +2719,7 @@
       "source_file": "app/(dashboard)/emails/page.tsx",
       "source_location": "L16",
       "_origin": "ast",
-      "community": 14,
+      "community": 85,
       "norm_label": "emailspage()",
       "id": "emails_page_emailspage"
     },
@@ -2599,7 +2729,7 @@
       "source_file": "app/(dashboard)/equipe/[id]/MemberActiveToggle.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 112,
+      "community": 50,
       "norm_label": "memberactivetoggle.tsx",
       "id": "id_memberactivetoggle"
     },
@@ -2609,7 +2739,7 @@
       "source_file": "app/(dashboard)/equipe/[id]/MemberActiveToggle.tsx",
       "source_location": "L9",
       "_origin": "ast",
-      "community": 112,
+      "community": 50,
       "norm_label": "memberactivetoggle()",
       "id": "id_memberactivetoggle_memberactivetoggle"
     },
@@ -2849,7 +2979,7 @@
       "source_file": "app/(dashboard)/equipe/page.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 139,
+      "community": 14,
       "norm_label": "page.tsx",
       "id": "equipe_page"
     },
@@ -2859,7 +2989,7 @@
       "source_file": "app/(dashboard)/equipe/page.tsx",
       "source_location": "L6",
       "_origin": "ast",
-      "community": 139,
+      "community": 14,
       "norm_label": "role_config",
       "id": "equipe_page_role_config"
     },
@@ -2869,7 +2999,7 @@
       "source_file": "app/(dashboard)/equipe/page.tsx",
       "source_location": "L13",
       "_origin": "ast",
-      "community": 139,
+      "community": 14,
       "norm_label": "equipepage()",
       "id": "equipe_page_equipepage"
     },
@@ -2879,7 +3009,7 @@
       "source_file": "app/(dashboard)/equipe/page.tsx",
       "source_location": "L94",
       "_origin": "ast",
-      "community": 139,
+      "community": 14,
       "norm_label": "membercard()",
       "id": "equipe_page_membercard"
     },
@@ -2969,7 +3099,7 @@
       "source_file": "app/(dashboard)/incidents/infractions/[id]/InfractionActions.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 99,
+      "community": 70,
       "norm_label": "infractionactions.tsx",
       "id": "id_infractionactions"
     },
@@ -2979,7 +3109,7 @@
       "source_file": "app/(dashboard)/incidents/infractions/[id]/InfractionActions.tsx",
       "source_location": "L9",
       "_origin": "ast",
-      "community": 99,
+      "community": 3,
       "norm_label": "infractionactions()",
       "id": "id_infractionactions_infractionactions"
     },
@@ -3019,7 +3149,7 @@
       "source_file": "app/(dashboard)/incidents/infractions/new/page.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 49,
+      "community": 70,
       "norm_label": "page.tsx",
       "id": "app_dashboard_incidents_infractions_new_page_tsx_new_page"
     },
@@ -3029,7 +3159,7 @@
       "source_file": "app/(dashboard)/incidents/infractions/new/page.tsx",
       "source_location": "L12",
       "_origin": "ast",
-      "community": 49,
+      "community": 70,
       "norm_label": "vehicle",
       "id": "app_dashboard_incidents_infractions_new_page_tsx_new_page_vehicle"
     },
@@ -3039,7 +3169,7 @@
       "source_file": "app/(dashboard)/incidents/infractions/new/page.tsx",
       "source_location": "L13",
       "_origin": "ast",
-      "community": 49,
+      "community": 70,
       "norm_label": "driver",
       "id": "app_dashboard_incidents_infractions_new_page_tsx_new_page_driver"
     },
@@ -3049,7 +3179,7 @@
       "source_file": "app/(dashboard)/incidents/infractions/new/page.tsx",
       "source_location": "L20",
       "_origin": "ast",
-      "community": 49,
+      "community": 70,
       "norm_label": "newinfractionpage()",
       "id": "new_page_newinfractionpage"
     },
@@ -3119,7 +3249,7 @@
       "source_file": "app/(dashboard)/incidents/sinistres/[id]/SinistreActions.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 99,
+      "community": 2,
       "norm_label": "sinistreactions.tsx",
       "id": "id_sinistreactions"
     },
@@ -3129,7 +3259,7 @@
       "source_file": "app/(dashboard)/incidents/sinistres/[id]/SinistreActions.tsx",
       "source_location": "L10",
       "_origin": "ast",
-      "community": 3,
+      "community": 2,
       "norm_label": "sinistreactions()",
       "id": "id_sinistreactions_sinistreactions"
     },
@@ -3169,7 +3299,7 @@
       "source_file": "app/(dashboard)/incidents/sinistres/new/page.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 49,
+      "community": 70,
       "norm_label": "page.tsx",
       "id": "app_dashboard_incidents_sinistres_new_page_tsx_new_page"
     },
@@ -3179,7 +3309,7 @@
       "source_file": "app/(dashboard)/incidents/sinistres/new/page.tsx",
       "source_location": "L12",
       "_origin": "ast",
-      "community": 49,
+      "community": 70,
       "norm_label": "vehicle",
       "id": "app_dashboard_incidents_sinistres_new_page_tsx_new_page_vehicle"
     },
@@ -3189,7 +3319,7 @@
       "source_file": "app/(dashboard)/incidents/sinistres/new/page.tsx",
       "source_location": "L13",
       "_origin": "ast",
-      "community": 49,
+      "community": 70,
       "norm_label": "driver",
       "id": "app_dashboard_incidents_sinistres_new_page_tsx_new_page_driver"
     },
@@ -3199,7 +3329,7 @@
       "source_file": "app/(dashboard)/incidents/sinistres/new/page.tsx",
       "source_location": "L20",
       "_origin": "ast",
-      "community": 49,
+      "community": 70,
       "norm_label": "newsinistrepage()",
       "id": "new_page_newsinistrepage"
     },
@@ -3249,7 +3379,7 @@
       "source_file": "app/(dashboard)/inspections/departure/[reservationId]/page.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 5,
+      "community": 139,
       "norm_label": "page.tsx",
       "id": "reservationid_page"
     },
@@ -3259,7 +3389,7 @@
       "source_file": "app/(dashboard)/inspections/departure/[reservationId]/page.tsx",
       "source_location": "L11",
       "_origin": "ast",
-      "community": 5,
+      "community": 139,
       "norm_label": "departureinspectionpage()",
       "id": "reservationid_page_departureinspectionpage"
     },
@@ -3289,7 +3419,7 @@
       "source_file": "app/(dashboard)/inspections/ia-departure/[operationId]/page.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 5,
+      "community": 139,
       "norm_label": "page.tsx",
       "id": "operationid_page"
     },
@@ -3299,7 +3429,7 @@
       "source_file": "app/(dashboard)/inspections/ia-departure/[operationId]/page.tsx",
       "source_location": "L11",
       "_origin": "ast",
-      "community": 5,
+      "community": 139,
       "norm_label": "iadepartureinspectionpage()",
       "id": "operationid_page_iadepartureinspectionpage"
     },
@@ -3789,7 +3919,7 @@
       "source_file": "app/(dashboard)/menu/page.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 137,
+      "community": 76,
       "norm_label": "page.tsx",
       "id": "menu_page"
     },
@@ -3799,7 +3929,7 @@
       "source_file": "app/(dashboard)/menu/page.tsx",
       "source_location": "L13",
       "_origin": "ast",
-      "community": 137,
+      "community": 76,
       "norm_label": "modules",
       "id": "menu_page_modules"
     },
@@ -3809,7 +3939,7 @@
       "source_file": "app/(dashboard)/menu/page.tsx",
       "source_location": "L26",
       "_origin": "ast",
-      "community": 137,
+      "community": 76,
       "norm_label": "adminmodules",
       "id": "menu_page_adminmodules"
     },
@@ -3819,7 +3949,7 @@
       "source_file": "app/(dashboard)/menu/page.tsx",
       "source_location": "L35",
       "_origin": "ast",
-      "community": 137,
+      "community": 76,
       "norm_label": "role_labels",
       "id": "menu_page_role_labels"
     },
@@ -3829,7 +3959,7 @@
       "source_file": "app/(dashboard)/menu/page.tsx",
       "source_location": "L43",
       "_origin": "ast",
-      "community": 137,
+      "community": 76,
       "norm_label": "menupage()",
       "id": "menu_page_menupage"
     },
@@ -4059,7 +4189,7 @@
       "source_file": "app/(dashboard)/partnerships/[id]/convention/ConventionPreviewClient.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 0,
+      "community": 118,
       "norm_label": "conventionpreviewclient.tsx",
       "id": "convention_conventionpreviewclient"
     },
@@ -4069,7 +4199,7 @@
       "source_file": "app/(dashboard)/partnerships/[id]/convention/ConventionPreviewClient.tsx",
       "source_location": "L10",
       "_origin": "ast",
-      "community": 0,
+      "community": 118,
       "norm_label": "props",
       "id": "convention_conventionpreviewclient_props"
     },
@@ -4079,7 +4209,7 @@
       "source_file": "app/(dashboard)/partnerships/[id]/convention/ConventionPreviewClient.tsx",
       "source_location": "L19",
       "_origin": "ast",
-      "community": 0,
+      "community": 118,
       "norm_label": "formatdatetime()",
       "id": "convention_conventionpreviewclient_formatdatetime"
     },
@@ -4089,7 +4219,7 @@
       "source_file": "app/(dashboard)/partnerships/[id]/convention/ConventionPreviewClient.tsx",
       "source_location": "L26",
       "_origin": "ast",
-      "community": 0,
+      "community": 118,
       "norm_label": "formatprice()",
       "id": "convention_conventionpreviewclient_formatprice"
     },
@@ -4099,7 +4229,7 @@
       "source_file": "app/(dashboard)/partnerships/[id]/convention/ConventionPreviewClient.tsx",
       "source_location": "L33",
       "_origin": "ast",
-      "community": 0,
+      "community": 118,
       "norm_label": "conventionclauses()",
       "id": "convention_conventionpreviewclient_conventionclauses"
     },
@@ -4109,7 +4239,7 @@
       "source_file": "app/(dashboard)/partnerships/[id]/convention/ConventionPreviewClient.tsx",
       "source_location": "L44",
       "_origin": "ast",
-      "community": 0,
+      "community": 118,
       "norm_label": "conventionpreviewclient()",
       "id": "convention_conventionpreviewclient_conventionpreviewclient"
     },
@@ -4429,7 +4559,7 @@
       "source_file": "app/(dashboard)/reservations/DepositSettlement.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 70,
+      "community": 18,
       "norm_label": "depositsettlement.tsx",
       "id": "reservations_depositsettlement"
     },
@@ -4439,7 +4569,7 @@
       "source_file": "app/(dashboard)/reservations/DepositSettlement.tsx",
       "source_location": "L8",
       "_origin": "ast",
-      "community": 70,
+      "community": 18,
       "norm_label": "fmt()",
       "id": "reservations_depositsettlement_fmt"
     },
@@ -4449,7 +4579,7 @@
       "source_file": "app/(dashboard)/reservations/DepositSettlement.tsx",
       "source_location": "L10",
       "_origin": "ast",
-      "community": 70,
+      "community": 18,
       "norm_label": "seizure",
       "id": "reservations_depositsettlement_seizure"
     },
@@ -4459,7 +4589,7 @@
       "source_file": "app/(dashboard)/reservations/DepositSettlement.tsx",
       "source_location": "L12",
       "_origin": "ast",
-      "community": 70,
+      "community": 18,
       "norm_label": "props",
       "id": "reservations_depositsettlement_props"
     },
@@ -4469,7 +4599,7 @@
       "source_file": "app/(dashboard)/reservations/DepositSettlement.tsx",
       "source_location": "L19",
       "_origin": "ast",
-      "community": 70,
+      "community": 18,
       "norm_label": "depositsettlement()",
       "id": "reservations_depositsettlement_depositsettlement"
     },
@@ -4909,7 +5039,7 @@
       "source_file": "app/(dashboard)/reservations/new/page.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 21,
+      "community": 16,
       "norm_label": "page.tsx",
       "id": "app_dashboard_reservations_new_page_tsx_new_page"
     },
@@ -4919,7 +5049,7 @@
       "source_file": "app/(dashboard)/reservations/new/page.tsx",
       "source_location": "L6",
       "_origin": "ast",
-      "community": 21,
+      "community": 16,
       "norm_label": "newreservationpage()",
       "id": "new_page_newreservationpage"
     },
@@ -5279,7 +5409,7 @@
       "source_file": "app/(dashboard)/vehicles/immobilises/page.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 136,
+      "community": 47,
       "norm_label": "page.tsx",
       "id": "immobilises_page"
     },
@@ -5289,7 +5419,7 @@
       "source_file": "app/(dashboard)/vehicles/immobilises/page.tsx",
       "source_location": "L13",
       "_origin": "ast",
-      "community": 136,
+      "community": 47,
       "norm_label": "immobilises_statuses",
       "id": "immobilises_page_immobilises_statuses"
     },
@@ -5299,7 +5429,7 @@
       "source_file": "app/(dashboard)/vehicles/immobilises/page.tsx",
       "source_location": "L15",
       "_origin": "ast",
-      "community": 136,
+      "community": 47,
       "norm_label": "status_label",
       "id": "immobilises_page_status_label"
     },
@@ -5309,7 +5439,7 @@
       "source_file": "app/(dashboard)/vehicles/immobilises/page.tsx",
       "source_location": "L23",
       "_origin": "ast",
-      "community": 136,
+      "community": 47,
       "norm_label": "openaccident",
       "id": "immobilises_page_openaccident"
     },
@@ -5319,7 +5449,7 @@
       "source_file": "app/(dashboard)/vehicles/immobilises/page.tsx",
       "source_location": "L24",
       "_origin": "ast",
-      "community": 136,
+      "community": 47,
       "norm_label": "recentmaintenance",
       "id": "immobilises_page_recentmaintenance"
     },
@@ -5329,7 +5459,7 @@
       "source_file": "app/(dashboard)/vehicles/immobilises/page.tsx",
       "source_location": "L26",
       "_origin": "ast",
-      "community": 136,
+      "community": 47,
       "norm_label": "immobilisespage()",
       "id": "immobilises_page_immobilisespage"
     },
@@ -5409,7 +5539,7 @@
       "source_file": "app/(dashboard)/vehicles/page.tsx",
       "source_location": "L36",
       "_origin": "ast",
-      "community": 81,
+      "community": 7,
       "norm_label": "vehiclespage()",
       "id": "vehicles_page_vehiclespage"
     },
@@ -5529,7 +5659,7 @@
       "source_file": "app/api/calendar/events/[id]/status/route.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 118,
+      "community": 117,
       "norm_label": "route.ts",
       "id": "status_route"
     },
@@ -5539,7 +5669,7 @@
       "source_file": "app/api/calendar/events/[id]/status/route.ts",
       "source_location": "L5",
       "_origin": "ast",
-      "community": 118,
+      "community": 117,
       "norm_label": "patch()",
       "id": "status_route_patch"
     },
@@ -5579,7 +5709,7 @@
       "source_file": "app/api/calendar/resources/route.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 111,
+      "community": 95,
       "norm_label": "route.ts",
       "id": "resources_route"
     },
@@ -5589,7 +5719,7 @@
       "source_file": "app/api/calendar/resources/route.ts",
       "source_location": "L5",
       "_origin": "ast",
-      "community": 111,
+      "community": 95,
       "norm_label": "resourcerow",
       "id": "resources_route_resourcerow"
     },
@@ -5599,7 +5729,7 @@
       "source_file": "app/api/calendar/resources/route.ts",
       "source_location": "L19",
       "_origin": "ast",
-      "community": 111,
+      "community": 95,
       "norm_label": "get()",
       "id": "resources_route_get"
     },
@@ -5669,7 +5799,7 @@
       "source_file": "app/api/contracts/generate-pdf/route.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 54,
+      "community": 119,
       "norm_label": "route.ts",
       "id": "generate_pdf_route"
     },
@@ -5679,7 +5809,7 @@
       "source_file": "app/api/contracts/generate-pdf/route.ts",
       "source_location": "L8",
       "_origin": "ast",
-      "community": 54,
+      "community": 119,
       "norm_label": "post()",
       "id": "generate_pdf_route_post"
     },
@@ -5689,7 +5819,7 @@
       "source_file": "app/api/contracts/send-email/route.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 92,
+      "community": 136,
       "norm_label": "route.ts",
       "id": "send_email_route"
     },
@@ -5699,7 +5829,7 @@
       "source_file": "app/api/contracts/send-email/route.ts",
       "source_location": "L12",
       "_origin": "ast",
-      "community": 92,
+      "community": 136,
       "norm_label": "post()",
       "id": "send_email_route_post"
     },
@@ -5819,7 +5949,7 @@
       "source_file": "app/api/invoices/[invoiceId]/preview/route.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 54,
+      "community": 92,
       "norm_label": "route.ts",
       "id": "preview_route"
     },
@@ -5829,7 +5959,7 @@
       "source_file": "app/api/invoices/[invoiceId]/preview/route.ts",
       "source_location": "L16",
       "_origin": "ast",
-      "community": 54,
+      "community": 92,
       "norm_label": "get()",
       "id": "preview_route_get"
     },
@@ -5859,7 +5989,7 @@
       "source_file": "app/api/push/subscribe/route.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 111,
+      "community": 95,
       "norm_label": "route.ts",
       "id": "subscribe_route"
     },
@@ -5869,7 +5999,7 @@
       "source_file": "app/api/push/subscribe/route.ts",
       "source_location": "L5",
       "_origin": "ast",
-      "community": 111,
+      "community": 95,
       "norm_label": "post()",
       "id": "subscribe_route_post"
     },
@@ -5879,7 +6009,7 @@
       "source_file": "app/api/push/subscribe/route.ts",
       "source_location": "L26",
       "_origin": "ast",
-      "community": 111,
+      "community": 95,
       "norm_label": "delete()",
       "id": "subscribe_route_delete"
     },
@@ -5959,7 +6089,7 @@
       "source_file": "app/api/team/[id]/route.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 111,
+      "community": 95,
       "norm_label": "route.ts",
       "id": "app_api_team_id_route_ts_id_route"
     },
@@ -5969,7 +6099,7 @@
       "source_file": "app/api/team/[id]/route.ts",
       "source_location": "L5",
       "_origin": "ast",
-      "community": 111,
+      "community": 95,
       "norm_label": "patch()",
       "id": "app_api_team_id_route_ts_id_route_patch"
     },
@@ -5979,7 +6109,7 @@
       "source_file": "app/api/team/[id]/route.ts",
       "source_location": "L61",
       "_origin": "ast",
-      "community": 111,
+      "community": 95,
       "norm_label": "delete()",
       "id": "app_api_team_id_route_ts_id_route_delete"
     },
@@ -5989,7 +6119,7 @@
       "source_file": "app/api/team/invite/route.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 111,
+      "community": 95,
       "norm_label": "route.ts",
       "id": "invite_route"
     },
@@ -5999,7 +6129,7 @@
       "source_file": "app/api/team/invite/route.ts",
       "source_location": "L5",
       "_origin": "ast",
-      "community": 111,
+      "community": 95,
       "norm_label": "post()",
       "id": "invite_route_post"
     },
@@ -6489,7 +6619,7 @@
       "source_file": "components/Toast.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 3,
+      "community": 34,
       "norm_label": "toast.tsx",
       "id": "components_toast"
     },
@@ -6499,7 +6629,7 @@
       "source_file": "components/Toast.tsx",
       "source_location": "L6",
       "_origin": "ast",
-      "community": 3,
+      "community": 34,
       "norm_label": "toasttype",
       "id": "components_toast_toasttype"
     },
@@ -6509,7 +6639,7 @@
       "source_file": "components/Toast.tsx",
       "source_location": "L7",
       "_origin": "ast",
-      "community": 3,
+      "community": 34,
       "norm_label": "toast",
       "id": "components_toast_toast"
     },
@@ -6519,7 +6649,7 @@
       "source_file": "components/Toast.tsx",
       "source_location": "L9",
       "_origin": "ast",
-      "community": 3,
+      "community": 34,
       "norm_label": "toastcontext",
       "id": "components_toast_toastcontext"
     },
@@ -6549,7 +6679,7 @@
       "source_file": "components/calendar/AlertPanel.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 119,
+      "community": 22,
       "norm_label": "alertpanel.tsx",
       "id": "calendar_alertpanel"
     },
@@ -6559,7 +6689,7 @@
       "source_file": "components/calendar/AlertPanel.tsx",
       "source_location": "L13",
       "_origin": "ast",
-      "community": 119,
+      "community": 22,
       "norm_label": "alertactionlink()",
       "id": "calendar_alertpanel_alertactionlink"
     },
@@ -6569,7 +6699,7 @@
       "source_file": "components/calendar/AlertPanel.tsx",
       "source_location": "L48",
       "_origin": "ast",
-      "community": 119,
+      "community": 22,
       "norm_label": "alertpanelprops",
       "id": "calendar_alertpanel_alertpanelprops"
     },
@@ -6579,7 +6709,7 @@
       "source_file": "components/calendar/AlertPanel.tsx",
       "source_location": "L55",
       "_origin": "ast",
-      "community": 119,
+      "community": 22,
       "norm_label": "alertpanel()",
       "id": "calendar_alertpanel_alertpanel"
     },
@@ -6619,7 +6749,7 @@
       "source_file": "components/calendar/CalendarGrid.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 107,
+      "community": 15,
       "norm_label": "calendargrid.tsx",
       "id": "calendar_calendargrid"
     },
@@ -6629,7 +6759,7 @@
       "source_file": "components/calendar/CalendarGrid.tsx",
       "source_location": "L8",
       "_origin": "ast",
-      "community": 107,
+      "community": 15,
       "norm_label": "calendargridprops",
       "id": "calendar_calendargrid_calendargridprops"
     },
@@ -6639,7 +6769,7 @@
       "source_file": "components/calendar/CalendarGrid.tsx",
       "source_location": "L18",
       "_origin": "ast",
-      "community": 107,
+      "community": 15,
       "norm_label": "calendargrid()",
       "id": "calendar_calendargrid_calendargrid"
     },
@@ -6669,7 +6799,7 @@
       "source_file": "components/calendar/CalendarPage.tsx",
       "source_location": "L24",
       "_origin": "ast",
-      "community": 33,
+      "community": 15,
       "norm_label": "rangefor()",
       "id": "calendar_calendarpage_rangefor"
     },
@@ -7119,7 +7249,7 @@
       "source_file": "components/calendar/MobileCalendar.tsx",
       "source_location": "L141",
       "_origin": "ast",
-      "community": 107,
+      "community": 45,
       "norm_label": "mobilecalendarprops",
       "id": "calendar_mobilecalendar_mobilecalendarprops"
     },
@@ -7179,7 +7309,7 @@
       "source_file": "components/calendar/ResourceColumn.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 33,
+      "community": 107,
       "norm_label": "resourcecolumn.tsx",
       "id": "calendar_resourcecolumn"
     },
@@ -7189,7 +7319,7 @@
       "source_file": "components/calendar/ResourceColumn.tsx",
       "source_location": "L9",
       "_origin": "ast",
-      "community": 33,
+      "community": 15,
       "norm_label": "resourcecolumnprops",
       "id": "calendar_resourcecolumn_resourcecolumnprops"
     },
@@ -7199,7 +7329,7 @@
       "source_file": "components/calendar/ResourceColumn.tsx",
       "source_location": "L18",
       "_origin": "ast",
-      "community": 33,
+      "community": 107,
       "norm_label": "hours",
       "id": "calendar_resourcecolumn_hours"
     },
@@ -7209,7 +7339,7 @@
       "source_file": "components/calendar/ResourceColumn.tsx",
       "source_location": "L23",
       "_origin": "ast",
-      "community": 33,
+      "community": 107,
       "norm_label": "resourcecolumn()",
       "id": "calendar_resourcecolumn_resourcecolumn"
     },
@@ -7779,7 +7909,7 @@
       "source_file": "components/layout/OfflineBanner.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 140,
+      "community": 34,
       "norm_label": "offlinebanner.tsx",
       "id": "layout_offlinebanner"
     },
@@ -7789,7 +7919,7 @@
       "source_file": "components/layout/OfflineBanner.tsx",
       "source_location": "L5",
       "_origin": "ast",
-      "community": 140,
+      "community": 34,
       "norm_label": "offlinebanner()",
       "id": "layout_offlinebanner_offlinebanner"
     },
@@ -7849,7 +7979,7 @@
       "source_file": "components/layout/Sidebar.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 76,
+      "community": 141,
       "norm_label": "sidebar.tsx",
       "id": "layout_sidebar"
     },
@@ -7859,7 +7989,7 @@
       "source_file": "components/layout/Sidebar.tsx",
       "source_location": "L17",
       "_origin": "ast",
-      "community": 76,
+      "community": 141,
       "norm_label": "navitems",
       "id": "layout_sidebar_navitems"
     },
@@ -7869,7 +7999,7 @@
       "source_file": "components/layout/Sidebar.tsx",
       "source_location": "L28",
       "_origin": "ast",
-      "community": 76,
+      "community": 141,
       "norm_label": "manageritems",
       "id": "layout_sidebar_manageritems"
     },
@@ -7879,7 +8009,7 @@
       "source_file": "components/layout/Sidebar.tsx",
       "source_location": "L32",
       "_origin": "ast",
-      "community": 76,
+      "community": 141,
       "norm_label": "sidebarprops",
       "id": "layout_sidebar_sidebarprops"
     },
@@ -7889,7 +8019,7 @@
       "source_file": "components/layout/Sidebar.tsx",
       "source_location": "L34",
       "_origin": "ast",
-      "community": 76,
+      "community": 141,
       "norm_label": "sidebar()",
       "id": "layout_sidebar_sidebar"
     },
@@ -8019,7 +8149,7 @@
       "source_file": "components/signature/SignatureCanvas.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 0,
+      "community": 118,
       "norm_label": "signaturecanvas.tsx",
       "id": "signature_signaturecanvas"
     },
@@ -8029,7 +8159,7 @@
       "source_file": "components/signature/SignatureCanvas.tsx",
       "source_location": "L6",
       "_origin": "ast",
-      "community": 0,
+      "community": 118,
       "norm_label": "signaturecanvasprops",
       "id": "signature_signaturecanvas_signaturecanvasprops"
     },
@@ -8039,7 +8169,7 @@
       "source_file": "components/signature/SignatureCanvas.tsx",
       "source_location": "L15",
       "_origin": "ast",
-      "community": 0,
+      "community": 118,
       "norm_label": "signaturecanvas()",
       "id": "signature_signaturecanvas_signaturecanvas"
     },
@@ -8049,7 +8179,7 @@
       "source_file": "components/ui/BackButton.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 120,
+      "community": 91,
       "norm_label": "backbutton.tsx",
       "id": "ui_backbutton"
     },
@@ -8059,7 +8189,7 @@
       "source_file": "components/ui/BackButton.tsx",
       "source_location": "L6",
       "_origin": "ast",
-      "community": 120,
+      "community": 91,
       "norm_label": "backbuttonprops",
       "id": "ui_backbutton_backbuttonprops"
     },
@@ -8069,7 +8199,7 @@
       "source_file": "components/ui/BackButton.tsx",
       "source_location": "L13",
       "_origin": "ast",
-      "community": 120,
+      "community": 91,
       "norm_label": "backbutton()",
       "id": "ui_backbutton_backbutton"
     },
@@ -8079,7 +8209,7 @@
       "source_file": "components/ui/DeleteButton.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 85,
+      "community": 115,
       "norm_label": "deletebutton.tsx",
       "id": "ui_deletebutton"
     },
@@ -8089,7 +8219,7 @@
       "source_file": "components/ui/DeleteButton.tsx",
       "source_location": "L6",
       "_origin": "ast",
-      "community": 85,
+      "community": 115,
       "norm_label": "deletebuttonprops",
       "id": "ui_deletebutton_deletebuttonprops"
     },
@@ -8099,7 +8229,7 @@
       "source_file": "components/ui/DeleteButton.tsx",
       "source_location": "L13",
       "_origin": "ast",
-      "community": 85,
+      "community": 115,
       "norm_label": "deletebutton()",
       "id": "ui_deletebutton_deletebutton"
     },
@@ -8359,7 +8489,7 @@
       "source_file": "components/ui/select.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 5,
+      "community": 137,
       "norm_label": "select.tsx",
       "id": "ui_select"
     },
@@ -8369,7 +8499,7 @@
       "source_file": "components/ui/select.tsx",
       "source_location": "L15",
       "_origin": "ast",
-      "community": 5,
+      "community": 137,
       "norm_label": "selecttrigger",
       "id": "ui_select_selecttrigger"
     },
@@ -8379,7 +8509,7 @@
       "source_file": "components/ui/select.tsx",
       "source_location": "L35",
       "_origin": "ast",
-      "community": 5,
+      "community": 137,
       "norm_label": "selectscrollupbutton",
       "id": "ui_select_selectscrollupbutton"
     },
@@ -8389,7 +8519,7 @@
       "source_file": "components/ui/select.tsx",
       "source_location": "L52",
       "_origin": "ast",
-      "community": 5,
+      "community": 137,
       "norm_label": "selectscrolldownbutton",
       "id": "ui_select_selectscrolldownbutton"
     },
@@ -8399,7 +8529,7 @@
       "source_file": "components/ui/select.tsx",
       "source_location": "L70",
       "_origin": "ast",
-      "community": 5,
+      "community": 137,
       "norm_label": "selectcontent",
       "id": "ui_select_selectcontent"
     },
@@ -8409,7 +8539,7 @@
       "source_file": "components/ui/select.tsx",
       "source_location": "L102",
       "_origin": "ast",
-      "community": 5,
+      "community": 137,
       "norm_label": "selectlabel",
       "id": "ui_select_selectlabel"
     },
@@ -8419,7 +8549,7 @@
       "source_file": "components/ui/select.tsx",
       "source_location": "L114",
       "_origin": "ast",
-      "community": 5,
+      "community": 137,
       "norm_label": "selectitem",
       "id": "ui_select_selectitem"
     },
@@ -8429,7 +8559,7 @@
       "source_file": "components/ui/select.tsx",
       "source_location": "L137",
       "_origin": "ast",
-      "community": 5,
+      "community": 137,
       "norm_label": "selectseparator",
       "id": "ui_select_selectseparator"
     },
@@ -9219,7 +9349,7 @@
       "source_file": "hooks/useOnlineStatus.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 140,
+      "community": 34,
       "norm_label": "useonlinestatus.ts",
       "id": "hooks_useonlinestatus"
     },
@@ -9229,7 +9359,7 @@
       "source_file": "hooks/useOnlineStatus.ts",
       "source_location": "L4",
       "_origin": "ast",
-      "community": 140,
+      "community": 34,
       "norm_label": "useonlinestatus()",
       "id": "hooks_useonlinestatus_useonlinestatus"
     },
@@ -9379,7 +9509,7 @@
       "source_file": "lib/accounting/categories.ts",
       "source_location": "L148",
       "_origin": "ast",
-      "community": 109,
+      "community": 108,
       "norm_label": "expensefamily",
       "id": "accounting_categories_expensefamily"
     },
@@ -9409,7 +9539,7 @@
       "source_file": "lib/accounting/categories.ts",
       "source_location": "L43",
       "_origin": "ast",
-      "community": 56,
+      "community": 108,
       "norm_label": "expense_categories",
       "id": "accounting_categories_expense_categories"
     },
@@ -9439,7 +9569,7 @@
       "source_file": "lib/accounting/categories.ts",
       "source_location": "L154",
       "_origin": "ast",
-      "community": 108,
+      "community": 77,
       "norm_label": "expensenature()",
       "id": "accounting_categories_expensenature"
     },
@@ -9459,7 +9589,7 @@
       "source_file": "lib/accounting/categories.ts",
       "source_location": "L163",
       "_origin": "ast",
-      "community": 56,
+      "community": 108,
       "norm_label": "expensecategoriesbyfamily()",
       "id": "accounting_categories_expensecategoriesbyfamily"
     },
@@ -9489,7 +9619,7 @@
       "source_file": "lib/accounting/categories.ts",
       "source_location": "L182",
       "_origin": "ast",
-      "community": 108,
+      "community": 140,
       "norm_label": "getcategorylabel()",
       "id": "accounting_categories_getcategorylabel"
     },
@@ -9499,7 +9629,7 @@
       "source_file": "lib/accounting/categories.ts",
       "source_location": "L186",
       "_origin": "ast",
-      "community": 47,
+      "community": 108,
       "norm_label": "payment_methods",
       "id": "accounting_categories_payment_methods"
     },
@@ -9552,126 +9682,6 @@
       "community": 32,
       "norm_label": "assertperiodopen()",
       "id": "accounting_period_lock_assertperiodopen"
-    },
-    {
-      "label": "accounting.ts",
-      "file_type": "code",
-      "source_file": "lib/actions/accounting.ts",
-      "source_location": "L1",
-      "_origin": "ast",
-      "community": 32,
-      "norm_label": "accounting.ts",
-      "id": "actions_accounting"
-    },
-    {
-      "label": "createTransaction()",
-      "file_type": "code",
-      "source_file": "lib/actions/accounting.ts",
-      "source_location": "L8",
-      "_origin": "ast",
-      "community": 32,
-      "norm_label": "createtransaction()",
-      "id": "actions_accounting_createtransaction"
-    },
-    {
-      "label": "revenueByPaymentMethod()",
-      "file_type": "code",
-      "source_file": "lib/actions/accounting.ts",
-      "source_location": "L46",
-      "_origin": "ast",
-      "community": 77,
-      "norm_label": "revenuebypaymentmethod()",
-      "id": "actions_accounting_revenuebypaymentmethod"
-    },
-    {
-      "label": "closeDailyAccounting()",
-      "file_type": "code",
-      "source_file": "lib/actions/accounting.ts",
-      "source_location": "L56",
-      "_origin": "ast",
-      "community": 77,
-      "norm_label": "closedailyaccounting()",
-      "id": "actions_accounting_closedailyaccounting"
-    },
-    {
-      "label": "closeMonthlyAccounting()",
-      "file_type": "code",
-      "source_file": "lib/actions/accounting.ts",
-      "source_location": "L94",
-      "_origin": "ast",
-      "community": 77,
-      "norm_label": "closemonthlyaccounting()",
-      "id": "actions_accounting_closemonthlyaccounting"
-    },
-    {
-      "label": "closeAnnualAccounting()",
-      "file_type": "code",
-      "source_file": "lib/actions/accounting.ts",
-      "source_location": "L126",
-      "_origin": "ast",
-      "community": 77,
-      "norm_label": "closeannualaccounting()",
-      "id": "actions_accounting_closeannualaccounting"
-    },
-    {
-      "label": "updateTransactionNotes()",
-      "file_type": "code",
-      "source_file": "lib/actions/accounting.ts",
-      "source_location": "L159",
-      "_origin": "ast",
-      "community": 32,
-      "norm_label": "updatetransactionnotes()",
-      "id": "actions_accounting_updatetransactionnotes"
-    },
-    {
-      "label": "toggleTransparence()",
-      "file_type": "code",
-      "source_file": "lib/actions/accounting.ts",
-      "source_location": "L180",
-      "_origin": "ast",
-      "community": 32,
-      "norm_label": "toggletransparence()",
-      "id": "actions_accounting_toggletransparence"
-    },
-    {
-      "label": "reopen()",
-      "file_type": "code",
-      "source_file": "lib/actions/accounting.ts",
-      "source_location": "L202",
-      "_origin": "ast",
-      "community": 32,
-      "norm_label": "reopen()",
-      "id": "actions_accounting_reopen"
-    },
-    {
-      "label": "reopenDailyClosing()",
-      "file_type": "code",
-      "source_file": "lib/actions/accounting.ts",
-      "source_location": "L215",
-      "_origin": "ast",
-      "community": 32,
-      "norm_label": "reopendailyclosing()",
-      "id": "actions_accounting_reopendailyclosing"
-    },
-    {
-      "label": "reopenMonthlyClosing()",
-      "file_type": "code",
-      "source_file": "lib/actions/accounting.ts",
-      "source_location": "L218",
-      "_origin": "ast",
-      "community": 32,
-      "norm_label": "reopenmonthlyclosing()",
-      "id": "actions_accounting_reopenmonthlyclosing"
-    },
-    {
-      "label": "reopenAnnualClosing()",
-      "file_type": "code",
-      "source_file": "lib/actions/accounting.ts",
-      "source_location": "L221",
-      "_origin": "ast",
-      "community": 32,
-      "norm_label": "reopenannualclosing()",
-      "id": "actions_accounting_reopenannualclosing"
     },
     {
       "label": "agency.ts",
@@ -9939,7 +9949,7 @@
       "source_file": "lib/actions/delete.ts",
       "source_location": "L100",
       "_origin": "ast",
-      "community": 85,
+      "community": 18,
       "norm_label": "deletecontract()",
       "id": "actions_delete_deletecontract"
     },
@@ -9969,7 +9979,7 @@
       "source_file": "lib/actions/delete.ts",
       "source_location": "L183",
       "_origin": "ast",
-      "community": 70,
+      "community": 18,
       "norm_label": "updatedepositdeducted()",
       "id": "actions_delete_updatedepositdeducted"
     },
@@ -9989,7 +9999,7 @@
       "source_file": "lib/actions/documents.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 9,
+      "community": 49,
       "norm_label": "documents.ts",
       "id": "actions_documents"
     },
@@ -9999,7 +10009,7 @@
       "source_file": "lib/actions/documents.ts",
       "source_location": "L8",
       "_origin": "ast",
-      "community": 9,
+      "community": 49,
       "norm_label": "uploaddocument()",
       "id": "actions_documents_uploaddocument"
     },
@@ -10009,7 +10019,7 @@
       "source_file": "lib/actions/documents.ts",
       "source_location": "L60",
       "_origin": "ast",
-      "community": 9,
+      "community": 49,
       "norm_label": "replacedocument()",
       "id": "actions_documents_replacedocument"
     },
@@ -10019,7 +10029,7 @@
       "source_file": "lib/actions/documents.ts",
       "source_location": "L116",
       "_origin": "ast",
-      "community": 9,
+      "community": 49,
       "norm_label": "deletedocument()",
       "id": "actions_documents_deletedocument"
     },
@@ -10029,7 +10039,7 @@
       "source_file": "lib/actions/documents.ts",
       "source_location": "L141",
       "_origin": "ast",
-      "community": 9,
+      "community": 49,
       "norm_label": "senddocumentbyemail()",
       "id": "actions_documents_senddocumentbyemail"
     },
@@ -10039,7 +10049,7 @@
       "source_file": "lib/actions/documents.ts",
       "source_location": "L173",
       "_origin": "ast",
-      "community": 9,
+      "community": 49,
       "norm_label": "archivecontractdocument()",
       "id": "actions_documents_archivecontractdocument"
     },
@@ -10049,7 +10059,7 @@
       "source_file": "lib/actions/documents.ts",
       "source_location": "L195",
       "_origin": "ast",
-      "community": 9,
+      "community": 49,
       "norm_label": "archiveinfractiondocument()",
       "id": "actions_documents_archiveinfractiondocument"
     },
@@ -10109,7 +10119,7 @@
       "source_file": "lib/actions/incidents.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 99,
+      "community": 70,
       "norm_label": "incidents.ts",
       "id": "actions_incidents"
     },
@@ -10119,7 +10129,7 @@
       "source_file": "lib/actions/incidents.ts",
       "source_location": "L11",
       "_origin": "ast",
-      "community": 49,
+      "community": 70,
       "norm_label": "lookupdriver()",
       "id": "actions_incidents_lookupdriver"
     },
@@ -10129,7 +10139,7 @@
       "source_file": "lib/actions/incidents.ts",
       "source_location": "L16",
       "_origin": "ast",
-      "community": 99,
+      "community": 70,
       "norm_label": "num()",
       "id": "actions_incidents_num"
     },
@@ -10139,7 +10149,7 @@
       "source_file": "lib/actions/incidents.ts",
       "source_location": "L22",
       "_origin": "ast",
-      "community": 99,
+      "community": 70,
       "norm_label": "int()",
       "id": "actions_incidents_int"
     },
@@ -10149,7 +10159,7 @@
       "source_file": "lib/actions/incidents.ts",
       "source_location": "L26",
       "_origin": "ast",
-      "community": 99,
+      "community": 70,
       "norm_label": "str()",
       "id": "actions_incidents_str"
     },
@@ -10159,7 +10169,7 @@
       "source_file": "lib/actions/incidents.ts",
       "source_location": "L28",
       "_origin": "ast",
-      "community": 99,
+      "community": 70,
       "norm_label": "createinfraction()",
       "id": "actions_incidents_createinfraction"
     },
@@ -10169,7 +10179,7 @@
       "source_file": "lib/actions/incidents.ts",
       "source_location": "L112",
       "_origin": "ast",
-      "community": 92,
+      "community": 70,
       "norm_label": "transmitinfractiontoclient()",
       "id": "actions_incidents_transmitinfractiontoclient"
     },
@@ -10179,7 +10189,7 @@
       "source_file": "lib/actions/incidents.ts",
       "source_location": "L166",
       "_origin": "ast",
-      "community": 99,
+      "community": 70,
       "norm_label": "markinfractionpaid()",
       "id": "actions_incidents_markinfractionpaid"
     },
@@ -10189,7 +10199,7 @@
       "source_file": "lib/actions/incidents.ts",
       "source_location": "L196",
       "_origin": "ast",
-      "community": 99,
+      "community": 70,
       "norm_label": "closeinfraction()",
       "id": "actions_incidents_closeinfraction"
     },
@@ -10199,7 +10209,7 @@
       "source_file": "lib/actions/incidents.ts",
       "source_location": "L208",
       "_origin": "ast",
-      "community": 99,
+      "community": 70,
       "norm_label": "createaccident()",
       "id": "actions_incidents_createaccident"
     },
@@ -10219,7 +10229,7 @@
       "source_file": "lib/actions/incidents.ts",
       "source_location": "L323",
       "_origin": "ast",
-      "community": 99,
+      "community": 2,
       "norm_label": "addaccidenttovehicle()",
       "id": "actions_incidents_addaccidenttovehicle"
     },
@@ -10249,7 +10259,7 @@
       "source_file": "lib/actions/invoices.ts",
       "source_location": "L18",
       "_origin": "ast",
-      "community": 16,
+      "community": 92,
       "norm_label": "nextinvoicenumber()",
       "id": "actions_invoices_nextinvoicenumber"
     },
@@ -10259,7 +10269,7 @@
       "source_file": "lib/actions/invoices.ts",
       "source_location": "L37",
       "_origin": "ast",
-      "community": 16,
+      "community": 92,
       "norm_label": "generateinvoicedraft()",
       "id": "actions_invoices_generateinvoicedraft"
     },
@@ -10289,7 +10299,7 @@
       "source_file": "lib/actions/invoices.ts",
       "source_location": "L283",
       "_origin": "ast",
-      "community": 92,
+      "community": 136,
       "norm_label": "rendercontractinvoiceattachment()",
       "id": "actions_invoices_rendercontractinvoiceattachment"
     },
@@ -10299,7 +10309,7 @@
       "source_file": "lib/actions/invoices.ts",
       "source_location": "L336",
       "_origin": "ast",
-      "community": 92,
+      "community": 136,
       "norm_label": "markrestitutioninvoicesent()",
       "id": "actions_invoices_markrestitutioninvoicesent"
     },
@@ -10539,7 +10549,7 @@
       "source_file": "lib/actions/reservations.ts",
       "source_location": "L153",
       "_origin": "ast",
-      "community": 21,
+      "community": 16,
       "norm_label": "createreservation()",
       "id": "actions_reservations_createreservation"
     },
@@ -10909,7 +10919,7 @@
       "source_file": "lib/calendar/constants.ts",
       "source_location": "L47",
       "_origin": "ast",
-      "community": 89,
+      "community": 22,
       "norm_label": "alert_rules",
       "id": "calendar_constants_alert_rules"
     },
@@ -10929,7 +10939,7 @@
       "source_file": "lib/calendar/dateUtils.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 33,
+      "community": 107,
       "norm_label": "dateutils.ts",
       "id": "calendar_dateutils"
     },
@@ -10949,7 +10959,7 @@
       "source_file": "lib/calendar/dateUtils.ts",
       "source_location": "L11",
       "_origin": "ast",
-      "community": 107,
+      "community": 15,
       "norm_label": "getweekdates()",
       "id": "calendar_dateutils_getweekdates"
     },
@@ -10969,7 +10979,7 @@
       "source_file": "lib/calendar/dateUtils.ts",
       "source_location": "L25",
       "_origin": "ast",
-      "community": 33,
+      "community": 107,
       "norm_label": "formatdateheader()",
       "id": "calendar_dateutils_formatdateheader"
     },
@@ -10989,7 +10999,7 @@
       "source_file": "lib/calendar/dateUtils.ts",
       "source_location": "L44",
       "_origin": "ast",
-      "community": 33,
+      "community": 107,
       "norm_label": "getcolumnwindow()",
       "id": "calendar_dateutils_getcolumnwindow"
     },
@@ -10999,7 +11009,7 @@
       "source_file": "lib/calendar/dateUtils.ts",
       "source_location": "L51",
       "_origin": "ast",
-      "community": 33,
+      "community": 107,
       "norm_label": "geteventposition()",
       "id": "calendar_dateutils_geteventposition"
     },
@@ -11009,7 +11019,7 @@
       "source_file": "lib/calendar/dateUtils.ts",
       "source_location": "L70",
       "_origin": "ast",
-      "community": 33,
+      "community": 107,
       "norm_label": "detectoverlaps()",
       "id": "calendar_dateutils_detectoverlaps"
     },
@@ -11039,7 +11049,7 @@
       "source_file": "lib/calendar/generateAlerts.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 89,
+      "community": 22,
       "norm_label": "generatealerts.ts",
       "id": "calendar_generatealerts"
     },
@@ -11079,7 +11089,7 @@
       "source_file": "lib/calendar/syncInternalTrip.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 1,
+      "community": 142,
       "norm_label": "syncinternaltrip.ts",
       "id": "calendar_syncinternaltrip"
     },
@@ -11089,7 +11099,7 @@
       "source_file": "lib/calendar/syncInternalTrip.ts",
       "source_location": "L3",
       "_origin": "ast",
-      "community": 1,
+      "community": 142,
       "norm_label": "purpose_labels",
       "id": "calendar_syncinternaltrip_purpose_labels"
     },
@@ -11099,7 +11109,7 @@
       "source_file": "lib/calendar/syncInternalTrip.ts",
       "source_location": "L9",
       "_origin": "ast",
-      "community": 1,
+      "community": 142,
       "norm_label": "status_map",
       "id": "calendar_syncinternaltrip_status_map"
     },
@@ -11119,7 +11129,7 @@
       "source_file": "lib/calendar/syncRental.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 6,
+      "community": 89,
       "norm_label": "syncrental.ts",
       "id": "calendar_syncrental"
     },
@@ -11139,7 +11149,7 @@
       "source_file": "lib/calendar/syncRental.ts",
       "source_location": "L26",
       "_origin": "ast",
-      "community": 6,
+      "community": 89,
       "norm_label": "statusesfor()",
       "id": "calendar_syncrental_statusesfor"
     },
@@ -11149,7 +11159,7 @@
       "source_file": "lib/calendar/syncRental.ts",
       "source_location": "L40",
       "_origin": "ast",
-      "community": 6,
+      "community": 89,
       "norm_label": "upsertevent()",
       "id": "calendar_syncrental_upsertevent"
     },
@@ -11159,7 +11169,7 @@
       "source_file": "lib/calendar/syncRental.ts",
       "source_location": "L90",
       "_origin": "ast",
-      "community": 6,
+      "community": 89,
       "norm_label": "syncreservationtocalendar()",
       "id": "calendar_syncrental_syncreservationtocalendar"
     },
@@ -11259,7 +11269,7 @@
       "source_file": "lib/contracts/legal-articles.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 0,
+      "community": 111,
       "norm_label": "legal-articles.ts",
       "id": "contracts_legal_articles"
     },
@@ -11269,7 +11279,7 @@
       "source_file": "lib/contracts/legal-articles.ts",
       "source_location": "L4",
       "_origin": "ast",
-      "community": 0,
+      "community": 111,
       "norm_label": "legalarticlesparams",
       "id": "contracts_legal_articles_legalarticlesparams"
     },
@@ -11279,7 +11289,7 @@
       "source_file": "lib/contracts/legal-articles.ts",
       "source_location": "L10",
       "_origin": "ast",
-      "community": 0,
+      "community": 111,
       "norm_label": "getlegalarticles()",
       "id": "contracts_legal_articles_getlegalarticles"
     },
@@ -11289,7 +11299,7 @@
       "source_file": "lib/contracts/legal-articles.ts",
       "source_location": "L73",
       "_origin": "ast",
-      "community": 0,
+      "community": 111,
       "norm_label": "getfeestable()",
       "id": "contracts_legal_articles_getfeestable"
     },
@@ -11369,7 +11379,7 @@
       "source_file": "lib/email/config.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 92,
+      "community": 49,
       "norm_label": "config.ts",
       "id": "email_config"
     },
@@ -11379,7 +11389,7 @@
       "source_file": "lib/email/config.ts",
       "source_location": "L26",
       "_origin": "ast",
-      "community": 92,
+      "community": 49,
       "norm_label": "resendto()",
       "id": "email_config_resendto"
     },
@@ -11389,7 +11399,7 @@
       "source_file": "lib/email/log.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 92,
+      "community": 136,
       "norm_label": "log.ts",
       "id": "email_log"
     },
@@ -11399,7 +11409,7 @@
       "source_file": "lib/email/log.ts",
       "source_location": "L3",
       "_origin": "ast",
-      "community": 92,
+      "community": 136,
       "norm_label": "emailtype",
       "id": "email_log_emailtype"
     },
@@ -11409,7 +11419,7 @@
       "source_file": "lib/email/log.ts",
       "source_location": "L5",
       "_origin": "ast",
-      "community": 92,
+      "community": 136,
       "norm_label": "logemailparams",
       "id": "email_log_logemailparams"
     },
@@ -11419,7 +11429,7 @@
       "source_file": "lib/email/log.ts",
       "source_location": "L19",
       "_origin": "ast",
-      "community": 92,
+      "community": 136,
       "norm_label": "logemail()",
       "id": "email_log_logemail"
     },
@@ -11499,7 +11509,7 @@
       "source_file": "lib/incidents.ts",
       "source_location": "L11",
       "_origin": "ast",
-      "community": 49,
+      "community": 70,
       "norm_label": "infraction_types",
       "id": "lib_incidents_infraction_types"
     },
@@ -11529,7 +11539,7 @@
       "source_file": "lib/incidents.ts",
       "source_location": "L33",
       "_origin": "ast",
-      "community": 99,
+      "community": 2,
       "norm_label": "sinistre_flow",
       "id": "lib_incidents_sinistre_flow"
     },
@@ -11669,7 +11679,7 @@
       "source_file": "lib/maintenance-health.ts",
       "source_location": "L66",
       "_origin": "ast",
-      "community": 81,
+      "community": 7,
       "norm_label": "computevehicleneeds()",
       "id": "lib_maintenance_health_computevehicleneeds"
     },
@@ -12009,7 +12019,7 @@
       "source_file": "lib/navigation/tabs.ts",
       "source_location": "L31",
       "_origin": "ast",
-      "community": 137,
+      "community": 76,
       "norm_label": "allowedhrefset()",
       "id": "navigation_tabs_allowedhrefset"
     },
@@ -12069,7 +12079,7 @@
       "source_file": "lib/pdf/build-contract-data.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 54,
+      "community": 119,
       "norm_label": "build-contract-data.ts",
       "id": "pdf_build_contract_data"
     },
@@ -12079,7 +12089,7 @@
       "source_file": "lib/pdf/build-contract-data.ts",
       "source_location": "L8",
       "_origin": "ast",
-      "community": 54,
+      "community": 119,
       "norm_label": "supabaseserver",
       "id": "pdf_build_contract_data_supabaseserver"
     },
@@ -12089,7 +12099,7 @@
       "source_file": "lib/pdf/build-contract-data.ts",
       "source_location": "L10",
       "_origin": "ast",
-      "community": 54,
+      "community": 92,
       "norm_label": "loadlogodataurl()",
       "id": "pdf_build_contract_data_loadlogodataurl"
     },
@@ -12099,7 +12109,7 @@
       "source_file": "lib/pdf/build-contract-data.ts",
       "source_location": "L20",
       "_origin": "ast",
-      "community": 54,
+      "community": 119,
       "norm_label": "loadedlschemadataurl()",
       "id": "pdf_build_contract_data_loadedlschemadataurl"
     },
@@ -12109,7 +12119,7 @@
       "source_file": "lib/pdf/build-contract-data.ts",
       "source_location": "L29",
       "_origin": "ast",
-      "community": 54,
+      "community": 119,
       "norm_label": "fetchphotoasdataurl()",
       "id": "pdf_build_contract_data_fetchphotoasdataurl"
     },
@@ -12119,7 +12129,7 @@
       "source_file": "lib/pdf/build-contract-data.ts",
       "source_location": "L46",
       "_origin": "ast",
-      "community": 54,
+      "community": 119,
       "norm_label": "builtcontractdata",
       "id": "pdf_build_contract_data_builtcontractdata"
     },
@@ -12129,7 +12139,7 @@
       "source_file": "lib/pdf/build-contract-data.ts",
       "source_location": "L60",
       "_origin": "ast",
-      "community": 54,
+      "community": 119,
       "norm_label": "buildcontractpdfdata()",
       "id": "pdf_build_contract_data_buildcontractpdfdata"
     },
@@ -12169,7 +12179,7 @@
       "source_file": "lib/pdf/contract-template.tsx",
       "source_location": "L33",
       "_origin": "ast",
-      "community": 54,
+      "community": 119,
       "norm_label": "contractdata",
       "id": "pdf_contract_template_contractdata"
     },
@@ -12449,7 +12459,7 @@
       "source_file": "lib/push/broadcastPush.ts",
       "source_location": "L4",
       "_origin": "ast",
-      "community": 118,
+      "community": 117,
       "norm_label": "broadcastpushtomanagers()",
       "id": "push_broadcastpush_broadcastpushtomanagers"
     },
@@ -12529,7 +12539,7 @@
       "source_file": "lib/supabase/admin.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 111,
+      "community": 95,
       "norm_label": "admin.ts",
       "id": "supabase_admin"
     },
@@ -12539,7 +12549,7 @@
       "source_file": "lib/supabase/admin.ts",
       "source_location": "L3",
       "_origin": "ast",
-      "community": 111,
+      "community": 95,
       "norm_label": "createadminclient()",
       "id": "supabase_admin_createadminclient"
     },
@@ -12639,7 +12649,7 @@
       "source_file": "lib/utils/findDriverAtDate.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 49,
+      "community": 70,
       "norm_label": "finddriveratdate.ts",
       "id": "utils_finddriveratdate"
     },
@@ -12649,7 +12659,7 @@
       "source_file": "lib/utils/findDriverAtDate.ts",
       "source_location": "L8",
       "_origin": "ast",
-      "community": 49,
+      "community": 70,
       "norm_label": "driverresult",
       "id": "utils_finddriveratdate_driverresult"
     },
@@ -12659,7 +12669,7 @@
       "source_file": "lib/utils/findDriverAtDate.ts",
       "source_location": "L15",
       "_origin": "ast",
-      "community": 49,
+      "community": 70,
       "norm_label": "finddriveratdate()",
       "id": "utils_finddriveratdate_finddriveratdate"
     },
@@ -12749,7 +12759,7 @@
       "source_file": "lib/utils/index.ts",
       "source_location": "L40",
       "_origin": "ast",
-      "community": 5,
+      "community": 139,
       "norm_label": "generatecontractnumber()",
       "id": "utils_index_generatecontractnumber"
     },
@@ -12859,7 +12869,7 @@
       "source_file": "lib/vehicles/vehicleStatus.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 18,
+      "community": 139,
       "norm_label": "vehiclestatus.ts",
       "id": "vehicles_vehiclestatus"
     },
@@ -12869,7 +12879,7 @@
       "source_file": "lib/vehicles/vehicleStatus.ts",
       "source_location": "L11",
       "_origin": "ast",
-      "community": 18,
+      "community": 139,
       "norm_label": "recomputevehiclestatus()",
       "id": "vehicles_vehiclestatus_recomputevehiclestatus"
     },
@@ -14479,7 +14489,7 @@
       "source_file": "types/calendar.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 119,
+      "community": 22,
       "norm_label": "calendar.ts",
       "id": "types_calendar"
     },
@@ -14489,7 +14499,7 @@
       "source_file": "types/calendar.ts",
       "source_location": "L3",
       "_origin": "ast",
-      "community": 107,
+      "community": 15,
       "norm_label": "calendarview",
       "id": "types_calendar_calendarview"
     },
@@ -14509,7 +14519,7 @@
       "source_file": "types/calendar.ts",
       "source_location": "L11",
       "_origin": "ast",
-      "community": 6,
+      "community": 22,
       "norm_label": "eventstatus",
       "id": "types_calendar_eventstatus"
     },
@@ -14519,7 +14529,7 @@
       "source_file": "types/calendar.ts",
       "source_location": "L13",
       "_origin": "ast",
-      "community": 119,
+      "community": 22,
       "norm_label": "alerttype",
       "id": "types_calendar_alerttype"
     },
@@ -14549,7 +14559,7 @@
       "source_file": "types/calendar.ts",
       "source_location": "L55",
       "_origin": "ast",
-      "community": 119,
+      "community": 22,
       "norm_label": "calendarteam",
       "id": "types_calendar_calendarteam"
     },
@@ -14559,7 +14569,7 @@
       "source_file": "types/calendar.ts",
       "source_location": "L62",
       "_origin": "ast",
-      "community": 119,
+      "community": 22,
       "norm_label": "calendaralert",
       "id": "types_calendar_calendaralert"
     },
@@ -14729,7 +14739,7 @@
       "source_file": "types/database.ts",
       "source_location": "L18",
       "_origin": "ast",
-      "community": 76,
+      "community": 141,
       "norm_label": "profile",
       "id": "types_database_profile"
     },
@@ -16656,6 +16666,663 @@
   ],
   "links": [
     {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/(dashboard)/accounting/AccountingTransactions.tsx",
+      "source_location": "L27",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "accounting_accountingtransactions",
+      "target": "accounting_accountingtransactions_accountingtransactions"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/(dashboard)/accounting/AccountingTransactions.tsx",
+      "source_location": "L15",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "accounting_accountingtransactions",
+      "target": "accounting_accountingtransactions_tx"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/(dashboard)/accounting/AccountingTransactions.tsx",
+      "source_location": "L7",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "accounting_accountingtransactions",
+      "target": "accounting_categories"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/(dashboard)/accounting/AccountingTransactions.tsx",
+      "source_location": "L7",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "accounting_accountingtransactions",
+      "target": "accounting_categories_getcategorylabel"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/(dashboard)/accounting/AccountingTransactions.tsx",
+      "source_location": "L13",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "accounting_accountingtransactions",
+      "target": "actions_accounting"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/(dashboard)/accounting/AccountingTransactions.tsx",
+      "source_location": "L13",
+      "weight": 1.0,
+      "source": "accounting_accountingtransactions",
+      "target": "actions_accounting_deletetransaction",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/(dashboard)/accounting/AccountingTransactions.tsx",
+      "source_location": "L8",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "accounting_accountingtransactions",
+      "target": "actions_accounting_toggletransparence"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/(dashboard)/accounting/AccountingTransactions.tsx",
+      "source_location": "L13",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "accounting_accountingtransactions",
+      "target": "actions_accounting_updatetransactionnotes"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/(dashboard)/accounting/AccountingTransactions.tsx",
+      "source_location": "L9",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "accounting_accountingtransactions",
+      "target": "components_animatedlist"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/(dashboard)/accounting/AccountingTransactions.tsx",
+      "source_location": "L9",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "accounting_accountingtransactions",
+      "target": "components_animatedlist_animatedlist"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/(dashboard)/accounting/AccountingTransactions.tsx",
+      "source_location": "L9",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "accounting_accountingtransactions",
+      "target": "components_animatedlist_animatedlistitem"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/(dashboard)/accounting/AccountingTransactions.tsx",
+      "source_location": "L12",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "accounting_accountingtransactions",
+      "target": "components_inlineeditfield"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/(dashboard)/accounting/AccountingTransactions.tsx",
+      "source_location": "L10",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "accounting_accountingtransactions",
+      "target": "components_swipeablerow"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/(dashboard)/accounting/AccountingTransactions.tsx",
+      "source_location": "L11",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "accounting_accountingtransactions",
+      "target": "components_toast"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/(dashboard)/accounting/AccountingTransactions.tsx",
+      "source_location": "L11",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "accounting_accountingtransactions",
+      "target": "components_toast_usetoast"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/(dashboard)/accounting/AccountingTransactions.tsx",
+      "source_location": "L6",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "accounting_accountingtransactions",
+      "target": "utils_index"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/(dashboard)/accounting/AccountingTransactions.tsx",
+      "source_location": "L6",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "accounting_accountingtransactions",
+      "target": "utils_index_formatdate"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/(dashboard)/accounting/AccountingTransactions.tsx",
+      "source_location": "L6",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "accounting_accountingtransactions",
+      "target": "utils_index_formatprice"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/(dashboard)/accounting/page.tsx",
+      "source_location": "L7",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "accounting_page",
+      "target": "accounting_accountingtransactions"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/(dashboard)/accounting/close/annual/page.tsx",
+      "source_location": "L8",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "annual_page",
+      "target": "accounting_accountingtransactions"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/(dashboard)/accounting/close/monthly/page.tsx",
+      "source_location": "L9",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "monthly_page",
+      "target": "accounting_accountingtransactions"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/(dashboard)/accounting/AccountingTransactions.tsx",
+      "source_location": "L29",
+      "weight": 1.0,
+      "source": "accounting_accountingtransactions_accountingtransactions",
+      "target": "components_toast_usetoast"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/actions/accounting.ts",
+      "source_location": "L5",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "actions_accounting",
+      "target": "accounting_period_lock"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/actions/accounting.ts",
+      "source_location": "L5",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "actions_accounting",
+      "target": "accounting_period_lock_assertperiodopen"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/actions/accounting.ts",
+      "source_location": "L94",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "actions_accounting",
+      "target": "actions_accounting_closeannualaccounting"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/actions/accounting.ts",
+      "source_location": "L37",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "actions_accounting",
+      "target": "actions_accounting_closedailyaccounting"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/actions/accounting.ts",
+      "source_location": "L64",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "actions_accounting",
+      "target": "actions_accounting_closemonthlyaccounting"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/actions/accounting.ts",
+      "source_location": "L6",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "actions_accounting",
+      "target": "actions_accounting_createtransaction"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/actions/accounting.ts",
+      "source_location": "L49",
+      "weight": 1.0,
+      "source": "actions_accounting",
+      "target": "actions_accounting_deletetransaction",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/actions/accounting.ts",
+      "source_location": "L201",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "actions_accounting",
+      "target": "actions_accounting_reopen"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/actions/accounting.ts",
+      "source_location": "L220",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "actions_accounting",
+      "target": "actions_accounting_reopenannualclosing"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/actions/accounting.ts",
+      "source_location": "L214",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "actions_accounting",
+      "target": "actions_accounting_reopendailyclosing"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/actions/accounting.ts",
+      "source_location": "L217",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "actions_accounting",
+      "target": "actions_accounting_reopenmonthlyclosing"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/actions/accounting.ts",
+      "source_location": "L39",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "actions_accounting",
+      "target": "actions_accounting_revenuebypaymentmethod"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/actions/accounting.ts",
+      "source_location": "L142",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "actions_accounting",
+      "target": "actions_accounting_toggletransparence"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/actions/accounting.ts",
+      "source_location": "L127",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "actions_accounting",
+      "target": "actions_accounting_updatetransactionnotes"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/actions/accounting.ts",
+      "source_location": "L5",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "actions_accounting",
+      "target": "supabase_admin"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/actions/accounting.ts",
+      "source_location": "L5",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "actions_accounting",
+      "target": "supabase_admin_createadminclient"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/actions/accounting.ts",
+      "source_location": "L4",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "actions_accounting",
+      "target": "supabase_server"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/actions/accounting.ts",
+      "source_location": "L4",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "actions_accounting",
+      "target": "supabase_server_createclient"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/(dashboard)/accounting/new/page.tsx",
+      "source_location": "L9",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_dashboard_accounting_new_page_tsx_new_page",
+      "target": "actions_accounting"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/(dashboard)/accounting/close/CloseButton.tsx",
+      "source_location": "L6",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "close_closebutton",
+      "target": "actions_accounting"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/(dashboard)/accounting/close/DailyCloseReconcile.tsx",
+      "source_location": "L6",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "close_dailyclosereconcile",
+      "target": "actions_accounting"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/(dashboard)/accounting/close/ReopenClosingButton.tsx",
+      "source_location": "L6",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "close_reopenclosingbutton",
+      "target": "actions_accounting"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/actions/accounting.ts",
+      "source_location": "L22",
+      "weight": 1.0,
+      "source": "actions_accounting_createtransaction",
+      "target": "accounting_period_lock_assertperiodopen"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/(dashboard)/accounting/new/page.tsx",
+      "source_location": "L9",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_dashboard_accounting_new_page_tsx_new_page",
+      "target": "actions_accounting_createtransaction"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/actions/accounting.ts",
+      "source_location": "L65",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "actions_accounting_closedailyaccounting",
+      "target": "actions_accounting_revenuebypaymentmethod"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/actions/accounting.ts",
+      "source_location": "L96",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "actions_accounting_closemonthlyaccounting",
+      "target": "actions_accounting_revenuebypaymentmethod"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/(dashboard)/accounting/close/CloseButton.tsx",
+      "source_location": "L6",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "close_closebutton",
+      "target": "actions_accounting_closedailyaccounting"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/(dashboard)/accounting/close/DailyCloseReconcile.tsx",
+      "source_location": "L6",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "close_dailyclosereconcile",
+      "target": "actions_accounting_closedailyaccounting"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/(dashboard)/accounting/close/CloseButton.tsx",
+      "source_location": "L6",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "close_closebutton",
+      "target": "actions_accounting_closemonthlyaccounting"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/(dashboard)/accounting/close/CloseButton.tsx",
+      "source_location": "L6",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "close_closebutton",
+      "target": "actions_accounting_closeannualaccounting"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/actions/accounting.ts",
+      "source_location": "L165",
+      "weight": 1.0,
+      "source": "actions_accounting_updatetransactionnotes",
+      "target": "accounting_period_lock_assertperiodopen"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/actions/accounting.ts",
+      "source_location": "L186",
+      "weight": 1.0,
+      "source": "actions_accounting_toggletransparence",
+      "target": "accounting_period_lock_assertperiodopen"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/actions/accounting.ts",
+      "source_location": "L202",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "actions_accounting_reopen",
+      "target": "supabase_server_createclient"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/actions/accounting.ts",
+      "source_location": "L221",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "actions_accounting_reopenannualclosing",
+      "target": "actions_accounting_reopen"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/actions/accounting.ts",
+      "source_location": "L215",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "actions_accounting_reopendailyclosing",
+      "target": "actions_accounting_reopen"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/actions/accounting.ts",
+      "source_location": "L218",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "actions_accounting_reopenmonthlyclosing",
+      "target": "actions_accounting_reopen"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/(dashboard)/accounting/close/DailyCloseReconcile.tsx",
+      "source_location": "L6",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "close_dailyclosereconcile",
+      "target": "actions_accounting_reopendailyclosing"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/(dashboard)/accounting/close/ReopenClosingButton.tsx",
+      "source_location": "L6",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "close_reopenclosingbutton",
+      "target": "actions_accounting_reopenmonthlyclosing"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/(dashboard)/accounting/close/ReopenClosingButton.tsx",
+      "source_location": "L6",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "close_reopenclosingbutton",
+      "target": "actions_accounting_reopenannualclosing"
+    },
+    {
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
@@ -16695,9 +17362,9 @@
       "source_file": "app/(dashboard)/internal-trips/InternalTripsClient.tsx",
       "source_location": "L5",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "internal_trips_internaltripsclient",
-      "target": "actions_internal_trips_deletetrip",
-      "confidence_score": 1.0
+      "target": "actions_internal_trips_deletetrip"
     },
     {
       "relation": "imports",
@@ -17037,9 +17704,9 @@
       "source_file": "lib/actions/internal-trips.ts",
       "source_location": "L288",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "actions_internal_trips",
-      "target": "actions_internal_trips_deletetrip",
-      "confidence_score": 1.0
+      "target": "actions_internal_trips_deletetrip"
     },
     {
       "relation": "contains",
@@ -17532,235 +18199,6 @@
       "confidence_score": 1.0,
       "source": "accounting_page",
       "target": "accounting_accountingcustomperiod"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "app/(dashboard)/accounting/AccountingTransactions.tsx",
-      "source_location": "L27",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "accounting_accountingtransactions",
-      "target": "accounting_accountingtransactions_accountingtransactions"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "app/(dashboard)/accounting/AccountingTransactions.tsx",
-      "source_location": "L15",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "accounting_accountingtransactions",
-      "target": "accounting_accountingtransactions_tx"
-    },
-    {
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "app/(dashboard)/accounting/AccountingTransactions.tsx",
-      "source_location": "L7",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "accounting_accountingtransactions",
-      "target": "accounting_categories"
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "app/(dashboard)/accounting/AccountingTransactions.tsx",
-      "source_location": "L7",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "accounting_accountingtransactions",
-      "target": "accounting_categories_getcategorylabel"
-    },
-    {
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "app/(dashboard)/accounting/AccountingTransactions.tsx",
-      "source_location": "L13",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "accounting_accountingtransactions",
-      "target": "actions_accounting"
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "app/(dashboard)/accounting/AccountingTransactions.tsx",
-      "source_location": "L8",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "accounting_accountingtransactions",
-      "target": "actions_accounting_toggletransparence"
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "app/(dashboard)/accounting/AccountingTransactions.tsx",
-      "source_location": "L13",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "accounting_accountingtransactions",
-      "target": "actions_accounting_updatetransactionnotes"
-    },
-    {
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "app/(dashboard)/accounting/AccountingTransactions.tsx",
-      "source_location": "L9",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "accounting_accountingtransactions",
-      "target": "components_animatedlist"
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "app/(dashboard)/accounting/AccountingTransactions.tsx",
-      "source_location": "L9",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "accounting_accountingtransactions",
-      "target": "components_animatedlist_animatedlist"
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "app/(dashboard)/accounting/AccountingTransactions.tsx",
-      "source_location": "L9",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "accounting_accountingtransactions",
-      "target": "components_animatedlist_animatedlistitem"
-    },
-    {
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "app/(dashboard)/accounting/AccountingTransactions.tsx",
-      "source_location": "L12",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "accounting_accountingtransactions",
-      "target": "components_inlineeditfield"
-    },
-    {
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "app/(dashboard)/accounting/AccountingTransactions.tsx",
-      "source_location": "L10",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "accounting_accountingtransactions",
-      "target": "components_swipeablerow"
-    },
-    {
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "app/(dashboard)/accounting/AccountingTransactions.tsx",
-      "source_location": "L11",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "accounting_accountingtransactions",
-      "target": "components_toast"
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "app/(dashboard)/accounting/AccountingTransactions.tsx",
-      "source_location": "L11",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "accounting_accountingtransactions",
-      "target": "components_toast_usetoast"
-    },
-    {
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "app/(dashboard)/accounting/AccountingTransactions.tsx",
-      "source_location": "L6",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "accounting_accountingtransactions",
-      "target": "utils_index"
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "app/(dashboard)/accounting/AccountingTransactions.tsx",
-      "source_location": "L6",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "accounting_accountingtransactions",
-      "target": "utils_index_formatdate"
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "app/(dashboard)/accounting/AccountingTransactions.tsx",
-      "source_location": "L6",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "accounting_accountingtransactions",
-      "target": "utils_index_formatprice"
-    },
-    {
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "app/(dashboard)/accounting/page.tsx",
-      "source_location": "L7",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "accounting_page",
-      "target": "accounting_accountingtransactions"
-    },
-    {
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "app/(dashboard)/accounting/close/annual/page.tsx",
-      "source_location": "L8",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "annual_page",
-      "target": "accounting_accountingtransactions"
-    },
-    {
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "app/(dashboard)/accounting/close/monthly/page.tsx",
-      "source_location": "L9",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "monthly_page",
-      "target": "accounting_accountingtransactions"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "app/(dashboard)/accounting/AccountingTransactions.tsx",
-      "source_location": "L29",
-      "weight": 1.0,
-      "source": "accounting_accountingtransactions_accountingtransactions",
-      "target": "components_toast_usetoast"
     },
     {
       "relation": "imports_from",
@@ -18687,50 +19125,6 @@
       "target": "close_closebutton"
     },
     {
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "app/(dashboard)/accounting/close/CloseButton.tsx",
-      "source_location": "L6",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "close_closebutton",
-      "target": "actions_accounting"
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "app/(dashboard)/accounting/close/CloseButton.tsx",
-      "source_location": "L6",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "close_closebutton",
-      "target": "actions_accounting_closeannualaccounting"
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "app/(dashboard)/accounting/close/CloseButton.tsx",
-      "source_location": "L6",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "close_closebutton",
-      "target": "actions_accounting_closedailyaccounting"
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "app/(dashboard)/accounting/close/CloseButton.tsx",
-      "source_location": "L6",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "close_closebutton",
-      "target": "actions_accounting_closemonthlyaccounting"
-    },
-    {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "app/(dashboard)/accounting/close/CloseButton.tsx",
@@ -18783,39 +19177,6 @@
       "confidence_score": 1.0,
       "source": "close_dailyclosereconcile",
       "target": "accounting_categories_paymentmethodlabel"
-    },
-    {
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "app/(dashboard)/accounting/close/DailyCloseReconcile.tsx",
-      "source_location": "L6",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "close_dailyclosereconcile",
-      "target": "actions_accounting"
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "app/(dashboard)/accounting/close/DailyCloseReconcile.tsx",
-      "source_location": "L6",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "close_dailyclosereconcile",
-      "target": "actions_accounting_closedailyaccounting"
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "app/(dashboard)/accounting/close/DailyCloseReconcile.tsx",
-      "source_location": "L6",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "close_dailyclosereconcile",
-      "target": "actions_accounting_reopendailyclosing"
     },
     {
       "relation": "contains",
@@ -18891,39 +19252,6 @@
       "confidence_score": 1.0,
       "source": "annual_page",
       "target": "close_reopenclosingbutton"
-    },
-    {
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "app/(dashboard)/accounting/close/ReopenClosingButton.tsx",
-      "source_location": "L6",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "close_reopenclosingbutton",
-      "target": "actions_accounting"
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "app/(dashboard)/accounting/close/ReopenClosingButton.tsx",
-      "source_location": "L6",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "close_reopenclosingbutton",
-      "target": "actions_accounting_reopenannualclosing"
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "app/(dashboard)/accounting/close/ReopenClosingButton.tsx",
-      "source_location": "L6",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "close_reopenclosingbutton",
-      "target": "actions_accounting_reopenmonthlyclosing"
     },
     {
       "relation": "contains",
@@ -20138,28 +20466,6 @@
       "confidence_score": 1.0,
       "source": "app_dashboard_accounting_new_page_tsx_new_page",
       "target": "accounting_categories_revenue_categories"
-    },
-    {
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "app/(dashboard)/accounting/new/page.tsx",
-      "source_location": "L9",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "app_dashboard_accounting_new_page_tsx_new_page",
-      "target": "actions_accounting"
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "app/(dashboard)/accounting/new/page.tsx",
-      "source_location": "L9",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "app_dashboard_accounting_new_page_tsx_new_page",
-      "target": "actions_accounting_createtransaction"
     },
     {
       "relation": "contains",
@@ -38847,67 +39153,12 @@
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
-      "source_file": "lib/actions/accounting.ts",
-      "source_location": "L5",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "actions_accounting",
-      "target": "accounting_period_lock"
-    },
-    {
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
       "source_file": "lib/actions/reservations.ts",
       "source_location": "L6",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "actions_reservations",
       "target": "accounting_period_lock"
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "lib/actions/accounting.ts",
-      "source_location": "L5",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "actions_accounting",
-      "target": "accounting_period_lock_assertperiodopen"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/actions/accounting.ts",
-      "source_location": "L22",
-      "weight": 1.0,
-      "source": "actions_accounting_createtransaction",
-      "target": "accounting_period_lock_assertperiodopen"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/actions/accounting.ts",
-      "source_location": "L186",
-      "weight": 1.0,
-      "source": "actions_accounting_toggletransparence",
-      "target": "accounting_period_lock_assertperiodopen"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/actions/accounting.ts",
-      "source_location": "L165",
-      "weight": 1.0,
-      "source": "actions_accounting_updatetransactionnotes",
-      "target": "accounting_period_lock_assertperiodopen"
     },
     {
       "relation": "imports",
@@ -38930,226 +39181,6 @@
       "weight": 1.0,
       "source": "actions_reservations_updatepaymentinfo",
       "target": "accounting_period_lock_assertperiodopen"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "lib/actions/accounting.ts",
-      "source_location": "L94",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "actions_accounting",
-      "target": "actions_accounting_closeannualaccounting"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "lib/actions/accounting.ts",
-      "source_location": "L37",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "actions_accounting",
-      "target": "actions_accounting_closedailyaccounting"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "lib/actions/accounting.ts",
-      "source_location": "L64",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "actions_accounting",
-      "target": "actions_accounting_closemonthlyaccounting"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "lib/actions/accounting.ts",
-      "source_location": "L6",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "actions_accounting",
-      "target": "actions_accounting_createtransaction"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "lib/actions/accounting.ts",
-      "source_location": "L201",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "actions_accounting",
-      "target": "actions_accounting_reopen"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "lib/actions/accounting.ts",
-      "source_location": "L220",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "actions_accounting",
-      "target": "actions_accounting_reopenannualclosing"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "lib/actions/accounting.ts",
-      "source_location": "L214",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "actions_accounting",
-      "target": "actions_accounting_reopendailyclosing"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "lib/actions/accounting.ts",
-      "source_location": "L217",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "actions_accounting",
-      "target": "actions_accounting_reopenmonthlyclosing"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "lib/actions/accounting.ts",
-      "source_location": "L39",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "actions_accounting",
-      "target": "actions_accounting_revenuebypaymentmethod"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "lib/actions/accounting.ts",
-      "source_location": "L142",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "actions_accounting",
-      "target": "actions_accounting_toggletransparence"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "lib/actions/accounting.ts",
-      "source_location": "L127",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "actions_accounting",
-      "target": "actions_accounting_updatetransactionnotes"
-    },
-    {
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "lib/actions/accounting.ts",
-      "source_location": "L5",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "actions_accounting",
-      "target": "supabase_admin"
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "lib/actions/accounting.ts",
-      "source_location": "L5",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "actions_accounting",
-      "target": "supabase_admin_createadminclient"
-    },
-    {
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "lib/actions/accounting.ts",
-      "source_location": "L4",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "actions_accounting",
-      "target": "supabase_server"
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "lib/actions/accounting.ts",
-      "source_location": "L4",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "actions_accounting",
-      "target": "supabase_server_createclient"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "lib/actions/accounting.ts",
-      "source_location": "L65",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "actions_accounting_closedailyaccounting",
-      "target": "actions_accounting_revenuebypaymentmethod"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "lib/actions/accounting.ts",
-      "source_location": "L96",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "actions_accounting_closemonthlyaccounting",
-      "target": "actions_accounting_revenuebypaymentmethod"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "lib/actions/accounting.ts",
-      "source_location": "L202",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "actions_accounting_reopen",
-      "target": "supabase_server_createclient"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "lib/actions/accounting.ts",
-      "source_location": "L221",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "actions_accounting_reopenannualclosing",
-      "target": "actions_accounting_reopen"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "lib/actions/accounting.ts",
-      "source_location": "L215",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "actions_accounting_reopendailyclosing",
-      "target": "actions_accounting_reopen"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "lib/actions/accounting.ts",
-      "source_location": "L218",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "actions_accounting_reopenmonthlyclosing",
-      "target": "actions_accounting_reopen"
     },
     {
       "relation": "contains",
@@ -48246,5 +48277,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "203fb73dfb4c19cc3be3763561cdaa32908a36c5"
+  "built_at_commit": "33786aa8892099772fe7be5c5e6976fba32a9d6a"
 }
