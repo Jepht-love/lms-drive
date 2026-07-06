@@ -344,6 +344,14 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
               {PURPOSES.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
             </select>
           </div>
+          {isManager && (
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Conducteur</label>
+              <select name="user_id" defaultValue={currentUserId} className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white">
+                {members.map(m => <option key={m.id} value={m.id}>{m.full_name}{m.id === currentUserId ? ' (moi)' : ''}</option>)}
+              </select>
+            </div>
+          )}
           <div>
             <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">
               KM départ * {selectedVehicle && <span className="text-gray-400 font-normal">(actuel: {selectedVehicle.current_km.toLocaleString('fr-FR')})</span>}

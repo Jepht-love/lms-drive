@@ -10,9 +10,15 @@ export async function startTrip(formData: FormData) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non authentifié' }
 
+  // Gérant/associé peuvent démarrer un déplacement au nom d'un collaborateur ;
+  // un employé ne peut le démarrer que pour lui-même. Défaut = soi-même.
+  const isManager = isManagerRole(await getRole(supabase, user.id))
+  const assigneeRaw = formData.get('user_id') as string | null
+  const assignee = isManager && assigneeRaw ? assigneeRaw : user.id
+
   const payload = {
     vehicle_id: formData.get('vehicle_id') as string,
-    user_id: user.id,
+    user_id: assignee,
     start_datetime: new Date().toISOString(),
     purpose: formData.get('purpose') as string,
     purpose_notes: formData.get('purpose_notes') as string || null,
@@ -32,7 +38,7 @@ export async function startTrip(formData: FormData) {
     action: 'internal_trip_started',
     entity_type: 'internal_trips',
     entity_id: data.id,
-    metadata: { vehicle_id: payload.vehicle_id, purpose: payload.purpose },
+    metadata: { vehicle_id: payload.vehicle_id, purpose: payload.purpose, assigned_to: assignee },
   })
 
   revalidatePath('/internal-trips')
