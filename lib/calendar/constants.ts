@@ -75,5 +75,12 @@ export const UNASSIGNED_RESOURCE_ID = '__unassigned__'
 export const CALENDAR_START_HOUR = 7
 export const CALENDAR_END_HOUR   = 27
 
+// Fuseau d'exploitation de l'agence. Les heures de départ/retour sont saisies et
+// stockées naïvement dans ce fuseau. Les calculs "journée du jour" côté serveur
+// (tableau de bord — exécuté en UTC sur Vercel) DOIVENT s'y référer via
+// businessNow() : sinon "aujourd'hui" est calculé en UTC et, selon l'heure de
+// consultation, un départ du jour bascule à tort dans "à venir".
+export const BUSINESS_TZ = process.env.BUSINESS_TZ || 'Europe/Paris'
+
 // IMPORTANT : ne jamais coder 64 en dur dans les composants — toujours importer cette constante
 export const HOUR_HEIGHT_PX = 64

@@ -3,10 +3,30 @@ import {
   differenceInCalendarDays, format,
 } from 'date-fns'
 import { fr } from 'date-fns/locale'
-import { CALENDAR_START_HOUR, CALENDAR_END_HOUR, HOUR_HEIGHT_PX } from './constants'
+import { CALENDAR_START_HOUR, CALENDAR_END_HOUR, HOUR_HEIGHT_PX, BUSINESS_TZ } from './constants'
 import type { CalendarEvent } from '@/types/calendar'
 
 export const DAY_ABBR = ['dim', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam']
+
+/**
+ * "Maintenant" ramené à l'heure murale du fuseau d'exploitation (BUSINESS_TZ),
+ * sous forme de Date dont les champs locaux (getHours, getDate…) correspondent à
+ * cette heure murale. Indispensable côté serveur : Vercel tourne en UTC, donc
+ * `new Date()` y donne l'heure UTC. Comme les départs/retours sont saisis et
+ * stockés naïvement dans le fuseau de l'agence, calculer "aujourd'hui" en UTC
+ * décale la fenêtre d'un jour selon l'heure de consultation et fait disparaître
+ * les départs du jour. businessNow() aligne le "maintenant" sur ce même repère.
+ * En dev (serveur déjà à l'heure de Paris) le résultat est identique à new Date().
+ */
+export function businessNow(now: Date = new Date()): Date {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: BUSINESS_TZ, hourCycle: 'h23',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+  }).formatToParts(now)
+  const g = (t: string) => Number(parts.find(p => p.type === t)!.value)
+  return new Date(g('year'), g('month') - 1, g('day'), g('hour'), g('minute'), g('second'))
+}
 
 export function getWeekDates(date: Date, mode: 'week_5d' | 'week_7d'): Date[] {
   const start = startOfWeek(date, { weekStartsOn: 1 })

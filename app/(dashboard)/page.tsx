@@ -5,7 +5,7 @@ import {
   differenceInDays, format, isSameDay,
   startOfDay, endOfDay, addDays, subDays, addHours,
 } from 'date-fns'
-import { getColumnWindow } from '@/lib/calendar/dateUtils'
+import { getColumnWindow, businessNow } from '@/lib/calendar/dateUtils'
 import { CALENDAR_START_HOUR } from '@/lib/calendar/constants'
 import { fr } from 'date-fns/locale'
 import {
@@ -105,7 +105,9 @@ const NEXT6H_HOUR_W = 88
 
 export default async function DashboardPage() {
   const supabase   = await createClient()
-  const now        = new Date()
+  // Heure de l'agence (BUSINESS_TZ), pas l'heure serveur UTC : sinon, selon
+  // l'heure de consultation, un départ du jour bascule à tort dans "à venir".
+  const now        = businessNow()
   const todayStart = startOfDay(now)
   const todayEnd   = endOfDay(now)
   const in7Days    = addDays(now, 7)
