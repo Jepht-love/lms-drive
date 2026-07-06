@@ -2,10 +2,10 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { startTrip, endTrip, planTrip, startPlannedTrip, assignTrip, cancelTrip } from '@/lib/actions/internal-trips'
+import { startTrip, endTrip, planTrip, startPlannedTrip, assignTrip, deleteTrip } from '@/lib/actions/internal-trips'
 import { useToast } from '@/components/Toast'
 import { formatDateTime, formatPrice } from '@/lib/utils'
-import { Plus, Navigation, Clock, CheckCircle2, CalendarClock, UserPlus, Play, X, User } from 'lucide-react'
+import { Plus, Navigation, Clock, CheckCircle2, CalendarClock, UserPlus, Play, Trash2, User } from 'lucide-react'
 import Drawer from '@/components/Drawer'
 
 interface Vehicle { id: string; plate: string; brand: string; model: string; current_km: number }
@@ -45,6 +45,7 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
   const [endingTrip, setEndingTrip] = useState<Trip | null>(null)
   const [startingPlanned, setStartingPlanned] = useState<Trip | null>(null)
   const [assigningTrip, setAssigningTrip] = useState<Trip | null>(null)
+  const [deletingTrip, setDeletingTrip] = useState<Trip | null>(null)
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -58,7 +59,7 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
 
   function reset() {
     setShowStartForm(false); setShowPlanForm(false)
-    setEndingTrip(null); setStartingPlanned(null); setAssigningTrip(null)
+    setEndingTrip(null); setStartingPlanned(null); setAssigningTrip(null); setDeletingTrip(null)
     setSelectedVehicle(null); setError(null); setLoading(false)
   }
 
@@ -81,8 +82,8 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
     run(() => assignTrip(assigningTrip.id, userId), 'Déplacement assigné')
   }
 
-  async function handleCancel(t: Trip) {
-    run(() => cancelTrip(t.id), 'Déplacement annulé')
+  function handleDelete() {
+    if (deletingTrip) run(() => deleteTrip(deletingTrip.id), 'Déplacement supprimé')
   }
 
   return (
@@ -151,12 +152,11 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
                   )}
                   {canManageTrip(t) && (
                     <button
-                      onClick={() => handleCancel(t)}
-                      disabled={loading}
-                      className="px-3 py-2 border border-gray-200 text-gray-500 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors disabled:opacity-50"
-                      title="Annuler"
+                      onClick={() => { setDeletingTrip(t); setError(null) }}
+                      className="px-3 py-2 border border-gray-200 text-gray-500 rounded-xl text-sm font-medium hover:bg-red-50 hover:text-red-600 hover:border-red-100 transition-colors"
+                      title="Supprimer"
                     >
-                      <X className="w-4 h-4" />
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   )}
                 </div>
@@ -188,12 +188,21 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
                 {t.km_start != null && <p className="text-xs text-gray-400">KM départ : {t.km_start.toLocaleString('fr-FR')}</p>}
                 {t.user?.full_name && <p className="text-xs text-gray-400">Conducteur : {t.user.full_name}</p>}
                 {canManageTrip(t) && (
-                  <button
-                    onClick={() => setEndingTrip(t)}
-                    className="mt-3 w-full py-2 bg-[#111111] text-white rounded-xl text-sm font-medium hover:bg-gray-900 transition-colors"
-                  >
-                    Terminer le déplacement
-                  </button>
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      onClick={() => setEndingTrip(t)}
+                      className="flex-1 py-2 bg-[#111111] text-white rounded-xl text-sm font-medium hover:bg-gray-900 transition-colors"
+                    >
+                      Terminer le déplacement
+                    </button>
+                    <button
+                      onClick={() => { setDeletingTrip(t); setError(null) }}
+                      className="px-3 py-2 border border-gray-200 text-gray-500 rounded-xl text-sm font-medium hover:bg-red-50 hover:text-red-600 hover:border-red-100 transition-colors"
+                      title="Supprimer"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 )}
               </div>
             ))}
@@ -233,6 +242,15 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
                       </p>
                     )}
                   </div>
+                  {canManageTrip(t) && (
+                    <button
+                      onClick={() => { setDeletingTrip(t); setError(null) }}
+                      className="flex-shrink-0 p-2 text-gray-300 rounded-lg hover:bg-red-50 hover:text-red-500 transition-colors"
+                      title="Supprimer"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               )
             })}
@@ -411,6 +429,25 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
             {loading ? 'Enregistrement...' : 'Terminer le déplacement'}
           </button>
         </form>
+      </Drawer>
+
+      {/* Delete confirmation Drawer */}
+      <Drawer open={!!deletingTrip} onClose={reset} title="Supprimer le déplacement">
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            Supprimer définitivement ce déplacement{deletingTrip?.vehicle?.plate ? ` (${deletingTrip.vehicle.plate})` : ''} ?
+            {deletingTrip?.status === 'termine' && ' Les charges de péages/frais liées seront aussi retirées de la comptabilité.'}
+          </p>
+          {error && <div className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{error}</div>}
+          <div className="flex gap-2">
+            <button onClick={reset} disabled={loading} className="flex-1 py-3 border border-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50">
+              Annuler
+            </button>
+            <button onClick={handleDelete} disabled={loading} className="flex-1 py-3 bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700 transition-colors disabled:opacity-50 active:scale-[.97]">
+              {loading ? 'Suppression...' : 'Supprimer'}
+            </button>
+          </div>
+        </div>
       </Drawer>
     </div>
   )

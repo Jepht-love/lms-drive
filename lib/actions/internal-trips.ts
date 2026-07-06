@@ -278,3 +278,33 @@ export async function cancelTrip(tripId: string) {
   revalidatePath('/')
   return { success: true }
 }
+
+/**
+ * Supprime définitivement un déplacement (propriétaire ou manager via RLS) et
+ * nettoie ses artefacts liés : l'événement calendrier (source_key trip-<id>) et
+ * les charges compta générées à la clôture (péages / frais). Le km du véhicule
+ * n'est PAS reculé — supprimer la trace ne « dé-roule » pas le véhicule.
+ */
+export async function deleteTrip(tripId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié' }
+
+  const { error } = await supabase.from('internal_trips').delete().eq('id', tripId)
+  if (error) return { error: error.message }
+
+  // Tables réservées aux managers par RLS → client admin pour le nettoyage.
+  const admin = createAdminClient()
+  await admin.from('calendar_events').delete().eq('source_key', `trip-${tripId}`)
+  await admin.from('financial_transactions').delete().in('reference', [`trip-tolls:${tripId}`, `trip-exp:${tripId}`])
+
+  await supabase.from('audit_logs').insert({
+    user_id: user.id, action: 'internal_trip_deleted',
+    entity_type: 'internal_trips', entity_id: tripId, metadata: {},
+  })
+
+  revalidatePath('/internal-trips')
+  revalidatePath('/calendrier')
+  revalidatePath('/')
+  return { success: true }
+}

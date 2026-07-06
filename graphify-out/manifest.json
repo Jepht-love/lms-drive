@@ -285,8 +285,8 @@
     "semantic_hash": ""
   },
   "app/(dashboard)/internal-trips/InternalTripsClient.tsx": {
-    "mtime": 1783324198.7274523,
-    "ast_hash": "c0b032a2ca678aa7ab158620a2f1c30e",
+    "mtime": 1783325441.330515,
+    "ast_hash": "22ef22bef7b879749a7397d59613fb0f",
     "semantic_hash": ""
   },
   "app/(dashboard)/internal-trips/page.tsx": {
@@ -820,8 +820,8 @@
     "semantic_hash": ""
   },
   "lib/actions/internal-trips.ts": {
-    "mtime": 1783324016.5449152,
-    "ast_hash": "49dff13d1d22d9ec76148737854899e5",
+    "mtime": 1783325426.9946592,
+    "ast_hash": "8f4e8e97d5e3afe1db3ca281f3e9247f",
     "semantic_hash": ""
   },
   "lib/actions/maintenance.ts": {

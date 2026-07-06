@@ -30,15 +30,15 @@ export default function VehiclesGridSwipeable({
   returnDateByVehicle?: Record<string, string>
 }) {
   return (
-    <AnimatedList className="grid sm:grid-cols-2 gap-3 items-start">
+    <AnimatedList className="grid sm:grid-cols-2 gap-3 items-stretch">
       {vehicles.map(v => {
         const cfg = STATUS_CONFIG[v.status] ?? STATUS_CONFIG.hors_service
         const badges = needsByVehicle[v.id] ?? []
 
         return (
-          <AnimatedListItem key={v.id}>
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all overflow-hidden">
-              <Link href={`/vehicles/${v.id}`} className="block group active:scale-[.99]">
+          <AnimatedListItem key={v.id} className="h-full">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all overflow-hidden h-full flex flex-col">
+              <Link href={`/vehicles/${v.id}`} className="block group active:scale-[.99] flex-1">
                 <div className="p-4">
                   <div className="flex items-start justify-between gap-2 mb-3">
                     <div className="min-w-0">
