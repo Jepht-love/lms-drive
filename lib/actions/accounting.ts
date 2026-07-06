@@ -41,6 +41,40 @@ export async function createTransaction(formData: FormData) {
   return { success: true }
 }
 
+/**
+ * Supprime une écriture comptable MANUELLE. Une écriture liée à une réservation
+ * (reservation_id renseigné, donc auto-générée) n'est pas supprimable ici — elle
+ * se gère depuis la réservation. Interdit aussi dans une période clôturée.
+ */
+export async function deleteTransaction(transactionId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié' }
+
+  const admin = createAdminClient()
+  const { data: tx } = await admin
+    .from('financial_transactions')
+    .select('date, reservation_id')
+    .eq('id', transactionId)
+    .single()
+  if (!tx) return { error: 'Écriture introuvable' }
+  if (tx.reservation_id) return { error: 'Écriture liée à une réservation — à gérer depuis la réservation.' }
+
+  const locked = await assertPeriodOpen(supabase, tx.date)
+  if (locked) return { error: locked }
+
+  const { error } = await admin.from('financial_transactions').delete().eq('id', transactionId)
+  if (error) return { error: error.message }
+
+  await supabase.from('audit_logs').insert({
+    user_id: user.id, action: 'transaction_deleted',
+    entity_type: 'financial_transactions', entity_id: transactionId, metadata: {},
+  })
+
+  revalidatePath('/accounting')
+  return { success: true }
+}
+
 // Répartition des recettes par type d'encaissement (espèces/carte/virement/...)
 // — figée à la clôture comme total_revenue/total_expenses, pas recalculée après.
 function revenueByPaymentMethod(txs: { type: string; amount: number | null; payment_method: string | null }[]): Record<string, number> {

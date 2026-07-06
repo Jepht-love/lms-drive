@@ -285,8 +285,8 @@
     "semantic_hash": ""
   },
   "app/(dashboard)/internal-trips/InternalTripsClient.tsx": {
-    "mtime": 1783325441.330515,
-    "ast_hash": "22ef22bef7b879749a7397d59613fb0f",
+    "mtime": 1783325995.1957557,
+    "ast_hash": "60df3f6a276491eb655b46a8fb1511ca",
     "semantic_hash": ""
   },
   "app/(dashboard)/internal-trips/page.tsx": {
@@ -500,8 +500,8 @@
     "semantic_hash": ""
   },
   "app/(dashboard)/vehicles/VehiclesGridSwipeable.tsx": {
-    "mtime": 1783009818.837938,
-    "ast_hash": "1d47453f6280749195e652000a30e820",
+    "mtime": 1783325834.653151,
+    "ast_hash": "2ce1d12b4357db8d15c2c13ebda9542f",
     "semantic_hash": ""
   },
   "app/(dashboard)/vehicles/[id]/VehicleMaintenanceCard.tsx": {
@@ -820,8 +820,8 @@
     "semantic_hash": ""
   },
   "lib/actions/internal-trips.ts": {
-    "mtime": 1783325426.9946592,
-    "ast_hash": "8f4e8e97d5e3afe1db3ca281f3e9247f",
+    "mtime": 1783325911.4948986,
+    "ast_hash": "f4a442ce9bd1af0b57102f85dcd4be09",
     "semantic_hash": ""
   },
   "lib/actions/maintenance.ts": {

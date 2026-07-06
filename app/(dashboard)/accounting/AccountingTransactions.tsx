@@ -10,7 +10,7 @@ import { AnimatedList, AnimatedListItem } from '@/components/AnimatedList'
 import SwipeableRow from '@/components/SwipeableRow'
 import { useToast } from '@/components/Toast'
 import InlineEditField from '@/components/InlineEditField'
-import { updateTransactionNotes } from '@/lib/actions/accounting'
+import { updateTransactionNotes, deleteTransaction } from '@/lib/actions/accounting'
 
 interface Tx {
   id: string
@@ -21,6 +21,7 @@ interface Tx {
   supplier_beneficiary: string | null
   notes: string | null
   is_transparent: boolean
+  reservation_id: string | null
   vehicles?: { plate: string } | { plate: string }[] | null
 }
 
@@ -56,6 +57,15 @@ export default function AccountingTransactions({ transactions }: { transactions:
       if (result?.error) { toast(result.error, 'error'); return }
       router.refresh()
       toast(t.is_transparent ? 'Transaction affichée' : 'Transaction masquée')
+    })
+  }
+
+  function onDelete(t: Tx) {
+    startTransition(async () => {
+      const result = await deleteTransaction(t.id)
+      if (result?.error) { toast(result.error, 'error'); return }
+      router.refresh()
+      toast('Écriture supprimée')
     })
   }
 
@@ -120,6 +130,8 @@ export default function AccountingTransactions({ transactions }: { transactions:
                     key={t.id}
                     actions={[
                       { label: t.is_transparent ? 'Afficher' : 'Masquer', color: '#7C3AED', onClick: () => onToggle(t) },
+                      // Écriture liée à une réservation : non supprimable ici (gérée via la réservation).
+                      ...(t.reservation_id ? [] : [{ label: 'Supprimer', color: '#DC2626', onClick: () => onDelete(t) }]),
                     ]}
                   >
                     {row}
