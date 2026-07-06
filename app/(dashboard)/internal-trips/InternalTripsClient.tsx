@@ -2,18 +2,20 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { startTrip, endTrip } from '@/lib/actions/internal-trips'
+import { startTrip, endTrip, planTrip, startPlannedTrip, assignTrip, cancelTrip } from '@/lib/actions/internal-trips'
 import { useToast } from '@/components/Toast'
 import { formatDateTime, formatPrice } from '@/lib/utils'
-import { Plus, Navigation, Clock, CheckCircle2 } from 'lucide-react'
+import { Plus, Navigation, Clock, CheckCircle2, CalendarClock, UserPlus, Play, X, User } from 'lucide-react'
 import Drawer from '@/components/Drawer'
 
 interface Vehicle { id: string; plate: string; brand: string; model: string; current_km: number }
+interface Member { id: string; full_name: string; role: string }
 interface Trip {
-  id: string; vehicle_id: string; user_id: string
+  id: string; vehicle_id: string; user_id: string | null
   start_datetime: string; end_datetime: string | null
+  status: 'planifie' | 'en_cours' | 'termine' | 'annule'
   purpose: string; purpose_notes: string | null
-  km_start: number; km_end: number | null
+  km_start: number | null; km_end: number | null
   fuel_start: number | null; fuel_end: number | null
   tolls_amount: number | null; expenses_amount: number | null
   vehicle: { plate: string; brand: string; model: string } | null
@@ -29,51 +31,140 @@ const PURPOSES = [
   { value: 'autre', label: 'Autre' },
 ]
 
-export default function InternalTripsClient({ vehicles, trips, isManager, currentUserId }: {
+export default function InternalTripsClient({ vehicles, trips, members, isManager, currentUserId }: {
   vehicles: Vehicle[]
   trips: Trip[]
+  members: Member[]
   isManager: boolean
   currentUserId: string
 }) {
   const router = useRouter()
   const { show } = useToast()
   const [showStartForm, setShowStartForm] = useState(false)
+  const [showPlanForm, setShowPlanForm] = useState(false)
   const [endingTrip, setEndingTrip] = useState<Trip | null>(null)
+  const [startingPlanned, setStartingPlanned] = useState<Trip | null>(null)
+  const [assigningTrip, setAssigningTrip] = useState<Trip | null>(null)
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
-  const activeTrips = trips.filter(t => !t.end_datetime)
-  const completedTrips = trips.filter(t => t.end_datetime)
+  const plannedTrips   = trips.filter(t => t.status === 'planifie')
+  const activeTrips     = trips.filter(t => t.status === 'en_cours')
+  const completedTrips = trips.filter(t => t.status === 'termine')
 
-  async function handleStart(formData: FormData) {
-    setLoading(true); setError(null)
-    const result = await startTrip(formData)
-    if (result?.error) { setError(result.error); setLoading(false); return }
-    show('Déplacement démarré', 'success')
-    setShowStartForm(false); setSelectedVehicle(null); setLoading(false)
-    router.refresh()
+  const vehicleById = (id: string) => vehicles.find(v => v.id === id) ?? null
+  const canManageTrip = (t: Trip) => isManager || t.user_id === currentUserId
+
+  function reset() {
+    setShowStartForm(false); setShowPlanForm(false)
+    setEndingTrip(null); setStartingPlanned(null); setAssigningTrip(null)
+    setSelectedVehicle(null); setError(null); setLoading(false)
   }
 
-  async function handleEnd(formData: FormData) {
-    if (!endingTrip) return
+  async function run(fn: () => Promise<{ error?: string; success?: boolean } | undefined>, okMsg: string) {
     setLoading(true); setError(null)
-    const result = await endTrip(endingTrip.id, formData)
+    const result = await fn()
     if (result?.error) { setError(result.error); setLoading(false); return }
-    show('Déplacement terminé', 'success')
-    setEndingTrip(null); setLoading(false)
-    router.refresh()
+    show(okMsg, 'success'); reset(); router.refresh()
+  }
+
+  const handleStart        = (fd: FormData) => { run(() => startTrip(fd), 'Déplacement démarré') }
+  const handlePlan          = (fd: FormData) => { run(() => planTrip(fd), 'Déplacement planifié') }
+  const handleEnd           = (fd: FormData) => { if (endingTrip) run(() => endTrip(endingTrip.id, fd), 'Déplacement terminé') }
+  const handleStartPlanned = (fd: FormData) => { if (startingPlanned) run(() => startPlannedTrip(startingPlanned.id, fd), 'Déplacement démarré') }
+
+  async function handleAssign(fd: FormData) {
+    if (!assigningTrip) return
+    const userId = fd.get('user_id') as string
+    if (!userId) { setError('Choisissez un conducteur'); return }
+    run(() => assignTrip(assigningTrip.id, userId), 'Déplacement assigné')
+  }
+
+  async function handleCancel(t: Trip) {
+    run(() => cancelTrip(t.id), 'Déplacement annulé')
   }
 
   return (
     <div className="space-y-6">
-      {/* Action */}
-      <button
-        onClick={() => setShowStartForm(true)}
-        className="flex items-center gap-2 px-4 py-2.5 bg-[#111111] text-white rounded-xl font-medium hover:bg-gray-800 transition-colors text-sm"
-      >
-        <Plus className="w-4 h-4" /> Démarrer un déplacement
-      </button>
+      {/* Actions */}
+      <div className="flex flex-wrap gap-2">
+        <button
+          onClick={() => setShowPlanForm(true)}
+          className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 text-gray-900 rounded-xl font-medium hover:bg-gray-50 transition-colors text-sm"
+        >
+          <CalendarClock className="w-4 h-4" /> Planifier un déplacement
+        </button>
+        <button
+          onClick={() => setShowStartForm(true)}
+          className="flex items-center gap-2 px-4 py-2.5 bg-[#111111] text-white rounded-xl font-medium hover:bg-gray-800 transition-colors text-sm"
+        >
+          <Plus className="w-4 h-4" /> Démarrer maintenant
+        </button>
+      </div>
+
+      {/* Planned trips */}
+      {plannedTrips.length > 0 && (
+        <div>
+          <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+            <CalendarClock className="w-4 h-4 text-blue-500" /> Planifiés ({plannedTrips.length})
+          </h3>
+          <div className="grid sm:grid-cols-2 gap-3">
+            {plannedTrips.map(t => (
+              <div key={t.id} className="bg-white rounded-2xl border-2 border-blue-100 shadow-sm p-4">
+                <div className="flex items-start justify-between mb-2">
+                  <div>
+                    <p className="font-bold text-gray-900">{t.vehicle?.plate}</p>
+                    <p className="text-xs text-gray-500">{t.vehicle?.brand} {t.vehicle?.model}</p>
+                  </div>
+                  <span className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded-full font-medium capitalize">
+                    {t.purpose}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 flex items-center gap-1">
+                  <CalendarClock className="w-3.5 h-3.5" /> {formatDateTime(t.start_datetime)}
+                </p>
+                <p className="text-xs mt-1 flex items-center gap-1">
+                  <User className="w-3.5 h-3.5 text-gray-400" />
+                  {t.user?.full_name
+                    ? <span className="text-gray-600">{t.user.full_name}</span>
+                    : <span className="text-amber-600 font-medium">Non assigné</span>}
+                </p>
+                {t.purpose_notes && <p className="text-xs text-gray-400 mt-1">{t.purpose_notes}</p>}
+
+                <div className="mt-3 flex gap-2">
+                  {!t.user_id && isManager && (
+                    <button
+                      onClick={() => { setAssigningTrip(t); setError(null) }}
+                      className="flex-1 py-2 bg-[#111111] text-white rounded-xl text-sm font-medium hover:bg-gray-900 transition-colors flex items-center justify-center gap-1.5"
+                    >
+                      <UserPlus className="w-4 h-4" /> Assigner
+                    </button>
+                  )}
+                  {t.user_id && canManageTrip(t) && (
+                    <button
+                      onClick={() => { setStartingPlanned(t); setSelectedVehicle(vehicleById(t.vehicle_id)); setError(null) }}
+                      className="flex-1 py-2 bg-[#111111] text-white rounded-xl text-sm font-medium hover:bg-gray-900 transition-colors flex items-center justify-center gap-1.5"
+                    >
+                      <Play className="w-4 h-4" /> Démarrer
+                    </button>
+                  )}
+                  {canManageTrip(t) && (
+                    <button
+                      onClick={() => handleCancel(t)}
+                      disabled={loading}
+                      className="px-3 py-2 border border-gray-200 text-gray-500 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors disabled:opacity-50"
+                      title="Annuler"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Active trips */}
       {activeTrips.length > 0 && (
@@ -94,8 +185,9 @@ export default function InternalTripsClient({ vehicles, trips, isManager, curren
                   </span>
                 </div>
                 <p className="text-xs text-gray-400">Depuis {formatDateTime(t.start_datetime)}</p>
-                <p className="text-xs text-gray-400">KM départ : {t.km_start.toLocaleString('fr-FR')}</p>
-                {(isManager || t.user_id === currentUserId) && (
+                {t.km_start != null && <p className="text-xs text-gray-400">KM départ : {t.km_start.toLocaleString('fr-FR')}</p>}
+                {t.user?.full_name && <p className="text-xs text-gray-400">Conducteur : {t.user.full_name}</p>}
+                {canManageTrip(t) && (
                   <button
                     onClick={() => setEndingTrip(t)}
                     className="mt-3 w-full py-2 bg-[#111111] text-white rounded-xl text-sm font-medium hover:bg-gray-900 transition-colors"
@@ -120,7 +212,7 @@ export default function InternalTripsClient({ vehicles, trips, isManager, curren
         ) : (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden divide-y divide-gray-50">
             {completedTrips.map(t => {
-              const distance = t.km_end ? t.km_end - t.km_start : 0
+              const distance = t.km_end != null && t.km_start != null ? t.km_end - t.km_start : 0
               return (
                 <div key={t.id} className="flex items-center gap-4 px-4 py-3">
                   <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
@@ -148,8 +240,89 @@ export default function InternalTripsClient({ vehicles, trips, isManager, curren
         )}
       </div>
 
-      {/* Start Drawer */}
-      <Drawer open={showStartForm} onClose={() => setShowStartForm(false)} title="Démarrer un déplacement">
+      {/* Plan Drawer */}
+      <Drawer open={showPlanForm} onClose={reset} title="Planifier un déplacement">
+        <form action={handlePlan} className="space-y-4">
+          <div>
+            <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Véhicule *</label>
+            <select name="vehicle_id" required className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white">
+              <option value="">— Choisir —</option>
+              {vehicles.map(v => <option key={v.id} value={v.id}>{v.plate} — {v.brand} {v.model}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Date et heure *</label>
+            <input type="datetime-local" name="start_datetime" required className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white" />
+          </div>
+          <div>
+            <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Motif *</label>
+            <select name="purpose" required className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white">
+              {PURPOSES.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+            </select>
+          </div>
+          {isManager ? (
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Conducteur</label>
+              <select name="user_id" defaultValue="none" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white">
+                <option value="none">— Non assigné —</option>
+                {members.map(m => <option key={m.id} value={m.id}>{m.full_name}</option>)}
+              </select>
+              <p className="text-[11px] text-gray-400 mt-1">Laissez « Non assigné » pour attribuer plus tard.</p>
+            </div>
+          ) : (
+            <p className="text-xs text-gray-500 bg-gray-50 rounded-xl px-3 py-2">Ce déplacement vous sera assigné.</p>
+          )}
+          <div>
+            <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Notes</label>
+            <input type="text" name="purpose_notes" placeholder="Détails..." enterKeyHint="done" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm" />
+          </div>
+          {error && <div className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{error}</div>}
+          <p className="text-[11px] text-gray-400">* Champ obligatoire</p>
+          <button type="submit" disabled={loading} className="w-full py-3 bg-[#111111] text-white rounded-xl font-semibold disabled:opacity-50 transition-colors active:scale-[.97]">
+            {loading ? 'Planification...' : 'Planifier'}
+          </button>
+        </form>
+      </Drawer>
+
+      {/* Assign Drawer */}
+      <Drawer open={!!assigningTrip} onClose={reset} title={`Assigner — ${assigningTrip?.vehicle?.plate ?? ''}`}>
+        <form action={handleAssign} className="space-y-4">
+          <div>
+            <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Conducteur *</label>
+            <select name="user_id" required defaultValue="" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white">
+              <option value="">— Choisir —</option>
+              {members.map(m => <option key={m.id} value={m.id}>{m.full_name}</option>)}
+            </select>
+          </div>
+          {error && <div className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{error}</div>}
+          <button type="submit" disabled={loading} className="w-full py-3 bg-[#111111] text-white rounded-xl font-semibold disabled:opacity-50 transition-colors active:scale-[.97]">
+            {loading ? 'Assignation...' : 'Assigner'}
+          </button>
+        </form>
+      </Drawer>
+
+      {/* Start-planned Drawer */}
+      <Drawer open={!!startingPlanned} onClose={reset} title={`Démarrer — ${startingPlanned?.vehicle?.plate ?? ''}`}>
+        <form action={handleStartPlanned} className="space-y-4">
+          <div>
+            <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">
+              KM départ * {selectedVehicle && <span className="text-gray-400 font-normal">(actuel: {selectedVehicle.current_km.toLocaleString('fr-FR')})</span>}
+            </label>
+            <input type="number" name="km_start" required defaultValue={selectedVehicle?.current_km} inputMode="numeric" enterKeyHint="next" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm" />
+          </div>
+          <div>
+            <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Autonomie carburant (km)</label>
+            <input type="number" name="fuel_start" min="0" placeholder="Autonomie en km" inputMode="numeric" enterKeyHint="done" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm" />
+          </div>
+          {error && <div className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{error}</div>}
+          <button type="submit" disabled={loading} className="w-full py-3 bg-[#111111] text-white rounded-xl font-semibold disabled:opacity-50 transition-colors active:scale-[.97]">
+            {loading ? 'Démarrage...' : 'Démarrer le déplacement'}
+          </button>
+        </form>
+      </Drawer>
+
+      {/* Start Drawer (immédiat) */}
+      <Drawer open={showStartForm} onClose={reset} title="Démarrer un déplacement">
         <form action={handleStart} className="space-y-4">
           <div>
             <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Véhicule *</label>
@@ -202,13 +375,13 @@ export default function InternalTripsClient({ vehicles, trips, isManager, curren
       </Drawer>
 
       {/* End Drawer */}
-      <Drawer open={!!endingTrip} onClose={() => setEndingTrip(null)} title={`Terminer — ${endingTrip?.vehicle?.plate ?? ''}`}>
+      <Drawer open={!!endingTrip} onClose={reset} title={`Terminer — ${endingTrip?.vehicle?.plate ?? ''}`}>
         <form action={handleEnd} className="space-y-4">
           <div>
             <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">
-              KM retour * <span className="text-gray-400 font-normal">(départ: {endingTrip?.km_start.toLocaleString('fr-FR')})</span>
+              KM retour * <span className="text-gray-400 font-normal">(départ: {endingTrip?.km_start?.toLocaleString('fr-FR') ?? '—'})</span>
             </label>
-            <input type="number" name="km_end" required min={endingTrip?.km_start} defaultValue={endingTrip?.km_start} inputMode="numeric" enterKeyHint="next" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm font-bold" />
+            <input type="number" name="km_end" required min={endingTrip?.km_start ?? undefined} defaultValue={endingTrip?.km_start ?? undefined} inputMode="numeric" enterKeyHint="next" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm font-bold" />
           </div>
           <div>
             <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Autonomie carburant (km)</label>

@@ -5,8 +5,8 @@
     "semantic_hash": ""
   },
   ".claude/settings.json": {
-    "mtime": 1781109997.598098,
-    "ast_hash": "bfee062c3962c14264fd704e975a6b38",
+    "mtime": 1783239761.4494033,
+    "ast_hash": "bbac824977d3d546d9f76510214f1c60",
     "semantic_hash": ""
   },
   "app/(auth)/layout.tsx": {
@@ -285,13 +285,13 @@
     "semantic_hash": ""
   },
   "app/(dashboard)/internal-trips/InternalTripsClient.tsx": {
-    "mtime": 1783082632.9282382,
-    "ast_hash": "e10d7a9edffd89bdf733ffdfef74c513",
+    "mtime": 1783324198.7274523,
+    "ast_hash": "c0b032a2ca678aa7ab158620a2f1c30e",
     "semantic_hash": ""
   },
   "app/(dashboard)/internal-trips/page.tsx": {
-    "mtime": 1781037809.7904093,
-    "ast_hash": "2f75c2f5c4dd661212275c25c70e9c89",
+    "mtime": 1783324067.3681448,
+    "ast_hash": "6a643b60e1bcdc04935a9443eb910c82",
     "semantic_hash": ""
   },
   "app/(dashboard)/layout.tsx": {
@@ -820,8 +820,8 @@
     "semantic_hash": ""
   },
   "lib/actions/internal-trips.ts": {
-    "mtime": 1783188905.374683,
-    "ast_hash": "4edec2e7520890b5f56a7cbdb41c7bee",
+    "mtime": 1783324016.5449152,
+    "ast_hash": "49dff13d1d22d9ec76148737854899e5",
     "semantic_hash": ""
   },
   "lib/actions/maintenance.ts": {
@@ -1550,8 +1550,8 @@
     "semantic_hash": ""
   },
   "lib/calendar/syncInternalTrip.ts": {
-    "mtime": 1782221021.7535448,
-    "ast_hash": "fdb28818cc748158a3f60e272c1f28ce",
+    "mtime": 1783324038.9968293,
+    "ast_hash": "9891b75036e7e893d053d3d7c0b45f0c",
     "semantic_hash": ""
   },
   "supabase/migrations/036_documents_bucket.sql": {
@@ -2082,6 +2082,56 @@
   "lib/fleetaxis-i18n.ts": {
     "mtime": 1783189970.6248412,
     "ast_hash": "13f3993d297eeff6f4ad1d0b36e70310",
+    "semantic_hash": ""
+  },
+  "skills-lock.json": {
+    "mtime": 1783209436.9808502,
+    "ast_hash": "55494ba3123fbbb6f7a74206ba662ef0",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/051_internal_trips_planning.sql": {
+    "mtime": 1783323939.2145247,
+    "ast_hash": "dd93eba86b3d6133c1953c91c79e48a0",
+    "semantic_hash": ""
+  },
+  ".agents/skills/gsap-core/SKILL.md": {
+    "mtime": 1783209436.9121535,
+    "ast_hash": "e14974bb48ddfe9e0da3406562b8f18f",
+    "semantic_hash": ""
+  },
+  ".agents/skills/gsap-frameworks/SKILL.md": {
+    "mtime": 1783209436.9208946,
+    "ast_hash": "8b067a9a32a69b11732678bcf09f5b4a",
+    "semantic_hash": ""
+  },
+  ".agents/skills/gsap-performance/SKILL.md": {
+    "mtime": 1783209436.931175,
+    "ast_hash": "f6b97aae273b24930d77e634dcf1c62e",
+    "semantic_hash": ""
+  },
+  ".agents/skills/gsap-plugins/SKILL.md": {
+    "mtime": 1783209436.9400282,
+    "ast_hash": "694d28e8efac50b29b33905ffa62ec4f",
+    "semantic_hash": ""
+  },
+  ".agents/skills/gsap-react/SKILL.md": {
+    "mtime": 1783209436.9498923,
+    "ast_hash": "9fc3789feebbe444032cee2ade44f5b4",
+    "semantic_hash": ""
+  },
+  ".agents/skills/gsap-scrolltrigger/SKILL.md": {
+    "mtime": 1783209436.9581668,
+    "ast_hash": "4082bbc747d61f4241b2f0c5f2cfbeca",
+    "semantic_hash": ""
+  },
+  ".agents/skills/gsap-timeline/SKILL.md": {
+    "mtime": 1783209436.968844,
+    "ast_hash": "3dfefe09dc41a59f2322734a7694b810",
+    "semantic_hash": ""
+  },
+  ".agents/skills/gsap-utils/SKILL.md": {
+    "mtime": 1783209436.977323,
+    "ast_hash": "6a9b883f5a4ce55430fd7463176a2004",
     "semantic_hash": ""
   }
 }

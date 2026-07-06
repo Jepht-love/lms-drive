@@ -16,6 +16,7 @@ export async function startTrip(formData: FormData) {
     start_datetime: new Date().toISOString(),
     purpose: formData.get('purpose') as string,
     purpose_notes: formData.get('purpose_notes') as string || null,
+    status: 'en_cours' as const,
     km_start: Number(formData.get('km_start')),
     fuel_start: formData.get('fuel_start') ? Number(formData.get('fuel_start')) : null,
     notes: formData.get('notes') as string || null,
@@ -36,6 +37,7 @@ export async function startTrip(formData: FormData) {
 
   revalidatePath('/internal-trips')
   revalidatePath('/calendrier')
+  revalidatePath('/')
   return { success: true }
 }
 
@@ -55,9 +57,10 @@ export async function endTrip(tripId: string, formData: FormData) {
     .single()
 
   if (!trip) return { error: 'Déplacement introuvable' }
-  if (kmEnd < trip.km_start) return { error: 'Le KM retour doit être supérieur au KM départ' }
+  if (trip.km_start != null && kmEnd < trip.km_start) return { error: 'Le KM retour doit être supérieur au KM départ' }
 
   const { error } = await supabase.from('internal_trips').update({
+    status: 'termine',
     end_datetime: new Date().toISOString(),
     km_end: kmEnd,
     fuel_end: formData.get('fuel_end') ? Number(formData.get('fuel_end')) : null,
@@ -111,5 +114,161 @@ export async function endTrip(tripId: string, formData: FormData) {
 
   revalidatePath('/internal-trips')
   revalidatePath('/calendrier')
+  revalidatePath('/')
+  return { success: true }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Planification
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function getRole(supabase: Awaited<ReturnType<typeof createClient>>, userId: string) {
+  const { data } = await supabase.from('profiles').select('role').eq('id', userId).single()
+  return data?.role ?? null
+}
+
+const isManagerRole = (role: string | null) => role === 'gerant' || role === 'associe'
+
+/**
+ * Planifie un déplacement pour une date (future ou non), assigné à un
+ * collaborateur OU laissé non assigné. Gérant/associé planifient pour n'importe
+ * qui ; un employé ne planifie que pour lui-même. Aucun km n'est saisi ici — il
+ * le sera au démarrage réel (startPlannedTrip).
+ */
+export async function planTrip(formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié' }
+
+  const isManager = isManagerRole(await getRole(supabase, user.id))
+
+  const vehicleId = formData.get('vehicle_id') as string
+  const purpose = formData.get('purpose') as string
+  const startRaw = formData.get('start_datetime') as string
+  if (!vehicleId || !purpose) return { error: 'Véhicule et motif requis' }
+  if (!startRaw) return { error: 'Date du déplacement requise' }
+
+  // Employé : forcé sur lui-même. Manager : valeur du select ('' ou 'none' = non assigné).
+  const assigneeRaw = (formData.get('user_id') as string | null) ?? ''
+  const assignee = isManager
+    ? (assigneeRaw && assigneeRaw !== 'none' ? assigneeRaw : null)
+    : user.id
+
+  const payload = {
+    vehicle_id: vehicleId,
+    user_id: assignee,
+    start_datetime: new Date(startRaw).toISOString(),
+    purpose,
+    purpose_notes: (formData.get('purpose_notes') as string) || null,
+    status: 'planifie' as const,
+    notes: (formData.get('notes') as string) || null,
+  }
+
+  const { data, error } = await supabase.from('internal_trips').insert(payload).select('id').single()
+  if (error) return { error: error.message }
+
+  await syncTripToCalendar(data.id)
+
+  await supabase.from('audit_logs').insert({
+    user_id: user.id,
+    action: 'internal_trip_planned',
+    entity_type: 'internal_trips',
+    entity_id: data.id,
+    metadata: { vehicle_id: vehicleId, purpose, assigned_to: assignee },
+  })
+
+  revalidatePath('/internal-trips')
+  revalidatePath('/calendrier')
+  revalidatePath('/')
+  return { success: true }
+}
+
+/** (Ré)assigner un déplacement planifié à un conducteur — gérant/associé uniquement. */
+export async function assignTrip(tripId: string, userId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié' }
+  if (!isManagerRole(await getRole(supabase, user.id))) return { error: 'Action réservée au gérant/associé' }
+
+  const { error } = await supabase
+    .from('internal_trips')
+    .update({ user_id: userId })
+    .eq('id', tripId)
+    .eq('status', 'planifie')
+  if (error) return { error: error.message }
+
+  await syncTripToCalendar(tripId)
+  await supabase.from('audit_logs').insert({
+    user_id: user.id, action: 'internal_trip_assigned',
+    entity_type: 'internal_trips', entity_id: tripId, metadata: { assigned_to: userId },
+  })
+
+  revalidatePath('/internal-trips')
+  revalidatePath('/calendrier')
+  revalidatePath('/')
+  return { success: true }
+}
+
+/**
+ * Démarre un déplacement planifié : passe à "en cours", enregistre le km/carburant
+ * réels et fixe l'heure de départ effective. Un non-assigné doit d'abord recevoir
+ * un conducteur.
+ */
+export async function startPlannedTrip(tripId: string, formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié' }
+
+  const { data: trip } = await supabase
+    .from('internal_trips')
+    .select('user_id, status')
+    .eq('id', tripId)
+    .single()
+  if (!trip) return { error: 'Déplacement introuvable' }
+  if (trip.status !== 'planifie') return { error: 'Ce déplacement n’est pas planifié' }
+  if (!trip.user_id) return { error: 'Assignez un conducteur avant de démarrer' }
+
+  const { error } = await supabase.from('internal_trips').update({
+    status: 'en_cours',
+    start_datetime: new Date().toISOString(),
+    km_start: Number(formData.get('km_start')),
+    fuel_start: formData.get('fuel_start') ? Number(formData.get('fuel_start')) : null,
+  }).eq('id', tripId)
+  if (error) return { error: error.message }
+
+  await syncTripToCalendar(tripId)
+  await supabase.from('audit_logs').insert({
+    user_id: user.id, action: 'internal_trip_started',
+    entity_type: 'internal_trips', entity_id: tripId, metadata: { from: 'planifie' },
+  })
+
+  revalidatePath('/internal-trips')
+  revalidatePath('/calendrier')
+  revalidatePath('/')
+  return { success: true }
+}
+
+/** Annule un déplacement encore planifié (propriétaire ou manager via RLS). */
+export async function cancelTrip(tripId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié' }
+
+  const { error } = await supabase
+    .from('internal_trips')
+    .update({ status: 'annule' })
+    .eq('id', tripId)
+    .eq('status', 'planifie')
+  if (error) return { error: error.message }
+
+  await syncTripToCalendar(tripId)
+  await supabase.from('audit_logs').insert({
+    user_id: user.id, action: 'internal_trip_cancelled',
+    entity_type: 'internal_trips', entity_id: tripId, metadata: {},
+  })
+
+  revalidatePath('/internal-trips')
+  revalidatePath('/calendrier')
+  revalidatePath('/')
   return { success: true }
 }

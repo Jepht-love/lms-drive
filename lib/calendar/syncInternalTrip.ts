@@ -5,6 +5,11 @@ const PURPOSE_LABELS: Record<string, string> = {
   preparation: 'Préparation', personnel: 'Personnel', autre: 'Autre',
 }
 
+// Statut du déplacement → statut de l'événement calendrier (enum calendar_events).
+const STATUS_MAP: Record<string, 'a_faire' | 'en_cours' | 'termine' | 'annule'> = {
+  planifie: 'a_faire', en_cours: 'en_cours', termine: 'termine', annule: 'annule',
+}
+
 // 1h par défaut quand le trajet est encore en cours (pas de end_datetime) —
 // même logique que syncRental.ts, juste pour donner une hauteur de bloc au
 // calendrier ; mis à jour avec la vraie durée dès que le trajet se termine.
@@ -20,7 +25,7 @@ export async function syncTripToCalendar(tripId: string): Promise<void> {
   const admin = createAdminClient()
   const { data: trip } = await admin
     .from('internal_trips')
-    .select('id, vehicle_id, user_id, start_datetime, end_datetime, purpose, vehicle:vehicles(brand, model)')
+    .select('id, vehicle_id, user_id, start_datetime, end_datetime, purpose, status, vehicle:vehicles(brand, model)')
     .eq('id', tripId)
     .single()
 
@@ -39,11 +44,11 @@ export async function syncTripToCalendar(tripId: string): Promise<void> {
   const payload = {
     title,
     event_type: 'deplacement_interne' as const,
-    status: trip.end_datetime ? ('termine' as const) : ('en_cours' as const),
+    status: STATUS_MAP[trip.status] ?? 'a_faire',
     start_at: startAt,
     end_at: endAt,
     vehicle_ids: [trip.vehicle_id],
-    assigned_to: trip.user_id,
+    assigned_to: trip.user_id, // null = non assigné (colonne nullable)
     source_key: sourceKey,
   }
 
