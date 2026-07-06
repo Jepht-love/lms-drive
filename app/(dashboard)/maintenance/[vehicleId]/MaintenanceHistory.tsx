@@ -2,16 +2,19 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { FileText, Check, BadgeEuro } from 'lucide-react'
+import { FileText, Check, BadgeEuro, Trash2 } from 'lucide-react'
 import { formatPrice, formatDate } from '@/lib/utils'
 import { MAINTENANCE_TYPES, maintenanceType, type MaintenanceRecord } from '@/lib/maintenance'
 import { PAYMENT_METHODS, paymentMethodLabel } from '@/lib/accounting/categories'
-import { markMaintenancePaid } from '@/lib/actions/maintenance'
+import { markMaintenancePaid, deleteMaintenanceRecord } from '@/lib/actions/maintenance'
+import { useToast } from '@/components/Toast'
 
 export default function MaintenanceHistory({ records }: { records: MaintenanceRecord[] }) {
   const router = useRouter()
+  const { show: toast } = useToast()
   const [filter, setFilter] = useState<string>('tous')
   const [openPay, setOpenPay] = useState<string | null>(null)
+  const [confirmDel, setConfirmDel] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
 
   const presentTypes = new Set(records.map(r => r.type))
@@ -22,6 +25,16 @@ export default function MaintenanceHistory({ records }: { records: MaintenanceRe
       await markMaintenancePaid(id, method)
       setOpenPay(null)
       router.refresh()
+    })
+  }
+
+  function del(id: string) {
+    startTransition(async () => {
+      const r = await deleteMaintenanceRecord(id)
+      if (r?.error) { toast(r.error, 'error'); return }
+      setConfirmDel(null)
+      router.refresh()
+      toast('Intervention supprimée')
     })
   }
 
@@ -80,7 +93,16 @@ export default function MaintenanceHistory({ records }: { records: MaintenanceRe
                     <p className="text-sm font-medium text-gray-900 mt-0.5">{r.description}</p>
                   )}
                 </div>
-                <span className="text-sm font-black text-gray-900 flex-shrink-0">{formatPrice(amount)}</span>
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <span className="text-sm font-black text-gray-900">{formatPrice(amount)}</span>
+                  <button
+                    onClick={() => setConfirmDel(confirmDel === r.id ? null : r.id)}
+                    className="p-1.5 text-gray-300 rounded-lg hover:bg-red-50 hover:text-red-500 transition-colors"
+                    title="Supprimer"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
               <div className="flex items-center gap-2 text-xs text-gray-400 flex-wrap">
                 <span>{formatDate(r.date)}</span>
@@ -143,6 +165,14 @@ export default function MaintenanceHistory({ records }: { records: MaintenanceRe
                       <BadgeEuro className="w-3.5 h-3.5" /> Marquer payé
                     </button>
                   )}
+                </div>
+              )}
+
+              {confirmDel === r.id && (
+                <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-2">
+                  <span className="text-xs text-gray-500 flex-1">Supprimer cette intervention ?{r.paid_at ? ' La charge compta liée sera aussi retirée.' : ''}</span>
+                  <button onClick={() => setConfirmDel(null)} disabled={pending} className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-gray-200 text-gray-600 disabled:opacity-40">Annuler</button>
+                  <button onClick={() => del(r.id)} disabled={pending} className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-600 text-white disabled:opacity-40">Supprimer</button>
                 </div>
               )}
             </div>

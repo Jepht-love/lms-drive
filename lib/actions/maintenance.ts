@@ -145,6 +145,54 @@ export async function createMaintenanceRecord(formData: FormData) {
   return { success: true }
 }
 
+/**
+ * Supprime une intervention d'entretien et nettoie ses artefacts : la charge
+ * comptable liée (reference `maintenance:<id>`, si l'intervention avait été
+ * réglée) et, best-effort, le RDV garage au calendrier (même véhicule / même
+ * jour — ces événements n'ont pas de source_key). Le km véhicule et le prochain
+ * entretien planifié ne sont PAS recalculés.
+ */
+export async function deleteMaintenanceRecord(recordId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié' }
+
+  const { data: rec } = await supabase
+    .from('maintenance_records')
+    .select('id, vehicle_id, type, date')
+    .eq('id', recordId)
+    .single()
+  if (!rec) return { error: 'Intervention introuvable' }
+
+  const admin = createAdminClient()
+  await admin.from('financial_transactions').delete().eq('reference', `maintenance:${recordId}`)
+
+  if (GARAGE_TYPES.has(rec.type)) {
+    await admin
+      .from('calendar_events')
+      .delete()
+      .eq('event_type', 'rdv_garage')
+      .contains('vehicle_ids', [rec.vehicle_id])
+      .gte('start_at', `${rec.date}T00:00:00`)
+      .lte('start_at', `${rec.date}T23:59:59`)
+  }
+
+  const { error } = await supabase.from('maintenance_records').delete().eq('id', recordId)
+  if (error) return { error: error.message }
+
+  await supabase.from('audit_logs').insert({
+    user_id: user.id, action: 'maintenance_deleted',
+    entity_type: 'maintenance_records', entity_id: recordId, metadata: {},
+  })
+
+  revalidatePath(`/maintenance/${rec.vehicle_id}`)
+  revalidatePath('/maintenance')
+  revalidatePath('/accounting')
+  revalidatePath('/calendrier')
+  revalidatePath('/')
+  return { success: true }
+}
+
 // Catégorie comptable selon le type d'intervention (réparation vs entretien courant).
 function expenseCategoryFor(type: string): string {
   if (['reparation', 'carrosserie', 'freins'].includes(type)) return 'reparations'
