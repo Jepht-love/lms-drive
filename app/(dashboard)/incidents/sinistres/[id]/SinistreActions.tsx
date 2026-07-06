@@ -2,9 +2,9 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowRight, Wrench, Lock, FileDown } from 'lucide-react'
+import { ArrowRight, Wrench, Lock, FileDown, Trash2 } from 'lucide-react'
 import { SINISTRE_FLOW, SINISTRE_STATUS } from '@/lib/incidents'
-import { updateAccidentStatus, addAccidentToVehicle } from '@/lib/actions/incidents'
+import { updateAccidentStatus, addAccidentToVehicle, deleteAccident } from '@/lib/actions/incidents'
 import { useToast } from '@/components/Toast'
 
 export default function SinistreActions({ id, status }: { id: string; status: string }) {
@@ -13,6 +13,7 @@ export default function SinistreActions({ id, status }: { id: string; status: st
   const [pending, startTransition] = useTransition()
   const [pdfPending, setPdfPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [confirmDel, setConfirmDel] = useState(false)
 
   async function downloadPdf() {
     setPdfPending(true)
@@ -68,6 +69,26 @@ export default function SinistreActions({ id, status }: { id: string; status: st
         className={`${btn} bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 w-full`}>
         <FileDown className="w-4 h-4" /> {pdfPending ? 'Génération…' : 'Télécharger le rapport PDF'}
       </button>
+
+      {confirmDel ? (
+        <div className="flex gap-2">
+          <button onClick={() => setConfirmDel(false)} disabled={pending}
+            className="flex-1 py-2.5 rounded-xl bg-white border border-gray-200 text-[13px] font-semibold text-gray-600 disabled:opacity-40">
+            Annuler
+          </button>
+          <button
+            onClick={() => { setError(null); startTransition(async () => { const r = await deleteAccident(id); if (r?.error) setError(r.error); else { show('Sinistre supprimé', 'success'); router.push('/incidents/sinistres') } }) }}
+            disabled={pending}
+            className="flex-1 py-2.5 rounded-xl bg-red-600 text-white text-[13px] font-semibold disabled:opacity-40">
+            {pending ? 'Suppression...' : 'Confirmer la suppression'}
+          </button>
+        </div>
+      ) : (
+        <button onClick={() => setConfirmDel(true)}
+          className={`${btn} bg-white border border-gray-200 text-red-600 hover:bg-red-50 hover:border-red-100 w-full`}>
+          <Trash2 className="w-4 h-4" /> Supprimer le sinistre
+        </button>
+      )}
 
       {error && <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2">{error}</p>}
     </div>

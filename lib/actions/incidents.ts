@@ -203,6 +203,34 @@ export async function closeInfraction(id: string) {
   return { success: true }
 }
 
+/**
+ * Supprime une infraction et la charge comptable liée (financial_transactions
+ * référencées par infraction_id). Les justificatifs déjà rangés dans Documents ›
+ * Véhicule ne sont pas retirés (non rattachés de façon unique à l'infraction).
+ */
+export async function deleteInfraction(id: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié' }
+
+  const { data: inf } = await supabase.from('infractions').select('vehicle_id').eq('id', id).single()
+  await createAdminClient().from('financial_transactions').delete().eq('infraction_id', id)
+
+  const { error } = await supabase.from('infractions').delete().eq('id', id)
+  if (error) return { error: error.message }
+
+  await supabase.from('audit_logs').insert({
+    user_id: user.id, action: 'infraction_deleted',
+    entity_type: 'infractions', entity_id: id, metadata: {},
+  })
+
+  revalidatePath('/incidents')
+  revalidatePath('/incidents/infractions')
+  revalidatePath('/accounting')
+  if (inf?.vehicle_id) revalidatePath(`/vehicles/${inf.vehicle_id}`)
+  return { success: true }
+}
+
 // ─── Sinistres (accidents) ────────────────────────────────────────────────────
 
 export async function createAccident(formData: FormData) {
@@ -317,6 +345,31 @@ export async function updateAccidentStatus(id: string, status: string) {
     })
   }
   revalidatePath(`/incidents/sinistres/${id}`)
+  return { success: true }
+}
+
+/**
+ * Supprime un sinistre et la charge comptable liée (reference `accident:<id>`,
+ * créée à la clôture avec réparation à charge de l'agence).
+ */
+export async function deleteAccident(id: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié' }
+
+  await createAdminClient().from('financial_transactions').delete().eq('reference', `accident:${id}`)
+
+  const { error } = await supabase.from('accidents').delete().eq('id', id)
+  if (error) return { error: error.message }
+
+  await supabase.from('audit_logs').insert({
+    user_id: user.id, action: 'accident_deleted',
+    entity_type: 'accidents', entity_id: id, metadata: {},
+  })
+
+  revalidatePath('/incidents')
+  revalidatePath('/incidents/sinistres')
+  revalidatePath('/accounting')
   return { success: true }
 }
 

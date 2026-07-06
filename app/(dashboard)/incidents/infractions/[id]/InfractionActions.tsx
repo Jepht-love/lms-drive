@@ -2,8 +2,8 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Send, CheckCircle2, Lock } from 'lucide-react'
-import { transmitInfractionToClient, markInfractionPaid, closeInfraction } from '@/lib/actions/incidents'
+import { Send, CheckCircle2, Lock, Trash2 } from 'lucide-react'
+import { transmitInfractionToClient, markInfractionPaid, closeInfraction, deleteInfraction } from '@/lib/actions/incidents'
 import { useToast } from '@/components/Toast'
 
 export default function InfractionActions({
@@ -15,6 +15,7 @@ export default function InfractionActions({
   const { show } = useToast()
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  const [confirmDel, setConfirmDel] = useState(false)
 
   function run(fn: () => Promise<{ error?: string; success?: boolean }>, okMsg: string) {
     setError(null)
@@ -25,10 +26,41 @@ export default function InfractionActions({
     })
   }
 
+  function doDelete() {
+    setError(null)
+    startTransition(async () => {
+      const res = await deleteInfraction(id)
+      if (res?.error) setError(res.error)
+      else { show('Infraction supprimée', 'success'); router.push('/incidents/infractions') }
+    })
+  }
+
+  const deleteBlock = confirmDel ? (
+    <div className="flex gap-2">
+      <button onClick={() => setConfirmDel(false)} disabled={pending}
+        className="flex-1 py-2.5 rounded-xl bg-white border border-gray-200 text-[13px] font-semibold text-gray-600 disabled:opacity-40">
+        Annuler
+      </button>
+      <button onClick={doDelete} disabled={pending}
+        className="flex-1 py-2.5 rounded-xl bg-red-600 text-white text-[13px] font-semibold disabled:opacity-40">
+        {pending ? 'Suppression...' : 'Confirmer la suppression'}
+      </button>
+    </div>
+  ) : (
+    <button onClick={() => setConfirmDel(true)}
+      className="w-full py-2.5 rounded-xl bg-white border border-gray-200 text-[13px] font-semibold text-red-600 flex items-center justify-center gap-1.5 hover:bg-red-50 hover:border-red-100 transition-colors">
+      <Trash2 className="w-4 h-4" /> Supprimer l&apos;infraction
+    </button>
+  )
+
   if (status === 'cloture') {
     return (
-      <div className="flex items-center justify-center gap-2 py-3 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-semibold text-gray-400">
-        <Lock className="w-4 h-4" /> Infraction clôturée
+      <div className="space-y-2">
+        <div className="flex items-center justify-center gap-2 py-3 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-semibold text-gray-400">
+          <Lock className="w-4 h-4" /> Infraction clôturée
+        </div>
+        {deleteBlock}
+        {error && <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2">{error}</p>}
       </div>
     )
   }
@@ -64,6 +96,7 @@ export default function InfractionActions({
           <Lock className="w-4 h-4" /> Clôturer
         </button>
       </div>
+      {deleteBlock}
       {error && <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2">{error}</p>}
     </div>
   )
