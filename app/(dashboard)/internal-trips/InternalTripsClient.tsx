@@ -324,7 +324,7 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
         <form action={handleStartPlanned} className="space-y-4">
           <div>
             <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">
-              KM départ * {selectedVehicle && <span className="text-gray-400 font-normal">(actuel: {selectedVehicle.current_km.toLocaleString('fr-FR')})</span>}
+              KM départ * {selectedVehicle && <span className="text-gray-400 font-normal">(actuel: {selectedVehicle.current_km?.toLocaleString('fr-FR') ?? '—'})</span>}
             </label>
             <input type="number" name="km_start" required defaultValue={selectedVehicle?.current_km} inputMode="numeric" enterKeyHint="next" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm" />
           </div>
@@ -372,7 +372,7 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
           )}
           <div>
             <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">
-              KM départ * {selectedVehicle && <span className="text-gray-400 font-normal">(actuel: {selectedVehicle.current_km.toLocaleString('fr-FR')})</span>}
+              KM départ * {selectedVehicle && <span className="text-gray-400 font-normal">(actuel: {selectedVehicle.current_km?.toLocaleString('fr-FR') ?? '—'})</span>}
             </label>
             <input
               type="number"

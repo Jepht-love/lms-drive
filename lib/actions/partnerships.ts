@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { formatDate, generateReservationNumber, calculateRentalDays } from '@/lib/utils'
+import { recomputeVehicleStatus } from '@/lib/vehicles/vehicleStatus'
 
 const str = (fd: FormData, k: string) => (fd.get(k) as string)?.trim() || null
 const num = (fd: FormData, k: string) => {
@@ -253,6 +254,9 @@ export async function updateOperationStatus(id: string, status: string) {
       const update: Record<string, unknown> = { status: 'disponible', availability_note: null }
       if (op.return_km != null) update.current_km = op.return_km
       await supabase.from('vehicles').update(update).eq('id', op.vehicle_id)
+      // Recalcule le vrai statut : si le véhicule a une réservation en cours/à
+      // venir, il repasse loué/réservé au lieu de rester figé sur disponible.
+      await recomputeVehicleStatus(supabase, op.vehicle_id)
     }
     // Filet de sécurité : booke aussi les opérations déjà bloquées à "termine"
     // avant ce correctif (bookOperationTransaction est anti-doublon).

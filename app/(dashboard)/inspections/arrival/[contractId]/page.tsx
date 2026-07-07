@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import BackButton from '@/components/ui/BackButton'
 import InspectionFlow from '@/components/inspection/InspectionFlow'
+import { calculateRentalDays } from '@/lib/utils'
 
 export default async function ArrivalInspectionPage({ params }: { params: Promise<{ contractId: string }> }) {
   const { contractId } = await params
@@ -16,6 +17,7 @@ export default async function ArrivalInspectionPage({ params }: { params: Promis
       reservation_id,
       reservation:reservations(
         vehicle_id,
+        start_datetime,
         end_datetime,
         km_included,
         extra_km_price,
@@ -31,6 +33,13 @@ export default async function ArrivalInspectionPage({ params }: { params: Promis
   const reservation = Array.isArray(contract.reservation) ? contract.reservation[0] : contract.reservation as any
   const vehicle = Array.isArray(reservation?.vehicle) ? reservation.vehicle[0] : reservation?.vehicle
   const client = Array.isArray(reservation?.client) ? reservation.client[0] : reservation?.client
+
+  // km_included est un forfait PAR JOUR → le seuil de dépassement de l'EDL retour
+  // doit couvrir toute la durée : forfait/jour × nombre de jours de location.
+  const rentalDays = reservation?.start_datetime && reservation?.end_datetime
+    ? calculateRentalDays(reservation.start_datetime, reservation.end_datetime)
+    : 1
+  const kmIncludedTotal = (reservation?.km_included ?? 200) * rentalDays
 
   // Relevé de bord au départ (km + carburant) pour comparer à l'aller-retour
   const { data: departureInspection } = await supabase
@@ -65,7 +74,7 @@ export default async function ArrivalInspectionPage({ params }: { params: Promis
         kmAtDeparture={departureInspection?.km_reading ?? vehicle?.current_km ?? 0}
         fuelRangeAtDeparture={departureInspection?.fuel_range_km ?? undefined}
         previousDamagedZones={(departureInspection?.damaged_zones as { id: string; label: string; severity: string; description?: string; photos?: string[] }[] | null) ?? []}
-        kmIncluded={reservation?.km_included ?? 200}
+        kmIncluded={kmIncludedTotal}
         extraKmPrice={reservation?.extra_km_price ?? 2}
       />
     </div>

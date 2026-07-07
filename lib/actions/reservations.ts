@@ -45,7 +45,20 @@ export async function updatePaymentInfo(
       const clientName = cl ? `${cl.first_name} ${cl.last_name}`.trim() : null
       const adminTx = createAdminClient()
 
-      await adminTx.from('financial_transactions').delete().eq('reference', txRef)
+      // CA « location » compté une seule fois par réservation, ancré sur le paiement :
+      // on retire toute recette location déjà posée pour cette résa (ancienne ligne de
+      // paiement, OU ligne de base créée à la clôture) avant de reposer le montant payé
+      // avec son mode de règlement. On ne touche jamais à une période figée (clôturée).
+      const { data: prevLoc } = await adminTx
+        .from('financial_transactions')
+        .select('id, date')
+        .eq('reservation_id', reservationId)
+        .eq('category', 'location')
+      for (const t of prevLoc ?? []) {
+        if (await assertPeriodOpen(supabase, t.date)) continue
+        await adminTx.from('financial_transactions').delete().eq('id', t.id)
+      }
+
       await adminTx.from('financial_transactions').insert({
         date: today,
         type: 'recette',
@@ -114,13 +127,16 @@ async function postRentalRevenue(reservationId: string, userId: string) {
     .single()
   if (!res) return
 
+  // Idempotence PAR CATÉGORIE. Le CA « location » est ancré sur le paiement
+  // (updatePaymentInfo, qui porte le mode de règlement pour la caisse) : ici on ne
+  // reposte la base que si AUCUNE recette location n'existe encore (secours : résa
+  // clôturée sans paiement enregistré). Les suppléments constatés au retour (km,
+  // retard, dégâts) sont postés une seule fois chacun.
   const { data: existing } = await admin
     .from('financial_transactions')
-    .select('id')
+    .select('category')
     .eq('reservation_id', reservationId)
-    .eq('category', 'location')
-    .limit(1)
-  if (existing && existing.length > 0) return
+  const posted = new Set((existing ?? []).map(t => t.category))
 
   // Date réelle de clôture (aujourd'hui), pas la date prévue de fin de location.
   // Sans ça, les retours tardifs postent dans le passé et n'apparaissent pas dans
@@ -135,16 +151,16 @@ async function postRentalRevenue(reservationId: string, userId: string) {
     created_by: userId,
   }
   const rows: Record<string, unknown>[] = []
-  if ((res.total_price ?? 0) > 0) {
+  if ((res.total_price ?? 0) > 0 && !posted.has('location')) {
     rows.push({ ...base, category: 'location', amount: res.total_price, notes: `Location ${res.reservation_number}` })
   }
-  if ((res.extra_km_amount ?? 0) > 0) {
+  if ((res.extra_km_amount ?? 0) > 0 && !posted.has('km_supplementaires')) {
     rows.push({ ...base, category: 'km_supplementaires', amount: res.extra_km_amount, notes: `Km supplémentaires ${res.reservation_number}` })
   }
-  if ((res.late_fee_amount ?? 0) > 0 && res.late_fee_validated) {
+  if ((res.late_fee_amount ?? 0) > 0 && res.late_fee_validated && !posted.has('frais_retard')) {
     rows.push({ ...base, category: 'frais_retard', amount: res.late_fee_amount, notes: `Frais de retard ${res.reservation_number}` })
   }
-  if ((res.deposit_deducted ?? 0) > 0) {
+  if ((res.deposit_deducted ?? 0) > 0 && !posted.has('degats')) {
     rows.push({ ...base, category: 'degats', amount: res.deposit_deducted, notes: `Caution retenue ${res.reservation_number}` })
   }
   if (rows.length) await admin.from('financial_transactions').insert(rows)
@@ -209,6 +225,40 @@ export async function createReservation(formData: FormData) {
 
   if (conflicts && conflicts.length > 0) {
     return { error: 'Ce véhicule est déjà réservé sur cette période.' }
+  }
+
+  // Indisponibilité GARAGE : un RDV garage (calendrier) qui chevauche RÉELLEMENT le
+  // créneau bloque la location — uniquement sur sa propre fenêtre. Un RDV 14h-17h
+  // n'empêche pas une location à 18h ; il refuse une location qui recoupe 14h-17h.
+  const { data: garageConflicts } = await supabase
+    .from('calendar_events')
+    .select('id')
+    .eq('event_type', 'rdv_garage')
+    .neq('status', 'annule')
+    .contains('vehicle_ids', [vehicleId])
+    .lt('start_at', endDatetime)
+    .gt('end_at', startDatetime)
+    .limit(1)
+
+  if (garageConflicts && garageConflicts.length > 0) {
+    return { error: 'Ce véhicule a un rendez-vous garage sur cette période.' }
+  }
+
+  // Indisponibilité DÉPLACEMENT INTERNE : un trajet interne qui chevauche le créneau
+  // (ou un trajet en cours, sans date de fin) bloque la location. Même logique de
+  // chevauchement réel : début existant < fin nouvelle ET (fin existante nulle OU
+  // fin existante > début nouvelle).
+  const { data: tripConflicts } = await supabase
+    .from('internal_trips')
+    .select('id')
+    .eq('vehicle_id', vehicleId)
+    .neq('status', 'annule')
+    .lt('start_datetime', endDatetime)
+    .or(`end_datetime.is.null,end_datetime.gt."${startDatetime}"`)
+    .limit(1)
+
+  if (tripConflicts && tripConflicts.length > 0) {
+    return { error: 'Ce véhicule est utilisé pour un déplacement interne sur cette période.' }
   }
 
   const { data: vehicle } = await supabase
@@ -501,6 +551,33 @@ export async function prolongReservation(
 
   if (conflicts && conflicts.length > 0) {
     return { error: 'Le véhicule est déjà réservé juste après — prolongation impossible sur cette période.' }
+  }
+
+  // Même règle de chevauchement horaire que createReservation, appliquée à la
+  // fenêtre ajoutée [fin actuelle → nouvelle fin].
+  const { data: garageConflicts } = await supabase
+    .from('calendar_events')
+    .select('id')
+    .eq('event_type', 'rdv_garage')
+    .neq('status', 'annule')
+    .contains('vehicle_ids', [reservation.vehicle_id])
+    .lt('start_at', newEnd)
+    .gt('end_at', reservation.end_datetime)
+    .limit(1)
+  if (garageConflicts && garageConflicts.length > 0) {
+    return { error: 'Ce véhicule a un rendez-vous garage sur cette période — prolongation impossible.' }
+  }
+
+  const { data: tripConflicts } = await supabase
+    .from('internal_trips')
+    .select('id')
+    .eq('vehicle_id', reservation.vehicle_id)
+    .neq('status', 'annule')
+    .lt('start_datetime', newEnd)
+    .or(`end_datetime.is.null,end_datetime.gt."${reservation.end_datetime}"`)
+    .limit(1)
+  if (tripConflicts && tripConflicts.length > 0) {
+    return { error: 'Ce véhicule est utilisé pour un déplacement interne sur cette période — prolongation impossible.' }
   }
 
   const vehicle = Array.isArray(reservation.vehicle) ? reservation.vehicle[0] : reservation.vehicle as any

@@ -66,6 +66,12 @@ body {
 /* Touch targets iPad */
 button, a, [role="button"] { min-height: 44px; }
 
+/* iOS : éviter le zoom automatique au focus d'un champ (taille < 16px).
+   Appliqué seulement sur petit écran pour ne pas alourdir le design desktop. */
+@media (max-width: 768px) {
+  input, textarea, select { font-size: 16px; }
+}
+
 /* Scrollbar slim */
 ::-webkit-scrollbar        { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track  { background: transparent; }

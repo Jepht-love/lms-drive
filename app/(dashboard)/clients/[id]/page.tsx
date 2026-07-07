@@ -6,6 +6,7 @@ import {
   ChevronRight, CalendarDays, Car, CreditCard, FileText, Plus, RotateCcw,
 } from 'lucide-react'
 import { formatDate, formatPrice } from '@/lib/utils'
+import { infractionTypeLabel, INFRACTION_STATUS, SINISTRE_STATUS } from '@/lib/incidents'
 import DeleteButton from '@/components/ui/DeleteButton'
 import { deleteClient } from '@/lib/actions/delete'
 import ClientDocPhotos from './ClientDocPhotos'
@@ -152,7 +153,7 @@ export default async function ClientPage({
     (infractions?.length ?? 0) + (accidents?.length ?? 0) +
     cautionsRetenues.length + litiges.length + retards.length
 
-  const initials = `${client.first_name.charAt(0)}${client.last_name.charAt(0)}`.toUpperCase()
+  const initials = `${client.first_name?.charAt(0) ?? ''}${client.last_name?.charAt(0) ?? ''}`.toUpperCase() || '?'
 
   const isVip        = client.status === 'vip'
   const isBlackliste = client.status === 'blackliste'
@@ -353,7 +354,7 @@ export default async function ClientPage({
                   className="flex items-center gap-3 p-2.5 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
                   <AlertTriangle className="w-4 h-4 text-orange-500 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-gray-900 truncate">Amende · {inf.type}</p>
+                    <p className="text-sm font-bold text-gray-900 truncate">Amende · {infractionTypeLabel(inf.type)}</p>
                     <p className="text-xs text-gray-400">
                       {formatDate(inf.infraction_date)}{v?.brand ? ` · ${v.brand} ${v.model}` : ''}
                       {v?.plate && <span className="text-gray-300 font-mono"> · {v.plate}</span>}
@@ -361,7 +362,7 @@ export default async function ClientPage({
                   </div>
                   <div className="text-right flex-shrink-0">
                     {inf.amount > 0 && <p className="text-sm font-bold text-gray-700">{formatPrice(inf.amount)}</p>}
-                    <p className="text-[10px] font-bold uppercase text-gray-400">{inf.status}</p>
+                    <p className="text-[10px] font-bold uppercase text-gray-400">{INFRACTION_STATUS[inf.status]?.label ?? inf.status}</p>
                   </div>
                 </Link>
               )
@@ -381,7 +382,7 @@ export default async function ClientPage({
                   </div>
                   <div className="text-right flex-shrink-0">
                     {acc.repair_cost > 0 && <p className="text-sm font-bold text-gray-700">{formatPrice(acc.repair_cost)}</p>}
-                    <p className="text-[10px] font-bold uppercase text-gray-400">{acc.status}</p>
+                    <p className="text-[10px] font-bold uppercase text-gray-400">{SINISTRE_STATUS[acc.status]?.label ?? acc.status}</p>
                   </div>
                 </Link>
               )

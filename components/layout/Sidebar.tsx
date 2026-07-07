@@ -11,6 +11,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { roleLabel } from '@/lib/roles'
 import { logout } from '@/lib/actions/auth'
 import type { Profile } from '@/types/database'
 
@@ -117,11 +118,11 @@ export default function Sidebar({ profile, unreadCount = 0 }: SidebarProps) {
       <div className="px-3 pb-5 pt-3" style={{ borderTop: '1px solid #1E1E1E' }}>
         <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl mb-1" style={{ background: '#141414' }}>
           <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-sm text-black" style={{ background: 'linear-gradient(135deg, #C4A35A, #D4B870)' }}>
-            {profile.full_name.charAt(0).toUpperCase()}
+            {(profile.full_name ?? '?').charAt(0).toUpperCase()}
           </div>
           <div className="min-w-0">
             <p className="text-sm font-medium text-white truncate">{profile.full_name}</p>
-            <p className="text-xs capitalize" style={{ color: '#C4A35A' }}>{profile.role}</p>
+            <p className="text-xs" style={{ color: '#C4A35A' }}>{roleLabel(profile.role)}</p>
           </div>
         </div>
         <form action={logout}>

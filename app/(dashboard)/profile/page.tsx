@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { User } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
+import { roleLabel } from '@/lib/roles'
 import LogoutButton from './LogoutButton'
 
 export default async function ProfilePage() {
@@ -27,7 +28,7 @@ export default async function ProfilePage() {
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
         <div className="flex items-center gap-4 mb-6">
           <div className="w-16 h-16 rounded-2xl bg-blue-100 flex items-center justify-center">
-            <span className="text-blue-700 font-bold text-2xl">{profile.full_name.charAt(0).toUpperCase()}</span>
+            <span className="text-blue-700 font-bold text-2xl">{(profile.full_name ?? '?').charAt(0).toUpperCase()}</span>
           </div>
           <div>
             <h2 className="text-xl font-bold text-gray-900">{profile.full_name}</h2>
@@ -36,7 +37,7 @@ export default async function ProfilePage() {
               profile.role === 'associe' ? 'bg-blue-100 text-blue-700' :
               'bg-gray-100 text-gray-600'
             }`}>
-              {profile.role}
+              {roleLabel(profile.role)}
             </span>
           </div>
         </div>
@@ -52,7 +53,7 @@ export default async function ProfilePage() {
           </div>
           <div className="flex justify-between py-2 border-b border-gray-50">
             <dt className="text-sm text-gray-500">Rôle</dt>
-            <dd className="text-sm font-medium text-gray-900 capitalize">{profile.role}</dd>
+            <dd className="text-sm font-medium text-gray-900">{roleLabel(profile.role)}</dd>
           </div>
           <div className="flex justify-between py-2">
             <dt className="text-sm text-gray-500">Membre depuis</dt>

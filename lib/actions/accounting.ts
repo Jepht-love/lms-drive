@@ -4,11 +4,14 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { assertPeriodOpen } from '@/lib/accounting/period-lock'
+import { assertManager } from '@/lib/auth/roles'
 
 export async function createTransaction(formData: FormData) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non authentifié' }
+  const mgrErr = await assertManager(supabase, user.id)
+  if (mgrErr) return { error: mgrErr.error }
 
   const type = (formData.get('type') as string) || 'depense'
   const category = (formData.get('category') as string)?.trim()
@@ -50,6 +53,8 @@ export async function deleteTransaction(transactionId: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non authentifié' }
+  const mgrErr = await assertManager(supabase, user.id)
+  if (mgrErr) return { error: mgrErr.error }
 
   const admin = createAdminClient()
   const { data: tx } = await admin
@@ -91,6 +96,8 @@ export async function closeDailyAccounting(date: string, countedByMethod: Record
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non authentifié' }
+  const mgrErr = await assertManager(supabase, user.id)
+  if (mgrErr) return { error: mgrErr.error }
 
   const { data: existing } = await supabase.from('daily_closings').select('is_closed').eq('date', date).maybeSingle()
   if (existing?.is_closed) return { error: 'Journée déjà clôturée' }
@@ -129,6 +136,8 @@ export async function closeMonthlyAccounting(month: number, year: number) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non authentifié' }
+  const mgrErr = await assertManager(supabase, user.id)
+  if (mgrErr) return { error: mgrErr.error }
 
   const from = `${year}-${String(month).padStart(2, '0')}-01`
   const to = new Date(year, month, 0).toISOString().slice(0, 10)
@@ -161,6 +170,8 @@ export async function closeAnnualAccounting(year: number) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non authentifié' }
+  const mgrErr = await assertManager(supabase, user.id)
+  if (mgrErr) return { error: mgrErr.error }
 
   const { data: months } = await supabase
     .from('monthly_closings')
@@ -194,6 +205,8 @@ export async function updateTransactionNotes(transactionId: string, notes: strin
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non authentifié' }
+  const mgrErr = await assertManager(supabase, user.id)
+  if (mgrErr) return { error: mgrErr.error }
 
   const { data: tx } = await supabase.from('financial_transactions').select('date').eq('id', transactionId).single()
   if (tx) {
@@ -215,6 +228,8 @@ export async function toggleTransparence(transactionId: string, current: boolean
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non authentifié' }
+  const mgrErr = await assertManager(supabase, user.id)
+  if (mgrErr) return { error: mgrErr.error }
 
   const { data: tx } = await supabase.from('financial_transactions').select('date').eq('id', transactionId).single()
   if (tx) {
@@ -237,6 +252,8 @@ async function reopen(table: string, match: Record<string, unknown>, path: strin
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non authentifié' }
+  const mgrErr = await assertManager(supabase, user.id)
+  if (mgrErr) return { error: mgrErr.error }
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
   if (!profile || !['gerant', 'associe'].includes(profile.role)) return { error: 'Accès refusé' }
 

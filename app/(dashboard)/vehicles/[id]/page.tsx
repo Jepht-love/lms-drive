@@ -11,6 +11,11 @@ import { deleteVehicle } from '@/lib/actions/delete'
 import { computeVehicleNeeds, buildLastByType } from '@/lib/maintenance-health'
 import type { MaintenanceFlag } from '@/types/database'
 
+const RESA_STATUS_LABEL: Record<string, string> = {
+  option: 'Option', confirmee: 'Confirmée', en_cours: 'En cours',
+  en_retard: 'En retard', terminee: 'Terminée', annulee: 'Annulée',
+}
+
 export default async function VehiclePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()
@@ -291,7 +296,7 @@ export default async function VehiclePage({ params }: { params: Promise<{ id: st
               { label: 'Contrôle technique', value: vehicle.ct_date ? formatDate(vehicle.ct_date) : undefined },
               { label: 'Prochain entretien KM', value: vehicle.next_service_km?.toLocaleString('fr-FR') },
               { label: 'Prochain entretien date', value: vehicle.next_service_date ? formatDate(vehicle.next_service_date) : undefined },
-              { label: 'KM actuels', value: vehicle.current_km.toLocaleString('fr-FR') },
+              { label: 'KM actuels', value: vehicle.current_km?.toLocaleString('fr-FR') },
               { label: 'Km depuis entretien', value: kmSinceService != null ? `${kmSinceService.toLocaleString('fr-FR')} km` : undefined },
             ]} />
           </InfoCard>
@@ -376,7 +381,7 @@ export default async function VehiclePage({ params }: { params: Promise<{ id: st
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-mono text-gray-500">{r.reservation_number}</span>
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${r.status === 'en_cours' ? 'bg-green-100 text-green-700' : r.status === 'terminee' ? 'bg-gray-100 text-gray-600' : 'bg-blue-100 text-blue-700'}`}>
-                        {r.status}
+                        {RESA_STATUS_LABEL[r.status] ?? r.status}
                       </span>
                     </div>
                     <p className="text-sm font-medium text-gray-800 mt-1">

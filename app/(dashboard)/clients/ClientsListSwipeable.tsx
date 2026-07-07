@@ -32,7 +32,7 @@ export default function ClientsListSwipeable({ clients }: { clients: Client[] })
   return (
     <AnimatedList className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden divide-y divide-gray-50">
       {clients.map(c => {
-        const initials = `${c.first_name.charAt(0)}${c.last_name.charAt(0)}`.toUpperCase()
+        const initials = `${c.first_name?.charAt(0) ?? ''}${c.last_name?.charAt(0) ?? ''}`.toUpperCase() || '?'
         return (
           <AnimatedListItem key={c.id}>
             <SwipeableRow

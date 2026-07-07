@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { recomputeVehicleStatus } from '@/lib/vehicles/vehicleStatus'
 import { findDriverAtDate } from '@/lib/utils/findDriverAtDate'
 import { logEmail } from '@/lib/email/log'
 import { RESEND_FROM, resendTo } from '@/lib/email/config'
@@ -320,6 +321,9 @@ export async function updateAccidentStatus(id: string, status: string) {
       const admin = createAdminClient()
       const { error: vehicleError } = await admin.from('vehicles').update({ status: 'disponible' }).eq('id', acc.vehicle_id)
       if (vehicleError) return { error: vehicleError.message }
+      // Sortie d'immobilisation → recalcule le vrai statut : si le véhicule a une
+      // réservation en cours/à venir, il repasse loué/réservé (pas figé disponible).
+      await recomputeVehicleStatus(supabase, acc.vehicle_id)
 
       const insurance = acc.insurance_covered ? (acc.insurance_amount ?? 0) : 0
       const net = Math.max(0, (acc.repair_cost ?? 0) - insurance - (acc.deposit_retained ?? 0))

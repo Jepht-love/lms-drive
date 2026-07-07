@@ -6,6 +6,7 @@ import { getAgencySettings } from '@/lib/contracts/agency'
 import AgencySettingsForm from './AgencySettingsForm'
 import AuditLogList from './AuditLogList'
 import NotificationSettings from '@/components/settings/NotificationSettings'
+import { roleLabel } from '@/lib/roles'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
@@ -58,7 +59,7 @@ export default async function SettingsPage() {
           {profiles?.map(p => (
             <div key={p.id} className="flex items-center gap-3 p-3 rounded-xl bg-gray-50">
               <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center">
-                <span className="text-blue-700 font-bold text-sm">{p.full_name.charAt(0).toUpperCase()}</span>
+                <span className="text-blue-700 font-bold text-sm">{(p.full_name ?? '?').charAt(0).toUpperCase()}</span>
               </div>
               <div className="flex-1">
                 <p className="font-medium text-gray-900 text-sm">{p.full_name}</p>
@@ -69,7 +70,7 @@ export default async function SettingsPage() {
                 p.role === 'associe' ? 'bg-blue-100 text-blue-700' :
                 'bg-gray-100 text-gray-600'
               }`}>
-                {p.role}
+                {roleLabel(p.role)}
               </span>
               {!p.is_active && <span className="text-xs text-red-500">Inactif</span>}
             </div>
