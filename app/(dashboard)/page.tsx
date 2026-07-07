@@ -82,6 +82,7 @@ const TASK_TYPE_LABELS: Record<string, string> = {
 // Prochaines 6h : style de pastille par type d'action (départ/retour/tâche/RDV…).
 const NEXT6H_TYPE_STYLE: Record<string, { badge: string; label: string }> = {
   depart:       { badge: 'bg-black text-white',           label: 'Départ' },
+  apreparer:    { badge: 'bg-amber-500 text-white',       label: 'À préparer' },
   retour:       { badge: 'bg-blue-100 text-blue-700',     label: 'Retour' },
   tache:        { badge: 'bg-violet-100 text-violet-700', label: 'Tâche' },
   rdv_client:   { badge: 'bg-pink-100 text-pink-700',     label: 'RDV client' },
@@ -367,6 +368,64 @@ export default async function DashboardPage() {
   }
 
   next6hActions.sort((a, b) => a.time.getTime() - b.time.getTime())
+
+  // ── Événements de la semaine, listés jour par jour ────────────────────────
+  // Chaque événement des 7 prochains jours est explicitement listé sous le
+  // mini-calendrier : départs (ou « à préparer »), retours et tâches/RDV du
+  // calendrier — avec heure, type, intitulé, véhicule et qui s'en charge.
+  type WeekEvent = {
+    key: string
+    time: Date
+    kind: keyof typeof NEXT6H_TYPE_STYLE
+    title: string
+    subtitle?: string
+    assignee: string | null
+    needsAssignee: boolean
+    href: string
+  }
+  const weekEvents: WeekEvent[] = []
+  for (const r of reservations ?? []) {
+    const v = getVehicle(r); const c = getClient(r)
+    const clientName = c ? `${c.first_name} ${c.last_name}` : 'Client'
+    const vehLabel   = v ? `${v.brand} ${v.model} · ${v.plate}` : undefined
+    if (isDepart(r.status)) {
+      weekEvents.push({
+        key: `wdep-${r.id}`, time: new Date(r.start_datetime),
+        kind: isToPrepare(r.id) ? 'apreparer' : 'depart',
+        title: clientName, subtitle: vehLabel,
+        assignee: null, needsAssignee: false, href: `/reservations/${r.id}`,
+      })
+    }
+    if (r.status === 'en_cours' || r.status === 'en_retard') {
+      weekEvents.push({
+        key: `wret-${r.id}`, time: new Date(r.end_datetime), kind: 'retour',
+        title: clientName, subtitle: vehLabel,
+        assignee: null, needsAssignee: false, href: `/reservations/${r.id}`,
+      })
+    }
+  }
+  for (const t of weekCalendarTasks) {
+    const kind = (['tache', 'rdv_client', 'rdv_garage', 'livraison', 'recuperation']
+      .includes(t.event_type ?? '') ? t.event_type : 'tache') as WeekEvent['kind']
+    const taskVehicles = (t.vehicle_ids ?? []).map((id: string) => vehicleById.get(id)).filter(Boolean)
+    const subtitle = taskVehicles.length
+      ? taskVehicles.map((tv: any) => `${tv.brand} ${tv.model}`).join(', ')
+      : undefined
+    const assignee = assigneeLabel(t)
+    weekEvents.push({
+      key: `wcal-${t.id}`, time: new Date(t.start_at), kind,
+      title: t.title, subtitle,
+      assignee, needsAssignee: !assignee, href: '/calendrier',
+    })
+  }
+  const weekEventsByDay = Array.from({ length: 7 }, (_, i) => addDays(todayStart, i))
+    .map(day => ({
+      day,
+      items: weekEvents
+        .filter(e => isSameDay(e.time, day))
+        .sort((a, b) => a.time.getTime() - b.time.getTime()),
+    }))
+    .filter(({ items }) => items.length > 0)
 
   // ── Alertes ───────────────────────────────────────────────────────────────
   const alerts = await fetchAllAlerts(supabase)
@@ -966,40 +1025,44 @@ export default async function DashboardPage() {
             </div>
           </div>
 
-          {/* Missions de la semaine — tâches/RDV calendrier, attribuées ou non,
-              pour voir en un coup d'œil qui fait quoi aujourd'hui et les jours
-              suivants (au-delà des départs/retours déjà couverts ci-dessus). */}
-          {weekCalendarTasks.length > 0 && (
+          {/* Détail de la semaine — chaque événement des 7 prochains jours,
+              listé jour par jour : départs (ou « à préparer »), retours et
+              tâches/RDV du calendrier, avec heure, type, intitulé et assigné. */}
+          {weekEventsByDay.length > 0 && (
             <div className="mt-4 pt-3 border-t border-gray-50 space-y-3">
-              {Array.from({ length: 7 }, (_, i) => addDays(todayStart, i))
-                .map(day => ({
-                  day,
-                  items: weekCalendarTasks.filter(t => isSameDay(new Date(t.start_at), day)),
-                }))
-                .filter(({ items }) => items.length > 0)
-                .map(({ day, items }) => (
-                  <div key={day.toISOString()}>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1.5">
-                      {isSameDay(day, todayStart) ? "Aujourd'hui" : format(day, 'EEEE d MMM', { locale: fr })}
-                    </p>
-                    <div className="space-y-1">
-                      {items.map(t => {
-                        const assignee = assigneeLabel(t)
-                        return (
-                          <Link key={t.id} href="/calendrier" className="flex items-center gap-2.5 py-1">
-                            <span className="w-10 text-[11px] font-mono font-bold text-gray-500 flex-shrink-0">
-                              {format(new Date(t.start_at), 'HH:mm')}
-                            </span>
-                            <span className="text-xs text-gray-700 font-medium flex-1 min-w-0 truncate">{t.title}</span>
-                            {assignee
-                              ? <span className="text-[10px] text-gray-400 flex-shrink-0">{assignee}</span>
-                              : <span className="text-[10px] font-semibold text-amber-600 flex-shrink-0">Non attribué</span>}
-                          </Link>
-                        )
-                      })}
-                    </div>
+              {weekEventsByDay.map(({ day, items }) => (
+                <div key={day.toISOString()}>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1.5">
+                    {isSameDay(day, todayStart) ? "Aujourd'hui" : format(day, 'EEEE d MMM', { locale: fr })}
+                  </p>
+                  <div className="space-y-1">
+                    {items.map(e => {
+                      const st = NEXT6H_TYPE_STYLE[e.kind] ?? NEXT6H_TYPE_STYLE.tache
+                      return (
+                        <Link key={e.key} href={e.href} className="flex items-center gap-2 py-1">
+                          <span className="w-10 text-[11px] font-mono font-bold text-gray-500 flex-shrink-0">
+                            {format(e.time, 'HH:mm')}
+                          </span>
+                          <span className={`text-[9px] font-black uppercase px-2 py-1 rounded-full flex-shrink-0 ${st.badge}`}>
+                            {st.label}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <span className="text-xs text-gray-800 font-semibold block truncate">{e.title}</span>
+                            {e.subtitle && (
+                              <span className="text-[10px] text-gray-400 block truncate">{e.subtitle}</span>
+                            )}
+                          </div>
+                          {e.assignee
+                            ? <span className="text-[10px] text-gray-400 flex-shrink-0 max-w-[64px] truncate">{e.assignee}</span>
+                            : e.needsAssignee
+                              ? <span className="text-[10px] font-semibold text-amber-600 flex-shrink-0">À assigner</span>
+                              : null}
+                        </Link>
+                      )
+                    })}
                   </div>
-                ))}
+                </div>
+              ))}
             </div>
           )}
         </div>
