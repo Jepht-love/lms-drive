@@ -23,13 +23,18 @@ export async function GET(request: NextRequest) {
   const supabase = createAdminClient()
   const today = new Date()
   today.setHours(0, 0, 0, 0)
-  const todayStr = today.toISOString().slice(0, 10)
+  // Instant exact du début de journée locale (pour les comparaisons sur timestamp).
+  const todayStartIso = today.toISOString()
+  // La date du jour doit être lue sur les composantes LOCALES : `toISOString()`
+  // repasse en UTC et, sur un serveur en avance sur UTC (Europe/Afrique), minuit
+  // local tombe la veille en UTC → tout le calcul d'offset serait décalé d'un jour.
+  const todayStr = localDateStr(today)
 
   // Fenêtre de scan : de J-19 (retard max relancé) à J+7 (anticipation max).
   const maxUpcoming = Math.max(...UPCOMING_DAYS)
   const maxOverdue = Math.max(...OVERDUE_DAYS)
-  const dueMax = addDays(today, maxUpcoming).toISOString().slice(0, 10)
-  const dueMin = addDays(today, -maxOverdue).toISOString().slice(0, 10)
+  const dueMax = localDateStr(addDays(today, maxUpcoming))
+  const dueMin = localDateStr(addDays(today, -maxOverdue))
 
   const { data: dues } = await supabase
     .from('financial_due_dates')
@@ -87,7 +92,7 @@ export async function GET(request: NextRequest) {
       .select('id')
       .eq('type', 'due_date_reminder')
       .eq('entity_id', due.id)
-      .gte('created_at', todayStr + 'T00:00:00Z')
+      .gte('created_at', todayStartIso)
       .limit(1)
 
     if (existing?.length) continue
@@ -128,6 +133,15 @@ function addDays(date: Date, days: number): Date {
   const d = new Date(date)
   d.setDate(d.getDate() + days)
   return d
+}
+
+// Formate une Date en 'YYYY-MM-DD' sur les composantes LOCALES (pas UTC), pour
+// rester aligné avec la colonne `due_date` (type date, sans fuseau).
+function localDateStr(date: Date): string {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
 }
 
 function formatAmount(amount: number): string {
