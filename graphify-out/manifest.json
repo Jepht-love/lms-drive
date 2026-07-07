@@ -370,8 +370,8 @@
     "semantic_hash": ""
   },
   "app/(dashboard)/page.tsx": {
-    "mtime": 1783173968.6320634,
-    "ast_hash": "ec8a084eb0cc793b9786bef0233bcaca",
+    "mtime": 1783379199.9027843,
+    "ast_hash": "a41152efe5492248141cea33af88b646",
     "semantic_hash": ""
   },
   "app/(dashboard)/partnerships/[id]/OperationActions.tsx": {
@@ -465,8 +465,8 @@
     "semantic_hash": ""
   },
   "app/(dashboard)/reservations/[id]/page.tsx": {
-    "mtime": 1782316248.4630141,
-    "ast_hash": "5d2e0822340fd9e21e42ea6a345b49bf",
+    "mtime": 1783327602.9287562,
+    "ast_hash": "a8c4addb4ef996bcc47549c9007c82f6",
     "semantic_hash": ""
   },
   "app/(dashboard)/reservations/new/page.tsx": {
@@ -985,8 +985,8 @@
     "semantic_hash": ""
   },
   "public/sw.js": {
-    "mtime": 1783188930.7594824,
-    "ast_hash": "f34e1a5b8a2cf15e27fd3497586c148c",
+    "mtime": 1783380533.2244973,
+    "ast_hash": "0c7e483201987f59fca4bd51859f5e3c",
     "semantic_hash": ""
   },
   "scripts/seed-vehicles.ts": {
@@ -1345,13 +1345,13 @@
     "semantic_hash": ""
   },
   "lib/calendar/constants.ts": {
-    "mtime": 1782803822.9079225,
-    "ast_hash": "6e1f406ed3181a12440a160956cb5005",
+    "mtime": 1783379169.3620112,
+    "ast_hash": "ce2fe6a174edb5b5f746ec86cabb648f",
     "semantic_hash": ""
   },
   "lib/calendar/dateUtils.ts": {
-    "mtime": 1782032005.550218,
-    "ast_hash": "1e10bf007cdf3794c9cf3331b7f6f042",
+    "mtime": 1783379187.6043355,
+    "ast_hash": "be100d0f06b09bc56db4c67b92adaadc",
     "semantic_hash": ""
   },
   "lib/calendar/enrichEvents.ts": {
@@ -1455,13 +1455,13 @@
     "semantic_hash": ""
   },
   "app/(dashboard)/reservations/InvoiceCard.tsx": {
-    "mtime": 1782710479.1367803,
-    "ast_hash": "f10ba50009cd31de35d626c1beab77a8",
+    "mtime": 1783327579.0088754,
+    "ast_hash": "aadae2a5c63f711c617209938d44b1c4",
     "semantic_hash": ""
   },
   "lib/actions/invoices.ts": {
-    "mtime": 1783009686.0532024,
-    "ast_hash": "13d235571a1f4ebda90ed3ac6f260995",
+    "mtime": 1783327527.012376,
+    "ast_hash": "13b54bf5125e20d9ddebcc204f0a7191",
     "semantic_hash": ""
   },
   "lib/pdf/invoice-template.tsx": {
@@ -2137,6 +2137,11 @@
   "app/(dashboard)/partnerships/agencies/DeleteAgencyButton.tsx": {
     "mtime": 1783327330.313006,
     "ast_hash": "23041337f6b613361a8ab124fd2f4129",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/052_invoices_cancellation.sql": {
+    "mtime": 1783327490.0602586,
+    "ast_hash": "bea140b35d9cca5a0fe59c6ef3273fe7",
     "semantic_hash": ""
   }
 }

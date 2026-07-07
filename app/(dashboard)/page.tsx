@@ -10,19 +10,13 @@ import { CALENDAR_START_HOUR } from '@/lib/calendar/constants'
 import { fr } from 'date-fns/locale'
 import {
   ChevronRight, AlertTriangle, CheckCircle2, Plus,
-  Wrench, Clock, FileText, ArrowLeftRight, Users, Car, type LucideIcon,
+  Wrench, Clock, FileText, ArrowLeftRight, type LucideIcon,
 } from 'lucide-react'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function getVehicle(r: any) { return Array.isArray(r.vehicles) ? r.vehicles[0] : r.vehicles }
 function getClient(r: any)  { return Array.isArray(r.clients)  ? r.clients[0]  : r.clients  }
-
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/)
-  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase()
-  return name.slice(0, 2).toUpperCase()
-}
 
 const TASK_STATUS_BADGE: Record<string, string> = {
   a_faire:  'bg-gray-100 text-gray-600',
@@ -85,21 +79,16 @@ const TASK_TYPE_LABELS: Record<string, string> = {
   autre:                'Tâche',
 }
 
-// Couleurs du demi-calendrier (par type d'événement calendrier) — alignées sur
-// la palette du calendrier complet (lib/calendar/constants EVENT_COLORS).
-const CAL_EVENT_COLORS: Record<string, { bg: string; border: string; text: string }> = {
-  tache:        { bg: '#f5f3ff', border: '#8b5cf6', text: '#6d28d9' },
-  rdv_client:   { bg: '#fdf2f8', border: '#ec4899', text: '#be185d' },
-  rdv_garage:   { bg: '#ecfeff', border: '#06b6d4', text: '#0e7490' },
-  livraison:    { bg: '#f7fee7', border: '#84cc16', text: '#4d7c0f' },
-  recuperation: { bg: '#fff7ed', border: '#f97316', text: '#c2410c' },
+// Prochaines 6h : style de pastille par type d'action (départ/retour/tâche/RDV…).
+const NEXT6H_TYPE_STYLE: Record<string, { badge: string; label: string }> = {
+  depart:       { badge: 'bg-black text-white',           label: 'Départ' },
+  retour:       { badge: 'bg-blue-100 text-blue-700',     label: 'Retour' },
+  tache:        { badge: 'bg-violet-100 text-violet-700', label: 'Tâche' },
+  rdv_client:   { badge: 'bg-pink-100 text-pink-700',     label: 'RDV client' },
+  rdv_garage:   { badge: 'bg-cyan-100 text-cyan-700',     label: 'RDV garage' },
+  livraison:    { badge: 'bg-lime-100 text-lime-700',     label: 'Livraison' },
+  recuperation: { badge: 'bg-orange-100 text-orange-700', label: 'Récupération' },
 }
-function calEventColor(type?: string | null) {
-  return CAL_EVENT_COLORS[type ?? 'tache'] ?? CAL_EVENT_COLORS.tache
-}
-
-// Demi-calendrier : largeur d'une heure (px) sur la piste horaire glissante.
-const NEXT6H_HOUR_W = 88
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
@@ -300,67 +289,84 @@ export default async function DashboardPage() {
     return assignee?.full_name ?? team?.name ?? null
   }
 
-  // ── Demi-calendrier : fenêtre GLISSANTE des prochaines 6h, par équipe/salarié ─
-  // Vue resserrée du calendrier (lib/calendar) : on prend les tâches/RDV
-  // calendrier dont l'heure de début tombe dans les 6 prochaines heures, et on
-  // les répartit en pistes horizontales — une par collaborateur ou équipe
-  // assigné, plus une piste « À assigner » pour les événements non attribués.
+  // ── Prochaines 6h : TOUTES les actions de la fenêtre glissante [now, +6h] ─────
+  // Liste unique et exhaustive — départs et retours de réservation ET tâches/RDV
+  // du calendrier — dont l'heure tombe dans les 6 prochaines heures. Chaque ligne
+  // porte l'heure, le type, l'intitulé, le véhicule et qui s'en charge. (Les
+  // départs de réservation manquaient auparavant : ils ne sont pas des
+  // calendar_events, donc une résa créée pour tout à l'heure n'apparaissait pas.)
   const next6hStart = now
   const next6hEnd   = addHours(now, 6)
-  const next6hMs    = next6hEnd.getTime() - next6hStart.getTime()
+  const inNext6h    = (d: Date) => d >= next6hStart && d <= next6hEnd
 
-  type Next6hLane = {
+  type Next6hAction = {
     key: string
-    label: string
-    kind: 'profile' | 'team' | 'unassigned'
-    color: string
-    items: typeof weekCalendarTasks
+    time: Date
+    kind: 'depart' | 'retour' | 'tache' | 'rdv_client' | 'rdv_garage' | 'livraison' | 'recuperation'
+    title: string
+    subtitle?: string
+    assignee: string | null
+    needsAssignee: boolean
+    href: string
   }
-  const next6hLaneMap = new Map<string, Next6hLane>()
-  for (const t of weekCalendarTasks) {
-    const s = new Date(t.start_at).getTime()
-    if (s < next6hStart.getTime() || s > next6hEnd.getTime()) continue
-    const assignee = Array.isArray(t.assignee) ? t.assignee[0] : t.assignee
-    const team     = Array.isArray(t.team) ? t.team[0] : t.team
-    let key: string, label: string, kind: Next6hLane['kind'], color: string
-    if (t.assigned_to && assignee?.full_name) {
-      key = `p:${t.assigned_to}`; label = assignee.full_name; kind = 'profile'; color = '#111111'
-    } else if (t.assigned_team_id && team?.name) {
-      key = `t:${t.assigned_team_id}`; label = team.name; kind = 'team'; color = team.color ?? '#6366f1'
-    } else {
-      key = 'unassigned'; label = 'À assigner'; kind = 'unassigned'; color = '#f59e0b'
+  const next6hActions: Next6hAction[] = []
+
+  // Réservations : départ (confirmée/option) et retour (en cours/en retard)
+  for (const r of reservations ?? []) {
+    const v = getVehicle(r); const c = getClient(r)
+    const clientName = c ? `${c.first_name} ${c.last_name}` : 'Client'
+    const vehLabel   = v ? `${v.brand} ${v.model} · ${v.plate}` : undefined
+    if (isDepart(r.status)) {
+      const s = new Date(r.start_datetime)
+      if (inNext6h(s)) next6hActions.push({
+        key: `dep-${r.id}`, time: s, kind: 'depart',
+        title: clientName, subtitle: vehLabel,
+        assignee: null, needsAssignee: false, href: `/reservations/${r.id}`,
+      })
     }
-    if (!next6hLaneMap.has(key)) next6hLaneMap.set(key, { key, label, kind, color, items: [] })
-    next6hLaneMap.get(key)!.items.push(t)
+    if (r.status === 'en_cours' || r.status === 'en_retard') {
+      const e = new Date(r.end_datetime)
+      if (inNext6h(e)) next6hActions.push({
+        key: `ret-${r.id}`, time: e, kind: 'retour',
+        title: clientName, subtitle: vehLabel,
+        assignee: null, needsAssignee: false, href: `/reservations/${r.id}`,
+      })
+    }
   }
-  const next6hLanes = [...next6hLaneMap.values()].sort((a, b) => {
-    if (a.kind === 'unassigned') return 1
-    if (b.kind === 'unassigned') return -1
-    return a.label.localeCompare(b.label)
-  })
-  // Repères horaires : chaque heure pleine comprise dans la fenêtre.
-  const next6hTicks: Date[] = []
-  {
-    const firstTick = new Date(next6hStart)
-    firstTick.setMinutes(0, 0, 0)
-    if (firstTick <= next6hStart) firstTick.setHours(firstTick.getHours() + 1)
-    for (let d = firstTick; d <= next6hEnd; d = addHours(d, 1)) next6hTicks.push(new Date(d))
+
+  // Tâches / RDV du calendrier
+  for (const t of weekCalendarTasks) {
+    const s = new Date(t.start_at)
+    if (!inNext6h(s)) continue
+    const kind = (['tache', 'rdv_client', 'rdv_garage', 'livraison', 'recuperation']
+      .includes(t.event_type ?? '') ? t.event_type : 'tache') as Next6hAction['kind']
+    const taskVehicles = (t.vehicle_ids ?? []).map((id: string) => vehicleById.get(id)).filter(Boolean)
+    const subtitle = taskVehicles.length
+      ? taskVehicles.map((tv: any) => `${tv.brand} ${tv.model}`).join(', ')
+      : undefined
+    const assignee = assigneeLabel(t)
+    next6hActions.push({
+      key: `cal-${t.id}`, time: s, kind,
+      title: t.title, subtitle,
+      assignee, needsAssignee: !assignee, href: '/calendrier',
+    })
   }
-  const next6hTrackW = NEXT6H_HOUR_W * 6
-  // Retours de réservations prévus dans les 6 prochaines heures
-  const retoursProchaines6h = (reservations ?? [])
-    .filter(r => r.status === 'en_cours' &&
-      new Date(r.end_datetime) >= next6hStart &&
-      new Date(r.end_datetime) <= next6hEnd)
-    .sort((a, b) => new Date(a.end_datetime).getTime() - new Date(b.end_datetime).getTime())
-  const next6hLeftPx = (iso: string) =>
-    ((new Date(iso).getTime() - next6hStart.getTime()) / next6hMs) * next6hTrackW
-  const next6hWidthPx = (t: typeof weekCalendarTasks[number]) => {
-    const durMs = t.end_at ? new Date(t.end_at).getTime() - new Date(t.start_at).getTime() : 3_600_000
-    const w = (Math.max(durMs, 1_800_000) / next6hMs) * next6hTrackW
-    const left = next6hLeftPx(t.start_at)
-    return Math.min(Math.max(w, 60), next6hTrackW - left)
+
+  // Interventions legacy (table tasks)
+  for (const task of todayTasks ?? []) {
+    const s = new Date(task.due_datetime)
+    if (!inNext6h(s)) continue
+    const tv       = Array.isArray((task as any).vehicles) ? (task as any).vehicles[0] : (task as any).vehicles
+    const assignee = Array.isArray((task as any).profiles) ? (task as any).profiles[0] : (task as any).profiles
+    next6hActions.push({
+      key: `task-${task.id}`, time: s, kind: 'tache',
+      title: task.title, subtitle: tv ? (tv as any).plate : undefined,
+      assignee: assignee ? (assignee as any).full_name : null,
+      needsAssignee: !assignee, href: '/calendrier',
+    })
   }
+
+  next6hActions.sort((a, b) => a.time.getTime() - b.time.getTime())
 
   // ── Alertes ───────────────────────────────────────────────────────────────
   const alerts = await fetchAllAlerts(supabase)
@@ -673,7 +679,7 @@ export default async function DashboardPage() {
         )}
       </section>
 
-      {/* ═══ 2a. DEMI-CALENDRIER — prochaines 6h, par équipe/salarié ════════ */}
+      {/* ═══ 2a. PROCHAINES 6H — liste de toutes les actions à venir ════════ */}
       <section>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-[11px] font-bold uppercase tracking-widest text-gray-900">
@@ -684,97 +690,45 @@ export default async function DashboardPage() {
           </span>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-3">
-          {/* Retours de réservation dans les 6h */}
-          {retoursProchaines6h.length > 0 && (
-            <div className={`flex flex-col gap-1.5${next6hLanes.length > 0 ? ' mb-3' : ''}`}>
-              {retoursProchaines6h.map(r => {
-                const v = getVehicle(r); const c = getClient(r)
-                const heure = format(new Date(r.end_datetime), 'HH:mm')
-                return (
-                  <Link key={r.id} href="/reservations"
-                    className="flex items-center gap-2 bg-blue-50 rounded-xl px-3 py-2">
-                    <Car className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
-                    <p className="flex-1 min-w-0 text-[11px] font-semibold text-blue-800 truncate">
-                      {c ? `${c.first_name} ${c.last_name}` : '—'}
-                      {v ? ` — ${v.brand} ${v.model} (${v.plate})` : ''}
-                    </p>
-                    <span className="text-[10px] font-mono font-bold text-blue-500 flex-shrink-0 ml-1">↩ {heure}</span>
-                  </Link>
-                )
-              })}
-            </div>
-          )}
-          {next6hLanes.length === 0 && retoursProchaines6h.length === 0 ? (
-            <div className="flex items-center gap-2 py-4 px-1">
+        {next6hActions.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+            <div className="flex items-center gap-2 py-1 px-1">
               <CheckCircle2 className="w-4 h-4 text-gray-200 flex-shrink-0" />
               <p className="text-xs text-gray-400 font-medium">Rien de prévu dans les 6 prochaines heures</p>
             </div>
-          ) : next6hLanes.length > 0 ? (
-            <div className="overflow-x-auto -mx-3 px-3" style={{ scrollbarWidth: 'thin' }}>
-              <div style={{ minWidth: 92 + next6hTrackW }}>
-                {/* Axe horaire */}
-                <div className="flex">
-                  <div className="w-[92px] flex-shrink-0" />
-                  <div className="relative flex-shrink-0" style={{ width: next6hTrackW, height: 16 }}>
-                    {next6hTicks.map(tick => (
-                      <span key={tick.toISOString()}
-                        className="absolute top-0 text-[9px] font-mono text-gray-400 -translate-x-1/2"
-                        style={{ left: next6hLeftPx(tick.toISOString()) }}>
-                        {format(tick, 'HH')}h
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Pistes ressources */}
-                <div className="divide-y divide-gray-50">
-                  {next6hLanes.map(lane => (
-                    <div key={lane.key} className="flex items-stretch">
-                      {/* Étiquette ressource */}
-                      <div className="w-[92px] flex-shrink-0 flex items-center gap-1.5 pr-2 py-1.5">
-                        <span className="w-[18px] h-[18px] rounded-full flex items-center justify-center flex-shrink-0"
-                          style={{ backgroundColor: lane.color }}>
-                          {lane.kind === 'team'
-                            ? <Users className="w-2.5 h-2.5 text-white" />
-                            : <span className="text-[8px] font-bold text-white">{initials(lane.label)}</span>}
-                        </span>
-                        <span className="text-[10px] font-medium text-gray-600 truncate">{lane.label}</span>
-                      </div>
-
-                      {/* Piste horaire */}
-                      <div className="relative flex-shrink-0 py-1.5" style={{ width: next6hTrackW, minHeight: 36 }}>
-                        {/* Lignes d'heure */}
-                        {next6hTicks.map(tick => (
-                          <div key={tick.toISOString()}
-                            className="absolute top-0 bottom-0 border-l border-gray-50"
-                            style={{ left: next6hLeftPx(tick.toISOString()) }} />
-                        ))}
-                        {/* Repère "maintenant" */}
-                        <div className="absolute top-0 bottom-0 border-l-2 border-red-400/60" style={{ left: 0 }} />
-                        {/* Événements */}
-                        {lane.items.map(t => {
-                          const cfg = calEventColor(t.event_type)
-                          const left = next6hLeftPx(t.start_at)
-                          const width = next6hWidthPx(t)
-                          return (
-                            <Link key={t.id} href="/calendrier"
-                              className="absolute top-1/2 -translate-y-1/2 rounded-lg px-1.5 py-1 overflow-hidden border-l-[3px] shadow-sm"
-                              style={{ left, width, backgroundColor: cfg.bg, borderLeftColor: cfg.border }}>
-                              <p className="text-[10px] font-bold leading-tight truncate" style={{ color: cfg.text }}>
-                                {format(new Date(t.start_at), 'HH:mm')} {t.title}
-                              </p>
-                            </Link>
-                          )
-                        })}
-                      </div>
+          </div>
+        ) : (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden divide-y divide-gray-50">
+            {next6hActions.map(a => {
+              const st = NEXT6H_TYPE_STYLE[a.kind] ?? NEXT6H_TYPE_STYLE.tache
+              return (
+                <Link key={a.key} href={a.href}>
+                  <div className="flex items-center gap-3 px-4 py-3.5 hover:bg-gray-50 transition-colors">
+                    <span className="w-12 flex flex-col items-center flex-shrink-0 leading-tight">
+                      <span className="text-sm font-black text-gray-900 font-mono">{format(a.time, 'HH:mm')}</span>
+                      <span className="text-[9px] text-gray-400 capitalize">{format(a.time, 'EEE d', { locale: fr })}</span>
+                    </span>
+                    <span className={`text-[10px] font-black uppercase px-2.5 py-1.5 rounded-full flex-shrink-0 ${st.badge}`}>
+                      {st.label}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-gray-900 truncate">{a.title}</p>
+                      {a.subtitle && (
+                        <p className="text-xs text-gray-400 mt-0.5 truncate">{a.subtitle}</p>
+                      )}
                     </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ) : null}
-        </div>
+                    {a.assignee
+                      ? <span className="text-[10px] text-gray-500 font-medium flex-shrink-0 max-w-[72px] truncate">{a.assignee}</span>
+                      : a.needsAssignee
+                        ? <span className="text-[10px] font-semibold text-amber-600 flex-shrink-0">À assigner</span>
+                        : null}
+                    <ChevronRight className="w-4 h-4 text-gray-200 flex-shrink-0" />
+                  </div>
+                </Link>
+              )
+            })}
+          </div>
+        )}
       </section>
 
       {/* ═══ 2b. RÉSERVATIONS À VENIR (prochains jours) ════════════════════ */}
