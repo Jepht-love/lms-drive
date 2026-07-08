@@ -370,8 +370,8 @@
     "semantic_hash": "9a9cfa85814952cc13b9c9de9f5e2fd6"
   },
   "app/(dashboard)/page.tsx": {
-    "mtime": 1783546069.1838615,
-    "ast_hash": "902506112a37c3e6da478bc3a6e0497e",
+    "mtime": 1783546906.9702816,
+    "ast_hash": "3130c2116e7d2ca6e5d375523e90f179",
     "semantic_hash": ""
   },
   "app/(dashboard)/partnerships/[id]/OperationActions.tsx": {
@@ -985,8 +985,8 @@
     "semantic_hash": "ace49c057ae3e1669b959b63b56753f1"
   },
   "public/sw.js": {
-    "mtime": 1783460918.2146347,
-    "ast_hash": "47c99cf31a112c7f234928643ad81af8",
+    "mtime": 1783546315.1271899,
+    "ast_hash": "55da0824e5600f386ccca3775f27b4db",
     "semantic_hash": ""
   },
   "scripts/seed-vehicles.ts": {

@@ -1,16 +1,16 @@
 # Graph Report - lms-drive  (2026-07-08)
 
 ## Corpus Check
-- 401 files · ~603,295 words
+- 401 files · ~602,638 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1735 nodes · 3101 edges · 146 communities (129 shown, 17 thin omitted)
+- 1735 nodes · 3101 edges · 145 communities (128 shown, 17 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 32 edges (avg confidence: 0.79)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `a800159b`
+- Built from commit: `e2c580b9`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -133,7 +133,6 @@
 - [[_COMMUNITY_Community 141|Community 141]]
 - [[_COMMUNITY_Community 142|Community 142]]
 - [[_COMMUNITY_Community 144|Community 144]]
-- [[_COMMUNITY_Community 145|Community 145]]
 
 ## God Nodes (most connected - your core abstractions)
 1. `createClient()` - 106 edges
@@ -166,7 +165,7 @@
 - **GSAP Skill Suite (cross-referencing animation skills)** — gsap_core_skill, gsap_timeline_skill, gsap_scrolltrigger_skill, gsap_react_skill, gsap_frameworks_skill, gsap_plugins_skill, gsap_performance_skill, gsap_utils_skill [EXTRACTED 1.00]
 - **Context Scoping + Cleanup Pattern** — gsap_core_context, gsap_react_usegsap_hook, gsap_frameworks_lifecycle_cleanup, gsap_scrolltrigger_refresh [INFERRED 0.85]
 
-## Communities (146 total, 17 thin omitted)
+## Communities (145 total, 17 thin omitted)
 
 ### Community 0 - "Marketing & Campagnes clients"
 Cohesion: 0.06
@@ -213,8 +212,8 @@ Cohesion: 0.16
 Nodes (17): Tx, assertPeriodOpen(), SB, closeAnnualAccounting(), closeDailyAccounting(), closeMonthlyAccounting(), createTransaction(), deleteTransaction() (+9 more)
 
 ### Community 11 - "Pages dashboard (routes)"
-Cohesion: 0.09
-Nodes (3): TYPE_LABELS, TYPES, ROLE_CONFIG
+Cohesion: 0.18
+Nodes (3): Props, OPERATION_FLOW, OPERATION_STATUS
 
 ### Community 12 - "Calendrier — grille & barre latérale"
 Cohesion: 0.16
@@ -305,8 +304,8 @@ Cohesion: 0.13
 Nodes (9): Driver, Vehicle, Vehicle, Props, INFRACTION_TYPES, Agency, Client, Reservation (+1 more)
 
 ### Community 34 - "Actions incidents (accidents/infractions)"
-Cohesion: 0.19
-Nodes (11): addAccidentToVehicle(), closeInfraction(), createAccident(), createInfraction(), deleteAccident(), deleteInfraction(), markInfractionPaid(), num() (+3 more)
+Cohesion: 0.13
+Nodes (15): addAccidentToVehicle(), closeInfraction(), createAccident(), createInfraction(), deleteAccident(), deleteInfraction(), markInfractionPaid(), num() (+7 more)
 
 ### Community 35 - "Échéancier (dueDates)"
 Cohesion: 0.05
@@ -317,8 +316,8 @@ Cohesion: 0.23
 Nodes (7): updateAgencySettings(), AGENCY_DEFAULTS, AgencySettings, getAgencySettings(), ConventionPage(), ContractPreviewPage(), SettingsPage()
 
 ### Community 37 - "Info caution réservation"
-Cohesion: 0.12
-Nodes (6): deleteTask(), STATUSES, TYPES, updateTask(), PATCH(), createClient()
+Cohesion: 0.09
+Nodes (3): TYPE_LABELS, TYPES, ROLE_CONFIG
 
 ### Community 38 - "Docs projet & règles"
 Cohesion: 0.09
@@ -501,8 +500,8 @@ Cohesion: 0.17
 Nodes (12): Do Not, GSAP with Vue, Svelte, and Other Frameworks, Learn More, Nuxt 4, Principles (All Frameworks), Scoping Selectors, ScrollTrigger Cleanup, Svelte (+4 more)
 
 ### Community 84 - "Liste incidents client"
-Cohesion: 0.33
-Nodes (4): Incident, STATUS_COLORS, STATUSES, Vehicle
+Cohesion: 0.26
+Nodes (8): managerItems, navItems, Sidebar(), SidebarProps, ROLE_LABELS, roleLabel(), ProfilePage(), Profile
 
 ### Community 85 - "Variants d'animation (framer)"
 Cohesion: 0.33
@@ -525,12 +524,12 @@ Cohesion: 0.40
 Nodes (4): MemberProfilePage(), ROLE_CONFIG, STATUS_BADGE, STATUS_LABEL
 
 ### Community 90 - "Liste ressources (calendrier)"
-Cohesion: 0.26
-Nodes (8): managerItems, navItems, Sidebar(), SidebarProps, ROLE_LABELS, roleLabel(), ProfilePage(), Profile
+Cohesion: 0.25
+Nodes (5): AlertPanelProps, ALERT_RULES, AlertType, CalendarAlert, CalendarTeam
 
 ### Community 91 - "Grille véhicules swipeable"
-Cohesion: 0.18
-Nodes (3): Props, OPERATION_FLOW, OPERATION_STATUS
+Cohesion: 0.28
+Nodes (5): CalendarBottomBarProps, EventBlockProps, STATUS_ICON, ResourceColumnProps, CalendarEvent
 
 ### Community 92 - "Page analytics"
 Cohesion: 0.20
@@ -546,15 +545,15 @@ Nodes (7): gsap.context() (scoping + cleanup), Framework Lifecycle Cleanup (moun
 
 ### Community 96 - "Page équipe"
 Cohesion: 0.25
-Nodes (5): AlertPanelProps, ALERT_RULES, AlertType, CalendarAlert, CalendarTeam
+Nodes (5): lookupDriver(), Driver, Vehicle, DriverResult, findDriverAtDate()
 
 ### Community 98 - "Proxy onglets (middleware)"
 Cohesion: 0.67
 Nodes (3): config, matchTab(), proxy()
 
 ### Community 102 - "Community 102"
-Cohesion: 0.28
-Nodes (5): CalendarBottomBarProps, EventBlockProps, STATUS_ICON, ResourceColumnProps, CalendarEvent
+Cohesion: 0.12
+Nodes (6): deleteTask(), STATUSES, TYPES, updateTask(), PATCH(), createClient()
 
 ### Community 104 - "Community 104"
 Cohesion: 1.00
@@ -563,10 +562,6 @@ Nodes (3): EDL Zones Verification Page, Vehicle Blueprint v3 (EDL zone image), E
 ### Community 137 - "Community 137"
 Cohesion: 0.39
 Nodes (6): createDueDate(), createRecurringDueDates(), deleteDueDate(), markDuePaid(), DueDate, Vehicle
-
-### Community 140 - "Community 140"
-Cohesion: 0.25
-Nodes (5): lookupDriver(), Driver, Vehicle, DriverResult, findDriverAtDate()
 
 ### Community 141 - "Community 141"
 Cohesion: 0.29
@@ -584,11 +579,11 @@ Nodes (4): AccountingLayout(), isManagerRole(), requireManagerPage(), Partnershi
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `createClient()` connect `Info caution réservation` to `Marketing & Campagnes clients`, `Alertes & Notifications`, `Partenariats inter-agences`, `Actions clients (remises/perks)`, `Community 137`, `Écritures & clôtures comptables`, `Pages dashboard (routes)`, `Catégories de dépenses`, `Community 141`, `Auth & navigation (Sidebar/rôles)`, `Déplacements internes (trajets)`, `Maintenance & immobilisés`, `Suppressions & caution`, `Community 143`, `Incidents / infractions / sinistres`, `Community 142`, `Community 145`, `Documents & expiration`, `Création réservation & blacklist`, `Prolongation & édition dates résa`, `Sync réservation↔calendrier`, `Facturation (invoices)`, `Analyse financière (agrégats)`, `Santé maintenance véhicule`, `Actions incidents (accidents/infractions)`, `Paramètres agence & convention`, `Layout dashboard & transitions`, `Fiche client & photos docs`, `Actions documents & sous-catégories`, `Graphiques comptables`, `Disponibilité employé`, `Signalements véhicule (issues)`, `Fiche véhicule & statut`, `Graphique échéances`, `Génération données contrat PDF`, `PDF sinistre`, `Création tâche & push`, `Community 140`, `PDF comptable`, `KPI véhicule`, `Email restitution & pièces`, `Actions véhicules`, `Primitive UI Card`, `Route API manager`, `Profil membre`, `Liste ressources (calendrier)`, `Grille véhicules swipeable`?**
+- **Why does `createClient()` connect `Community 102` to `Marketing & Campagnes clients`, `Alertes & Notifications`, `Partenariats inter-agences`, `Actions clients (remises/perks)`, `Community 137`, `Écritures & clôtures comptables`, `Pages dashboard (routes)`, `Catégories de dépenses`, `Community 141`, `Auth & navigation (Sidebar/rôles)`, `Déplacements internes (trajets)`, `Maintenance & immobilisés`, `Suppressions & caution`, `Community 143`, `Incidents / infractions / sinistres`, `Community 142`, `Community 144`, `Documents & expiration`, `Création réservation & blacklist`, `Prolongation & édition dates résa`, `Sync réservation↔calendrier`, `Facturation (invoices)`, `Analyse financière (agrégats)`, `Santé maintenance véhicule`, `Actions incidents (accidents/infractions)`, `Paramètres agence & convention`, `Info caution réservation`, `Layout dashboard & transitions`, `Fiche client & photos docs`, `Actions documents & sous-catégories`, `Graphiques comptables`, `Disponibilité employé`, `Signalements véhicule (issues)`, `Fiche véhicule & statut`, `Graphique échéances`, `Génération données contrat PDF`, `PDF sinistre`, `Création tâche & push`, `PDF comptable`, `KPI véhicule`, `Email restitution & pièces`, `Actions véhicules`, `Primitive UI Card`, `Liste incidents client`, `Route API manager`, `Profil membre`, `Page équipe`?**
   _High betweenness centrality (0.123) - this node is a cross-community bridge._
 - **Why does `createAdminClient()` connect `Alertes & Notifications` to `Actions incidents (accidents/infractions)`, `Email restitution & pièces`, `Écritures & clôtures comptables`, `Déplacements internes (trajets)`, `Maintenance & immobilisés`, `Suppressions & caution`, `Création réservation & blacklist`, `Sync réservation↔calendrier`, `Génération données contrat PDF`?**
   _High betweenness centrality (0.014) - this node is a cross-community bridge._
-- **Why does `formatPrice()` connect `Primitive UI Card` to `Marketing & Campagnes clients`, `Community 137`, `Écritures & clôtures comptables`, `Community 143`, `Déplacements internes (trajets)`, `Suppressions & caution`, `Incidents / infractions / sinistres`, `Maintenance & immobilisés`, `Facturation (invoices)`, `Prolongation & édition dates résa`, `Analyse financière (agrégats)`, `Formatage journal d'audit`, `Santé maintenance véhicule`, `Primitives UI (badge/button/input)`, `Fiche client & photos docs`, `Graphiques comptables`, `Fiche véhicule & statut`, `Graphique échéances`, `KPI véhicule`, `Info paiement réservation`, `Grille véhicules swipeable`?**
+- **Why does `formatPrice()` connect `Primitive UI Card` to `Marketing & Campagnes clients`, `Community 137`, `Écritures & clôtures comptables`, `Pages dashboard (routes)`, `Community 143`, `Déplacements internes (trajets)`, `Suppressions & caution`, `Incidents / infractions / sinistres`, `Maintenance & immobilisés`, `Facturation (invoices)`, `Prolongation & édition dates résa`, `Analyse financière (agrégats)`, `Formatage journal d'audit`, `Santé maintenance véhicule`, `Primitives UI (badge/button/input)`, `Fiche client & photos docs`, `Graphiques comptables`, `Fiche véhicule & statut`, `Graphique échéances`, `KPI véhicule`, `Info paiement réservation`?**
   _High betweenness centrality (0.013) - this node is a cross-community bridge._
 - **What connects `version`, `configurations`, `PreToolUse` to the rest of the system?**
   _608 weakly-connected nodes found - possible documentation gaps or missing edges._

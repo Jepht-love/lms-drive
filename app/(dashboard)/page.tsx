@@ -3,7 +3,7 @@ import { fetchAllAlerts } from '@/lib/utils/alerts'
 import Link from 'next/link'
 import {
   differenceInDays, format, isSameDay,
-  startOfDay, endOfDay, addDays, subDays, addHours,
+  startOfDay, endOfDay, addDays, subDays,
 } from 'date-fns'
 import { getColumnWindow, businessNow } from '@/lib/calendar/dateUtils'
 import { CALENDAR_START_HOUR } from '@/lib/calendar/constants'
@@ -358,88 +358,6 @@ export default async function DashboardPage() {
     return assignee?.full_name ?? team?.name ?? null
   }
 
-  // ── Prochaines 6h : TOUTES les actions de la fenêtre glissante [now, +6h] ─────
-  // Liste unique et exhaustive — départs et retours de réservation ET tâches/RDV
-  // du calendrier — dont l'heure tombe dans les 6 prochaines heures. Chaque ligne
-  // porte l'heure, le type, l'intitulé, le véhicule et qui s'en charge. (Les
-  // départs de réservation manquaient auparavant : ils ne sont pas des
-  // calendar_events, donc une résa créée pour tout à l'heure n'apparaissait pas.)
-  const next6hStart = now
-  const next6hEnd   = addHours(now, 6)
-  const inNext6h    = (d: Date) => d >= next6hStart && d <= next6hEnd
-
-  type Next6hAction = {
-    key: string
-    time: Date
-    kind: 'depart' | 'retour' | 'tache' | 'rdv_client' | 'rdv_garage' | 'livraison' | 'recuperation'
-    title: string
-    subtitle?: string
-    assignee: string | null
-    needsAssignee: boolean
-    href: string
-  }
-  const next6hActions: Next6hAction[] = []
-
-  // Réservations : départ (confirmée/option) et retour (en cours/en retard)
-  for (const r of reservations ?? []) {
-    const v = getVehicle(r); const c = getClient(r)
-    const clientName = c ? `${c.first_name} ${c.last_name}` : 'Client'
-    const vehLabel   = v ? `${v.brand} ${v.model} · ${v.plate}` : undefined
-    if (isDepart(r.status)) {
-      const s = new Date(r.start_datetime)
-      // Une récupération confirmée dont l'heure est déjà passée mais non effectuée
-      // reste à réaliser : on la garde ici même si elle sort de la fenêtre avant.
-      const recuperationEnRetard = r.status === 'confirmee' && s < now
-      if (inNext6h(s) || recuperationEnRetard) next6hActions.push({
-        key: `dep-${r.id}`, time: s, kind: 'depart',
-        title: clientName, subtitle: vehLabel,
-        assignee: null, needsAssignee: false, href: `/reservations/${r.id}`,
-      })
-    }
-    if (r.status === 'en_cours' || r.status === 'en_retard') {
-      const e = new Date(r.end_datetime)
-      if (inNext6h(e)) next6hActions.push({
-        key: `ret-${r.id}`, time: e, kind: 'retour',
-        title: clientName, subtitle: vehLabel,
-        assignee: null, needsAssignee: false, href: `/reservations/${r.id}`,
-      })
-    }
-  }
-
-  // Tâches / RDV du calendrier
-  for (const t of weekCalendarTasks) {
-    const s = new Date(t.start_at)
-    if (!inNext6h(s)) continue
-    const kind = (['tache', 'rdv_client', 'rdv_garage', 'livraison', 'recuperation']
-      .includes(t.event_type ?? '') ? t.event_type : 'tache') as Next6hAction['kind']
-    const taskVehicles = (t.vehicle_ids ?? []).map((id: string) => vehicleById.get(id)).filter(Boolean)
-    const subtitle = taskVehicles.length
-      ? taskVehicles.map((tv: any) => `${tv.brand} ${tv.model}`).join(', ')
-      : undefined
-    const assignee = assigneeLabel(t)
-    next6hActions.push({
-      key: `cal-${t.id}`, time: s, kind,
-      title: t.title, subtitle,
-      assignee, needsAssignee: !assignee, href: '/calendrier',
-    })
-  }
-
-  // Interventions legacy (table tasks)
-  for (const task of weekTasks ?? []) {
-    const s = new Date(task.due_datetime)
-    if (!inNext6h(s)) continue
-    const tv       = Array.isArray((task as any).vehicles) ? (task as any).vehicles[0] : (task as any).vehicles
-    const assignee = Array.isArray((task as any).profiles) ? (task as any).profiles[0] : (task as any).profiles
-    next6hActions.push({
-      key: `task-${task.id}`, time: s, kind: 'tache',
-      title: task.title, subtitle: tv ? (tv as any).plate : undefined,
-      assignee: assignee ? (assignee as any).full_name : null,
-      needsAssignee: !assignee, href: '/calendrier',
-    })
-  }
-
-  next6hActions.sort((a, b) => a.time.getTime() - b.time.getTime())
-
   // ── Événements de la semaine, listés jour par jour ────────────────────────
   // Chaque événement des 7 prochains jours est explicitement listé sous le
   // mini-calendrier : départs (ou « à préparer »), retours et tâches/RDV du
@@ -591,6 +509,65 @@ export default async function DashboardPage() {
               </div>
             </div>
           </Link>
+        </section>
+      )}
+
+      {/* ═══ 1b. RÉSERVATIONS À VENIR (départ à venir, pas encore effectué) ═ */}
+      {reservationsAVenir.length > 0 && (
+        <section>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-[11px] font-bold uppercase tracking-widest text-gray-900">
+              Réservé · {reservationsAVenir.length}
+            </h2>
+            <Link href="/reservations?status=confirmee" className="text-[11px] text-gray-400 font-medium flex items-center gap-1">
+              TOUT VOIR <ChevronRight className="w-3 h-3" />
+            </Link>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden divide-y divide-gray-50">
+            {reservationsAVenir.map(r => {
+              const v = getVehicle(r); const c = getClient(r)
+              const start = new Date(r.start_datetime)
+              const end   = new Date(r.end_datetime)
+              const days  = Math.max(1, differenceInDays(startOfDay(end), startOfDay(start)))
+              const isOption = r.status === 'option'
+              return (
+                <Link key={r.id} href={`/reservations/${r.id}`}>
+                  <div className="flex items-center gap-4 px-4 py-3.5 hover:bg-gray-50 transition-colors">
+                    {/* Date de DÉPART (jour / heure) */}
+                    <div className="flex flex-col items-center w-12 flex-shrink-0">
+                      <span className="text-[10px] font-bold uppercase text-gray-400 capitalize">
+                        {format(start, 'EEE', { locale: fr })}
+                      </span>
+                      <span className="text-sm font-black text-gray-900">{format(start, 'd')}</span>
+                      <span className="text-[10px] text-gray-400 font-mono">{format(start, 'HH:mm')}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-bold text-gray-900 truncate">{c?.first_name} {c?.last_name}</p>
+                        {isOption && (
+                          <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500 flex-shrink-0">Option</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {v?.brand} {v?.model} <span className="text-gray-300 font-mono">· {v?.plate}</span>
+                      </p>
+                      {/* Départ ET retour prévus */}
+                      <p className="text-[11px] text-gray-500 mt-1">
+                        Départ {format(start, 'd MMM à HH:mm', { locale: fr })}
+                        <span className="text-gray-300"> · </span>
+                        <span className="font-semibold text-gray-700">Retour {format(end, 'd MMM à HH:mm', { locale: fr })}</span>
+                      </p>
+                    </div>
+                    <div className="flex flex-col items-end flex-shrink-0 gap-1">
+                      <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap">{days} j</span>
+                      <ChevronRight className="w-4 h-4 text-gray-200" />
+                    </div>
+                  </div>
+                </Link>
+              )
+            })}
+          </div>
         </section>
       )}
 
@@ -862,114 +839,35 @@ export default async function DashboardPage() {
         )}
       </section>
 
-      {/* ═══ 2a. PROCHAINES 6H — liste de toutes les actions à venir ════════ */}
-      <section>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-[11px] font-bold uppercase tracking-widest text-gray-900">
-            Prochaines 6h
-          </h2>
-          <span className="text-[11px] text-gray-400 font-medium">
-            {format(next6hStart, 'HH:mm')} – {format(next6hEnd, 'HH:mm')}
-          </span>
-        </div>
-
-        {next6hActions.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-            <div className="flex items-center gap-2 py-1 px-1">
-              <CheckCircle2 className="w-4 h-4 text-gray-200 flex-shrink-0" />
-              <p className="text-xs text-gray-400 font-medium">Rien de prévu dans les 6 prochaines heures</p>
-            </div>
-          </div>
-        ) : (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden divide-y divide-gray-50">
-            {next6hActions.map(a => {
-              const st = NEXT6H_TYPE_STYLE[a.kind] ?? NEXT6H_TYPE_STYLE.tache
-              return (
-                <Link key={a.key} href={a.href}>
-                  <div className="flex items-center gap-3 px-4 py-3.5 hover:bg-gray-50 transition-colors">
-                    <span className="w-12 flex flex-col items-center flex-shrink-0 leading-tight">
-                      <span className="text-sm font-black text-gray-900 font-mono">{format(a.time, 'HH:mm')}</span>
-                      <span className="text-[9px] text-gray-400 capitalize">{format(a.time, 'EEE d', { locale: fr })}</span>
-                    </span>
-                    <span className={`text-[10px] font-black uppercase px-2.5 py-1.5 rounded-full flex-shrink-0 ${st.badge}`}>
-                      {st.label}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-gray-900 truncate">{a.title}</p>
-                      {a.subtitle && (
-                        <p className="text-xs text-gray-400 mt-0.5 truncate">{a.subtitle}</p>
-                      )}
-                    </div>
-                    {a.assignee
-                      ? <span className="text-[10px] text-gray-500 font-medium flex-shrink-0 max-w-[72px] truncate">{a.assignee}</span>
-                      : a.needsAssignee
-                        ? <span className="text-[10px] font-semibold text-amber-600 flex-shrink-0">À assigner</span>
-                        : null}
-                    <ChevronRight className="w-4 h-4 text-gray-200 flex-shrink-0" />
-                  </div>
-                </Link>
-              )
-            })}
-          </div>
-        )}
-      </section>
-
-      {/* ═══ 2b. RÉSERVÉ (départ à venir, pas encore effectué) ═════════════ */}
-      {reservationsAVenir.length > 0 && (
+      {/* ═══ 2a. ALERTES — résumé compact + lien vers la page complète ══════ */}
+      {alerts.length > 0 && (
         <section>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-[11px] font-bold uppercase tracking-widest text-gray-900">
-              Réservé · {reservationsAVenir.length}
-            </h2>
-            <Link href="/reservations?status=confirmee" className="text-[11px] text-gray-400 font-medium flex items-center gap-1">
-              TOUT VOIR <ChevronRight className="w-3 h-3" />
-            </Link>
+          <div className="flex items-center gap-2 mb-3">
+            <h2 className="text-[11px] font-black uppercase tracking-widest text-gray-900">Alertes</h2>
+            <span className="w-5 h-5 bg-red-500 rounded-full text-white text-[10px] font-bold flex items-center justify-center">
+              {alerts.length > 9 ? '9+' : alerts.length}
+            </span>
           </div>
 
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden divide-y divide-gray-50">
-            {reservationsAVenir.map(r => {
-              const v = getVehicle(r); const c = getClient(r)
-              const start = new Date(r.start_datetime)
-              const end   = new Date(r.end_datetime)
-              const days  = Math.max(1, differenceInDays(startOfDay(end), startOfDay(start)))
-              const isOption = r.status === 'option'
-              return (
-                <Link key={r.id} href={`/reservations/${r.id}`}>
-                  <div className="flex items-center gap-4 px-4 py-3.5 hover:bg-gray-50 transition-colors">
-                    {/* Date de DÉPART (jour / heure) */}
-                    <div className="flex flex-col items-center w-12 flex-shrink-0">
-                      <span className="text-[10px] font-bold uppercase text-gray-400 capitalize">
-                        {format(start, 'EEE', { locale: fr })}
-                      </span>
-                      <span className="text-sm font-black text-gray-900">{format(start, 'd')}</span>
-                      <span className="text-[10px] text-gray-400 font-mono">{format(start, 'HH:mm')}</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-bold text-gray-900 truncate">{c?.first_name} {c?.last_name}</p>
-                        {isOption && (
-                          <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500 flex-shrink-0">Option</span>
-                        )}
-                      </div>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        {v?.brand} {v?.model} <span className="text-gray-300 font-mono">· {v?.plate}</span>
-                      </p>
-                      {/* Départ ET retour prévus */}
-                      <p className="text-[11px] text-gray-500 mt-1">
-                        Départ {format(start, 'd MMM à HH:mm', { locale: fr })}
-                        <span className="text-gray-300"> · </span>
-                        <span className="font-semibold text-gray-700">Retour {format(end, 'd MMM à HH:mm', { locale: fr })}</span>
-                      </p>
-                    </div>
-                    <div className="flex flex-col items-end flex-shrink-0 gap-1">
-                      <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap">{days} j</span>
-                      <ChevronRight className="w-4 h-4 text-gray-200" />
-                    </div>
-                  </div>
-                </Link>
-              )
-            })}
-          </div>
+          <Link href="/alerts" className="block bg-white rounded-2xl border border-gray-100 shadow-sm p-4 hover:bg-gray-50 transition-colors active:scale-[.99] transition-transform">
+            <div className="flex items-center gap-2 flex-wrap mb-3">
+              {ALERT_GROUPS.map(group => {
+                const count = alerts.filter(a => a.type === group.type).length
+                if (count === 0) return null
+                const GroupIcon = group.icon
+                return (
+                  <span key={group.type} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold ${group.cardBg} ${group.labelColor}`}>
+                    <GroupIcon className={`w-3 h-3 ${group.iconColor}`} />
+                    {group.label} · {count}
+                  </span>
+                )
+              })}
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-bold text-gray-900">Voir toutes les alertes</span>
+              <ChevronRight className="w-4 h-4 text-gray-400" />
+            </div>
+          </Link>
         </section>
       )}
 
@@ -1111,38 +1009,6 @@ export default async function DashboardPage() {
         </section>
       )}
 
-      {/* ═══ 4. ALERTES — résumé compact + lien vers la page complète ═══════ */}
-      {alerts.length > 0 && (
-        <section>
-          <div className="flex items-center gap-2 mb-3">
-            <h2 className="text-[11px] font-black uppercase tracking-widest text-gray-900">Alertes</h2>
-            <span className="w-5 h-5 bg-red-500 rounded-full text-white text-[10px] font-bold flex items-center justify-center">
-              {alerts.length > 9 ? '9+' : alerts.length}
-            </span>
-          </div>
-
-          <Link href="/alerts" className="block bg-white rounded-2xl border border-gray-100 shadow-sm p-4 hover:bg-gray-50 transition-colors active:scale-[.99] transition-transform">
-            <div className="flex items-center gap-2 flex-wrap mb-3">
-              {ALERT_GROUPS.map(group => {
-                const count = alerts.filter(a => a.type === group.type).length
-                if (count === 0) return null
-                const GroupIcon = group.icon
-                return (
-                  <span key={group.type} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold ${group.cardBg} ${group.labelColor}`}>
-                    <GroupIcon className={`w-3 h-3 ${group.iconColor}`} />
-                    {group.label} · {count}
-                  </span>
-                )
-              })}
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-bold text-gray-900">Voir toutes les alertes</span>
-              <ChevronRight className="w-4 h-4 text-gray-400" />
-            </div>
-          </Link>
-        </section>
-      )}
-
       {/* ═══ 5. SEMAINE ════════════════════════════════════════════════════ */}
       <section>
         <div className="flex items-center justify-between mb-3">
@@ -1165,6 +1031,11 @@ export default async function DashboardPage() {
                 (r.status === 'en_cours' || r.status === 'en_retard')
               ) ?? []
               const dayToPrepare = dayDeparts.filter(r => isToPrepare(r.id))
+              const dayItems     = weekEvents.filter(e => isSameDay(e.time, day))
+              const dayRdv       = dayItems.filter(e => e.kind === 'rdv_client' || e.kind === 'rdv_garage')
+              const dayInterventions = dayItems.filter(e =>
+                e.kind === 'tache' || e.kind === 'livraison' || e.kind === 'recuperation'
+              )
 
               return (
                 <div key={day.toISOString()} className="flex flex-col items-center gap-1.5">
@@ -1195,7 +1066,18 @@ export default async function DashboardPage() {
                         <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />{dayToPrepare.length}
                       </span>
                     )}
-                    {dayDeparts.length === 0 && dayReturns.length === 0 && (
+                    {dayRdv.length > 0 && (
+                      <span className="flex items-center gap-0.5 text-[9px] font-bold text-pink-500">
+                        <span className="w-1.5 h-1.5 rounded-full bg-pink-400" />{dayRdv.length}
+                      </span>
+                    )}
+                    {dayInterventions.length > 0 && (
+                      <span className="flex items-center gap-0.5 text-[9px] font-bold text-purple-600">
+                        <span className="w-1.5 h-1.5 rounded-full bg-purple-400" />{dayInterventions.length}
+                      </span>
+                    )}
+                    {dayDeparts.length === 0 && dayReturns.length === 0 &&
+                     dayRdv.length === 0 && dayInterventions.length === 0 && (
                       <span className="text-[8px] text-gray-200">—</span>
                     )}
                   </div>
@@ -1205,7 +1087,7 @@ export default async function DashboardPage() {
           </div>
 
           {/* Légende */}
-          <div className="flex items-center gap-4 mt-3 pt-3 border-t border-gray-50">
+          <div className="flex items-center flex-wrap gap-x-4 gap-y-2 mt-3 pt-3 border-t border-gray-50">
             <div className="flex items-center gap-1.5">
               <div className="w-1.5 h-1.5 rounded-full bg-black" />
               <span className="text-[10px] text-gray-400">Départ</span>
@@ -1217,6 +1099,14 @@ export default async function DashboardPage() {
             <div className="flex items-center gap-1.5">
               <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />
               <span className="text-[10px] text-gray-400">À préparer</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-pink-400" />
+              <span className="text-[10px] text-gray-400">RDV</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-purple-400" />
+              <span className="text-[10px] text-gray-400">Intervention</span>
             </div>
           </div>
 
