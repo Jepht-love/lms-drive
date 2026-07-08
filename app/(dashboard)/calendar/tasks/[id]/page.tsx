@@ -7,6 +7,7 @@ import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import DeleteButton from '@/components/ui/DeleteButton'
 import BackButton from '@/components/ui/BackButton'
+import { broadcastPushToManagers } from '@/lib/push/broadcastPush'
 
 const TYPES: Record<string, string> = {
   lavage: 'Lavage', preparation: 'Préparation',
@@ -30,7 +31,21 @@ async function updateTask(id: string, formData: FormData) {
   const supabase = await createClient()
   const status = formData.get('status') as string
   const notes  = (formData.get('notes') as string)?.trim() || null
-  await supabase.from('tasks').update({ status, notes, completed_at: status === 'termine' ? new Date().toISOString() : null }).eq('id', id)
+  const { data: updated } = await supabase
+    .from('tasks')
+    .update({ status, notes, completed_at: status === 'termine' ? new Date().toISOString() : null })
+    .eq('id', id)
+    .select('title')
+    .single()
+
+  // Notifie les managers du nouveau statut (en précisant le libellé).
+  const statusLabel = STATUSES.find(s => s.id === status)?.label ?? status
+  await broadcastPushToManagers({
+    title: `Tâche · ${statusLabel}`,
+    body: `${updated?.title ?? 'Tâche'} — statut : ${statusLabel}`,
+    url: '/calendar/tasks',
+  })
+
   revalidatePath('/calendar/tasks')
   redirect('/calendar/tasks')
 }

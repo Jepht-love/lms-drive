@@ -199,6 +199,16 @@ export default async function DashboardPage() {
     )
     .sort((a, b) => a.end_datetime.localeCompare(b.end_datetime)) // plus en retard en premier
 
+  // ── RÉCUPÉRATIONS EN RETARD (départ dépassé, client pas venu chercher) ──────
+  // Une réservation CONFIRMÉE (avance bloquée) dont l'heure de départ est passée
+  // mais qui n'est pas encore partie (statut toujours "confirmee", EDL non fait)
+  // reste une action à réaliser : on la remonte tout en haut des tâches, comme
+  // pour un retour en retard. Le départ "du jour même" reste, lui, dans
+  // departsAujourdhui (badge DÉPART / À PRÉPARER).
+  const recuperationsEnRetard = (reservations ?? [])
+    .filter(r => r.status === 'confirmee' && new Date(r.start_datetime) < businessDayStart)
+    .sort((a, b) => a.start_datetime.localeCompare(b.start_datetime))
+
   // Même véhicule avec un départ ET un retour aujourd'hui (rotation rapide) —
   // à signaler clairement : peu de marge pour laver/préparer entre les deux.
   const departVehicleIds = new Set(departsAujourdhui.map(r => getVehicle(r)?.id).filter(Boolean))
@@ -207,9 +217,39 @@ export default async function DashboardPage() {
     [...departVehicleIds].filter(id => retourVehicleIds.has(id))
   )
 
-  const enLocationNow = (reservations?.filter(r =>
-    r.status === 'en_cours' || r.status === 'en_retard'
-  ) ?? []).sort((a, b) => a.end_datetime.localeCompare(b.end_datetime))
+  // ── « En location » : locations engagées ───────────────────────────────────
+  // Requête dédiée SANS plafond de date. Dès qu'une réservation est CONFIRMÉE
+  // (le client a bloqué une avance), le véhicule est considéré comme loué et doit
+  // apparaître ici — même si le départ / l'état des lieux n'est pas encore fait,
+  // et même si la récupération est en retard. Statuts inclus : confirmee (engagée,
+  // pas encore partie), en_cours (partie), en_retard (retour dépassé). Les
+  // « options » (non confirmées) restent dans la section « Réservé ».
+  const { data: locationRaw } = await supabase
+    .from('reservations')
+    .select(`
+      id, status, start_datetime, end_datetime,
+      vehicles ( id, plate, brand, model ),
+      clients  ( id, first_name, last_name, phone )
+    `)
+    .in('status', ['confirmee', 'en_cours', 'en_retard'])
+    .order('start_datetime', { ascending: true })
+    .limit(100)
+
+  // Une confirmée dont l'heure de départ est atteinte mais non récupérée = à
+  // récupérer (prioritaire). Ordre : à récupérer → retour en retard → en cours
+  // (par retour) → confirmée future (par départ).
+  const locationRank = (r: { status: string; start_datetime: string }) => {
+    if (r.status === 'confirmee') return new Date(r.start_datetime) <= now ? 0 : 3
+    if (r.status === 'en_retard') return 1
+    return 2 // en_cours
+  }
+  const enLocationNow = (locationRaw ?? []).slice().sort((a, b) => {
+    const ra = locationRank(a), rb = locationRank(b)
+    if (ra !== rb) return ra - rb
+    const da = ra === 3 ? a.start_datetime : a.end_datetime
+    const db = rb === 3 ? b.start_datetime : b.end_datetime
+    return da.localeCompare(db)
+  })
 
   // Prochaine réservation par véhicule (confirmee/option la plus proche) — permet
   // de repérer, sur une location en cours, si quelqu'un a déjà réservé après,
@@ -225,10 +265,24 @@ export default async function DashboardPage() {
     }
   }
 
-  // Réservations à venir (à partir de demain, dans les 7 jours)
-  const reservationsAVenir = (reservations ?? []).filter(r =>
-    isDepart(r.status) && new Date(r.start_datetime) > businessDayEnd
-  ).sort((a, b) => a.start_datetime.localeCompare(b.start_datetime))
+  // ── OPTIONS (réservations non encore confirmées) → section « Réservé » ──────
+  // Les réservations CONFIRMÉES basculent dans « En location » (voir plus haut).
+  // Ici on ne garde que les « options » : un pré-blocage non confirmé (pas
+  // d'avance), départ à venir. Requête dédiée SANS plafond à 7 jours pour ne pas
+  // masquer une option lointaine. Pas de montant : le CDC interdit toute donnée
+  // financière sur l'accueil.
+  const { data: reservedRaw } = await supabase
+    .from('reservations')
+    .select(`
+      id, status, start_datetime, end_datetime,
+      vehicles ( id, plate, brand, model ),
+      clients  ( id, first_name, last_name, phone )
+    `)
+    .eq('status', 'option')
+    .gt('start_datetime', businessDayEnd.toISOString())
+    .order('start_datetime', { ascending: true })
+    .limit(50)
+  const reservationsAVenir = reservedRaw ?? []
 
   // ── Contrats ouverts → réservations « à préparer » ──────────────────────────
   // Un contrat non signé (brouillon / à signer) ou absent = réservation à préparer.
@@ -247,18 +301,32 @@ export default async function DashboardPage() {
   }
   const aPreparerAujourdhui = departsAujourdhui.filter(r => isToPrepare(r.id))
 
-  // ── Interventions du jour (table tasks) ─────────────────────────────────────
-  const { data: todayTasks } = await supabase
+  // ── Interventions (table `tasks` legacy) sur 7 jours ────────────────────────
+  // Une tâche créée depuis le calendrier (/calendar/tasks/new) n'existe QUE dans
+  // `tasks` — aucun miroir dans calendar_events. Pour qu'elle apparaisse partout
+  // sur le dashboard (« Tâches du jour », « Prochaines 6h » ET « Semaine »), comme
+  // un événement calendrier, on la charge sur toute la fenêtre semaine. La borne
+  // basse prend le plus tôt entre minuit civil et le début de journée métier pour
+  // ne jamais masquer une tâche déjà visible avant, tout en captant les tâches de
+  // nuit (0h→3h) que le calendrier range dans la journée métier.
+  const tasksLowerBound = businessDayStart < todayStart ? businessDayStart : todayStart
+  const { data: weekTasks } = await supabase
     .from('tasks')
     .select(`
       id, title, type, status, due_datetime,
       vehicles ( plate ),
       profiles!tasks_assigned_to_fkey ( full_name )
     `)
-    .gte('due_datetime', todayStart.toISOString())
-    .lte('due_datetime', todayEnd.toISOString())
+    .gte('due_datetime', tasksLowerBound.toISOString())
+    .lte('due_datetime', in7Days.toISOString())
     .neq('status', 'annule')
     .order('due_datetime', { ascending: true })
+  // « Tâches du jour » = journée métier courante (7h→3h, comme le calendrier)
+  // OU jour civil (rétro-compatibilité, ne masque rien de ce qui s'affichait).
+  const todayTasks = (weekTasks ?? []).filter(t => {
+    const d = new Date(t.due_datetime)
+    return (d >= businessDayStart && d <= businessDayEnd) || (d >= todayStart && d <= todayEnd)
+  })
 
   // ── Tâches calendrier du jour (lavage, CT, assurance, révision, infraction,
   // sinistre, contrat à signer, RDV client/garage, livraison/récupération...) ──
@@ -319,7 +387,10 @@ export default async function DashboardPage() {
     const vehLabel   = v ? `${v.brand} ${v.model} · ${v.plate}` : undefined
     if (isDepart(r.status)) {
       const s = new Date(r.start_datetime)
-      if (inNext6h(s)) next6hActions.push({
+      // Une récupération confirmée dont l'heure est déjà passée mais non effectuée
+      // reste à réaliser : on la garde ici même si elle sort de la fenêtre avant.
+      const recuperationEnRetard = r.status === 'confirmee' && s < now
+      if (inNext6h(s) || recuperationEnRetard) next6hActions.push({
         key: `dep-${r.id}`, time: s, kind: 'depart',
         title: clientName, subtitle: vehLabel,
         assignee: null, needsAssignee: false, href: `/reservations/${r.id}`,
@@ -354,7 +425,7 @@ export default async function DashboardPage() {
   }
 
   // Interventions legacy (table tasks)
-  for (const task of todayTasks ?? []) {
+  for (const task of weekTasks ?? []) {
     const s = new Date(task.due_datetime)
     if (!inNext6h(s)) continue
     const tv       = Array.isArray((task as any).vehicles) ? (task as any).vehicles[0] : (task as any).vehicles
@@ -416,6 +487,18 @@ export default async function DashboardPage() {
       key: `wcal-${t.id}`, time: new Date(t.start_at), kind,
       title: t.title, subtitle,
       assignee, needsAssignee: !assignee, href: '/calendrier',
+    })
+  }
+  // Tâches legacy (table `tasks`) — créées depuis le calendrier, sans miroir
+  // dans calendar_events : on les liste aussi jour par jour.
+  for (const task of weekTasks ?? []) {
+    const tv       = Array.isArray((task as any).vehicles) ? (task as any).vehicles[0] : (task as any).vehicles
+    const assignee = Array.isArray((task as any).profiles) ? (task as any).profiles[0] : (task as any).profiles
+    weekEvents.push({
+      key: `wtask-${task.id}`, time: new Date(task.due_datetime), kind: 'tache',
+      title: task.title, subtitle: tv ? (tv as any).plate : undefined,
+      assignee: assignee ? (assignee as any).full_name : null,
+      needsAssignee: !assignee, href: '/calendrier',
     })
   }
   const weekEventsByDay = Array.from({ length: 7 }, (_, i) => addDays(todayStart, i))
@@ -527,12 +610,18 @@ export default async function DashboardPage() {
               </Link>
             </div>
           </div>
-          {(retoursEnRetard.length > 0 || aPreparerAujourdhui.length > 0) && (
+          {(retoursEnRetard.length > 0 || recuperationsEnRetard.length > 0 || aPreparerAujourdhui.length > 0) && (
             <div className="flex items-center gap-2 mt-2 flex-wrap">
               {retoursEnRetard.length > 0 && (
                 <span className="inline-flex items-center gap-1 text-[10px] font-black text-white bg-red-600 px-2.5 py-1 rounded-full animate-pulse whitespace-nowrap">
                   <AlertTriangle className="w-3 h-3" />
                   {retoursEnRetard.length} retour{retoursEnRetard.length > 1 ? 's' : ''} en retard
+                </span>
+              )}
+              {recuperationsEnRetard.length > 0 && (
+                <span className="inline-flex items-center gap-1 text-[10px] font-black text-white bg-orange-600 px-2.5 py-1 rounded-full whitespace-nowrap">
+                  <AlertTriangle className="w-3 h-3" />
+                  {recuperationsEnRetard.length} récupération{recuperationsEnRetard.length > 1 ? 's' : ''} en retard
                 </span>
               )}
               {aPreparerAujourdhui.length > 0 && (
@@ -544,7 +633,7 @@ export default async function DashboardPage() {
           )}
         </div>
 
-        {retoursEnRetard.length === 0 && departsAujourdhui.length === 0 && retoursAujourdhui.length === 0 && (todayTasks?.length ?? 0) === 0 && todayCalendarTasks.length === 0 ? (
+        {retoursEnRetard.length === 0 && recuperationsEnRetard.length === 0 && departsAujourdhui.length === 0 && retoursAujourdhui.length === 0 && (todayTasks?.length ?? 0) === 0 && todayCalendarTasks.length === 0 ? (
           <div className="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm text-center">
             <CheckCircle2 className="w-10 h-10 text-gray-200 mx-auto mb-3" />
             <p className="text-sm text-gray-400 font-medium">Aucune mission aujourd'hui</p>
@@ -584,6 +673,41 @@ export default async function DashboardPage() {
                       </p>
                     </div>
                     <ChevronRight className="w-4 h-4 text-red-300 flex-shrink-0" />
+                  </div>
+                </Link>
+              )
+            })}
+
+            {/* ⚠️ Récupérations EN RETARD — confirmée, départ dépassé, non récupérée */}
+            {recuperationsEnRetard.map(r => {
+              const v = getVehicle(r); const c = getClient(r)
+              const daysLate = differenceInDays(todayStart, startOfDay(new Date(r.start_datetime)))
+              return (
+                <Link key={`pickup-late-${r.id}`} href={`/reservations/${r.id}`}>
+                  <div className="flex items-center gap-4 px-4 py-4 bg-orange-50 hover:bg-orange-100 border-l-4 border-orange-600 transition-colors">
+                    <span className="w-12 flex flex-col items-center flex-shrink-0 leading-tight">
+                      <span className="text-[10px] font-bold text-orange-500 capitalize">
+                        {format(new Date(r.start_datetime), 'd MMM', { locale: fr })}
+                      </span>
+                      <span className="text-sm font-black text-orange-700 font-mono">
+                        {format(new Date(r.start_datetime), 'HH:mm')}
+                      </span>
+                    </span>
+                    <span className="flex items-center gap-1 text-[10px] font-black uppercase px-2.5 py-1.5 rounded-full flex-shrink-0 bg-orange-600 text-white">
+                      <AlertTriangle className="w-3 h-3" /> À RÉCUPÉRER
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[11px] font-black uppercase tracking-wide text-orange-600">
+                        Récupération en retard{daysLate >= 1 ? ` de ${daysLate} jour${daysLate > 1 ? 's' : ''}` : ''}
+                      </p>
+                      <p className="text-sm font-bold text-gray-900 truncate">
+                        {c?.first_name} {c?.last_name}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        {v?.brand} {v?.model} <span className="text-gray-400 font-mono">· {v?.plate}</span>
+                      </p>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-orange-300 flex-shrink-0" />
                   </div>
                 </Link>
               )
@@ -790,12 +914,12 @@ export default async function DashboardPage() {
         )}
       </section>
 
-      {/* ═══ 2b. RÉSERVATIONS À VENIR (prochains jours) ════════════════════ */}
+      {/* ═══ 2b. RÉSERVÉ (départ à venir, pas encore effectué) ═════════════ */}
       {reservationsAVenir.length > 0 && (
         <section>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-[11px] font-bold uppercase tracking-widest text-gray-900">
-              Réservations à venir · {reservationsAVenir.length}
+              Réservé · {reservationsAVenir.length}
             </h2>
             <Link href="/reservations?status=confirmee" className="text-[11px] text-gray-400 font-medium flex items-center gap-1">
               TOUT VOIR <ChevronRight className="w-3 h-3" />
@@ -806,9 +930,13 @@ export default async function DashboardPage() {
             {reservationsAVenir.map(r => {
               const v = getVehicle(r); const c = getClient(r)
               const start = new Date(r.start_datetime)
+              const end   = new Date(r.end_datetime)
+              const days  = Math.max(1, differenceInDays(startOfDay(end), startOfDay(start)))
+              const isOption = r.status === 'option'
               return (
                 <Link key={r.id} href={`/reservations/${r.id}`}>
                   <div className="flex items-center gap-4 px-4 py-3.5 hover:bg-gray-50 transition-colors">
+                    {/* Date de DÉPART (jour / heure) */}
                     <div className="flex flex-col items-center w-12 flex-shrink-0">
                       <span className="text-[10px] font-bold uppercase text-gray-400 capitalize">
                         {format(start, 'EEE', { locale: fr })}
@@ -817,10 +945,26 @@ export default async function DashboardPage() {
                       <span className="text-[10px] text-gray-400 font-mono">{format(start, 'HH:mm')}</span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-gray-900 truncate">{c?.first_name} {c?.last_name}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">{v?.brand} {v?.model} <span className="text-gray-300 font-mono">· {v?.plate}</span></p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-bold text-gray-900 truncate">{c?.first_name} {c?.last_name}</p>
+                        {isOption && (
+                          <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500 flex-shrink-0">Option</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {v?.brand} {v?.model} <span className="text-gray-300 font-mono">· {v?.plate}</span>
+                      </p>
+                      {/* Départ ET retour prévus */}
+                      <p className="text-[11px] text-gray-500 mt-1">
+                        Départ {format(start, 'd MMM à HH:mm', { locale: fr })}
+                        <span className="text-gray-300"> · </span>
+                        <span className="font-semibold text-gray-700">Retour {format(end, 'd MMM à HH:mm', { locale: fr })}</span>
+                      </p>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-gray-200 flex-shrink-0" />
+                    <div className="flex flex-col items-end flex-shrink-0 gap-1">
+                      <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap">{days} j</span>
+                      <ChevronRight className="w-4 h-4 text-gray-200" />
+                    </div>
                   </div>
                 </Link>
               )
@@ -845,50 +989,101 @@ export default async function DashboardPage() {
             {enLocationNow.map(r => {
               const v           = getVehicle(r)
               const c           = getClient(r)
-              const daysLeft    = differenceInDays(startOfDay(new Date(r.end_datetime)), todayStart)
-              const isLate      = r.status === 'en_retard'
-              const isReturnToday = daysLeft === 0 && !isLate
+              const start       = new Date(r.start_datetime)
+              const end         = new Date(r.end_datetime)
+              // États possibles dans « En location » :
+              const isDeparted  = r.status === 'en_cours' || r.status === 'en_retard'
+              const isLate      = r.status === 'en_retard'                 // retour dépassé
+              const pickupDue   = r.status === 'confirmee' && start <= now  // départ dépassé, pas récupéré
+              const isReserved  = r.status === 'confirmee' && start > now   // réservée, départ futur
+
+              const daysLeft    = differenceInDays(startOfDay(end), todayStart)   // avant retour
+              const isReturnToday = isDeparted && daysLeft === 0 && !isLate
+              const daysToStart = differenceInDays(startOfDay(start), todayStart)  // avant départ
+              const daysLatePickup = differenceInDays(todayStart, startOfDay(start))
+
               const nextBooking = v?.id ? nextBookingByVehicle.get(v.id) : undefined
-              const hasNextBooking = nextBooking && nextBooking.start_datetime > r.end_datetime
+              const hasNextBooking = isDeparted && nextBooking && nextBooking.start_datetime > r.end_datetime
+
+              // Cadre + pastille de coin selon l'état
+              const cardClass = isLate || pickupDue ? 'border-orange-200 bg-orange-50/40' : 'border-gray-100'
 
               return (
                 <Link key={r.id} href={`/reservations/${r.id}`}>
-                  <div className={`bg-white rounded-2xl p-4 border shadow-sm ${
-                    isLate ? 'border-red-200 bg-red-50/30' : 'border-gray-100'
-                  }`}>
+                  <div className={`bg-white rounded-2xl p-4 border shadow-sm ${cardClass}`}>
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
                           <span className="text-base font-black text-gray-900">{v?.brand} {v?.model}</span>
                           <span className="text-xs text-gray-400">{v?.plate}</span>
+                          {pickupDue && (
+                            <span className="text-[9px] font-black uppercase tracking-wide text-white bg-orange-600 px-2 py-0.5 rounded-full">
+                              À récupérer
+                            </span>
+                          )}
+                          {isReserved && (
+                            <span className="text-[9px] font-black uppercase tracking-wide text-blue-700 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-full">
+                              Réservé
+                            </span>
+                          )}
                         </div>
                         <p className="text-sm text-gray-600">{c?.first_name} {c?.last_name}</p>
-                        <p className="text-xs text-gray-400 mt-1">
-                          Retour : {format(new Date(r.end_datetime), 'dd MMM à HH:mm', { locale: fr })}
-                        </p>
+                        {isDeparted ? (
+                          <p className="text-xs text-gray-400 mt-1">
+                            Retour : {format(end, 'dd MMM à HH:mm', { locale: fr })}
+                          </p>
+                        ) : pickupDue ? (
+                          <p className="text-xs text-orange-600 font-semibold mt-1">
+                            Départ prévu {format(start, 'dd MMM à HH:mm', { locale: fr })} · en attente de récupération
+                          </p>
+                        ) : (
+                          <p className="text-xs text-gray-400 mt-1">
+                            Départ {format(start, 'dd MMM à HH:mm', { locale: fr })} · Retour {format(end, 'dd MMM à HH:mm', { locale: fr })}
+                          </p>
+                        )}
                       </div>
 
                       {/* Countdown 64×64 */}
-                      <div className={`w-16 h-16 rounded-2xl flex flex-col items-center justify-center flex-shrink-0 ${
-                        isLate          ? 'bg-red-500'
-                        : isReturnToday ? 'bg-orange-500'
-                        : daysLeft <= 2 ? 'bg-orange-100'
-                        : 'bg-gray-100'
-                      }`}>
-                        <span className={`text-2xl font-black leading-none ${
-                          isLate || isReturnToday ? 'text-white' : daysLeft <= 2 ? 'text-orange-600' : 'text-gray-700'
+                      {isDeparted ? (
+                        <div className={`w-16 h-16 rounded-2xl flex flex-col items-center justify-center flex-shrink-0 ${
+                          isLate          ? 'bg-red-500'
+                          : isReturnToday ? 'bg-orange-500'
+                          : daysLeft <= 2 ? 'bg-orange-100'
+                          : 'bg-gray-100'
                         }`}>
-                          {isLate ? `+${Math.abs(daysLeft)}` : daysLeft}
-                        </span>
-                        <span className={`text-[10px] font-bold mt-0.5 ${
-                          isLate          ? 'text-red-100'
-                          : isReturnToday ? 'text-orange-100'
-                          : daysLeft <= 2 ? 'text-orange-500'
-                          : 'text-gray-400'
-                        }`}>
-                          {isLate ? 'j retard' : isReturnToday ? 'auj.' : 'jours'}
-                        </span>
-                      </div>
+                          <span className={`text-2xl font-black leading-none ${
+                            isLate || isReturnToday ? 'text-white' : daysLeft <= 2 ? 'text-orange-600' : 'text-gray-700'
+                          }`}>
+                            {isLate ? `+${Math.abs(daysLeft)}` : daysLeft}
+                          </span>
+                          <span className={`text-[10px] font-bold mt-0.5 ${
+                            isLate          ? 'text-red-100'
+                            : isReturnToday ? 'text-orange-100'
+                            : daysLeft <= 2 ? 'text-orange-500'
+                            : 'text-gray-400'
+                          }`}>
+                            {isLate ? 'j retard' : isReturnToday ? 'auj.' : 'jours'}
+                          </span>
+                        </div>
+                      ) : pickupDue ? (
+                        <div className="w-16 h-16 rounded-2xl flex flex-col items-center justify-center flex-shrink-0 bg-orange-500">
+                          <span className="text-2xl font-black leading-none text-white">
+                            {daysLatePickup >= 1 ? `+${daysLatePickup}` : '!'}
+                          </span>
+                          <span className="text-[10px] font-bold mt-0.5 text-orange-100">
+                            {daysLatePickup >= 1 ? 'j retard' : 'à récup.'}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="w-16 h-16 rounded-2xl flex flex-col items-center justify-center flex-shrink-0 bg-blue-50 border border-blue-100">
+                          <span className="text-2xl font-black leading-none text-blue-700">
+                            {daysToStart === 0 ? 'auj.' : daysToStart}
+                          </span>
+                          <span className="text-[10px] font-bold mt-0.5 text-blue-400">
+                            {daysToStart === 0 ? 'départ' : 'j départ'}
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     {hasNextBooking && (
@@ -1070,6 +1265,7 @@ export default async function DashboardPage() {
 
       {/* État vide global */}
       {enLocationNow.length === 0 && alerts.length === 0 && retoursEnRetard.length === 0 &&
+       recuperationsEnRetard.length === 0 && reservationsAVenir.length === 0 &&
        departsAujourdhui.length === 0 && retoursAujourdhui.length === 0 &&
        (todayTasks?.length ?? 0) === 0 && todayCalendarTasks.length === 0 && (
         <div className="flex flex-col items-center gap-3 py-16 text-center">

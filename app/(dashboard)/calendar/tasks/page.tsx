@@ -10,6 +10,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { createClient } from '@/lib/supabase/client'
+import { updateTaskStatus } from '@/lib/actions/tasks'
 import { formatDate } from '@/lib/utils'
 import Link from 'next/link'
 import { ArrowLeft, Plus } from 'lucide-react'
@@ -97,7 +98,9 @@ export default function TasksKanban() {
     const task = tasks.find(t => t.id === active.id)
     if (!task || task.status === newStatus) return
     setTasks(prev => prev.map(t => t.id === active.id ? { ...t, status: newStatus } : t))
-    await supabase.from('tasks').update({ status: newStatus }).eq('id', active.id)
+    // Passe par l'action serveur : met à jour le statut (+ completed_at) et
+    // notifie les managers par push en précisant le nouveau statut.
+    await updateTaskStatus(active.id as string, newStatus)
   }
 
   return (
