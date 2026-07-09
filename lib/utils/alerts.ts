@@ -342,6 +342,33 @@ export async function fetchAllAlerts(
     })
   })
 
+  // ── 11. Récupérations en retard (confirmée, start_datetime dépassé, non traitée) ─
+  const { data: overduePickups } = await supabase
+    .from('reservations')
+    .select('id, vehicle_id, start_datetime, vehicles(plate, brand, model), clients(first_name, last_name)')
+    .eq('status', 'confirmee')
+    .lt('start_datetime', now.toISOString())
+    .order('start_datetime', { ascending: true })
+
+  overduePickups?.forEach(r => {
+    const v = Array.isArray(r.vehicles) ? r.vehicles[0] : r.vehicles
+    const c = Array.isArray(r.clients)  ? r.clients[0]  : r.clients
+    const hoursLate = Math.round((now.getTime() - new Date(r.start_datetime).getTime()) / 3600000)
+    const daysLate  = Math.floor(hoursLate / 24)
+    alerts.push({
+      id: `pickup-late-${r.id}`,
+      category: 'urgent',
+      urgent: true,
+      type: 'recuperation_retard',
+      label: 'RÉCUPÉRATION EN RETARD',
+      sublabel: `${vLabel(v)} · ${(c as any)?.first_name ?? ''} ${(c as any)?.last_name ?? ''} · ${daysLate > 0 ? `${daysLate}j de retard` : `${hoursLate}h de retard`}`,
+      href: `/reservations/${r.id}`,
+      date: r.start_datetime,
+      vehicleId: r.vehicle_id,
+      reservationId: r.id,
+    })
+  })
+
   return alerts.sort((a, b) => {
     const order = { urgent: 0, important: 1, info: 2 }
     return order[a.category] - order[b.category]

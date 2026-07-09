@@ -45,6 +45,8 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
   const [selectedClientId, setSelectedClientId] = useState(defaultClientId ?? '')
   const [clientQuery, setClientQuery] = useState('')
   const [showClientResults, setShowClientResults] = useState(false)
+  const [durDays, setDurDays] = useState(0)
+  const [durHours, setDurHours] = useState(0)
 
   const selectedClient = clients.find(c => c.id === selectedClientId)
   const filteredClients = clientQuery.trim()
@@ -192,22 +194,37 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
               className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm"
             />
           </div>
-          <div className="flex gap-2">
-            <button type="button" onClick={() => setDuration(24)} className="flex-1 px-2 py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
-              24h (1 jour)
-            </button>
-            <button type="button" onClick={() => setDuration(72)} className="flex-1 px-2 py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
-              72h (3 jours)
-            </button>
-            <button type="button" onClick={() => setDuration(168)} className="flex-1 px-2 py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
-              168h (1 semaine)
-            </button>
+          <div>
+            <label className="block text-[11px] font-bold text-gray-400 mb-1.5 uppercase tracking-wide">Durée</label>
+            <div className="flex items-end gap-3">
+              <div className="flex-1">
+                <input
+                  type="number" min="0" placeholder="0"
+                  value={durDays || ''}
+                  onChange={e => {
+                    const d = Math.max(0, parseInt(e.target.value) || 0)
+                    setDurDays(d)
+                    setDuration(d * 24 + durHours)
+                  }}
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm"
+                />
+                <span className="text-[10px] text-gray-400 mt-0.5 block">jours</span>
+              </div>
+              <div className="flex-1">
+                <input
+                  type="number" min="0" max="23" placeholder="0"
+                  value={durHours || ''}
+                  onChange={e => {
+                    const h = Math.min(23, Math.max(0, parseInt(e.target.value) || 0))
+                    setDurHours(h)
+                    setDuration(durDays * 24 + h)
+                  }}
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm"
+                />
+                <span className="text-[10px] text-gray-400 mt-0.5 block">heures</span>
+              </div>
+            </div>
           </div>
-          {days > 0 && (
-            <p className="text-sm text-gray-500 bg-gray-50 px-3 py-2 rounded-lg">
-              Durée : <strong>{days} jour{days > 1 ? 's' : ''}</strong>
-            </p>
-          )}
         </div>
       </div>
 

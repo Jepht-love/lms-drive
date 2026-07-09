@@ -49,7 +49,7 @@ function rangeFor(view: CalendarView, currentDate: Date): [Date, Date] {
 }
 
 export default function CalendarPage() {
-  const [view, setView] = useState<CalendarView>('week_5d')
+  const [view, setView] = useState<CalendarView>('month')
   const [currentDate, setCurrentDate] = useState(new Date())
   const [resources, setResources] = useState<CalendarResource[]>([])
   const [myRole, setMyRole] = useState<UserRole | null>(null)

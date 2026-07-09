@@ -46,6 +46,8 @@ const ALERT_GROUPS: AlertGroup[] = [
     cardBg: 'bg-red-50',    cardBorder: 'border-red-100',    labelColor: 'text-red-700',    iconColor: 'text-red-500',    badgeBg: 'bg-red-500',    badgeText: 'text-white' },
   { type: 'contrat',  label: 'Contrat à signer',       icon: FileText,      href: '/contracts',
     cardBg: 'bg-red-50',    cardBorder: 'border-red-100',    labelColor: 'text-red-700',    iconColor: 'text-red-500',    badgeBg: 'bg-red-500',    badgeText: 'text-white' },
+  { type: 'recuperation_retard', label: 'Récupération en retard', icon: AlertTriangle, href: '/reservations',
+    cardBg: 'bg-orange-50', cardBorder: 'border-orange-100', labelColor: 'text-orange-700', iconColor: 'text-orange-500', badgeBg: 'bg-orange-500', badgeText: 'text-white' },
   { type: 'ct',       label: 'Contrôle technique',     icon: AlertTriangle, href: '/vehicles',
     cardBg: 'bg-orange-50', cardBorder: 'border-orange-100', labelColor: 'text-orange-700', iconColor: 'text-orange-500', badgeBg: 'bg-orange-500', badgeText: 'text-white' },
   { type: 'assurance',label: 'Assurance',              icon: AlertTriangle, href: '/vehicles',
@@ -205,10 +207,6 @@ export default async function DashboardPage() {
   // reste une action à réaliser : on la remonte tout en haut des tâches, comme
   // pour un retour en retard. Le départ "du jour même" reste, lui, dans
   // departsAujourdhui (badge DÉPART / À PRÉPARER).
-  const recuperationsEnRetard = (reservations ?? [])
-    .filter(r => r.status === 'confirmee' && new Date(r.start_datetime) < businessDayStart)
-    .sort((a, b) => a.start_datetime.localeCompare(b.start_datetime))
-
   // Même véhicule avec un départ ET un retour aujourd'hui (rotation rapide) —
   // à signaler clairement : peu de marge pour laver/préparer entre les deux.
   const departVehicleIds = new Set(departsAujourdhui.map(r => getVehicle(r)?.id).filter(Boolean))
@@ -559,10 +557,7 @@ export default async function DashboardPage() {
                         <span className="font-semibold text-gray-700">Retour {format(end, 'd MMM à HH:mm', { locale: fr })}</span>
                       </p>
                     </div>
-                    <div className="flex flex-col items-end flex-shrink-0 gap-1">
-                      <span className="text-[11px] font-bold text-gray-500 whitespace-nowrap">{days} j</span>
-                      <ChevronRight className="w-4 h-4 text-gray-200" />
-                    </div>
+                    <ChevronRight className="w-4 h-4 text-gray-200 flex-shrink-0" />
                   </div>
                 </Link>
               )
@@ -587,18 +582,12 @@ export default async function DashboardPage() {
               </Link>
             </div>
           </div>
-          {(retoursEnRetard.length > 0 || recuperationsEnRetard.length > 0 || aPreparerAujourdhui.length > 0) && (
+          {(retoursEnRetard.length > 0 || aPreparerAujourdhui.length > 0) && (
             <div className="flex items-center gap-2 mt-2 flex-wrap">
               {retoursEnRetard.length > 0 && (
                 <span className="inline-flex items-center gap-1 text-[10px] font-black text-white bg-red-600 px-2.5 py-1 rounded-full animate-pulse whitespace-nowrap">
                   <AlertTriangle className="w-3 h-3" />
                   {retoursEnRetard.length} retour{retoursEnRetard.length > 1 ? 's' : ''} en retard
-                </span>
-              )}
-              {recuperationsEnRetard.length > 0 && (
-                <span className="inline-flex items-center gap-1 text-[10px] font-black text-white bg-orange-600 px-2.5 py-1 rounded-full whitespace-nowrap">
-                  <AlertTriangle className="w-3 h-3" />
-                  {recuperationsEnRetard.length} récupération{recuperationsEnRetard.length > 1 ? 's' : ''} en retard
                 </span>
               )}
               {aPreparerAujourdhui.length > 0 && (
@@ -610,7 +599,7 @@ export default async function DashboardPage() {
           )}
         </div>
 
-        {retoursEnRetard.length === 0 && recuperationsEnRetard.length === 0 && departsAujourdhui.length === 0 && retoursAujourdhui.length === 0 && (todayTasks?.length ?? 0) === 0 && todayCalendarTasks.length === 0 ? (
+        {retoursEnRetard.length === 0 && departsAujourdhui.length === 0 && retoursAujourdhui.length === 0 && (todayTasks?.length ?? 0) === 0 && todayCalendarTasks.length === 0 ? (
           <div className="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm text-center">
             <CheckCircle2 className="w-10 h-10 text-gray-200 mx-auto mb-3" />
             <p className="text-sm text-gray-400 font-medium">Aucune mission aujourd'hui</p>
@@ -650,41 +639,6 @@ export default async function DashboardPage() {
                       </p>
                     </div>
                     <ChevronRight className="w-4 h-4 text-red-300 flex-shrink-0" />
-                  </div>
-                </Link>
-              )
-            })}
-
-            {/* ⚠️ Récupérations EN RETARD — confirmée, départ dépassé, non récupérée */}
-            {recuperationsEnRetard.map(r => {
-              const v = getVehicle(r); const c = getClient(r)
-              const daysLate = differenceInDays(todayStart, startOfDay(new Date(r.start_datetime)))
-              return (
-                <Link key={`pickup-late-${r.id}`} href={`/reservations/${r.id}`}>
-                  <div className="flex items-center gap-4 px-4 py-4 bg-orange-50 hover:bg-orange-100 border-l-4 border-orange-600 transition-colors">
-                    <span className="w-12 flex flex-col items-center flex-shrink-0 leading-tight">
-                      <span className="text-[10px] font-bold text-orange-500 capitalize">
-                        {format(new Date(r.start_datetime), 'd MMM', { locale: fr })}
-                      </span>
-                      <span className="text-sm font-black text-orange-700 font-mono">
-                        {format(new Date(r.start_datetime), 'HH:mm')}
-                      </span>
-                    </span>
-                    <span className="flex items-center gap-1 text-[10px] font-black uppercase px-2.5 py-1.5 rounded-full flex-shrink-0 bg-orange-600 text-white">
-                      <AlertTriangle className="w-3 h-3" /> À RÉCUPÉRER
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[11px] font-black uppercase tracking-wide text-orange-600">
-                        Récupération en retard{daysLate >= 1 ? ` de ${daysLate} jour${daysLate > 1 ? 's' : ''}` : ''}
-                      </p>
-                      <p className="text-sm font-bold text-gray-900 truncate">
-                        {c?.first_name} {c?.last_name}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        {v?.brand} {v?.model} <span className="text-gray-400 font-mono">· {v?.plate}</span>
-                      </p>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-orange-300 flex-shrink-0" />
                   </div>
                 </Link>
               )
@@ -1155,7 +1109,7 @@ export default async function DashboardPage() {
 
       {/* État vide global */}
       {enLocationNow.length === 0 && alerts.length === 0 && retoursEnRetard.length === 0 &&
-       recuperationsEnRetard.length === 0 && reservationsAVenir.length === 0 &&
+       reservationsAVenir.length === 0 &&
        departsAujourdhui.length === 0 && retoursAujourdhui.length === 0 &&
        (todayTasks?.length ?? 0) === 0 && todayCalendarTasks.length === 0 && (
         <div className="flex flex-col items-center gap-3 py-16 text-center">

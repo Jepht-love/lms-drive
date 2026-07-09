@@ -975,7 +975,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "accounting_layout",
-      "community": 142,
+      "community": 102,
       "norm_label": "layout.tsx"
     },
     {
@@ -985,7 +985,7 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "accounting_layout_accountinglayout",
-      "community": 142,
+      "community": 102,
       "norm_label": "accountinglayout()"
     },
     {
@@ -1265,7 +1265,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "app_dashboard_calendar_tasks_id_page_tsx_id_page",
-      "community": 102,
+      "community": 37,
       "norm_label": "page.tsx"
     },
     {
@@ -1275,7 +1275,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "id_page_types",
-      "community": 102,
+      "community": 37,
       "norm_label": "types"
     },
     {
@@ -1285,7 +1285,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "id_page_statuses",
-      "community": 102,
+      "community": 37,
       "norm_label": "statuses"
     },
     {
@@ -1295,7 +1295,7 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "id_page_updatetask",
-      "community": 102,
+      "community": 37,
       "norm_label": "updatetask()"
     },
     {
@@ -1305,7 +1305,7 @@
       "source_location": "L53",
       "_origin": "ast",
       "id": "id_page_deletetask",
-      "community": 102,
+      "community": 37,
       "norm_label": "deletetask()"
     },
     {
@@ -1315,7 +1315,7 @@
       "source_location": "L61",
       "_origin": "ast",
       "id": "id_page_taskdetailpage",
-      "community": 102,
+      "community": 37,
       "norm_label": "taskdetailpage()"
     },
     {
@@ -1325,7 +1325,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "new_tasktypefield",
-      "community": 62,
+      "community": 140,
       "norm_label": "tasktypefield.tsx"
     },
     {
@@ -1335,7 +1335,7 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "new_tasktypefield_types",
-      "community": 62,
+      "community": 140,
       "norm_label": "types"
     },
     {
@@ -1345,7 +1345,7 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "new_tasktypefield_tasktypefield",
-      "community": 62,
+      "community": 140,
       "norm_label": "tasktypefield()"
     },
     {
@@ -1355,7 +1355,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "app_dashboard_calendar_tasks_new_page_tsx_new_page",
-      "community": 62,
+      "community": 140,
       "norm_label": "page.tsx"
     },
     {
@@ -1365,7 +1365,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "new_page_createtask",
-      "community": 62,
+      "community": 140,
       "norm_label": "createtask()"
     },
     {
@@ -1375,7 +1375,7 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "new_page_newtaskpage",
-      "community": 62,
+      "community": 140,
       "norm_label": "newtaskpage()"
     },
     {
@@ -1935,7 +1935,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "clients_page",
-      "community": 37,
+      "community": 62,
       "norm_label": "page.tsx"
     },
     {
@@ -1945,7 +1945,7 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "clients_page_clientspage",
-      "community": 37,
+      "community": 62,
       "norm_label": "clientspage()"
     },
     {
@@ -2095,7 +2095,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "contracts_page",
-      "community": 144,
+      "community": 145,
       "norm_label": "page.tsx"
     },
     {
@@ -2105,7 +2105,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "contracts_page_status_config",
-      "community": 144,
+      "community": 145,
       "norm_label": "status_config"
     },
     {
@@ -2115,7 +2115,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "contracts_page_contractspage",
-      "community": 144,
+      "community": 145,
       "norm_label": "contractspage()"
     },
     {
@@ -2425,7 +2425,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "emails_page",
-      "community": 37,
+      "community": 62,
       "norm_label": "page.tsx"
     },
     {
@@ -2435,7 +2435,7 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "emails_page_type_labels",
-      "community": 37,
+      "community": 62,
       "norm_label": "type_labels"
     },
     {
@@ -2445,7 +2445,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "emails_page_types",
-      "community": 37,
+      "community": 62,
       "norm_label": "types"
     },
     {
@@ -2455,7 +2455,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "emails_page_emailspage",
-      "community": 37,
+      "community": 62,
       "norm_label": "emailspage()"
     },
     {
@@ -2575,7 +2575,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "app_dashboard_equipe_id_edit_page_tsx_edit_page",
-      "community": 102,
+      "community": 62,
       "norm_label": "page.tsx"
     },
     {
@@ -2585,7 +2585,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "edit_page_editmemberpage",
-      "community": 102,
+      "community": 62,
       "norm_label": "editmemberpage()"
     },
     {
@@ -2715,7 +2715,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "equipe_page",
-      "community": 37,
+      "community": 62,
       "norm_label": "page.tsx"
     },
     {
@@ -2725,7 +2725,7 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "equipe_page_role_config",
-      "community": 37,
+      "community": 62,
       "norm_label": "role_config"
     },
     {
@@ -2735,7 +2735,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "equipe_page_equipepage",
-      "community": 37,
+      "community": 62,
       "norm_label": "equipepage()"
     },
     {
@@ -2745,7 +2745,7 @@
       "source_location": "L94",
       "_origin": "ast",
       "id": "equipe_page_membercard",
-      "community": 37,
+      "community": 62,
       "norm_label": "membercard()"
     },
     {
@@ -2775,7 +2775,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "incidents_incidentsclient",
-      "community": 34,
+      "community": 84,
       "norm_label": "incidentsclient.tsx"
     },
     {
@@ -2785,7 +2785,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "incidents_incidentsclient_vehicle",
-      "community": 34,
+      "community": 84,
       "norm_label": "vehicle"
     },
     {
@@ -2795,7 +2795,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "incidents_incidentsclient_incident",
-      "community": 34,
+      "community": 84,
       "norm_label": "incident"
     },
     {
@@ -2805,7 +2805,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "incidents_incidentsclient_status_colors",
-      "community": 34,
+      "community": 84,
       "norm_label": "status_colors"
     },
     {
@@ -2815,7 +2815,7 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "incidents_incidentsclient_statuses",
-      "community": 34,
+      "community": 84,
       "norm_label": "statuses"
     },
     {
@@ -2825,7 +2825,7 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "incidents_incidentsclient_incidentsclient",
-      "community": 34,
+      "community": 84,
       "norm_label": "incidentsclient()"
     },
     {
@@ -3035,7 +3035,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "app_dashboard_incidents_sinistres_new_page_tsx_new_page",
-      "community": 96,
+      "community": 98,
       "norm_label": "page.tsx"
     },
     {
@@ -3045,7 +3045,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "app_dashboard_incidents_sinistres_new_page_tsx_new_page_vehicle",
-      "community": 96,
+      "community": 98,
       "norm_label": "vehicle"
     },
     {
@@ -3055,7 +3055,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "app_dashboard_incidents_sinistres_new_page_tsx_new_page_driver",
-      "community": 96,
+      "community": 98,
       "norm_label": "driver"
     },
     {
@@ -3065,7 +3065,7 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "new_page_newsinistrepage",
-      "community": 96,
+      "community": 98,
       "norm_label": "newsinistrepage()"
     },
     {
@@ -3255,7 +3255,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "internal_trips_page",
-      "community": 37,
+      "community": 62,
       "norm_label": "page.tsx"
     },
     {
@@ -3265,7 +3265,7 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "internal_trips_page_internaltripspage",
-      "community": 37,
+      "community": 62,
       "norm_label": "internaltripspage()"
     },
     {
@@ -3832,7 +3832,7 @@
       "label": "TASK_TYPE_LABELS",
       "file_type": "code",
       "source_file": "app/(dashboard)/page.tsx",
-      "source_location": "L67",
+      "source_location": "L69",
       "_origin": "ast",
       "id": "dashboard_page_task_type_labels",
       "community": 1,
@@ -3842,7 +3842,7 @@
       "label": "NEXT6H_TYPE_STYLE",
       "file_type": "code",
       "source_file": "app/(dashboard)/page.tsx",
-      "source_location": "L83",
+      "source_location": "L85",
       "_origin": "ast",
       "id": "dashboard_page_next6h_type_style",
       "community": 1,
@@ -3852,7 +3852,7 @@
       "label": "DashboardPage()",
       "file_type": "code",
       "source_file": "app/(dashboard)/page.tsx",
-      "source_location": "L96",
+      "source_location": "L98",
       "_origin": "ast",
       "id": "dashboard_page_dashboardpage",
       "community": 1,
@@ -4115,7 +4115,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "agencies_page",
-      "community": 102,
+      "community": 37,
       "norm_label": "page.tsx"
     },
     {
@@ -4125,7 +4125,7 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "agencies_page_agenciespage",
-      "community": 102,
+      "community": 37,
       "norm_label": "agenciespage()"
     },
     {
@@ -4135,7 +4135,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "partnerships_layout",
-      "community": 142,
+      "community": 102,
       "norm_label": "layout.tsx"
     },
     {
@@ -4145,7 +4145,7 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "partnerships_layout_partnershipslayout",
-      "community": 142,
+      "community": 102,
       "norm_label": "partnershipslayout()"
     },
     {
@@ -4295,7 +4295,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "profile_page",
-      "community": 84,
+      "community": 90,
       "norm_label": "page.tsx"
     },
     {
@@ -4305,7 +4305,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "profile_page_profilepage",
-      "community": 84,
+      "community": 90,
       "norm_label": "profilepage()"
     },
     {
@@ -5005,7 +5005,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "settings_page",
-      "community": 84,
+      "community": 90,
       "norm_label": "page.tsx"
     },
     {
@@ -5425,7 +5425,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "dismiss_route",
-      "community": 102,
+      "community": 37,
       "norm_label": "route.ts"
     },
     {
@@ -5435,7 +5435,7 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "dismiss_route_patch",
-      "community": 102,
+      "community": 37,
       "norm_label": "patch()"
     },
     {
@@ -5445,7 +5445,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "alerts_route",
-      "community": 37,
+      "community": 62,
       "norm_label": "route.ts"
     },
     {
@@ -5455,7 +5455,7 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "alerts_route_normalize",
-      "community": 37,
+      "community": 62,
       "norm_label": "normalize()"
     },
     {
@@ -5465,7 +5465,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "alerts_route_get",
-      "community": 37,
+      "community": 62,
       "norm_label": "get()"
     },
     {
@@ -5515,7 +5515,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "status_route",
-      "community": 102,
+      "community": 37,
       "norm_label": "route.ts"
     },
     {
@@ -5525,7 +5525,7 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "status_route_patch",
-      "community": 102,
+      "community": 37,
       "norm_label": "patch()"
     },
     {
@@ -5695,7 +5695,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "sign_route",
-      "community": 37,
+      "community": 62,
       "norm_label": "route.ts"
     },
     {
@@ -5705,7 +5705,7 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "sign_route_post",
-      "community": 37,
+      "community": 62,
       "norm_label": "post()"
     },
     {
@@ -5905,7 +5905,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "app_api_settings_notifications_route_ts_notifications_route",
-      "community": 102,
+      "community": 37,
       "norm_label": "route.ts"
     },
     {
@@ -5915,7 +5915,7 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "app_api_settings_notifications_route_ts_notifications_route_get",
-      "community": 102,
+      "community": 37,
       "norm_label": "get()"
     },
     {
@@ -5925,7 +5925,7 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "notifications_route_patch",
-      "community": 102,
+      "community": 37,
       "norm_label": "patch()"
     },
     {
@@ -6355,7 +6355,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "components_drawer",
-      "community": 140,
+      "community": 144,
       "norm_label": "drawer.tsx"
     },
     {
@@ -6365,7 +6365,7 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "components_drawer_drawerprops",
-      "community": 140,
+      "community": 144,
       "norm_label": "drawerprops"
     },
     {
@@ -6375,7 +6375,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "components_drawer_drawer",
-      "community": 140,
+      "community": 144,
       "norm_label": "drawer()"
     },
     {
@@ -6545,7 +6545,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "calendar_alertpanel",
-      "community": 90,
+      "community": 96,
       "norm_label": "alertpanel.tsx"
     },
     {
@@ -6555,7 +6555,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "calendar_alertpanel_alertactionlink",
-      "community": 90,
+      "community": 96,
       "norm_label": "alertactionlink()"
     },
     {
@@ -6565,7 +6565,7 @@
       "source_location": "L48",
       "_origin": "ast",
       "id": "calendar_alertpanel_alertpanelprops",
-      "community": 90,
+      "community": 96,
       "norm_label": "alertpanelprops"
     },
     {
@@ -6575,7 +6575,7 @@
       "source_location": "L55",
       "_origin": "ast",
       "id": "calendar_alertpanel_alertpanel",
-      "community": 90,
+      "community": 96,
       "norm_label": "alertpanel()"
     },
     {
@@ -7845,7 +7845,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "layout_sidebar",
-      "community": 84,
+      "community": 90,
       "norm_label": "sidebar.tsx"
     },
     {
@@ -7855,7 +7855,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "layout_sidebar_navitems",
-      "community": 84,
+      "community": 90,
       "norm_label": "navitems"
     },
     {
@@ -7865,7 +7865,7 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "layout_sidebar_manageritems",
-      "community": 84,
+      "community": 90,
       "norm_label": "manageritems"
     },
     {
@@ -7875,7 +7875,7 @@
       "source_location": "L33",
       "_origin": "ast",
       "id": "layout_sidebar_sidebarprops",
-      "community": 84,
+      "community": 90,
       "norm_label": "sidebarprops"
     },
     {
@@ -7885,7 +7885,7 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "layout_sidebar_sidebar",
-      "community": 84,
+      "community": 90,
       "norm_label": "sidebar()"
     },
     {
@@ -10135,7 +10135,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "actions_incidents_lookupdriver",
-      "community": 96,
+      "community": 98,
       "norm_label": "lookupdriver()"
     },
     {
@@ -11025,7 +11025,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "auth_roles",
-      "community": 142,
+      "community": 102,
       "norm_label": "roles.ts"
     },
     {
@@ -11035,7 +11035,7 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "auth_roles_ismanagerrole",
-      "community": 142,
+      "community": 102,
       "norm_label": "ismanagerrole()"
     },
     {
@@ -11055,7 +11055,7 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "auth_roles_requiremanagerpage",
-      "community": 142,
+      "community": 102,
       "norm_label": "requiremanagerpage()"
     },
     {
@@ -11145,7 +11145,7 @@
       "source_location": "L47",
       "_origin": "ast",
       "id": "calendar_constants_alert_rules",
-      "community": 90,
+      "community": 96,
       "norm_label": "alert_rules"
     },
     {
@@ -12745,7 +12745,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "lib_roles",
-      "community": 84,
+      "community": 90,
       "norm_label": "roles.ts"
     },
     {
@@ -12755,7 +12755,7 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "lib_roles_role_labels",
-      "community": 84,
+      "community": 90,
       "norm_label": "role_labels"
     },
     {
@@ -12765,7 +12765,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "lib_roles_rolelabel",
-      "community": 84,
+      "community": 90,
       "norm_label": "rolelabel()"
     },
     {
@@ -12845,7 +12845,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "supabase_server",
-      "community": 37,
+      "community": 62,
       "norm_label": "server.ts"
     },
     {
@@ -12855,7 +12855,7 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "supabase_server_createclient",
-      "community": 102,
+      "community": 37,
       "norm_label": "createclient()"
     },
     {
@@ -12865,7 +12865,7 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "supabase_server_createadminclient",
-      "community": 37,
+      "community": 62,
       "norm_label": "createadminclient()"
     },
     {
@@ -12915,7 +12915,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "utils_finddriveratdate",
-      "community": 96,
+      "community": 98,
       "norm_label": "finddriveratdate.ts"
     },
     {
@@ -12925,7 +12925,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "utils_finddriveratdate_driverresult",
-      "community": 96,
+      "community": 98,
       "norm_label": "driverresult"
     },
     {
@@ -12935,7 +12935,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "utils_finddriveratdate_finddriveratdate",
-      "community": 96,
+      "community": 98,
       "norm_label": "finddriveratdate()"
     },
     {
@@ -13805,7 +13805,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "proxy",
-      "community": 98,
+      "community": 142,
       "norm_label": "proxy.ts"
     },
     {
@@ -13815,7 +13815,7 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "proxy_matchtab",
-      "community": 98,
+      "community": 142,
       "norm_label": "matchtab()"
     },
     {
@@ -13825,7 +13825,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "proxy_proxy",
-      "community": 98,
+      "community": 142,
       "norm_label": "proxy()"
     },
     {
@@ -13835,7 +13835,7 @@
       "source_location": "L91",
       "_origin": "ast",
       "id": "proxy_config",
-      "community": 98,
+      "community": 142,
       "norm_label": "config"
     },
     {
@@ -14755,7 +14755,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "types_calendar",
-      "community": 90,
+      "community": 96,
       "norm_label": "calendar.ts"
     },
     {
@@ -14795,7 +14795,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "types_calendar_alerttype",
-      "community": 90,
+      "community": 96,
       "norm_label": "alerttype"
     },
     {
@@ -14825,7 +14825,7 @@
       "source_location": "L55",
       "_origin": "ast",
       "id": "types_calendar_calendarteam",
-      "community": 90,
+      "community": 96,
       "norm_label": "calendarteam"
     },
     {
@@ -14835,7 +14835,7 @@
       "source_location": "L62",
       "_origin": "ast",
       "id": "types_calendar_calendaralert",
-      "community": 90,
+      "community": 96,
       "norm_label": "calendaralert"
     },
     {
@@ -15005,7 +15005,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "types_database_profile",
-      "community": 84,
+      "community": 90,
       "norm_label": "profile"
     },
     {
@@ -21037,9 +21037,9 @@
       "source_file": "app/(dashboard)/calendar/tasks/[id]/page.tsx",
       "source_location": "L53",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "app_dashboard_calendar_tasks_id_page_tsx_id_page",
-      "target": "id_page_deletetask",
-      "confidence_score": 1.0
+      "target": "id_page_deletetask"
     },
     {
       "relation": "contains",
@@ -21047,9 +21047,9 @@
       "source_file": "app/(dashboard)/calendar/tasks/[id]/page.tsx",
       "source_location": "L21",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "app_dashboard_calendar_tasks_id_page_tsx_id_page",
-      "target": "id_page_statuses",
-      "confidence_score": 1.0
+      "target": "id_page_statuses"
     },
     {
       "relation": "contains",
@@ -21057,9 +21057,9 @@
       "source_file": "app/(dashboard)/calendar/tasks/[id]/page.tsx",
       "source_location": "L61",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "app_dashboard_calendar_tasks_id_page_tsx_id_page",
-      "target": "id_page_taskdetailpage",
-      "confidence_score": 1.0
+      "target": "id_page_taskdetailpage"
     },
     {
       "relation": "contains",
@@ -21067,9 +21067,9 @@
       "source_file": "app/(dashboard)/calendar/tasks/[id]/page.tsx",
       "source_location": "L12",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "app_dashboard_calendar_tasks_id_page_tsx_id_page",
-      "target": "id_page_types",
-      "confidence_score": 1.0
+      "target": "id_page_types"
     },
     {
       "relation": "contains",
@@ -21077,9 +21077,9 @@
       "source_file": "app/(dashboard)/calendar/tasks/[id]/page.tsx",
       "source_location": "L29",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "app_dashboard_calendar_tasks_id_page_tsx_id_page",
-      "target": "id_page_updatetask",
-      "confidence_score": 1.0
+      "target": "id_page_updatetask"
     },
     {
       "relation": "imports_from",
@@ -21088,9 +21088,9 @@
       "source_file": "app/(dashboard)/calendar/tasks/[id]/page.tsx",
       "source_location": "L10",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "app_dashboard_calendar_tasks_id_page_tsx_id_page",
-      "target": "push_broadcastpush",
-      "confidence_score": 1.0
+      "target": "push_broadcastpush"
     },
     {
       "relation": "imports",
@@ -21099,9 +21099,9 @@
       "source_file": "app/(dashboard)/calendar/tasks/[id]/page.tsx",
       "source_location": "L10",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "app_dashboard_calendar_tasks_id_page_tsx_id_page",
-      "target": "push_broadcastpush_broadcastpushtomanagers",
-      "confidence_score": 1.0
+      "target": "push_broadcastpush_broadcastpushtomanagers"
     },
     {
       "relation": "imports_from",
@@ -21110,9 +21110,9 @@
       "source_file": "app/(dashboard)/calendar/tasks/[id]/page.tsx",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "app_dashboard_calendar_tasks_id_page_tsx_id_page",
-      "target": "supabase_server",
-      "confidence_score": 1.0
+      "target": "supabase_server"
     },
     {
       "relation": "imports",
@@ -21121,9 +21121,9 @@
       "source_file": "app/(dashboard)/calendar/tasks/[id]/page.tsx",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "app_dashboard_calendar_tasks_id_page_tsx_id_page",
-      "target": "supabase_server_createclient",
-      "confidence_score": 1.0
+      "target": "supabase_server_createclient"
     },
     {
       "relation": "imports_from",
@@ -21132,9 +21132,9 @@
       "source_file": "app/(dashboard)/calendar/tasks/[id]/page.tsx",
       "source_location": "L9",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "app_dashboard_calendar_tasks_id_page_tsx_id_page",
-      "target": "ui_backbutton",
-      "confidence_score": 1.0
+      "target": "ui_backbutton"
     },
     {
       "relation": "imports_from",
@@ -21143,9 +21143,9 @@
       "source_file": "app/(dashboard)/calendar/tasks/[id]/page.tsx",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "app_dashboard_calendar_tasks_id_page_tsx_id_page",
-      "target": "ui_deletebutton",
-      "confidence_score": 1.0
+      "target": "ui_deletebutton"
     },
     {
       "relation": "calls",
@@ -27294,7 +27294,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "app/(dashboard)/page.tsx",
-      "source_location": "L96",
+      "source_location": "L98",
       "weight": 1.0,
       "source": "app_dashboard_page_tsx_dashboard_page",
       "target": "dashboard_page_dashboardpage",
@@ -27324,7 +27324,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "app/(dashboard)/page.tsx",
-      "source_location": "L83",
+      "source_location": "L85",
       "weight": 1.0,
       "source": "app_dashboard_page_tsx_dashboard_page",
       "target": "dashboard_page_next6h_type_style",
@@ -27354,7 +27354,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "app/(dashboard)/page.tsx",
-      "source_location": "L67",
+      "source_location": "L69",
       "weight": 1.0,
       "source": "app_dashboard_page_tsx_dashboard_page",
       "target": "dashboard_page_task_type_labels",
@@ -50260,5 +50260,5 @@
       "source_file": ".agents/skills/gsap-react/SKILL.md"
     }
   ],
-  "built_at_commit": "e2c580b91b451cd7fbf45163e3698359efbb9306"
+  "built_at_commit": "3c8b935f6efbb18c187fc6777c57660fc2f5c3b4"
 }
