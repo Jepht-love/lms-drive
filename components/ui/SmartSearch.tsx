@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { Search } from 'lucide-react'
 import Link from 'next/link'
 
@@ -15,99 +14,12 @@ interface Props {
   className?: string
 }
 
-async function fetchFor(supabase: ReturnType<typeof createClient>, scope: Props['scope'], q: string): Promise<Suggestion[]> {
-  if (scope === 'clients') {
-    const { data } = await supabase
-      .from('clients')
-      .select('id, first_name, last_name, phone')
-      .or(`first_name.ilike.%${q}%,last_name.ilike.%${q}%,phone.ilike.%${q}%,email.ilike.%${q}%`)
-      .limit(6)
-    return (data ?? []).map(r => ({
-      id: r.id,
-      label: `${r.first_name ?? ''} ${r.last_name ?? ''}`.trim(),
-      sub: r.phone ?? undefined,
-      href: `/clients/${r.id}`,
-    }))
-  }
-  if (scope === 'vehicles') {
-    const { data } = await supabase
-      .from('vehicles')
-      .select('id, plate, brand, model')
-      .or(`plate.ilike.%${q}%,brand.ilike.%${q}%,model.ilike.%${q}%`)
-      .eq('is_active', true)
-      .limit(6)
-    return (data ?? []).map(r => ({
-      id: r.id,
-      label: `${r.brand ?? ''} ${r.model ?? ''}`.trim(),
-      sub: r.plate,
-      href: `/vehicles/${r.id}`,
-    }))
-  }
-  if (scope === 'reservations') {
-    const { data } = await supabase
-      .from('reservations')
-      .select('id, reservation_number, vehicles(plate, brand, model), clients(first_name, last_name)')
-      .or(`reservation_number.ilike.%${q}%`)
-      .limit(6)
-    return (data ?? []).map(r => {
-      const v = Array.isArray(r.vehicles) ? (r.vehicles as any[])[0] : r.vehicles as any
-      const c = Array.isArray(r.clients) ? (r.clients as any[])[0] : r.clients as any
-      return {
-        id: r.id,
-        label: r.reservation_number ?? '',
-        sub: `${c?.first_name ?? ''} ${c?.last_name ?? ''} · ${v?.plate ?? ''}`.trim(),
-        href: `/reservations/${r.id}`,
-      }
-    })
-  }
-  if (scope === 'contracts') {
-    const [{ data: byNum }, { data: byClient }] = await Promise.all([
-      supabase
-        .from('contracts')
-        .select('id, contract_number, reservation:reservations(vehicle:vehicles(plate,brand,model), client:clients(first_name,last_name))')
-        .ilike('contract_number', `%${q}%`)
-        .limit(4),
-      supabase
-        .from('clients')
-        .select('first_name, last_name, reservations(contracts(id, contract_number), vehicle:vehicles(plate,brand,model))')
-        .or(`first_name.ilike.%${q}%,last_name.ilike.%${q}%`)
-        .limit(3),
-    ])
-    const seen = new Set<string>()
-    const out: Suggestion[] = []
-    for (const c of byNum ?? []) {
-      if (seen.has(c.id)) continue
-      seen.add(c.id)
-      const res = c.reservation as any
-      const v = Array.isArray(res?.vehicle) ? (res.vehicle as any[])[0] : res?.vehicle
-      const cl = Array.isArray(res?.client) ? (res.client as any[])[0] : res?.client
-      out.push({ id: c.id, label: c.contract_number ?? '', sub: [cl?.first_name, cl?.last_name, v?.plate].filter(Boolean).join(' · '), href: `/contracts/${c.id}` })
-    }
-    for (const client of byClient ?? []) {
-      const resas = Array.isArray(client.reservations) ? client.reservations : (client.reservations ? [client.reservations] : [])
-      for (const resa of resas as any[]) {
-        const contracts = Array.isArray(resa?.contracts) ? resa.contracts : (resa?.contracts ? [resa.contracts] : [])
-        for (const contract of contracts as any[]) {
-          if (!contract?.id || seen.has(contract.id)) continue
-          seen.add(contract.id)
-          const v = Array.isArray(resa.vehicle) ? (resa.vehicle as any[])[0] : resa.vehicle
-          out.push({ id: contract.id, label: contract.contract_number ?? '', sub: [client.first_name, client.last_name, v?.plate].filter(Boolean).join(' · '), href: `/contracts/${contract.id}` })
-        }
-      }
-      if (out.length >= 6) break
-    }
-    return out.slice(0, 6)
-  }
-  return []
-}
-
 export default function SmartSearch({ name = 'q', placeholder, defaultValue = '', scope, className }: Props) {
   const [value, setValue] = useState(defaultValue)
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
-  const supabase = createClient()
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
@@ -123,9 +35,15 @@ export default function SmartSearch({ name = 'q', placeholder, defaultValue = ''
     clearTimeout(debounceRef.current)
     if (q.length < 1) { setSuggestions([]); setOpen(false); return }
     debounceRef.current = setTimeout(async () => {
-      const results = await fetchFor(supabase, scope, q)
-      setSuggestions(results)
-      setOpen(results.length > 0)
+      try {
+        const res = await fetch(`/api/search?scope=${scope}&q=${encodeURIComponent(q)}`)
+        const results: Suggestion[] = await res.json()
+        setSuggestions(results)
+        setOpen(results.length > 0)
+      } catch {
+        setSuggestions([])
+        setOpen(false)
+      }
     }, 180)
   }
 
