@@ -128,9 +128,9 @@ export function getReservationStatusColor(status: string): string {
 
 export function getReservationStatusLabel(status: string): string {
   const labels: Record<string, string> = {
-    option: 'Option',
+    option: 'En cours',
     confirmee: 'Confirmée',
-    en_cours: 'En cours',
+    en_cours: 'En location',
     terminee: 'Terminée',
     annulee: 'Annulée',
     en_retard: 'En retard',

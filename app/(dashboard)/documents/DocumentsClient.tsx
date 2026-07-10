@@ -66,9 +66,9 @@ interface Props {
 }
 
 const RESA_STATUS_LABEL: Record<string, string> = {
-  option:    'Option',
+  option:    'En cours',
   confirmee: 'Confirmée',
-  en_cours:  'En cours',
+  en_cours:  'En location',
   terminee:  'Terminée',
   annulee:   'Annulée',
   en_retard: 'En retard',

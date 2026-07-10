@@ -44,9 +44,9 @@ const STATUS_RES: Record<string, string> = {
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  option:    'Option',
+  option:    'En cours',
   confirmee: 'Confirmée',
-  en_cours:  'En cours',
+  en_cours:  'En location',
   en_retard: 'En retard',
   terminee:  'Terminée',
   annulee:   'Annulée',
@@ -162,6 +162,25 @@ export default async function ClientPage({
     <div className="space-y-4">
 
       <BackButton fallbackHref="/clients" />
+
+      {/* ─── Dossier incomplet ─── */}
+      {(() => {
+        const missing: string[] = []
+        if (!client.first_name || !client.last_name) missing.push('Identité')
+        if (!client.address) missing.push('Adresse')
+        if (!client.id_doc_front_path && !client.id_doc_back_path && !client.license_front_path)
+          missing.push('Documents & Pièces justificatives')
+        if (missing.length === 0) return null
+        return (
+          <div className="flex items-start gap-3 bg-orange-50 border border-orange-200 rounded-2xl px-4 py-3">
+            <AlertTriangle className="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-bold text-orange-800">Dossier incomplet — impossibilité de louer</p>
+              <p className="text-xs text-orange-600 mt-0.5">Manquant : {missing.join(', ')}</p>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* ─── Hero client ─── */}
       <div className={`rounded-2xl p-5 ${

@@ -544,7 +544,7 @@ export default async function DashboardPage() {
                       <div className="flex items-center gap-2">
                         <p className="text-sm font-bold text-gray-900 truncate">{c?.first_name} {c?.last_name}</p>
                         {isOption && (
-                          <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500 flex-shrink-0">Option</span>
+                          <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500 flex-shrink-0">En cours</span>
                         )}
                       </div>
                       <p className="text-xs text-gray-400 mt-0.5">

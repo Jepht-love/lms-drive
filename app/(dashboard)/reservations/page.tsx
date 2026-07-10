@@ -1,17 +1,19 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import { Plus, ClipboardList, Search } from 'lucide-react'
+import { Plus, ClipboardList } from 'lucide-react'
+import SmartSearch from '@/components/ui/SmartSearch'
 import { formatPrice } from '@/lib/utils'
 import DeleteReservationButton from './DeleteReservationButton'
+import PaymentCountdownMini from './PaymentCountdownMini'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { AnimatedList, AnimatedListItem } from '@/components/AnimatedList'
 
 // ─── Statuts ──────────────────────────────────────────────────────────────────
 const STATUS_CONFIG: Record<string, { label: string; bar: string; badge: string }> = {
-  option:    { label: 'Option',     bar: 'bg-gray-300',   badge: 'bg-gray-100 text-gray-600' },
+  option:    { label: 'En cours',    bar: 'bg-gray-300',   badge: 'bg-gray-100 text-gray-600' },
   confirmee: { label: 'Confirmée',  bar: 'bg-blue-400',   badge: 'bg-blue-50 text-blue-700' },
-  en_cours:  { label: 'En cours',   bar: 'bg-green-500',  badge: 'bg-green-50 text-green-700' },
+  en_cours:  { label: 'En location', bar: 'bg-green-500', badge: 'bg-green-50 text-green-700' },
   en_retard: { label: 'En retard',  bar: 'bg-red-500',    badge: 'bg-red-50 text-red-700' },
   terminee:  { label: 'Terminée',   bar: 'bg-gray-200',   badge: 'bg-gray-100 text-gray-500' },
   annulee:   { label: 'Annulée',    bar: 'bg-gray-100',   badge: 'bg-gray-50 text-gray-400' },
@@ -98,17 +100,10 @@ export default async function ReservationsPage({
       </div>
 
       {/* Recherche */}
-      <form method="get" className="relative">
+      <form method="get">
         {status && <input type="hidden" name="status" value={status} />}
         {vehicle && <input type="hidden" name="vehicle" value={vehicle} />}
-        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-        <input
-          name="q"
-          type="search"
-          defaultValue={q}
-          placeholder="Rechercher par n°, véhicule, client…"
-          className="w-full bg-white border border-gray-100 shadow-sm rounded-xl pl-10 pr-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-black/10"
-        />
+        <SmartSearch name="q" placeholder="Rechercher par n°, véhicule, client…" scope="reservations" defaultValue={q ?? ''} />
       </form>
 
       {/* Filtres statut — scroll horizontal */}
@@ -166,6 +161,11 @@ export default async function ReservationsPage({
             const startDate = new Date(r.start_datetime)
             const endDate   = new Date(r.end_datetime)
 
+            const paymentEmailSentAt = (r as any).payment_email_sent_at
+            const paymentDeadline = paymentEmailSentAt && r.payment_status === 'en_attente' && r.status === 'confirmee'
+              ? new Date(new Date(paymentEmailSentAt).getTime() + 2 * 60 * 60 * 1000).toISOString()
+              : null
+
             return (
               <AnimatedListItem key={r.id}>
               <div className="flex items-stretch hover:bg-gray-50/80 transition-colors group">
@@ -194,7 +194,7 @@ export default async function ReservationsPage({
                     <div className="text-sm font-semibold text-gray-800 mt-0.5">
                       {c?.first_name} {c?.last_name}
                     </div>
-                    {/* Ligne 3 : dates + n° */}
+                    {/* Ligne 3 : dates + n° + countdown paiement */}
                     <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                       <span className="text-xs text-gray-400">
                         {format(startDate, 'd MMM', { locale: fr })}
@@ -203,6 +203,9 @@ export default async function ReservationsPage({
                       </span>
                       <span className="text-gray-200">·</span>
                       <span className="text-xs text-gray-300 font-mono">{r.reservation_number}</span>
+                      {paymentDeadline && (
+                        <PaymentCountdownMini reservationId={r.id} deadline={paymentDeadline} />
+                      )}
                     </div>
                   </div>
 

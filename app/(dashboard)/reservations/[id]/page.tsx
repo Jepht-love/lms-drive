@@ -18,9 +18,11 @@ import WorkflowStepper from '../WorkflowStepper'
 import InvoiceCard from '../InvoiceCard'
 import DeleteButton from '@/components/ui/DeleteButton'
 import { deleteReservation } from '@/lib/actions/delete'
+import PaymentCountdownMini from '../PaymentCountdownMini'
+import SendPaymentEmailButton from '../SendPaymentEmailButton'
 import { syncReservationToCalendar } from '@/lib/calendar/syncRental'
 import type { ReservationStatus, PaymentStatus, PaymentMethod } from '@/types/database'
-import { format, differenceInDays } from 'date-fns'
+import { format, differenceInDays, differenceInHours } from 'date-fns'
 import { fr } from 'date-fns/locale'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -44,9 +46,9 @@ function InfoRow({ label, children }: { label: string; children: React.ReactNode
 }
 
 const STATUS_CONFIG: Record<string, { label: string; hero: string; badge: string }> = {
-  option:    { label: 'Option',    hero: 'bg-gray-700',   badge: 'bg-gray-100 text-gray-600' },
-  confirmee: { label: 'Confirmée', hero: 'bg-blue-700',   badge: 'bg-blue-50 text-blue-700' },
-  en_cours:  { label: 'En cours',  hero: 'bg-[#111111]',  badge: 'bg-green-50 text-green-700' },
+  option:    { label: 'En cours',    hero: 'bg-gray-700',  badge: 'bg-gray-100 text-gray-600' },
+  confirmee: { label: 'Confirmée',  hero: 'bg-blue-700',  badge: 'bg-blue-50 text-blue-700' },
+  en_cours:  { label: 'En location', hero: 'bg-[#111111]', badge: 'bg-green-50 text-green-700' },
   en_retard: { label: 'En retard', hero: 'bg-red-700',    badge: 'bg-red-50 text-red-700' },
   terminee:  { label: 'Terminée',  hero: 'bg-gray-500',   badge: 'bg-gray-100 text-gray-500' },
   annulee:   { label: 'Annulée',   hero: 'bg-gray-400',   badge: 'bg-gray-100 text-gray-400' },
@@ -91,6 +93,22 @@ export default async function ReservationPage({
     }
   }
 
+  // Auto-annulation si délai de paiement expiré (2h après envoi email)
+  if (
+    (reservation as any).payment_email_sent_at &&
+    reservation.payment_status === 'en_attente' &&
+    reservation.status === 'confirmee'
+  ) {
+    const deadline = new Date(new Date((reservation as any).payment_email_sent_at).getTime() + 2 * 60 * 60 * 1000)
+    if (deadline < new Date()) {
+      await supabase.from('reservations')
+        .update({ status: 'annulee', payment_email_sent_at: null })
+        .eq('id', id)
+      reservation.status = 'annulee'
+      ;(reservation as any).payment_email_sent_at = null
+    }
+  }
+
   const { data: contract } = await supabase
     .from('contracts')
     .select('id, contract_number, status')
@@ -130,10 +148,17 @@ export default async function ReservationPage({
 
   const startDate = new Date(reservation.start_datetime)
   const endDate   = new Date(reservation.end_datetime)
-  const nbDays    = Math.max(1, differenceInDays(endDate, startDate))
+  const totalHours = differenceInHours(endDate, startDate)
+  const nbDays     = Math.max(0, Math.floor(totalHours / 24))
+  const nbHours    = totalHours % 24
   const isLate    = reservation.status === 'en_retard'
   const hasExtraFees =
     (reservation.late_fee_amount > 0) || (reservation.extra_km_count > 0)
+
+  const paymentEmailSentAt = (reservation as any).payment_email_sent_at
+  const initialDeadline = paymentEmailSentAt && reservation.payment_status === 'en_attente'
+    ? new Date(new Date(paymentEmailSentAt).getTime() + 2 * 60 * 60 * 1000).toISOString()
+    : null
 
   return (
     <div className="space-y-4">
@@ -175,11 +200,16 @@ export default async function ReservationPage({
               />
             )}
           </div>
-          {isLate && (
-            <span className="flex items-center gap-1.5 text-xs text-red-200">
-              <AlertTriangle className="w-3.5 h-3.5" /> Retour dépassé
-            </span>
-          )}
+          <div className="flex items-center gap-2">
+            {isLate && (
+              <span className="flex items-center gap-1.5 text-xs text-red-200">
+                <AlertTriangle className="w-3.5 h-3.5" /> Retour dépassé
+              </span>
+            )}
+            {initialDeadline && (
+              <PaymentCountdownMini reservationId={id} deadline={initialDeadline} onDark />
+            )}
+          </div>
         </div>
 
         {/* Véhicule + client */}
@@ -212,7 +242,7 @@ export default async function ReservationPage({
         <div className="mt-3 bg-white/10 rounded-xl p-3">
           <div className="flex items-center gap-1.5 text-white/60 mb-2">
             <CalendarDays className="w-3.5 h-3.5" />
-            <span className="text-xs font-semibold">Période · {nbDays}j</span>
+            <span className="text-xs font-semibold">Période · {nbDays}j{nbHours > 0 ? ` ${nbHours}h` : ''}</span>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
@@ -292,7 +322,7 @@ export default async function ReservationPage({
         <SectionLabel>Tarif</SectionLabel>
         <div>
           <InfoRow label="Prix / jour">{formatPrice(reservation.daily_price)}</InfoRow>
-          <InfoRow label="Durée">{nbDays} jour{nbDays > 1 ? 's' : ''}</InfoRow>
+          <InfoRow label="Durée">{nbDays} jour{nbDays > 1 ? 's' : ''}{nbHours > 0 ? ` ${nbHours}h` : ''}</InfoRow>
           {reservation.km_included && (
             <InfoRow label="KM inclus / jour">{reservation.km_included} km</InfoRow>
           )}
@@ -390,6 +420,14 @@ export default async function ReservationPage({
           currentAmount={reservation.payment_amount ?? null}
           currentRef={reservation.payment_ref ?? null}
         />
+        {!initialDeadline && reservation.payment_status === 'en_attente' && c?.email && (
+          <SendPaymentEmailButton
+            reservationId={id}
+            clientEmail={c.email}
+            clientName={[c.first_name, c.last_name].filter(Boolean).join(' ')}
+            reservationNumber={reservation.reservation_number ?? ''}
+          />
+        )}
       </div>
 
       {/* ─── Notes internes ─── */}

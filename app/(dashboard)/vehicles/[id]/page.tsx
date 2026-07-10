@@ -12,7 +12,7 @@ import { computeVehicleNeeds, buildLastByType } from '@/lib/maintenance-health'
 import type { MaintenanceFlag } from '@/types/database'
 
 const RESA_STATUS_LABEL: Record<string, string> = {
-  option: 'Option', confirmee: 'Confirmée', en_cours: 'En cours',
+  option: 'En cours', confirmee: 'Confirmée', en_cours: 'En location',
   en_retard: 'En retard', terminee: 'Terminée', annulee: 'Annulée',
 }
 

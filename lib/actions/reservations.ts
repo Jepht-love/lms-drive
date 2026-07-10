@@ -4,6 +4,73 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { assertPeriodOpen } from '@/lib/accounting/period-lock'
+import { Resend } from 'resend'
+import { RESEND_FROM, resendTo } from '@/lib/email/config'
+
+export async function sendPaymentInfoEmail(
+  reservationId: string,
+  clientEmail: string,
+  clientName: string,
+  reservationNumber: string,
+): Promise<{ success?: boolean; deadline?: string; error?: string }> {
+  if (!clientEmail) return { error: 'Pas d\'adresse email pour ce client' }
+  const apiKey = process.env.RESEND_API_KEY
+  if (!apiKey) return { error: 'Clé RESEND_API_KEY manquante' }
+
+  const sentAt = new Date()
+  const deadline = new Date(sentAt.getTime() + 2 * 60 * 60 * 1000)
+  const deadlineStr = deadline.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+
+  const resend = new Resend(apiKey)
+  const { error } = await resend.emails.send({
+    from: RESEND_FROM,
+    to: resendTo(clientEmail),
+    subject: `Modalités de paiement — Réservation ${reservationNumber}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;color:#111">
+        <h2 style="margin-bottom:4px">Bonjour${clientName ? ` ${clientName}` : ''},</h2>
+        <p>Concernant votre réservation <strong>${reservationNumber}</strong>, voici les modalités de règlement disponibles :</p>
+        <ul style="line-height:2">
+          <li>💳 <strong>Carte bancaire</strong></li>
+          <li>🏦 <strong>Virement bancaire</strong></li>
+          <li>💵 <strong>Espèces</strong></li>
+        </ul>
+        <p>Pour un paiement en espèces, merci de contacter l'agence afin de convenir d'un rendez-vous.</p>
+        <p style="color:#e55;font-weight:bold">⏳ Sans retour de votre part avant ${deadlineStr}, votre réservation sera automatiquement annulée et le véhicule remis en disponibilité.</p>
+        <p style="color:#666;font-size:13px;margin-top:24px">— L'équipe LMS Drive</p>
+      </div>
+    `,
+  })
+  if (error) return { error: error.message }
+
+  const supabase = await createClient()
+  await supabase
+    .from('reservations')
+    .update({ payment_email_sent_at: sentAt.toISOString() })
+    .eq('id', reservationId)
+
+  revalidatePath(`/reservations/${reservationId}`)
+  return { success: true, deadline: deadline.toISOString() }
+}
+
+export async function cancelReservationOnPaymentTimeout(
+  reservationId: string,
+): Promise<{ success?: boolean; error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié' }
+
+  await supabase
+    .from('reservations')
+    .update({ status: 'annulee', payment_email_sent_at: null })
+    .eq('id', reservationId)
+    .eq('payment_status', 'en_attente')
+
+  revalidatePath(`/reservations/${reservationId}`)
+  revalidatePath('/reservations')
+  revalidatePath('/')
+  return { success: true }
+}
 
 export async function updatePaymentInfo(
   reservationId: string,
