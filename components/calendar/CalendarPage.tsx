@@ -266,6 +266,7 @@ export default function CalendarPage() {
           <MonthView
             currentDate={currentDate}
             events={events}
+            resources={visibleResources}
             onEventClick={handleEventClick}
             onDayClick={d => { setCurrentDate(d); setView('day') }}
           />

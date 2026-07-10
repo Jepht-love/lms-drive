@@ -1,6 +1,6 @@
 import type { UserRole } from '@/types/database'
 
-export type CalendarView = 'day' | 'week_5d' | 'week_7d' | 'month'
+export type CalendarView = 'day' | 'week_7d' | 'month'
 
 export type EventType =
   | 'reservation' | 'depart_vehicule' | 'retour_vehicule'

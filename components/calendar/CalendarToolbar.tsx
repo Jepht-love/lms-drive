@@ -17,8 +17,7 @@ interface CalendarToolbarProps {
 
 const VIEW_OPTIONS: { key: CalendarView; label: string }[] = [
   { key: 'day', label: 'Jour' },
-  { key: 'week_5d', label: 'Sem.5J' },
-  { key: 'week_7d', label: 'Sem.7J' },
+  { key: 'week_7d', label: 'Semaine' },
   { key: 'month', label: 'Mois' },
 ]
 
@@ -45,7 +44,7 @@ export default function CalendarToolbar({ currentDate, view, onViewChange, onNav
 
   return (
     <div className="pb-2">
-      <div className="grid grid-cols-4 gap-1 mb-2">
+      <div className="grid grid-cols-3 gap-1 mb-2">
         {VIEW_OPTIONS.map(opt => {
           const active = opt.key === view
           return (

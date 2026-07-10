@@ -1,13 +1,14 @@
 'use client'
 
 import { startOfWeek } from 'date-fns'
-import type { CalendarEvent } from '@/types/calendar'
-import { EVENT_COLORS } from '@/lib/calendar/constants'
+import type { CalendarEvent, CalendarResource } from '@/types/calendar'
+import { EVENT_COLORS, UNASSIGNED_RESOURCE_ID } from '@/lib/calendar/constants'
 import { getMonthDates, isSameDay } from '@/lib/calendar/dateUtils'
 
 interface MonthViewProps {
   currentDate: Date
   events: CalendarEvent[]
+  resources: CalendarResource[]
   onEventClick: (e: CalendarEvent) => void
   onDayClick: (date: Date) => void
 }
@@ -15,8 +16,14 @@ interface MonthViewProps {
 const DAY_HEADERS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
 const MAX_VISIBLE = 3
 
-export default function MonthView({ currentDate, events, onEventClick, onDayClick }: MonthViewProps) {
+export default function MonthView({ currentDate, events, resources, onEventClick, onDayClick }: MonthViewProps) {
   const days = getMonthDates(currentDate)
+  const visibleIds = new Set(resources.map(r => r.id))
+  const filteredEvents = resources.length === 0 ? events : events.filter(ev => {
+    if (ev.assigned_to) return visibleIds.has(ev.assigned_to)
+    if (ev.assigned_team_id) return visibleIds.has(ev.assigned_team_id)
+    return visibleIds.has(UNASSIGNED_RESOURCE_ID)
+  })
   const today = new Date()
   const currentWeekStart = startOfWeek(today, { weekStartsOn: 1 }).getTime()
 
@@ -34,7 +41,7 @@ export default function MonthView({ currentDate, events, onEventClick, onDayClic
         {days.map(day => {
           const isCurrentWeek = startOfWeek(day, { weekStartsOn: 1 }).getTime() === currentWeekStart
           const isToday = isSameDay(day, today)
-          const dayEvents = events
+          const dayEvents = filteredEvents
             .filter(e => e.status !== 'termine' && isSameDay(new Date(e.start_at), day))
             .sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime())
           const visible = dayEvents.slice(0, MAX_VISIBLE)

@@ -284,6 +284,7 @@ export default function MobileCalendar({
         <MonthView
           currentDate={currentDate}
           events={events}
+          resources={resources.filter(r => r.visible)}
           onEventClick={onEventClick}
           onDayClick={d => { onSelectDate(d); onViewChange('day') }}
         />

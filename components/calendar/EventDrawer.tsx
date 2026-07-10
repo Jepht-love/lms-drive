@@ -34,7 +34,7 @@ function eventLinks(event: CalendarEvent | null) {
   const links: { href: string; label: string; Icon: typeof ExternalLink }[] = []
   const vehicleLinkId = event.vehicles?.[0]?.id ?? event.vehicle_ids?.[0] ?? null
   if (event.reservation_id) {
-    links.push({ href: `/reservations/${event.reservation_id}`, label: 'Ouvrir la réservation', Icon: ExternalLink })
+    links.push({ href: `/reservations/${event.reservation_id}?from=calendrier`, label: 'Ouvrir la réservation', Icon: ExternalLink })
     if (event.event_type === 'depart_vehicule') {
       links.push({ href: `/inspections/departure/${event.reservation_id}`, label: "Faire l'EDL de départ", Icon: ClipboardCheck })
     }

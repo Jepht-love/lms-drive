@@ -238,11 +238,14 @@ export async function createReservation(formData: FormData) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non authentifié' }
 
-  const vehicleId = formData.get('vehicle_id') as string
-  let clientId = formData.get('client_id') as string
+  const vehicleId = (formData.get('vehicle_id') as string)?.trim()
+  let clientId = (formData.get('client_id') as string)?.trim()
   const startDatetime = formData.get('start_datetime') as string
   const endDatetime = formData.get('end_datetime') as string
   const dailyPrice = Number(formData.get('daily_price'))
+
+  if (!vehicleId) return { error: 'Veuillez sélectionner un véhicule.' }
+  if (!startDatetime || !endDatetime) return { error: 'Veuillez renseigner les dates de début et de fin.' }
 
   // Nouveau client créé à la volée (prénom/nom/téléphone uniquement)
   const newFirstName = (formData.get('new_client_first_name') as string)?.trim()

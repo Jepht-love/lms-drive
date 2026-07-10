@@ -68,10 +68,14 @@ const DEPOSIT_STATUS_LABELS: Record<string, string> = {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default async function ReservationPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>
+  searchParams: Promise<{ from?: string }>
 }) {
   const { id } = await params
+  const { from } = await searchParams
+  const backHref = from === 'calendrier' ? '/calendrier' : '/reservations'
   const supabase = await createClient()
 
   const { data: reservation } = await supabase
@@ -165,7 +169,7 @@ export default async function ReservationPage({
 
       {/* ─── Bouton retour ─── */}
       <div className="flex items-center gap-3">
-        <BackButton fallbackHref="/reservations" className="p-2 rounded-xl hover:bg-gray-100 transition-colors">
+        <BackButton fallbackHref={backHref} className="p-2 rounded-xl hover:bg-gray-100 transition-colors">
           <ArrowLeft className="w-5 h-5 text-gray-600" />
         </BackButton>
         <span className="text-sm text-gray-400 font-mono">{reservation.reservation_number}</span>
