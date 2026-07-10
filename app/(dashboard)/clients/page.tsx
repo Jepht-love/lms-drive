@@ -1,7 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import { Plus, Users, Search } from 'lucide-react'
+import { Plus, Users } from 'lucide-react'
 import ClientsListSwipeable from './ClientsListSwipeable'
+import SmartSearch from '@/components/ui/SmartSearch'
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default async function ClientsPage({
@@ -92,15 +93,8 @@ export default async function ClientsPage({
       </div>
 
       {/* Recherche */}
-      <form method="get" className="relative">
-        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-        <input
-          name="q"
-          type="search"
-          defaultValue={q}
-          placeholder="Rechercher par nom, téléphone, email…"
-          className="w-full bg-white border border-gray-100 shadow-sm rounded-xl pl-10 pr-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-black/10"
-        />
+      <form method="get">
+        <SmartSearch name="q" placeholder="Rechercher par nom, téléphone, email…" scope="clients" defaultValue={q ?? ''} />
       </form>
 
       {/* Filtres rapides */}
