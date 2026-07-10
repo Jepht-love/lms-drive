@@ -52,6 +52,13 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   if (!user && !pathname.startsWith('/login')) {
+    // Routes API : renvoyer un 401 JSON plutôt qu'une redirection HTML vers /login.
+    // Sinon un fetch() côté client (ex : recherche typeahead /api/search) reçoit la
+    // page de login en HTML, res.json() échoue silencieusement, et le menu de
+    // suggestions ne s'ouvre jamais — d'où « la recherche ne marche que sur Entrée ».
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
+    }
     // Let the exact root through — the layout handles the client-side redirect.
     // This allows the preview tool's health check to see 200.
     if (pathname === '/') return supabaseResponse
