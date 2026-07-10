@@ -1,7 +1,9 @@
 'use client'
 
 import { useActionState, useState, useEffect } from 'react'
+import { AlertTriangle } from 'lucide-react'
 import { calculateRentalDays, calculateRentalPrice, formatPrice } from '@/lib/utils'
+import { getMissingClientFields } from '@/lib/clients/completeness'
 import { useToast } from '@/components/Toast'
 
 function toDatetimeLocal(d: Date): string {
@@ -18,6 +20,10 @@ interface Vehicle {
 
 interface Client {
   id: string; first_name: string; last_name: string; phone: string; status?: string
+  address?: string | null
+  id_doc_front_path?: string | null
+  id_doc_back_path?: string | null
+  license_front_path?: string | null
 }
 
 interface Props {
@@ -47,8 +53,15 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
   const [showClientResults, setShowClientResults] = useState(false)
   const [durDays, setDurDays] = useState(0)
   const [durHours, setDurHours] = useState(0)
+  const [dossierConfirmed, setDossierConfirmed] = useState(false)
 
   const selectedClient = clients.find(c => c.id === selectedClientId)
+  // Dossier incomplet : on alerte dès qu'un client EXISTANT sélectionné manque
+  // d'identité / adresse / pièces. La création reste possible après confirmation
+  // explicite (choix « alerte + confirmation »). Le mode « nouveau client » inline
+  // n'est pas concerné : ses pièces seront ajoutées depuis la fiche client ensuite.
+  const missingFields = selectedClient && !creatingNewClient ? getMissingClientFields(selectedClient) : []
+  const dossierBlocked = missingFields.length > 0 && !dossierConfirmed
   const filteredClients = clientQuery.trim()
     ? clients.filter(c => {
         const q = clientQuery.trim().toLowerCase()
@@ -63,6 +76,10 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
       setDailyPrice(selectedVehicle.daily_price.toString())
     }
   }, [selectedVehicleId, selectedVehicle])
+
+  // Changer de client réinitialise la confirmation « dossier incomplet »
+  // pour éviter qu'une validation précédente ne s'applique au nouveau client.
+  useEffect(() => { setDossierConfirmed(false) }, [selectedClientId])
 
   const days = startDatetime && endDatetime
     ? calculateRentalDays(startDatetime, endDatetime)
@@ -165,6 +182,28 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
               </div>
             )}
           </div>
+
+          {/* Dossier incomplet — alerte + confirmation avant création (client existant) */}
+          {missingFields.length > 0 && (
+            <div className="flex items-start gap-3 bg-orange-50 border border-orange-200 rounded-xl px-3 py-2.5">
+              <AlertTriangle className="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold text-orange-800">Dossier incomplet — impossibilité de louer</p>
+                <p className="text-[11px] text-orange-600 mt-0.5">Manquant : {missingFields.join(', ')}</p>
+                <label className="flex items-start gap-2 mt-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={dossierConfirmed}
+                    onChange={e => setDossierConfirmed(e.target.checked)}
+                    className="mt-0.5 accent-orange-600 w-4 h-4 flex-shrink-0"
+                  />
+                  <span className="text-[11px] font-semibold text-orange-800">
+                    Je confirme créer la réservation malgré le dossier incomplet
+                  </span>
+                </label>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Dates */}
@@ -351,7 +390,7 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
       <p className="text-[11px] text-gray-400">* Champ obligatoire</p>
       <button
         type="submit"
-        disabled={pending}
+        disabled={pending || dossierBlocked}
         className="px-6 py-3 bg-[#111111] hover:bg-gray-800 disabled:opacity-40 text-white font-semibold rounded-xl transition-all active:scale-[.97] text-sm"
       >
         {pending ? 'Création...' : 'Créer la réservation'}

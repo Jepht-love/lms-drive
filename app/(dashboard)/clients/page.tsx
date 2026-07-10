@@ -13,9 +13,10 @@ export default async function ClientsPage({
   const { q, status } = await searchParams
   const supabase = await createClient()
 
-  // « meilleurs » / « a_risque » sont des segments calculés (pas des statuts en
-  // base) → on ne les passe pas à un .eq(), on filtre en mémoire plus bas.
-  const isSegment = status === 'meilleurs' || status === 'a_risque'
+  // « meilleurs » / « a_risque » / « note_interne » sont des segments calculés
+  // (pas des statuts en base) → on ne les passe pas à un .eq(), on filtre en
+  // mémoire plus bas.
+  const isSegment = status === 'meilleurs' || status === 'a_risque' || status === 'note_interne'
 
   let query = supabase.from('clients').select('*').order('last_name')
 
@@ -55,19 +56,24 @@ export default async function ClientsPage({
     const a = byClient.get(c.id)
     return c.status === 'vip' || (a ? a.completed >= 3 && a.unpaid === 0 && a.litige === 0 : false)
   }
+  // Note interne : le gérant / l'équipe a saisi une note sur la fiche client.
+  const hasNote = (c: { internal_notes?: string | null }) =>
+    !!c.internal_notes && c.internal_notes.trim() !== ''
 
   let clients = clientsRaw ?? []
-  if (status === 'meilleurs') clients = clients.filter(isBest)
-  if (status === 'a_risque')  clients = clients.filter(isRisk)
+  if (status === 'meilleurs')    clients = clients.filter(isBest)
+  if (status === 'a_risque')     clients = clients.filter(isRisk)
+  if (status === 'note_interne') clients = clients.filter(hasNote)
 
   // Compteurs par statut / segment (sur l'ensemble, indépendamment de la recherche)
-  const { data: allClients } = await supabase.from('clients').select('id, status')
+  const { data: allClients } = await supabase.from('clients').select('id, status, internal_notes')
   const counts = {
-    total:      allClients?.length ?? 0,
-    vip:        allClients?.filter(c => c.status === 'vip').length ?? 0,
-    blackliste: allClients?.filter(c => c.status === 'blackliste').length ?? 0,
-    meilleurs:  allClients?.filter(isBest).length ?? 0,
-    aRisque:    allClients?.filter(isRisk).length ?? 0,
+    total:       allClients?.length ?? 0,
+    vip:         allClients?.filter(c => c.status === 'vip').length ?? 0,
+    blackliste:  allClients?.filter(c => c.status === 'blackliste').length ?? 0,
+    meilleurs:   allClients?.filter(isBest).length ?? 0,
+    aRisque:     allClients?.filter(isRisk).length ?? 0,
+    noteInterne: allClients?.filter(hasNote).length ?? 0,
   }
 
   return (
@@ -104,6 +110,7 @@ export default async function ClientsPage({
           { label: '★ VIP', value: 'vip' },
           { label: `◆ Meilleurs${counts.meilleurs > 0 ? ` · ${counts.meilleurs}` : ''}`, value: 'meilleurs' },
           { label: `▲ À risque${counts.aRisque > 0 ? ` · ${counts.aRisque}` : ''}`, value: 'a_risque' },
+          { label: `✎ Note interne${counts.noteInterne > 0 ? ` · ${counts.noteInterne}` : ''}`, value: 'note_interne' },
           { label: '⚠ Blacklisté', value: 'blackliste' },
         ].map(f => (
           <Link

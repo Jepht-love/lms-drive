@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Phone, Mail, Star } from 'lucide-react'
+import { Phone, Mail, Star, StickyNote } from 'lucide-react'
 import SwipeableRow from '@/components/SwipeableRow'
 import { AnimatedList, AnimatedListItem } from '@/components/AnimatedList'
 import type { Client } from '@/types/database'
@@ -23,6 +23,16 @@ function StarRating({ rating }: { rating: number | null }) {
         <Star key={i} className={`w-3 h-3 ${i < rating ? 'fill-amber-400 text-amber-400' : 'text-gray-200'}`} />
       ))}
     </div>
+  )
+}
+
+// Pastille discrète : le client porte une note interne (visible équipe, pas client).
+function NoteIndicator({ notes }: { notes: string | null | undefined }) {
+  if (!notes || notes.trim() === '') return null
+  return (
+    <span title="Note interne" aria-label="Note interne" className="inline-flex items-center text-amber-500">
+      <StickyNote className="w-3.5 h-3.5" />
+    </span>
   )
 }
 
@@ -65,6 +75,7 @@ export default function ClientsListSwipeable({ clients }: { clients: Client[] })
                     <span className="font-bold text-gray-900 text-sm">{c.first_name} {c.last_name}</span>
                     <StatusBadge status={c.status} />
                     <StarRating rating={c.rating} />
+                    <NoteIndicator notes={c.internal_notes} />
                   </div>
                   <div className="flex items-center gap-3 mt-0.5">
                     <span className="flex items-center gap-1 text-xs text-gray-500">

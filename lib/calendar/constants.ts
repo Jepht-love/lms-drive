@@ -6,6 +6,7 @@ export const EVENT_COLORS: Record<EventType, string> = {
   retour_vehicule:  '#F59E0B',   // amber
   rdv_client:       '#EC4899',   // rose
   rdv_garage:       '#06B6D4',   // cyan
+  rdv_autre:        '#6366F1',   // indigo
   livraison:        '#84CC16',   // lime
   recuperation:     '#F97316',   // orange
   tache:               '#8B5CF6',   // violet
@@ -20,6 +21,7 @@ export const EVENT_TYPE_LABELS: Record<EventType, string> = {
   retour_vehicule:  'Retour véhicule',
   rdv_client:       'RDV client',
   rdv_garage:       'RDV garage',
+  rdv_autre:        'RDV autre',
   livraison:        'Livraison',
   recuperation:     'Récupération',
   tache:               'Tâche',

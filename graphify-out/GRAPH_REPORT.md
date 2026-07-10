@@ -1,16 +1,16 @@
-# Graph Report - lms-drive  (2026-07-09)
+# Graph Report - lms-drive  (2026-07-10)
 
 ## Corpus Check
-- 401 files · ~602,694 words
+- 409 files · ~607,302 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1735 nodes · 3101 edges · 146 communities (129 shown, 17 thin omitted)
-- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 32 edges (avg confidence: 0.79)
+- 1769 nodes · 3180 edges · 141 communities (122 shown, 19 thin omitted)
+- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 39 edges (avg confidence: 0.79)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `3c8b935f`
+- Built from commit: `d398af68`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -97,7 +97,6 @@
 - [[_COMMUNITY_Layout-guards rôle (accountingpartnerships)|Layout-guards rôle (accounting/partnerships)]]
 - [[_COMMUNITY_Layout FleetAxis|Layout FleetAxis]]
 - [[_COMMUNITY_Compteur alertes & nav basse|Compteur alertes & nav basse]]
-- [[_COMMUNITY_Primitive UI Card|Primitive UI Card]]
 - [[_COMMUNITY_Routes API (normalize)|Routes API (normalize)]]
 - [[_COMMUNITY_Liste incidents client|Liste incidents client]]
 - [[_COMMUNITY_Variants d'animation (framer)|Variants d'animation (framer)]]
@@ -110,14 +109,11 @@
 - [[_COMMUNITY_Page analytics|Page analytics]]
 - [[_COMMUNITY_Permissions locales Claude|Permissions locales Claude]]
 - [[_COMMUNITY_Clôture journalière (day picker)|Clôture journalière (day picker)]]
-- [[_COMMUNITY_Page emails|Page emails]]
 - [[_COMMUNITY_Page équipe|Page équipe]]
 - [[_COMMUNITY_Statut en ligne  hors-ligne|Statut en ligne / hors-ligne]]
-- [[_COMMUNITY_Proxy onglets (middleware)|Proxy onglets (middleware)]]
 - [[_COMMUNITY_Community 99|Community 99]]
 - [[_COMMUNITY_Community 100|Community 100]]
 - [[_COMMUNITY_Community 101|Community 101]]
-- [[_COMMUNITY_Community 102|Community 102]]
 - [[_COMMUNITY_Community 103|Community 103]]
 - [[_COMMUNITY_Community 104|Community 104]]
 - [[_COMMUNITY_Community 105|Community 105]]
@@ -129,35 +125,33 @@
 - [[_COMMUNITY_Community 137|Community 137]]
 - [[_COMMUNITY_Community 138|Community 138]]
 - [[_COMMUNITY_Community 139|Community 139]]
-- [[_COMMUNITY_Community 140|Community 140]]
 - [[_COMMUNITY_Community 141|Community 141]]
-- [[_COMMUNITY_Community 142|Community 142]]
-- [[_COMMUNITY_Community 144|Community 144]]
-- [[_COMMUNITY_Community 145|Community 145]]
+- [[_COMMUNITY_Community 147|Community 147]]
+- [[_COMMUNITY_Community 148|Community 148]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `createClient()` - 106 edges
-2. `formatPrice()` - 40 edges
-3. `formatDate()` - 26 edges
-4. `useToast()` - 25 edges
-5. `createAdminClient()` - 25 edges
+1. `createClient()` - 107 edges
+2. `formatPrice()` - 43 edges
+3. `formatDate()` - 29 edges
+4. `createAdminClient()` - 26 edges
+5. `useToast()` - 25 edges
 6. `CalendarEvent` - 24 edges
-7. `recomputeVehicleStatus()` - 17 edges
-8. `CalendarResource` - 17 edges
+7. `CalendarResource` - 19 edges
+8. `recomputeVehicleStatus()` - 17 edges
 9. `getAgencySettings()` - 16 edges
 10. `compilerOptions` - 16 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `GET()` --calls--> `getAgencySettings()`  [INFERRED]
   app/(dashboard)/accounting/export/pdf/route.ts → lib/contracts/agency.ts
-- `ReservationPage()` --calls--> `syncReservationToCalendar()`  [INFERRED]
-  app/(dashboard)/reservations/[id]/page.tsx → lib/calendar/syncRental.ts
 - `NewTransactionPage()` --calls--> `expenseCategoriesByFamily()`  [INFERRED]
   app/(dashboard)/accounting/new/page.tsx → lib/accounting/categories.ts
+- `ClientForm()` --calls--> `useToast()`  [EXTRACTED]
+  app/(dashboard)/clients/ClientForm.tsx → components/Toast.tsx
 - `ClientStatusActions()` --calls--> `useToast()`  [EXTRACTED]
   app/(dashboard)/clients/[id]/ClientStatusActions.tsx → components/Toast.tsx
-- `InfractionActions()` --calls--> `useToast()`  [EXTRACTED]
-  app/(dashboard)/incidents/infractions/[id]/InfractionActions.tsx → components/Toast.tsx
+- `updateReservationStatus()` --calls--> `fmtDate()`  [INFERRED]
+  lib/actions/reservations.ts → app/(dashboard)/documents/DocumentsClient.tsx
 
 ## Import Cycles
 - None detected.
@@ -166,23 +160,23 @@
 - **GSAP Skill Suite (cross-referencing animation skills)** — gsap_core_skill, gsap_timeline_skill, gsap_scrolltrigger_skill, gsap_react_skill, gsap_frameworks_skill, gsap_plugins_skill, gsap_performance_skill, gsap_utils_skill [EXTRACTED 1.00]
 - **Context Scoping + Cleanup Pattern** — gsap_core_context, gsap_react_usegsap_hook, gsap_frameworks_lifecycle_cleanup, gsap_scrolltrigger_refresh [INFERRED 0.85]
 
-## Communities (146 total, 17 thin omitted)
+## Communities (141 total, 19 thin omitted)
 
 ### Community 0 - "Marketing & Campagnes clients"
-Cohesion: 0.06
-Nodes (27): closeCampaign(), createCampaign(), deleteCampaign(), updateCampaignStatus(), AnimatedList(), AnimatedListItem(), AnimatedTabsProps, Tab (+19 more)
+Cohesion: 0.15
+Nodes (6): Props, createClient(), COLUMNS, Task, Props, Suggestion
 
 ### Community 1 - "Alertes & Notifications"
-Cohesion: 0.07
-Nodes (28): NotificationsPage(), GET(), businessNow(), syncAlertsToCalendar(), GET(), ALERT_GROUPS, AlertGroup, DashboardPage() (+20 more)
+Cohesion: 0.43
+Nodes (6): markRestitutionInvoiceSent(), renderContractInvoiceAttachment(), EmailType, logEmail(), LogEmailParams, POST()
 
 ### Community 2 - "GSAP Core & Animation"
-Cohesion: 0.22
-Nodes (8): autoAlpha (fade + visibility), immediateRender, gsap.matchMedia() (responsive + reduced-motion), GSAP Stagger, GSAP Core Tween Methods (to/from/fromTo/set), clamp / mapRange / normalize, distribute(), Function Form (omit value for reusable fn)
+Cohesion: 0.18
+Nodes (10): autoAlpha (fade + visibility), GSAP Easing, immediateRender, gsap.matchMedia() (responsive + reduced-motion), GSAP Stagger, GSAP Core Tween Methods (to/from/fromTo/set), CustomEase Plugin, clamp / mapRange / normalize (+2 more)
 
 ### Community 3 - "Partenariats inter-agences"
-Cohesion: 0.14
-Nodes (11): bookOperationTransaction(), createAgency(), createOperation(), num(), parseExternalVehicle(), recordReturn(), startEntrantRental(), updateOperationStatus() (+3 more)
+Cohesion: 0.08
+Nodes (18): bookOperationTransaction(), createAgency(), createOperation(), deleteAgency(), num(), parseExternalVehicle(), recordReturn(), startEntrantRental() (+10 more)
 
 ### Community 4 - "Verrou skills (lockfile)"
 Cohesion: 0.05
@@ -193,63 +187,59 @@ Cohesion: 0.05
 Nodes (42): dependencies, class-variance-authority, clsx, date-fns, @dnd-kit/core, @dnd-kit/sortable, @dnd-kit/utilities, framer-motion (+34 more)
 
 ### Community 6 - "Actions clients (remises/perks)"
-Cohesion: 0.23
-Nodes (10): applyCommercialPerks(), applyDiscount(), buildBasePayload(), createClientAction(), parseDiscount(), updateClientAction(), updateClientStatus(), uploadClientDoc() (+2 more)
+Cohesion: 0.15
+Nodes (7): ClientForm(), ClientFormProps, DISCOUNT_PRESETS, DOC_TYPES, PAYMENT_METHODS, PHOTO_SLOTS, Client
 
 ### Community 7 - "Landing FleetAxis"
 Cohesion: 0.10
 Nodes (9): ICONS, ICONS, FleetAxisLanding(), CELLS, Status, getTranslation(), Lang, Translation (+1 more)
 
 ### Community 8 - "Panneau alertes & menu création"
-Cohesion: 0.15
-Nodes (15): EVENT_COLORS, EVENT_STATUS_LABELS, EVENT_TYPE_LABELS, STATUS_COLORS, CreateMenuProps, OPTIONS, ClientOption, EventDrawer() (+7 more)
+Cohesion: 0.14
+Nodes (16): EVENT_COLORS, EVENT_STATUS_LABELS, EVENT_TYPE_LABELS, STATUS_COLORS, CreateMenuProps, OPTIONS, ClientOption, EventDrawer() (+8 more)
 
 ### Community 9 - "Catégories de dépenses"
-Cohesion: 0.14
-Nodes (15): ALL, CostNature, EXPENSE_CAT_BY_ID, EXPENSE_CATEGORIES, EXPENSE_FAMILIES, expenseCategoriesByFamily(), ExpenseCategory, expenseFamily (+7 more)
+Cohesion: 0.06
+Nodes (49): aggregate(), buildAnalysisData(), dateLabel(), pctDelta(), previousRange(), Tx, ALL, CostNature (+41 more)
 
 ### Community 10 - "Écritures & clôtures comptables"
-Cohesion: 0.16
-Nodes (17): Tx, assertPeriodOpen(), SB, closeAnnualAccounting(), closeDailyAccounting(), closeMonthlyAccounting(), createTransaction(), deleteTransaction() (+9 more)
+Cohesion: 0.13
+Nodes (21): Tx, AccountingLayout(), assertPeriodOpen(), SB, closeAnnualAccounting(), closeDailyAccounting(), closeMonthlyAccounting(), createTransaction() (+13 more)
 
 ### Community 11 - "Pages dashboard (routes)"
-Cohesion: 0.18
-Nodes (3): Props, OPERATION_FLOW, OPERATION_STATUS
-
-### Community 12 - "Calendrier — grille & barre latérale"
-Cohesion: 0.16
-Nodes (11): CalendarGridProps, SlotContext, CalendarSidebarProps, RESOURCE_PALETTE, SlotContext, MobileCalendarProps, ResourceListProps, ROLE_LABELS (+3 more)
+Cohesion: 0.10
+Nodes (20): Accessibility and responsive (gsap.matchMedia()), Common vars, Core Tween Methods, Custom: use CustomEase (plugin), Defaults, Do Not, Easing, Function-based values (+12 more)
 
 ### Community 13 - "PDF contrat & articles légaux"
 Cohesion: 0.13
-Nodes (17): getFeesTable(), getLegalArticles(), LegalArticlesParams, ContractPDF(), DamagedZone, fmtDate(), fmtDT(), fmtMoney() (+9 more)
+Nodes (16): getFeesTable(), getLegalArticles(), LegalArticlesParams, ContractPDF(), DamagedZone, fmtDate(), fmtDT(), fmtMoney() (+8 more)
 
 ### Community 14 - "Auth & navigation (Sidebar/rôles)"
-Cohesion: 0.21
-Nodes (6): logout(), adminModules, MenuPage(), modules, ROLE_LABELS, allowedHrefSet()
+Cohesion: 0.15
+Nodes (8): NotificationsPage(), GET(), syncAlertsToCalendar(), GET(), ResourceRow, createAdminClient(), AppAlert, fetchAllAlerts()
 
 ### Community 15 - "Déplacements internes (trajets)"
-Cohesion: 0.20
-Nodes (17): assignTrip(), cancelTrip(), deleteTrip(), endTrip(), getRole(), isManagerRole(), planTrip(), startPlannedTrip() (+9 more)
+Cohesion: 0.15
+Nodes (14): ActionMeta, ACTIONS, auditActionLabel(), auditActionTone(), auditEntityLabel(), AuditLog, AuditTone, ENTITIES (+6 more)
 
 ### Community 16 - "Maintenance & immobilisés"
 Cohesion: 0.14
 Nodes (14): createMaintenanceRecord(), deleteMaintenanceRecord(), expenseCategoryFor(), GARAGE_TYPES, markMaintenancePaid(), IMMOBILISES_STATUSES, OpenAccident, RecentMaintenance (+6 more)
 
 ### Community 17 - "Suppressions & caution"
-Cohesion: 0.05
-Nodes (27): deleteContract(), deleteReservation(), resetInspection(), updateDepositDeducted(), updateDepositInfo(), updateDepositStatus(), PAYMENT_LABELS, removeReservationFromCalendar() (+19 more)
+Cohesion: 0.26
+Nodes (8): DIACRITICS_RE, isNameBlacklisted(), normalizeName(), postRentalRevenue(), updateReservationStatus(), validateContract(), logAudit(), fmtDate()
 
 ### Community 18 - "Incidents / infractions / sinistres"
-Cohesion: 0.17
-Nodes (7): InfractionDetailPage(), Vehicle, INFRACTION_STATUS, infractionTypeLabel(), SINISTRE_STATUS, formatDate(), formatDateRange()
+Cohesion: 0.09
+Nodes (13): paymentMethodLabel(), deleteContract(), PAYMENT_LABELS, ClientPage(), InfractionDetailPage(), STATUS_LABELS, STATUS_RES, Vehicle (+5 more)
 
 ### Community 19 - "Types de base de données"
 Cohesion: 0.10
 Nodes (19): AuditLog, Contract, ContractStatus, DamagedZone, DepositStatus, Document, DocumentCategory, Incident (+11 more)
 
 ### Community 20 - "Documents & expiration"
-Cohesion: 0.12
+Cohesion: 0.13
 Nodes (14): isExpiringSoon(), ActiveTab, Client, DocStatus, Document, ExpiryBadge(), Partner, Props (+6 more)
 
 ### Community 21 - "Config TypeScript"
@@ -257,84 +247,84 @@ Cohesion: 0.10
 Nodes (19): compilerOptions, allowJs, esModuleInterop, incremental, isolatedModules, jsx, lib, module (+11 more)
 
 ### Community 22 - "Facturation (invoices)"
-Cohesion: 0.21
-Nodes (10): cancelInvoice(), updateInvoiceLines(), loadLogoDataUrl(), InvoiceData, InvoiceLineItem, InvoicePDF(), LEGAL_LINES(), s (+2 more)
+Cohesion: 0.09
+Nodes (18): deleteClient(), deleteReservation(), deleteVehicle(), resetInspection(), updateDepositInfo(), updateDepositStatus(), PAYMENT_LABELS, removeReservationFromCalendar() (+10 more)
 
 ### Community 23 - "Création réservation & blacklist"
-Cohesion: 0.19
-Nodes (14): createReservation(), DIACRITICS_RE, isNameBlacklisted(), normalizeName(), postRentalRevenue(), updateReservationStatus(), validateContract(), logAudit() (+6 more)
+Cohesion: 0.22
+Nodes (6): AlertPanelProps, ALERT_RULES, AlertType, CalendarAlert, CalendarTeam, UserRole
 
 ### Community 24 - "Prolongation & édition dates résa"
-Cohesion: 0.19
-Nodes (14): prolongReservation(), updateReservationDates(), ArrivalInspectionPage(), EditDatesPanel(), Props, toInputValue(), ProlongReservation(), Props (+6 more)
+Cohesion: 0.14
+Nodes (18): createReservation(), prolongReservation(), updateReservationDates(), ClientCompletenessInput, getMissingClientFields(), isClientComplete(), ArrivalInspectionPage(), EditDatesPanel() (+10 more)
 
 ### Community 25 - "Sync réservation↔calendrier"
 Cohesion: 0.21
-Nodes (11): PATCH(), enrichEvents(), generateAlertsForEvent(), ReservationForSync, statusesFor(), syncWashTask(), upsertEvent(), GET() (+3 more)
+Nodes (12): PATCH(), enrichEvents(), generateAlertsForEvent(), ReservationForSync, statusesFor(), syncReservationToCalendar(), syncWashTask(), upsertEvent() (+4 more)
 
 ### Community 26 - "EDL — zones & lightbox photos"
-Cohesion: 0.15
-Nodes (12): PhotoLightbox(), PhotoLightboxProps, EDL_ZONES, Zone2D, zoneBox(), DamageSeverity, graviteLabel(), BadgeType (+4 more)
+Cohesion: 0.20
+Nodes (10): PhotoLightbox(), PhotoLightboxProps, compressImageToBase64(), EDL_ZONES, Zone2D, zoneBox(), DAMAGE_TYPES, graviteLabel() (+2 more)
 
 ### Community 27 - "Toasts & notifications UI"
-Cohesion: 0.12
-Nodes (17): AccountingTransactions(), deleteAgency(), DeleteAgencyButton(), COLORS, ICONS, NotificationsList(), ClientForm(), Toast (+9 more)
+Cohesion: 0.13
+Nodes (15): AccountingTransactions(), COLORS, ICONS, NotificationsList(), Toast, ToastContext, ToastType, useToast() (+7 more)
 
 ### Community 28 - "Analyse financière (agrégats)"
-Cohesion: 0.32
-Nodes (12): aggregate(), buildAnalysisData(), dateLabel(), pctDelta(), previousRange(), Tx, AnalysisPage(), PERIODS (+4 more)
+Cohesion: 0.12
+Nodes (24): CalendarBottomBarProps, CalendarGrid(), CalendarGridProps, rangeFor(), SlotContext, CalendarSidebarProps, CalendarToolbar(), CalendarToolbarProps (+16 more)
 
 ### Community 29 - "Formatage journal d'audit"
-Cohesion: 0.15
-Nodes (14): ActionMeta, ACTIONS, auditActionLabel(), auditActionTone(), auditEntityLabel(), AuditLog, AuditTone, ENTITIES (+6 more)
+Cohesion: 0.14
+Nodes (14): closeInfraction(), createAccident(), createInfraction(), deleteInfraction(), lookupDriver(), markInfractionPaid(), num(), transmitInfractionToClient() (+6 more)
 
 ### Community 30 - "Calendrier — barre basse & mini"
-Cohesion: 0.24
-Nodes (9): rangeFor(), getMonthDates(), isSameDay(), DAY_HEADERS, MiniCalendar(), MiniCalendarProps, DAY_HEADERS, MonthView() (+1 more)
+Cohesion: 0.31
+Nodes (7): getMonthDates(), isSameDay(), DAY_HEADERS, MiniCalendar(), MiniCalendarProps, DAY_HEADERS, MonthView()
 
 ### Community 31 - "Santé maintenance véhicule"
-Cohesion: 0.11
-Nodes (24): buildDamageFlag(), Candidate, computeVehicleNeeds(), dateCandidate(), fmtKm(), groupNeedsForBadges(), kmCandidate(), LastByType (+16 more)
+Cohesion: 0.10
+Nodes (25): Candidate, computeVehicleNeeds(), dateCandidate(), fmtKm(), groupNeedsForBadges(), kmCandidate(), LastByType, LastIntervention (+17 more)
 
 ### Community 32 - "Primitives UI (badge/button/input)"
-Cohesion: 0.09
-Nodes (21): ReservationStatusButtons(), Badge(), BadgeProps, badgeVariants, Button, ButtonProps, buttonVariants, Card (+13 more)
+Cohesion: 0.08
+Nodes (23): ReservationStatusButtons(), Badge(), BadgeProps, badgeVariants, Button, ButtonProps, buttonVariants, Input (+15 more)
 
 ### Community 33 - "Login & éditeur KPI"
-Cohesion: 0.13
-Nodes (9): Driver, Vehicle, Vehicle, Props, INFRACTION_TYPES, Agency, Client, Reservation (+1 more)
+Cohesion: 0.19
+Nodes (14): cancelInvoice(), generateInvoiceDraft(), nextInvoiceNumber(), sendInvoice(), SupabaseServer, updateInvoiceLines(), loadLogoDataUrl(), InvoiceData (+6 more)
 
 ### Community 34 - "Actions incidents (accidents/infractions)"
-Cohesion: 0.19
-Nodes (11): addAccidentToVehicle(), closeInfraction(), createAccident(), createInfraction(), deleteAccident(), deleteInfraction(), markInfractionPaid(), num() (+3 more)
+Cohesion: 0.17
+Nodes (9): addAccidentToVehicle(), deleteAccident(), updateAccidentStatus(), SinistreActions(), Incident, STATUS_COLORS, STATUSES, Vehicle (+1 more)
 
 ### Community 35 - "Échéancier (dueDates)"
 Cohesion: 0.05
-Nodes (46): GSAP Easing, CustomEase Plugin, Draggable Plugin, DrawSVGPlugin, Flip Plugin (FLIP layout transitions), InertiaPlugin, GSAP Free Licensing (post-Webflow), MorphSVGPlugin (+38 more)
+Nodes (44): Draggable Plugin, DrawSVGPlugin, Flip Plugin (FLIP layout transitions), InertiaPlugin, GSAP Free Licensing (post-Webflow), MorphSVGPlugin, gsap.registerPlugin(), Best practices (+36 more)
 
 ### Community 36 - "Paramètres agence & convention"
-Cohesion: 0.23
-Nodes (7): updateAgencySettings(), AGENCY_DEFAULTS, AgencySettings, getAgencySettings(), ConventionPage(), ContractPreviewPage(), SettingsPage()
+Cohesion: 0.20
+Nodes (9): updateAgencySettings(), AGENCY_DEFAULTS, AgencySettings, getAgencySettings(), ConventionPage(), IaDepartureInspectionPage(), ContractPreviewPage(), SettingsPage() (+1 more)
 
 ### Community 37 - "Info caution réservation"
-Cohesion: 0.11
-Nodes (6): deleteTask(), STATUSES, TYPES, updateTask(), PATCH(), createClient()
+Cohesion: 0.07
+Nodes (9): STATUS_CONFIG, TYPE_LABELS, TYPES, deleteTask(), STATUSES, TYPES, updateTask(), createClient() (+1 more)
 
 ### Community 38 - "Docs projet & règles"
 Cohesion: 0.09
 Nodes (19): Next.js Agent Rules (breaking changes), Graphify Usage Rules, Project CLAUDE.md, LMS Drive Migration Summary, Dashboard Next 6h Sliding Window, No Automated Supabase Mutation Rule, Vercel Secrets Requirement, 1. Variables d'environnement (+11 more)
 
 ### Community 39 - "Onglets membres & catégories docs"
-Cohesion: 0.20
-Nodes (9): DOCUMENT_CATEGORIES, ALL_DOC_KEYS, Props, ALL_TAB_KEYS, APP_TABS, AppTab, ALL_DOC_KEYS, COLORS (+1 more)
+Cohesion: 0.21
+Nodes (9): ALL_TAB_KEYS, APP_TABS, AppTab, ALL_DOC_KEYS, COLORS, ROLES, config, matchTab() (+1 more)
 
 ### Community 40 - "Édition membre & réglages notif"
 Cohesion: 0.14
 Nodes (6): COLORS, Member, ROLES, DEFAULTS, Settings, ToggleProps
 
 ### Community 41 - "EDL — dégâts & carte inspection"
-Cohesion: 0.19
-Nodes (10): DamageComparisonProps, DamageDrawerProps, SEVERITY_ACTIVE, SEVERITY_STYLES, DamageEntry, DamageZone, VehicleInspectionMapProps, PreviousZone (+2 more)
+Cohesion: 0.32
+Nodes (6): DamageComparisonProps, DamageEntry, VehicleInspectionMapProps, PreviousZone, Props, Props
 
 ### Community 42 - "Layout racine & PWA (SW/push)"
 Cohesion: 0.15
@@ -348,17 +338,13 @@ Nodes (9): DAY_LETTERS, dayBounds(), getVisibleIds(), layoutEvents(), MobileCale
 Cohesion: 0.12
 Nodes (7): ToastProvider(), NO_PADDING_ROUTES, AlertCountContext, useAlertCount(), BottomNav(), TABS, PageHeaderProps
 
-### Community 45 - "Fiche client & photos docs"
-Cohesion: 0.17
-Nodes (6): deleteClient(), PAYMENT_LABELS, DOCS, Props, STATUS_LABELS, STATUS_RES
-
 ### Community 46 - "Actions documents & sous-catégories"
-Cohesion: 0.18
-Nodes (7): deleteDocument(), replaceDocument(), sendDocumentByEmail(), uploadDocument(), DOCUMENT_SUBCATEGORIES, DocumentCategory, SENSITIVE_SUBCATEGORIES
+Cohesion: 0.05
+Nodes (27): closeCampaign(), createCampaign(), deleteCampaign(), updateCampaignStatus(), AnimatedList(), AnimatedListItem(), AnimatedTabsProps, Tab (+19 more)
 
 ### Community 47 - "Frais EDL & flow inspection"
 Cohesion: 0.20
-Nodes (8): calculateExtraKm(), calculateLateFee(), CLEANLINESS_LEVELS, ComputedFees, Props, Step, compressImageToBase64(), defaultDamagePrice()
+Nodes (8): calculateExtraKm(), calculateLateFee(), CLEANLINESS_LEVELS, ComputedFees, Props, Step, buildDamageFlag(), INTERIOR_DAMAGE_ITEMS
 
 ### Community 48 - "Config shadcn (components.json)"
 Cohesion: 0.17
@@ -369,44 +355,44 @@ Cohesion: 0.17
 Nodes (11): background_color, categories, description, display, icons, name, orientation, short_name (+3 more)
 
 ### Community 50 - "Comparaison dégâts & types inspection"
-Cohesion: 0.21
-Nodes (9): VIEW_BOXES, DAMAGE_TYPE_PRICES, DAMAGE_TYPES, damageTypeLabel(), GRAVITES, INTERIOR_DAMAGE_ITEMS, VEHICLE_ZONES, VehicleView (+1 more)
+Cohesion: 0.15
+Nodes (12): VIEW_BOXES, DAMAGE_TYPE_PRICES, DamageSeverity, damageTypeLabel(), defaultDamagePrice(), GRAVITES, VEHICLE_ZONES, VehicleView (+4 more)
 
 ### Community 51 - "Graphiques comptables"
-Cohesion: 0.14
-Nodes (6): getCategoryLabel(), periodRange(), AccountingPage(), PERIODS, Props, M
+Cohesion: 0.22
+Nodes (16): assignTrip(), cancelTrip(), deleteTrip(), endTrip(), getRole(), isManagerRole(), planTrip(), startPlannedTrip() (+8 more)
 
 ### Community 52 - "Disponibilité employé"
-Cohesion: 0.22
-Nodes (4): setWeeklyAvailability(), DAYS, Profile, Slot
+Cohesion: 0.16
+Nodes (8): setWeeklyAvailability(), AssignedEvent, CREATE_TYPES, CreateFromSlotModal(), DAYS, fmtMin(), Profile, Slot
 
 ### Community 53 - "Signalements véhicule (issues)"
-Cohesion: 0.31
-Nodes (7): loadFlags(), NewIssue, reportVehicleIssues(), resolveVehicleIssue(), setVehicleRepairStatus(), VehicleNeed, MaintenanceFlag
+Cohesion: 0.33
+Nodes (7): loadFlags(), NewIssue, reportVehicleIssues(), resolveVehicleIssue(), setVehicleRepairStatus(), DepartureInspectionPage(), recomputeVehicleStatus()
 
 ### Community 54 - "Fiche véhicule & statut"
-Cohesion: 0.31
-Nodes (6): deleteVehicle(), RESA_STATUS_LABEL, VehiclePage(), buildLastByType(), getVehicleStatusColor(), getVehicleStatusLabel()
+Cohesion: 0.23
+Nodes (10): applyCommercialPerks(), applyDiscount(), buildBasePayload(), createClientAction(), parseDiscount(), updateClientAction(), updateClientStatus(), uploadClientDoc() (+2 more)
 
 ### Community 55 - "Graphique échéances"
-Cohesion: 0.22
-Nodes (3): Props, MONTHS, VehicleSchedule
+Cohesion: 0.24
+Nodes (6): deleteDocument(), replaceDocument(), sendDocumentByEmail(), uploadDocument(), DocumentCategory, resendTo()
 
 ### Community 56 - "Zones EDL (WIP json)"
 Cohesion: 0.20
 Nodes (9): lunette-arriere, label, points, lunette-avant, label, points, toit, label (+1 more)
 
 ### Community 57 - "Génération données contrat PDF"
-Cohesion: 0.36
-Nodes (7): POST(), buildContractPdfData(), BuiltContractData, fetchPhotoAsDataUrl(), loadEdlSchemaDataUrl(), SupabaseServer, ContractData
+Cohesion: 0.28
+Nodes (4): createVehicle(), updateVehicle(), updateVehicleStatus(), VehicleStatus
 
 ### Community 58 - "Dépendances dev"
 Cohesion: 0.20
 Nodes (10): devDependencies, dotenv, eslint, eslint-config-next, tailwindcss, @tailwindcss/postcss, @types/node, @types/react (+2 more)
 
 ### Community 59 - "Formulaire véhicule"
-Cohesion: 0.22
-Nodes (6): Vehicle, CATEGORIES, FUEL_TYPES, TRANSMISSIONS, VehicleForm(), VehicleFormProps
+Cohesion: 0.21
+Nodes (11): addDays(), formatAmount(), formatDate(), GET(), localDateStr(), OVERDUE_DAYS, UPCOMING_DAYS, MemberProfilePage() (+3 more)
 
 ### Community 60 - "Schéma véhicule orthographique SVG"
 Cohesion: 0.20
@@ -417,16 +403,16 @@ Cohesion: 0.33
 Nodes (6): fmt(), fmtDate(), s, SinistrePDF(), SinistrePDFData, STATUS_LABELS
 
 ### Community 62 - "Création tâche & push"
-Cohesion: 0.10
-Nodes (3): TYPE_LABELS, TYPES, ROLE_CONFIG
+Cohesion: 0.22
+Nodes (6): Vehicle, CATEGORIES, FUEL_TYPES, TRANSMISSIONS, VehicleForm(), VehicleFormProps
 
 ### Community 63 - "Calendrier — utils dates & ressources"
-Cohesion: 0.20
-Nodes (12): CalendarGrid(), CalendarToolbar(), CalendarToolbarProps, rangeLabel(), VIEW_OPTIONS, DAY_ABBR, detectOverlaps(), formatDateHeader() (+4 more)
+Cohesion: 0.18
+Nodes (9): TASK_STATUS_LABELS, updateTaskStatus(), createTask(), TYPES, broadcastPushToManagers(), PushPayload, sendPushToSubscription(), StoredSubscription (+1 more)
 
 ### Community 64 - "Aperçu convention & signature"
-Cohesion: 0.33
-Nodes (6): conventionClauses(), ConventionPreviewClient(), formatDateTime(), formatPrice(), Props, SignatureCanvasProps
+Cohesion: 0.25
+Nodes (5): DOCUMENT_CATEGORIES, DOCUMENT_SUBCATEGORIES, SENSITIVE_SUBCATEGORIES, ALL_DOC_KEYS, Props
 
 ### Community 65 - "package.json"
 Cohesion: 0.22
@@ -441,28 +427,28 @@ Cohesion: 0.36
 Nodes (6): Props, ZONE_COLORS, DamagedZone, MANDATORY_PHOTOS, VEHICLE_ZONES, ZoneId
 
 ### Community 68 - "PDF comptable"
-Cohesion: 0.36
-Nodes (6): AccountingPdf(), AccountingPdfData, fmt(), s, GET(), MONTHS
+Cohesion: 0.31
+Nodes (8): POST(), buildContractPdfData(), BuiltContractData, fetchPhotoAsDataUrl(), loadEdlSchemaDataUrl(), SupabaseServer, ContractData, InspectionPDFData
 
 ### Community 69 - "KPI véhicule"
-Cohesion: 0.29
-Nodes (7): getFamilyLabel(), GARAGE_TYPES, overlapDays(), PANNE_TYPES, PERIODS, RENTED_STATUSES, VehicleKpiPage()
+Cohesion: 0.25
+Nodes (4): EmailLog, TYPE_CONTENT, TYPE_LABELS, formatDateTime()
 
 ### Community 70 - "Recherche conducteur (sinistre)"
 Cohesion: 0.08
 Nodes (26): Arrays and Collections, Best practices, clamp(min, max, value?), Clamping and Ranges, distribute(config), Do Not, getUnit(value), gsap.utils (+18 more)
 
 ### Community 71 - "Email restitution & pièces"
-Cohesion: 0.27
-Nodes (12): transmitInfractionToClient(), generateInvoiceDraft(), markRestitutionInvoiceSent(), nextInvoiceNumber(), renderContractInvoiceAttachment(), sendInvoice(), SupabaseServer, resendTo() (+4 more)
+Cohesion: 0.20
+Nodes (7): RESA_STATUS_LABEL, VehiclePage(), buildLastByType(), DeleteButtonProps, getVehicleStatusColor(), getVehicleStatusLabel(), STATUSES
 
 ### Community 72 - "Info paiement réservation"
-Cohesion: 0.25
-Nodes (6): updatePaymentInfo(), PAYMENT_METHODS, PAYMENT_STATUSES, PaymentMethodType, PaymentStatus, Props
+Cohesion: 0.19
+Nodes (11): businessNow(), ALERT_GROUPS, AlertGroup, DashboardPage(), getClient(), getVehicle(), NEXT6H_TYPE_STYLE, TASK_STATUS_BADGE (+3 more)
 
 ### Community 73 - "Actions véhicules"
-Cohesion: 0.23
-Nodes (5): createVehicle(), updateVehicle(), updateVehicleStatus(), VehicleStatus, STATUSES
+Cohesion: 0.29
+Nodes (6): Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle
 
 ### Community 74 - "Config Claude (settings/plugins)"
 Cohesion: 0.25
@@ -473,20 +459,20 @@ Cohesion: 0.10
 Nodes (20): Horizontal Scroll (containerAnimation), ScrollTrigger Pinning, ScrollTrigger.refresh() and Cleanup, ScrollTrigger Scrub, Basic Trigger, Do Not, GSAP ScrollTrigger, Horizontal scroll (containerAnimation) (+12 more)
 
 ### Community 76 - "Grille véhicules & badges maintenance"
-Cohesion: 0.10
-Nodes (20): Accessibility and responsive (gsap.matchMedia()), Common vars, Core Tween Methods, Custom: use CustomEase (plugin), Defaults, Do Not, Easing, Function-based values (+12 more)
+Cohesion: 0.36
+Nodes (6): AccountingPdf(), AccountingPdfData, fmt(), s, GET(), MONTHS
 
 ### Community 77 - "Statuts réservation (helpers)"
 Cohesion: 0.15
 Nodes (13): GSAP Transform Aliases, gsap.quickTo() (frequently updated properties), Batch Reads and Writes, Best practices, Do Not, Frequently updated properties (e.g. mouse followers), GSAP Performance, Many Elements (Stagger, Lists) (+5 more)
 
 ### Community 78 - "Primitive UI Select"
-Cohesion: 0.25
-Nodes (7): SelectContent, SelectItem, SelectLabel, SelectScrollDownButton, SelectScrollUpButton, SelectSeparator, SelectTrigger
+Cohesion: 0.40
+Nodes (5): updateDepositDeducted(), DepositSettlement(), fmt(), Props, SEIZURE
 
 ### Community 79 - "Layout-guards rôle (accounting/partnerships)"
-Cohesion: 0.17
-Nodes (6): ClientFormProps, DISCOUNT_PRESETS, DOC_TYPES, PAYMENT_METHODS, PHOTO_SLOTS, Client
+Cohesion: 0.25
+Nodes (3): Props, MONTHS, VehicleSchedule
 
 ### Community 80 - "Layout FleetAxis"
 Cohesion: 0.29
@@ -496,17 +482,13 @@ Nodes (5): inter, jakarta, metadata, plexMono, viewport
 Cohesion: 0.18
 Nodes (12): Timeline Position Parameter, Controlling Playback, Creating a Timeline, Do Not, GSAP Timeline, Labels, Nesting Timelines, Official GSAP Best practices (+4 more)
 
-### Community 82 - "Primitive UI Card"
-Cohesion: 0.21
-Nodes (5): expenseNature(), paymentMethodLabel(), MonthlyClosingPage(), MONTHS, formatPrice()
-
 ### Community 83 - "Routes API (normalize)"
 Cohesion: 0.17
 Nodes (12): Do Not, GSAP with Vue, Svelte, and Other Frameworks, Learn More, Nuxt 4, Principles (All Frameworks), Scoping Selectors, ScrollTrigger Cleanup, Svelte (+4 more)
 
 ### Community 84 - "Liste incidents client"
-Cohesion: 0.33
-Nodes (4): Incident, STATUS_COLORS, STATUSES, Vehicle
+Cohesion: 0.13
+Nodes (14): logout(), managerItems, navItems, Sidebar(), SidebarProps, ROLE_LABELS, roleLabel(), adminModules (+6 more)
 
 ### Community 85 - "Variants d'animation (framer)"
 Cohesion: 0.33
@@ -524,17 +506,9 @@ Nodes (4): DELETE(), PATCH(), POST(), requireManager()
 Cohesion: 0.17
 Nodes (12): Best practices, Context-Safe Callbacks, Dependency array, scope, and revertOnUpdate, Do Not, gsap.context() in useEffect (when useGSAP isn't used), GSAP with React, Installation, Learn More (+4 more)
 
-### Community 89 - "Profil membre"
-Cohesion: 0.40
-Nodes (4): MemberProfilePage(), ROLE_CONFIG, STATUS_BADGE, STATUS_LABEL
-
-### Community 90 - "Liste ressources (calendrier)"
-Cohesion: 0.26
-Nodes (8): managerItems, navItems, Sidebar(), SidebarProps, ROLE_LABELS, roleLabel(), ProfilePage(), Profile
-
 ### Community 91 - "Grille véhicules swipeable"
-Cohesion: 0.28
-Nodes (5): CalendarBottomBarProps, EventBlockProps, STATUS_ICON, ResourceColumnProps, CalendarEvent
+Cohesion: 0.25
+Nodes (6): updatePaymentInfo(), PAYMENT_METHODS, PAYMENT_STATUSES, PaymentMethodType, PaymentStatus, Props
 
 ### Community 92 - "Page analytics"
 Cohesion: 0.20
@@ -549,52 +523,40 @@ Cohesion: 0.31
 Nodes (7): gsap.context() (scoping + cleanup), Framework Lifecycle Cleanup (mount/unmount revert), Nuxt useGSAP Composable (lazy plugin load), contextSafe Callbacks, Client-only GSAP (SSR safety), useGSAP() Hook (@gsap/react), selector / toArray (scoped collections)
 
 ### Community 96 - "Page équipe"
-Cohesion: 0.25
-Nodes (5): AlertPanelProps, ALERT_RULES, AlertType, CalendarAlert, CalendarTeam
-
-### Community 98 - "Proxy onglets (middleware)"
-Cohesion: 0.25
-Nodes (5): lookupDriver(), Driver, Vehicle, DriverResult, findDriverAtDate()
-
-### Community 102 - "Community 102"
-Cohesion: 0.52
-Nodes (4): AccountingLayout(), isManagerRole(), requireManagerPage(), PartnershipsLayout()
+Cohesion: 0.33
+Nodes (6): conventionClauses(), ConventionPreviewClient(), formatDateTime(), formatPrice(), Props, SignatureCanvasProps
 
 ### Community 104 - "Community 104"
 Cohesion: 1.00
 Nodes (3): EDL Zones Verification Page, Vehicle Blueprint v3 (EDL zone image), EDL Zone Polygons (Dessus/Avant/Arrière)
 
-### Community 137 - "Community 137"
-Cohesion: 0.39
-Nodes (6): createDueDate(), createRecurringDueDates(), deleteDueDate(), markDuePaid(), DueDate, Vehicle
-
 ### Community 141 - "Community 141"
-Cohesion: 0.29
-Nodes (4): TASK_STATUS_LABELS, updateTaskStatus(), COLUMNS, Task
+Cohesion: 0.25
+Nodes (5): DrawerProps, DamageDrawerProps, SEVERITY_ACTIVE, SEVERITY_STYLES, DamageZone
 
-### Community 142 - "Community 142"
-Cohesion: 0.67
-Nodes (3): config, matchTab(), proxy()
+### Community 147 - "Community 147"
+Cohesion: 0.14
+Nodes (11): cancelReservationOnPaymentTimeout(), sendPaymentInfoEmail(), pad(), PaymentCountdown(), Props, split(), pad(), PaymentCountdownMini() (+3 more)
 
 ## Knowledge Gaps
-- **599 isolated node(s):** `version`, `configurations`, `PreToolUse`, `frontend-design@claude-plugins-official`, `skill-creator@claude-plugins-official` (+594 more)
+- **607 isolated node(s):** `version`, `configurations`, `PreToolUse`, `frontend-design@claude-plugins-official`, `skill-creator@claude-plugins-official` (+602 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **17 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **19 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `createClient()` connect `Info caution réservation` to `Marketing & Campagnes clients`, `Alertes & Notifications`, `Partenariats inter-agences`, `Actions clients (remises/perks)`, `Community 137`, `Écritures & clôtures comptables`, `Pages dashboard (routes)`, `Community 140`, `Community 141`, `Auth & navigation (Sidebar/rôles)`, `Déplacements internes (trajets)`, `Maintenance & immobilisés`, `Suppressions & caution`, `Community 143`, `Incidents / infractions / sinistres`, `Community 145`, `Documents & expiration`, `Facturation (invoices)`, `Création réservation & blacklist`, `Prolongation & édition dates résa`, `Sync réservation↔calendrier`, `Analyse financière (agrégats)`, `Santé maintenance véhicule`, `Actions incidents (accidents/infractions)`, `Paramètres agence & convention`, `Layout dashboard & transitions`, `Fiche client & photos docs`, `Actions documents & sous-catégories`, `Catégories de dépenses`, `Graphiques comptables`, `Disponibilité employé`, `Signalements véhicule (issues)`, `Fiche véhicule & statut`, `Graphique échéances`, `Génération données contrat PDF`, `PDF sinistre`, `Création tâche & push`, `PDF comptable`, `KPI véhicule`, `Email restitution & pièces`, `Actions véhicules`, `Primitive UI Card`, `Route API manager`, `Profil membre`, `Liste ressources (calendrier)`, `Proxy onglets (middleware)`, `Community 102`?**
-  _High betweenness centrality (0.123) - this node is a cross-community bridge._
-- **Why does `createAdminClient()` connect `Alertes & Notifications` to `Actions incidents (accidents/infractions)`, `Email restitution & pièces`, `Écritures & clôtures comptables`, `Déplacements internes (trajets)`, `Maintenance & immobilisés`, `Suppressions & caution`, `Création réservation & blacklist`, `Sync réservation↔calendrier`, `Génération données contrat PDF`?**
-  _High betweenness centrality (0.014) - this node is a cross-community bridge._
-- **Why does `formatPrice()` connect `Primitive UI Card` to `Marketing & Campagnes clients`, `Community 137`, `Écritures & clôtures comptables`, `Pages dashboard (routes)`, `Community 143`, `Déplacements internes (trajets)`, `Suppressions & caution`, `Incidents / infractions / sinistres`, `Maintenance & immobilisés`, `Facturation (invoices)`, `Prolongation & édition dates résa`, `Analyse financière (agrégats)`, `Formatage journal d'audit`, `Santé maintenance véhicule`, `Primitives UI (badge/button/input)`, `Fiche client & photos docs`, `Graphiques comptables`, `Fiche véhicule & statut`, `Graphique échéances`, `KPI véhicule`, `Info paiement réservation`?**
-  _High betweenness centrality (0.013) - this node is a cross-community bridge._
+- **Why does `createClient()` connect `Info caution réservation` to `Alertes & Notifications`, `Partenariats inter-agences`, `Catégories de dépenses`, `Écritures & clôtures comptables`, `Community 137`, `Auth & navigation (Sidebar/rôles)`, `Maintenance & immobilisés`, `Suppressions & caution`, `Incidents / infractions / sinistres`, `Documents & expiration`, `Facturation (invoices)`, `Prolongation & édition dates résa`, `Sync réservation↔calendrier`, `Formatage journal d'audit`, `Santé maintenance véhicule`, `Login & éditeur KPI`, `Paramètres agence & convention`, `Layout dashboard & transitions`, `Actions documents & sous-catégories`, `Graphiques comptables`, `Disponibilité employé`, `Signalements véhicule (issues)`, `Fiche véhicule & statut`, `Graphique échéances`, `Génération données contrat PDF`, `Formulaire véhicule`, `PDF sinistre`, `Calendrier — utils dates & ressources`, `PDF comptable`, `Email restitution & pièces`, `Info paiement réservation`, `Grille véhicules & badges maintenance`, `Layout-guards rôle (accounting/partnerships)`, `Primitive UI Card`, `Liste incidents client`, `Route API manager`, `Liste ressources (calendrier)`, `Page emails`?**
+  _High betweenness centrality (0.100) - this node is a cross-community bridge._
+- **Why does `formatPrice()` connect `Incidents / infractions / sinistres` to `Primitives UI (badge/button/input)`, `Login & éditeur KPI`, `Email restitution & pièces`, `Catégories de dépenses`, `Écritures & clôtures comptables`, `Community 137`, `Actions documents & sous-catégories`, `Déplacements internes (trajets)`, `Maintenance & immobilisés`, `Primitive UI Card`, `Graphiques comptables`, `Facturation (invoices)`, `Prolongation & édition dates résa`, `Grille véhicules swipeable`, `Santé maintenance véhicule`?**
+  _High betweenness centrality (0.016) - this node is a cross-community bridge._
+- **Why does `createAdminClient()` connect `Auth & navigation (Sidebar/rôles)` to `Login & éditeur KPI`, `Alertes & Notifications`, `PDF comptable`, `Écritures & clôtures comptables`, `Maintenance & immobilisés`, `Suppressions & caution`, `Calendrier — utils dates & ressources`, `Graphiques comptables`, `Facturation (invoices)`, `Création réservation & blacklist`, `Sync réservation↔calendrier`, `Formulaire véhicule`, `Formatage journal d'audit`, `Page emails`?**
+  _High betweenness centrality (0.012) - this node is a cross-community bridge._
+- **Are the 3 inferred relationships involving `formatPrice()` (e.g. with `ClientPage()` and `ReservationPage()`) actually correct?**
+  _`formatPrice()` has 3 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 2 inferred relationships involving `formatDate()` (e.g. with `ClientPage()` and `VehiclePage()`) actually correct?**
+  _`formatDate()` has 2 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `version`, `configurations`, `PreToolUse` to the rest of the system?**
-  _608 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _616 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Marketing & Campagnes clients` be split into smaller, more focused modules?**
-  _Cohesion score 0.055218855218855216 - nodes in this community are weakly interconnected._
-- **Should `Alertes & Notifications` be split into smaller, more focused modules?**
-  _Cohesion score 0.07294117647058823 - nodes in this community are weakly interconnected._
-- **Should `Partenariats inter-agences` be split into smaller, more focused modules?**
-  _Cohesion score 0.14285714285714285 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.14705882352941177 - nodes in this community are weakly interconnected._

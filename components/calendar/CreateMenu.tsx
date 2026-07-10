@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { CalendarPlus, ClipboardList, UserPlus, Wrench, CircleDot } from 'lucide-react'
+import { CalendarPlus, ClipboardList, UserPlus, Wrench, CircleDot, CalendarClock } from 'lucide-react'
 import type { EventType } from '@/types/calendar'
 import { EVENT_COLORS } from '@/lib/calendar/constants'
 
@@ -20,6 +20,7 @@ const OPTIONS: { key: string; label: string; sub: string; Icon: typeof Clipboard
   { key: 'tache',       label: 'Tâche',                sub: 'À faire, rappel, préparation',  Icon: ClipboardList, type: 'tache',        color: EVENT_COLORS.tache },
   { key: 'rdv_client',  label: 'RDV client',           sub: 'Rendez-vous, signature, remise', Icon: UserPlus,     type: 'rdv_client',   color: EVENT_COLORS.rdv_client },
   { key: 'rdv_garage',  label: 'RDV garage',           sub: 'Entretien, réparation',          Icon: Wrench,       type: 'rdv_garage',   color: EVENT_COLORS.rdv_garage },
+  { key: 'rdv_autre',   label: 'RDV autre',            sub: 'Autre rendez-vous, titre libre', Icon: CalendarClock, type: 'rdv_autre',   color: EVENT_COLORS.rdv_autre },
   { key: 'disponibilite', label: 'Disponibilité',      sub: 'Créneau collaborateur',          Icon: CircleDot,    type: 'disponibilite', color: '#64748B' },
 ]
 

@@ -10,7 +10,7 @@ import { CALENDAR_START_HOUR } from '@/lib/calendar/constants'
 import { fr } from 'date-fns/locale'
 import {
   ChevronRight, AlertTriangle, CheckCircle2, Plus,
-  Wrench, Clock, FileText, ArrowLeftRight, type LucideIcon,
+  Wrench, Clock, FileText, ArrowLeftRight, UserRound, type LucideIcon,
 } from 'lucide-react'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -91,6 +91,20 @@ const NEXT6H_TYPE_STYLE: Record<string, { badge: string; label: string }> = {
   rdv_garage:   { badge: 'bg-cyan-100 text-cyan-700',     label: 'RDV garage' },
   livraison:    { badge: 'bg-lime-100 text-lime-700',     label: 'Livraison' },
   recuperation: { badge: 'bg-orange-100 text-orange-700', label: 'Récupération' },
+}
+
+// Ligne « qui s'en charge » sur une carte du tableau de bord (départ, retour).
+// Nom de l'opérateur / équipe assigné, ou « À assigner » en ambre quand
+// personne n'est encore affecté — pour repérer d'un coup d'œil qui fait quoi
+// et ce qui reste à distribuer. L'assignation se pose sur l'événement calendrier
+// (départ / retour) lié à la réservation, jamais sur la réservation elle-même.
+function AssigneeLine({ name }: { name: string | null }) {
+  return (
+    <p className={`text-[11px] mt-1 flex items-center gap-1 ${name ? 'font-medium text-gray-600' : 'font-semibold text-amber-600'}`}>
+      <UserRound className="w-3 h-3 flex-shrink-0" />
+      {name ?? 'À assigner'}
+    </p>
+  )
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -299,6 +313,31 @@ export default async function DashboardPage() {
   }
   const aPreparerAujourdhui = departsAujourdhui.filter(r => isToPrepare(r.id))
 
+  // ── Assignation des départs / retours (lue sur le calendrier) ───────────────
+  // Chaque réservation est reflétée par deux calendar_events (depart_vehicule +
+  // retour_vehicule). L'affectation à une personne / équipe se fait sur CES
+  // events (tiroir du calendrier), pas sur la réservation. On la lit ici pour
+  // afficher « qui s'en charge » sur les cartes départ / retour du jour ET dans
+  // la liste Semaine, sans changer le modèle de données.
+  const departAssigneeByRes = new Map<string, string>()
+  const retourAssigneeByRes = new Map<string, string>()
+  if (weekResIds.length) {
+    const { data: resEvents } = await supabase
+      .from('calendar_events')
+      .select('reservation_id, event_type, assignee:profiles!assigned_to(full_name), team:calendar_teams!assigned_team_id(name)')
+      .in('reservation_id', weekResIds)
+      .in('event_type', ['depart_vehicule', 'retour_vehicule'])
+    for (const ev of resEvents ?? []) {
+      if (!ev.reservation_id) continue
+      const assignee = Array.isArray(ev.assignee) ? ev.assignee[0] : ev.assignee
+      const team     = Array.isArray(ev.team) ? ev.team[0] : ev.team
+      const label    = assignee?.full_name ?? team?.name ?? null
+      if (!label) continue
+      if (ev.event_type === 'depart_vehicule') departAssigneeByRes.set(ev.reservation_id, label)
+      else if (ev.event_type === 'retour_vehicule') retourAssigneeByRes.set(ev.reservation_id, label)
+    }
+  }
+
   // ── Interventions (table `tasks` legacy) sur 7 jours ────────────────────────
   // Une tâche créée depuis le calendrier (/calendar/tasks/new) n'existe QUE dans
   // `tasks` — aucun miroir dans calendar_events. Pour qu'elle apparaisse partout
@@ -376,18 +415,20 @@ export default async function DashboardPage() {
     const clientName = c ? `${c.first_name} ${c.last_name}` : 'Client'
     const vehLabel   = v ? `${v.brand} ${v.model} · ${v.plate}` : undefined
     if (isDepart(r.status)) {
+      const a = departAssigneeByRes.get(r.id) ?? null
       weekEvents.push({
         key: `wdep-${r.id}`, time: new Date(r.start_datetime),
         kind: isToPrepare(r.id) ? 'apreparer' : 'depart',
         title: clientName, subtitle: vehLabel,
-        assignee: null, needsAssignee: false, href: `/reservations/${r.id}`,
+        assignee: a, needsAssignee: !a, href: `/reservations/${r.id}`,
       })
     }
     if (r.status === 'en_cours' || r.status === 'en_retard') {
+      const a = retourAssigneeByRes.get(r.id) ?? null
       weekEvents.push({
         key: `wret-${r.id}`, time: new Date(r.end_datetime), kind: 'retour',
         title: clientName, subtitle: vehLabel,
-        assignee: null, needsAssignee: false, href: `/reservations/${r.id}`,
+        assignee: a, needsAssignee: !a, href: `/reservations/${r.id}`,
       })
     }
   }
@@ -624,7 +665,7 @@ export default async function DashboardPage() {
                         {format(new Date(r.end_datetime), 'HH:mm')}
                       </span>
                     </span>
-                    <span className="flex items-center gap-1 text-[10px] font-black uppercase px-2.5 py-1.5 rounded-full flex-shrink-0 bg-red-600 text-white">
+                    <span className="inline-flex items-center justify-center gap-1 min-w-[92px] text-[10px] font-black uppercase px-2.5 py-1.5 rounded-full flex-shrink-0 bg-red-600 text-white">
                       <AlertTriangle className="w-3 h-3" /> {daysLate} j
                     </span>
                     <div className="flex-1 min-w-0">
@@ -637,6 +678,7 @@ export default async function DashboardPage() {
                       <p className="text-xs text-gray-500 mt-0.5">
                         {v?.brand} {v?.model} <span className="text-gray-400 font-mono">· {v?.plate}</span>
                       </p>
+                      <AssigneeLine name={retourAssigneeByRes.get(r.id) ?? null} />
                     </div>
                     <ChevronRight className="w-4 h-4 text-red-300 flex-shrink-0" />
                   </div>
@@ -656,7 +698,7 @@ export default async function DashboardPage() {
                     <span className="w-12 text-sm font-black text-gray-900 font-mono text-center flex-shrink-0">
                       {format(new Date(r.start_datetime), 'HH:mm')}
                     </span>
-                    <span className={`text-[10px] font-black uppercase px-2.5 py-1.5 rounded-full flex-shrink-0 ${
+                    <span className={`text-[10px] font-black uppercase px-2.5 py-1.5 rounded-full flex-shrink-0 inline-flex items-center justify-center min-w-[92px] ${
                       isQuickTurnaround ? 'bg-orange-500 text-white' : isToPrepare(r.id) ? 'bg-amber-500 text-white' : 'bg-black text-white'
                     }`}>
                       {isToPrepare(r.id) ? 'À PRÉPARER' : 'DÉPART'}
@@ -668,6 +710,7 @@ export default async function DashboardPage() {
                       <p className="text-xs text-gray-400 mt-0.5">
                         {v?.brand} {v?.model} <span className="text-gray-300 font-mono">· {v?.plate}</span>
                       </p>
+                      <AssigneeLine name={departAssigneeByRes.get(r.id) ?? null} />
                       {isQuickTurnaround && (
                         <p className="text-[10px] font-bold text-orange-600 flex items-center gap-1 mt-1">
                           <ArrowLeftRight className="w-3 h-3" /> Retour du même véhicule aujourd'hui
@@ -695,7 +738,7 @@ export default async function DashboardPage() {
                     <span className="w-12 text-sm font-black text-gray-900 font-mono text-center flex-shrink-0">
                       {format(new Date(r.end_datetime), 'HH:mm')}
                     </span>
-                    <span className={`text-[10px] font-black uppercase px-2.5 py-1.5 rounded-full flex-shrink-0 ${
+                    <span className={`text-[10px] font-black uppercase px-2.5 py-1.5 rounded-full flex-shrink-0 inline-flex items-center justify-center min-w-[92px] ${
                       isLate ? 'bg-red-600 text-white' : isQuickTurnaround ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-600'
                     }`}>
                       {isLate ? 'RETOUR EN RETARD' : 'RETOUR'}
@@ -707,6 +750,7 @@ export default async function DashboardPage() {
                       <p className="text-xs text-gray-400 mt-0.5">
                         {v?.brand} {v?.model} <span className="text-gray-300 font-mono">· {v?.plate}</span>
                       </p>
+                      <AssigneeLine name={retourAssigneeByRes.get(r.id) ?? null} />
                       {isQuickTurnaround && (
                         <p className="text-[10px] font-bold text-orange-600 flex items-center gap-1 mt-1">
                           <ArrowLeftRight className="w-3 h-3" /> Redépart du même véhicule aujourd'hui
@@ -730,7 +774,7 @@ export default async function DashboardPage() {
                     <span className="w-12 text-sm font-mono font-bold text-gray-600 text-center flex-shrink-0">
                       {format(new Date(task.due_datetime), 'HH:mm')}
                     </span>
-                    <span className="text-[10px] font-black uppercase px-2.5 py-1.5 rounded-full flex-shrink-0 bg-gray-100 text-gray-600">
+                    <span className="text-[10px] font-black uppercase px-2.5 py-1.5 rounded-full flex-shrink-0 inline-flex items-center justify-center min-w-[92px] bg-gray-100 text-gray-600">
                       {TASK_TYPE_LABELS[task.type ?? 'autre']}
                     </span>
                     <div className="flex-1 min-w-0">
@@ -768,7 +812,7 @@ export default async function DashboardPage() {
                     <span className="w-12 text-sm font-mono font-bold text-gray-600 text-center flex-shrink-0">
                       {format(new Date(t.start_at), 'HH:mm')}
                     </span>
-                    <span className="text-[10px] font-black uppercase px-2.5 py-1.5 rounded-full flex-shrink-0 bg-gray-100 text-gray-600">
+                    <span className="text-[10px] font-black uppercase px-2.5 py-1.5 rounded-full flex-shrink-0 inline-flex items-center justify-center min-w-[92px] bg-gray-100 text-gray-600">
                       TÂCHE
                     </span>
                     <div className="flex-1 min-w-0">
@@ -1082,7 +1126,7 @@ export default async function DashboardPage() {
                           <span className="w-10 text-[11px] font-mono font-bold text-gray-500 flex-shrink-0">
                             {format(e.time, 'HH:mm')}
                           </span>
-                          <span className={`text-[9px] font-black uppercase px-2 py-1 rounded-full flex-shrink-0 ${st.badge}`}>
+                          <span className={`text-[9px] font-black uppercase px-2 py-1 rounded-full flex-shrink-0 inline-flex items-center justify-center min-w-[84px] ${st.badge}`}>
                             {st.label}
                           </span>
                           <div className="flex-1 min-w-0">

@@ -13,6 +13,7 @@ import ClientDocPhotos from './ClientDocPhotos'
 import ClientNotesEditor from './ClientNotesEditor'
 import ClientStatusActions from './ClientStatusActions'
 import BackButton from '@/components/ui/BackButton'
+import { getMissingClientFields } from '@/lib/clients/completeness'
 
 // ─── Helpers visuels ──────────────────────────────────────────────────────────
 
@@ -165,11 +166,7 @@ export default async function ClientPage({
 
       {/* ─── Dossier incomplet ─── */}
       {(() => {
-        const missing: string[] = []
-        if (!client.first_name || !client.last_name) missing.push('Identité')
-        if (!client.address) missing.push('Adresse')
-        if (!client.id_doc_front_path && !client.id_doc_back_path && !client.license_front_path)
-          missing.push('Documents & Pièces justificatives')
+        const missing = getMissingClientFields(client)
         if (missing.length === 0) return null
         return (
           <div className="flex items-start gap-3 bg-orange-50 border border-orange-200 rounded-2xl px-4 py-3">
