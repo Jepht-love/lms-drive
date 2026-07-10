@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import { FileText, ChevronRight, CheckCircle2, Clock, Lock, Search } from 'lucide-react'
+import { FileText, ChevronRight, CheckCircle2, Clock, Lock } from 'lucide-react'
+import SmartSearch from '@/components/ui/SmartSearch'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 
@@ -72,17 +73,11 @@ export default async function ContractsPage({
       </div>
 
       {/* Recherche */}
-      <form method="get" className="relative">
-        {status && <input type="hidden" name="status" value={status} />}
-        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-        <input
-          name="q"
-          type="search"
-          defaultValue={q}
-          placeholder="Rechercher par n°, véhicule, client…"
-          className="w-full bg-white border border-gray-100 shadow-sm rounded-xl pl-10 pr-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-black/10"
-        />
-      </form>
+      <SmartSearch
+        scope="contracts"
+        placeholder="Rechercher par n°, véhicule, client…"
+        defaultValue={q ?? ''}
+      />
 
       {/* Filtres */}
       <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>

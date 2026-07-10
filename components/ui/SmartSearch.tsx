@@ -11,7 +11,7 @@ interface Props {
   name?: string
   placeholder?: string
   defaultValue?: string
-  scope: 'clients' | 'vehicles' | 'reservations'
+  scope: 'clients' | 'vehicles' | 'reservations' | 'contracts'
   className?: string
 }
 
@@ -59,6 +59,44 @@ async function fetchFor(supabase: ReturnType<typeof createClient>, scope: Props[
         href: `/reservations/${r.id}`,
       }
     })
+  }
+  if (scope === 'contracts') {
+    const [{ data: byNum }, { data: byClient }] = await Promise.all([
+      supabase
+        .from('contracts')
+        .select('id, contract_number, reservation:reservations(vehicle:vehicles(plate,brand,model), client:clients(first_name,last_name))')
+        .ilike('contract_number', `%${q}%`)
+        .limit(4),
+      supabase
+        .from('clients')
+        .select('first_name, last_name, reservations(contracts(id, contract_number), vehicle:vehicles(plate,brand,model))')
+        .or(`first_name.ilike.%${q}%,last_name.ilike.%${q}%`)
+        .limit(3),
+    ])
+    const seen = new Set<string>()
+    const out: Suggestion[] = []
+    for (const c of byNum ?? []) {
+      if (seen.has(c.id)) continue
+      seen.add(c.id)
+      const res = c.reservation as any
+      const v = Array.isArray(res?.vehicle) ? (res.vehicle as any[])[0] : res?.vehicle
+      const cl = Array.isArray(res?.client) ? (res.client as any[])[0] : res?.client
+      out.push({ id: c.id, label: c.contract_number ?? '', sub: [cl?.first_name, cl?.last_name, v?.plate].filter(Boolean).join(' · '), href: `/contracts/${c.id}` })
+    }
+    for (const client of byClient ?? []) {
+      const resas = Array.isArray(client.reservations) ? client.reservations : (client.reservations ? [client.reservations] : [])
+      for (const resa of resas as any[]) {
+        const contracts = Array.isArray(resa?.contracts) ? resa.contracts : (resa?.contracts ? [resa.contracts] : [])
+        for (const contract of contracts as any[]) {
+          if (!contract?.id || seen.has(contract.id)) continue
+          seen.add(contract.id)
+          const v = Array.isArray(resa.vehicle) ? (resa.vehicle as any[])[0] : resa.vehicle
+          out.push({ id: contract.id, label: contract.contract_number ?? '', sub: [client.first_name, client.last_name, v?.plate].filter(Boolean).join(' · '), href: `/contracts/${contract.id}` })
+        }
+      }
+      if (out.length >= 6) break
+    }
+    return out.slice(0, 6)
   }
   return []
 }
