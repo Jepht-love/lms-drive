@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl
@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
 
   if (!q || q.length < 1) return NextResponse.json([])
 
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   if (scope === 'clients') {
     const { data } = await supabase
