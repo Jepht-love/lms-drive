@@ -44,23 +44,52 @@ export async function GET(req: NextRequest) {
   }
 
   if (scope === 'reservations') {
-    const { data } = await supabase
-      .from('reservations')
-      .select('id, reservation_number, vehicles(plate, brand, model), clients(first_name, last_name)')
-      .or(`reservation_number.ilike.%${q}%`)
-      .limit(6)
-    return NextResponse.json(
-      (data ?? []).map(r => {
+    const [{ data: byNum }, { data: byClient }, { data: byVehicle }] = await Promise.all([
+      supabase
+        .from('reservations')
+        .select('id, reservation_number, vehicles(plate, brand, model), clients(first_name, last_name)')
+        .ilike('reservation_number', `%${q}%`)
+        .limit(3),
+      supabase
+        .from('clients')
+        .select('first_name, last_name, phone, reservations(id, reservation_number, vehicles(plate, brand, model))')
+        .or(`first_name.ilike.%${q}%,last_name.ilike.%${q}%,phone.ilike.%${q}%`)
+        .limit(3),
+      supabase
+        .from('vehicles')
+        .select('plate, brand, model, reservations(id, reservation_number, clients(first_name, last_name))')
+        .or(`plate.ilike.%${q}%,brand.ilike.%${q}%,model.ilike.%${q}%`)
+        .limit(3),
+    ])
+    const seen = new Set<string>()
+    const out: { id: string; label: string; sub: string; href: string }[] = []
+    const push = (id: string, num: string, firstName: string, lastName: string, plate: string) => {
+      if (seen.has(id)) return
+      seen.add(id)
+      out.push({ id, label: num, sub: [firstName, lastName, plate].filter(Boolean).join(' · '), href: `/reservations/${id}` })
+    }
+    for (const r of byNum ?? []) {
+      const v = Array.isArray(r.vehicles) ? (r.vehicles as any[])[0] : r.vehicles as any
+      const c = Array.isArray(r.clients) ? (r.clients as any[])[0] : r.clients as any
+      push(r.id, r.reservation_number ?? '', c?.first_name ?? '', c?.last_name ?? '', v?.plate ?? '')
+    }
+    for (const client of byClient ?? []) {
+      const resas = Array.isArray(client.reservations) ? client.reservations : (client.reservations ? [client.reservations] : [])
+      for (const r of resas as any[]) {
+        if (!r?.id) continue
         const v = Array.isArray(r.vehicles) ? (r.vehicles as any[])[0] : r.vehicles as any
+        push(r.id, r.reservation_number ?? '', client.first_name ?? '', client.last_name ?? '', v?.plate ?? '')
+      }
+    }
+    for (const vehicle of byVehicle ?? []) {
+      const resas = Array.isArray(vehicle.reservations) ? vehicle.reservations : (vehicle.reservations ? [vehicle.reservations] : [])
+      for (const r of resas as any[]) {
+        if (!r?.id) continue
         const c = Array.isArray(r.clients) ? (r.clients as any[])[0] : r.clients as any
-        return {
-          id: r.id,
-          label: r.reservation_number ?? '',
-          sub: `${c?.first_name ?? ''} ${c?.last_name ?? ''} · ${v?.plate ?? ''}`.trim(),
-          href: `/reservations/${r.id}`,
-        }
-      })
-    )
+        push(r.id, r.reservation_number ?? '', c?.first_name ?? '', c?.last_name ?? '', vehicle.plate ?? '')
+      }
+    }
+    return NextResponse.json(out.slice(0, 6))
   }
 
   if (scope === 'contracts') {
