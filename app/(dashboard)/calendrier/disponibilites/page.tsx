@@ -9,15 +9,14 @@ export default async function AvailabilityPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  // Les événements (pour déduire les créneaux occupés) sont chargés côté client
-  // par semaine affichée — la navigation semaine par semaine impose ce fetch
-  // dynamique. Ici on ne charge que le planning hebdomadaire récurrent, valable
-  // pour toutes les semaines.
-  const [{ data: mySlots }, { data: profiles }, { data: allSlots }] = await Promise.all([
-    supabase.from('availability_slots').select('day_of_week, start_time, end_time').eq('user_id', user.id),
-    supabase.from('profiles').select('id, full_name, role').in('role', ['gerant', 'associe', 'employe', 'prestataire']).order('full_name'),
-    supabase.from('availability_slots').select('user_id, day_of_week, start_time, end_time'),
-  ])
+  // Vue « disponibilité = 24 h − créneaux réservés » : plus de planning à
+  // déclarer, seuls les membres sont chargés ici. Les événements (créneaux
+  // occupés) sont récupérés côté client par semaine affichée.
+  const { data: profiles } = await supabase
+    .from('profiles')
+    .select('id, full_name, role')
+    .in('role', ['gerant', 'associe', 'employe', 'prestataire'])
+    .order('full_name')
 
   return (
     <div className="space-y-4">
@@ -25,12 +24,7 @@ export default async function AvailabilityPage() {
         <ArrowLeft className="w-4 h-4" /> Calendrier
       </BackButton>
       <h1 className="text-xl font-black text-gray-900">Disponibilités</h1>
-      <AvailabilityClient
-        userId={user.id}
-        mySlots={mySlots ?? []}
-        profiles={profiles ?? []}
-        allSlots={allSlots ?? []}
-      />
+      <AvailabilityClient profiles={profiles ?? []} />
     </div>
   )
 }

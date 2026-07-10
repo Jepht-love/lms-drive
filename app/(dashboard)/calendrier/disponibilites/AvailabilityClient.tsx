@@ -1,23 +1,11 @@
 'use client'
 
-import { useState, useEffect, useMemo, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, useMemo } from 'react'
 import { startOfWeek, endOfWeek, addWeeks, addDays, format, isSameDay } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { Plus, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react'
-import { setWeeklyAvailability } from '@/lib/actions/availability'
 import { EVENT_TYPE_LABELS, EVENT_COLORS } from '@/lib/calendar/constants'
 import type { EventType } from '@/types/calendar'
-
-const DAYS = [
-  { value: 1, label: 'Lundi' },
-  { value: 2, label: 'Mardi' },
-  { value: 3, label: 'Mercredi' },
-  { value: 4, label: 'Jeudi' },
-  { value: 5, label: 'Vendredi' },
-  { value: 6, label: 'Samedi' },
-  { value: 0, label: 'Dimanche' },
-]
 
 // Abréviations des 7 jours dans l'ordre d'affichage de la semaine (lundi → dimanche).
 const WEEK_ABBR = ['lun', 'mar', 'mer', 'jeu', 'ven', 'sam', 'dim']
@@ -27,7 +15,6 @@ const WEEK_ABBR = ['lun', 'mar', 'mer', 'jeu', 'ven', 'sam', 'dim']
 // rendez-vous ou une tâche, pas un déplacement de flotte.
 const CREATE_TYPES: EventType[] = ['tache', 'rdv_client', 'rdv_garage', 'rdv_autre']
 
-interface Slot { day_of_week: number; start_time: string; end_time: string }
 interface Profile { id: string; full_name: string; role: string }
 interface Ev {
   id: string
@@ -49,72 +36,6 @@ const fmtMin = (min: number) =>
 const minutesOfDay = (iso: string) => {
   const d = new Date(iso)
   return d.getHours() * 60 + d.getMinutes()
-}
-
-function DaySlotForm({ userId, slots }: { userId: string; slots: Slot[] }) {
-  const router = useRouter()
-  const [pending, startTransition] = useTransition()
-  const [error, setError] = useState<string | null>(null)
-  const [days, setDays] = useState(() => DAYS.map(d => {
-    const existing = slots.find(s => s.day_of_week === d.value)
-    return {
-      day_of_week: d.value,
-      is_active: !!existing,
-      start_time: existing?.start_time?.slice(0, 5) ?? '08:00',
-      end_time: existing?.end_time?.slice(0, 5) ?? '18:00',
-    }
-  }))
-
-  function update(dayValue: number, patch: Partial<typeof days[number]>) {
-    setDays(prev => prev.map(d => d.day_of_week === dayValue ? { ...d, ...patch } : d))
-  }
-
-  function onSave() {
-    setError(null)
-    startTransition(async () => {
-      const res = await setWeeklyAvailability(userId, days)
-      if (res?.error) setError(res.error)
-      else router.refresh()
-    })
-  }
-
-  return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 space-y-2">
-      <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2">Mon planning hebdomadaire</p>
-      {DAYS.map(d => {
-        const day = days.find(x => x.day_of_week === d.value)!
-        return (
-          <div key={d.value} className="flex items-center gap-3 py-1.5">
-            <button
-              type="button"
-              onClick={() => update(d.value, { is_active: !day.is_active })}
-              className={`w-16 flex-shrink-0 py-1.5 rounded-lg text-xs font-bold transition-colors ${
-                day.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'
-              }`}
-            >
-              {d.label.slice(0, 3)}
-            </button>
-            {day.is_active ? (
-              <div className="flex items-center gap-2">
-                <input type="time" value={day.start_time} onChange={e => update(d.value, { start_time: e.target.value })}
-                  className="text-sm border border-gray-200 rounded-lg px-2 py-1" />
-                <span className="text-gray-400 text-xs">→</span>
-                <input type="time" value={day.end_time} onChange={e => update(d.value, { end_time: e.target.value })}
-                  className="text-sm border border-gray-200 rounded-lg px-2 py-1" />
-              </div>
-            ) : (
-              <span className="text-xs text-gray-400">Non disponible</span>
-            )}
-          </div>
-        )
-      })}
-      {error && <p className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{error}</p>}
-      <button onClick={onSave} disabled={pending}
-        className="w-full mt-2 py-2.5 bg-[#111111] text-white rounded-xl font-semibold text-sm hover:bg-gray-800 transition-colors disabled:opacity-40">
-        {pending ? 'Enregistrement…' : 'Enregistrer mon planning'}
-      </button>
-    </div>
-  )
 }
 
 /**
@@ -257,25 +178,22 @@ function BookSlotModal({
 }
 
 /**
- * Planning de disponibilités par membre, heure par heure, navigable semaine par
- * semaine. Chaque tranche horaire de la fenêtre de disponibilité d'un membre est
- * soit occupée (on affiche l'événement + « Réservé »), soit libre (bouton pour
- * réserver directement une tâche / un rendez-vous). Les événements de la semaine
- * affichée sont chargés à la volée depuis l'API calendrier.
+ * Planning de l'équipe par jour, heure par heure (tranches d'1 h sur 24 h),
+ * navigable semaine par semaine. On sélectionne un jour, puis on déroule un
+ * membre pour voir ses créneaux : occupé (événement affecté + « Réservé ») ou
+ * libre (bouton pour réserver une tâche / un rendez-vous). La disponibilité est
+ * implicite : toute tranche non réservée est réservable — aucun planning à
+ * déclarer, la vue est opérante dès qu'un profil existe. Les événements de la
+ * semaine affichée sont chargés à la volée depuis l'API calendrier.
  */
-function AvailabilityScheduler({
-  profiles, allSlots,
-}: {
-  profiles: Profile[]
-  allSlots: (Slot & { user_id: string })[]
-}) {
+function AvailabilityScheduler({ profiles }: { profiles: Profile[] }) {
   const [weekOffset, setWeekOffset] = useState(0)
   const [selectedDayIdx, setSelectedDayIdx] = useState(() => (new Date().getDay() + 6) % 7) // lundi = 0
   const [events, setEvents] = useState<Ev[]>([])
   const [loading, setLoading] = useState(true)
   const [hasLoaded, setHasLoaded] = useState(false)
   const [reloadKey, setReloadKey] = useState(0)
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set(profiles.map(p => p.id)))
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set())
   const [booking, setBooking] = useState<{ profile: Profile; date: Date; startMin: number; endMin: number } | null>(null)
 
   const weekStart = useMemo(() => startOfWeek(addWeeks(new Date(), weekOffset), { weekStartsOn: 1 }), [weekOffset])
@@ -310,7 +228,7 @@ function AvailabilityScheduler({
           <ChevronLeft className="w-5 h-5" />
         </button>
         <div className="text-center">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Disponibilités de l&apos;équipe</p>
+          <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Planning de l&apos;équipe</p>
           <p className="text-sm font-black text-gray-900 capitalize">
             {format(weekStart, 'd', { locale: fr })}–{format(weekEnd, 'd MMM', { locale: fr })}
           </p>
@@ -342,56 +260,44 @@ function AvailabilityScheduler({
         })}
       </div>
 
-      {/* Corps : membres × tranches horaires du jour sélectionné */}
+      {/* Corps : membres × 24 tranches d'1 h du jour sélectionné */}
       {!hasLoaded ? (
         <p className="text-center text-sm text-gray-400 py-8">Chargement des créneaux…</p>
+      ) : profiles.length === 0 ? (
+        <p className="text-center text-sm text-gray-400 py-8">Aucun membre d&apos;équipe pour le moment.</p>
       ) : (
         <div className="space-y-2.5">
           {loading && (
             <p className="text-center text-[11px] text-gray-400 -mt-1 mb-1">Actualisation…</p>
           )}
           {profiles.map(m => {
-            const dow = selectedDay.getDay()
-            const slot = allSlots.find(s => s.user_id === m.id && s.day_of_week === dow)
-
-            if (!slot) {
-              return (
-                <div key={m.id} className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-gray-50">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">{m.full_name}</p>
-                    <p className="text-[11px] text-gray-400 capitalize">{m.role}</p>
-                  </div>
-                  <span className="text-xs font-medium text-gray-400 bg-gray-100 px-2.5 py-1 rounded-full">Indisponible</span>
-                </div>
-              )
-            }
-
-            const ws = toMin(slot.start_time.slice(0, 5))
-            const we = toMin(slot.end_time.slice(0, 5))
-            const startHour = Math.floor(ws / 60)
-            const endHour = Math.ceil(we / 60)
             const dayEvents = events.filter(e => e.assigned_to === m.id && isSameDay(new Date(e.start_at), selectedDay))
 
             const bands: { h: number; ev: Ev | undefined }[] = []
             let freeCount = 0
-            for (let h = startHour; h < endHour; h++) {
+            for (let h = 0; h < 24; h++) {
               const bandStart = h * 60
               const bandEnd = h * 60 + 60
               const ev = dayEvents.find(e => minutesOfDay(e.start_at) < bandEnd && minutesOfDay(e.end_at) > bandStart)
               if (!ev) freeCount++
               bands.push({ h, ev })
             }
-
+            const reservedCount = 24 - freeCount
             const expanded = expandedIds.has(m.id)
 
             return (
               <div key={m.id} className="rounded-xl bg-gray-50 overflow-hidden">
                 <button type="button" onClick={() => toggle(m.id)} className="w-full flex items-center justify-between px-3 py-2.5 text-left">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">{m.full_name}</p>
-                    <p className="text-[11px] text-gray-400 capitalize">{m.role} · {fmtMin(ws)}–{fmtMin(we)}</p>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">{m.full_name}</p>
+                    <p className="text-[11px] text-gray-400 capitalize">{m.role}</p>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    {reservedCount > 0 && (
+                      <span className="text-xs font-bold px-2.5 py-1 rounded-full text-amber-600 bg-amber-50">
+                        {reservedCount} réservé{reservedCount > 1 ? 's' : ''}
+                      </span>
+                    )}
                     <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
                       freeCount > 0 ? 'text-green-700 bg-green-50' : 'text-amber-600 bg-amber-50'
                     }`}>
@@ -455,18 +361,6 @@ function AvailabilityScheduler({
   )
 }
 
-export default function AvailabilityClient({
-  userId, mySlots, profiles, allSlots,
-}: {
-  userId: string
-  mySlots: Slot[]
-  profiles: Profile[]
-  allSlots: (Slot & { user_id: string })[]
-}) {
-  return (
-    <div className="space-y-4">
-      <DaySlotForm userId={userId} slots={mySlots} />
-      <AvailabilityScheduler profiles={profiles} allSlots={allSlots} />
-    </div>
-  )
+export default function AvailabilityClient({ profiles }: { profiles: Profile[] }) {
+  return <AvailabilityScheduler profiles={profiles} />
 }
