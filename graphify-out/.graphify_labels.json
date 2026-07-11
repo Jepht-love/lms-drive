@@ -83,14 +83,14 @@
   "81": "Compteur alertes & nav basse",
   "82": "Primitive UI Card",
   "83": "Routes API (normalize)",
-  "84": "Liste incidents client",
+  "84": "Community 84",
   "85": "Variants d'animation (framer)",
   "86": "Seed véhicules",
   "87": "Route API manager",
   "88": "Stepper workflow inspection",
   "89": "Profil membre",
-  "90": "Liste ressources (calendrier)",
-  "91": "Grille véhicules swipeable",
+  "90": "Community 90",
+  "91": "Community 91",
   "92": "Page analytics",
   "93": "Permissions locales Claude",
   "94": "Clôture journalière (day picker)",
@@ -143,5 +143,9 @@
   "141": "Community 141",
   "142": "Community 142",
   "143": "Community 143",
-  "147": "Community 147"
+  "144": "Community 144",
+  "145": "Community 145",
+  "146": "Community 146",
+  "147": "Community 147",
+  "148": "Community 148"
 }

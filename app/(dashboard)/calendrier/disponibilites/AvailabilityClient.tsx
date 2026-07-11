@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { startOfWeek, endOfWeek, addWeeks, addDays, format, isSameDay } from 'date-fns'
 import { fr } from 'date-fns/locale'
-import { Plus, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react'
+import { Plus, ChevronLeft, ChevronRight, ChevronDown, Pencil, Trash2 } from 'lucide-react'
 import { EVENT_TYPE_LABELS, EVENT_COLORS } from '@/lib/calendar/constants'
 import type { EventType } from '@/types/calendar'
 
@@ -23,6 +23,8 @@ interface Ev {
   start_at: string
   end_at: string
   assigned_to: string | null
+  reservation_id?: string | null
+  source_key?: string | null
 }
 
 const toMin = (hhmm: string) => {
@@ -38,27 +40,44 @@ const minutesOfDay = (iso: string) => {
   return d.getHours() * 60 + d.getMinutes()
 }
 
+// Un événement n'est modifiable/supprimable depuis ce planning que s'il a été
+// posé « à la main » ici (tâche / RDV). On exclut les miroirs de réservation
+// (depart/retour, reservation_id) et les trajets (source_key « trip- ») : les
+// toucher ici désynchroniserait la résa/le trajet, d'autant que le GET calendrier
+// recrée les miroirs manquants à la volée.
+const isEditableEvent = (ev: Ev) =>
+  (CREATE_TYPES as string[]).includes(ev.event_type) &&
+  !ev.reservation_id &&
+  !(ev.source_key ?? '').startsWith('trip-')
+
 /**
- * Modale de réservation : le créneau (membre + date + tranche horaire) pré-remplit
- * l'événement, qui part directement dans le calendrier déjà attribué (assigned_to).
- * Même contrat que le tiroir calendrier (POST en instant ISO UTC).
+ * Modale de créneau : en création, le créneau (membre + date + tranche horaire)
+ * pré-remplit l'événement, qui part dans le calendrier déjà attribué (assigned_to).
+ * En édition (`event` fourni), on peut déplacer le rendez-vous (changer le titre,
+ * le type, l'horaire → PATCH) ou le supprimer (DELETE). Même contrat que le tiroir
+ * calendrier (instant ISO UTC).
  */
 function BookSlotModal({
-  profile, date, startMin, endMin, onClose, onCreated,
+  profile, date, startMin, endMin, event, onClose, onSaved,
 }: {
   profile: Profile
   date: Date
   startMin: number
   endMin: number
+  event?: Ev | null
   onClose: () => void
-  onCreated: () => void
+  onSaved: () => void
 }) {
-  const [title, setTitle] = useState('')
-  const [eventType, setEventType] = useState<EventType>('tache')
+  const isEdit = !!event
+  const [title, setTitle] = useState(event?.title ?? '')
+  const [eventType, setEventType] = useState<EventType>((event?.event_type as EventType) ?? 'tache')
   const [start, setStart] = useState(fmtMin(startMin))
   const [end, setEnd] = useState(fmtMin(endMin))
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const busy = saving || deleting
 
   async function save() {
     if (!title.trim()) { setError('Le titre est requis.'); return }
@@ -76,41 +95,69 @@ function BookSlotModal({
     const endDate = new Date(base); endDate.setHours(Math.floor(endM / 60), endM % 60, 0, 0)
 
     try {
-      const res = await fetch('/api/calendar/events', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: title.trim(),
-          event_type: eventType,
-          status: 'a_faire',
-          start_at: startDate.toISOString(),
-          end_at: endDate.toISOString(),
-          assigned_to: profile.id,
-        }),
-      })
+      const res = await fetch(
+        isEdit ? `/api/calendar/events/${event!.id}` : '/api/calendar/events',
+        {
+          method: isEdit ? 'PATCH' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(
+            isEdit
+              ? {
+                  title: title.trim(),
+                  event_type: eventType,
+                  start_at: startDate.toISOString(),
+                  end_at: endDate.toISOString(),
+                }
+              : {
+                  title: title.trim(),
+                  event_type: eventType,
+                  status: 'a_faire',
+                  start_at: startDate.toISOString(),
+                  end_at: endDate.toISOString(),
+                  assigned_to: profile.id,
+                }
+          ),
+        }
+      )
       if (!res.ok) {
         const b = await res.json().catch(() => ({}))
-        throw new Error(b.error ?? "Erreur lors de la création")
+        throw new Error(b.error ?? (isEdit ? "Erreur lors de l'enregistrement" : 'Erreur lors de la création'))
       }
-      onCreated()
+      onSaved()
     } catch (e: any) {
-      setError(e.message ?? "Erreur lors de la création")
+      setError(e.message ?? 'Erreur')
       setSaving(false)
+    }
+  }
+
+  async function remove() {
+    if (!event) return
+    setDeleting(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/calendar/events/${event.id}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const b = await res.json().catch(() => ({}))
+        throw new Error(b.error ?? 'Erreur lors de la suppression')
+      }
+      onSaved()
+    } catch (e: any) {
+      setError(e.message ?? 'Erreur')
+      setDeleting(false)
     }
   }
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end md:items-center md:justify-center">
       <button type="button" aria-label="Fermer" onClick={onClose} className="absolute inset-0 bg-black/30" />
-      <div
-        className="relative w-full md:w-[380px] bg-white rounded-t-2xl md:rounded-2xl shadow-sm border border-gray-100 p-4 space-y-3"
-        style={{ paddingBottom: 'max(16px, env(safe-area-inset-bottom))' }}
-      >
+      <div className="relative w-full md:w-[380px] max-h-[88vh] overflow-y-auto bg-white rounded-t-2xl md:rounded-2xl shadow-sm border border-gray-100 p-4 space-y-3">
         <div className="md:hidden flex justify-center pb-1">
           <div className="w-10 h-1 bg-gray-200 rounded-full" />
         </div>
         <div>
-          <p className="text-[15px] font-black text-gray-900 leading-tight">Réserver le créneau</p>
+          <p className="text-[15px] font-black text-gray-900 leading-tight">
+            {isEdit ? 'Modifier le rendez-vous' : 'Réserver le créneau'}
+          </p>
           <p className="text-xs text-gray-400 mt-0.5 capitalize">
             {profile.full_name} · {format(date, 'EEEE d MMM', { locale: fr })}
           </p>
@@ -119,7 +166,7 @@ function BookSlotModal({
         <div>
           <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Titre</label>
           <input
-            autoFocus
+            autoFocus={!isEdit}
             value={title}
             onChange={e => setTitle(e.target.value)}
             placeholder="Ex : Remise des clés"
@@ -162,27 +209,58 @@ function BookSlotModal({
 
         {error && <p className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{error}</p>}
 
-        <div className="flex items-center gap-2 pt-1">
-          <button type="button" onClick={onClose} disabled={saving}
-            className="flex-1 py-2.5 rounded-xl font-semibold text-sm text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors disabled:opacity-40">
-            Annuler
-          </button>
-          <button type="button" onClick={save} disabled={saving}
-            className="flex-1 py-2.5 rounded-xl font-semibold text-sm text-white bg-[#111111] hover:bg-gray-800 transition-colors disabled:opacity-40">
-            {saving ? 'Réservation…' : 'Réserver'}
-          </button>
+        <div className="space-y-2 pt-1">
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={onClose} disabled={busy}
+              className="flex-1 py-2.5 rounded-xl font-semibold text-sm text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors disabled:opacity-40">
+              Annuler
+            </button>
+            <button type="button" onClick={save} disabled={busy}
+              className="flex-1 py-2.5 rounded-xl font-semibold text-sm text-white bg-[#111111] hover:bg-gray-800 transition-colors disabled:opacity-40">
+              {saving ? (isEdit ? 'Enregistrement…' : 'Réservation…') : (isEdit ? 'Enregistrer' : 'Réserver')}
+            </button>
+          </div>
+
+          {isEdit && (
+            confirmDelete ? (
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={() => setConfirmDelete(false)} disabled={busy}
+                  className="flex-1 py-2.5 rounded-xl font-semibold text-sm text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors disabled:opacity-40">
+                  Annuler
+                </button>
+                <button type="button" onClick={remove} disabled={busy}
+                  className="flex-1 py-2.5 rounded-xl font-semibold text-sm text-white bg-red-600 hover:bg-red-700 transition-colors disabled:opacity-40">
+                  {deleting ? 'Suppression…' : 'Confirmer'}
+                </button>
+              </div>
+            ) : (
+              <button type="button" onClick={() => setConfirmDelete(true)} disabled={busy}
+                className="w-full py-2.5 rounded-xl font-semibold text-sm text-red-600 bg-red-50 hover:bg-red-100 transition-colors disabled:opacity-40 inline-flex items-center justify-center gap-1.5">
+                <Trash2 className="w-4 h-4" /> Supprimer
+              </button>
+            )
+          )}
         </div>
+
+        {/* Sur mobile, dégage la barre de navigation basse (60px + safe-area) pour
+            que les boutons d'action ne soient pas masqués derrière. */}
+        <div className="md:hidden" aria-hidden style={{ height: 'calc(60px + env(safe-area-inset-bottom))' }} />
       </div>
     </div>
   )
 }
 
+type ModalState =
+  | { mode: 'create'; profile: Profile; date: Date; startMin: number; endMin: number }
+  | { mode: 'edit'; profile: Profile; date: Date; event: Ev }
+
 /**
  * Planning de l'équipe par jour, heure par heure (tranches d'1 h sur 24 h),
  * navigable semaine par semaine. On sélectionne un jour, puis on déroule un
  * membre pour voir ses créneaux : occupé (événement affecté + « Réservé ») ou
- * libre (bouton pour réserver une tâche / un rendez-vous). La disponibilité est
- * implicite : toute tranche non réservée est réservable — aucun planning à
+ * libre (bouton pour réserver une tâche / un rendez-vous). Un rendez-vous posé
+ * ici se retouche (déplacer / supprimer) d'un clic sur sa tuile. La disponibilité
+ * est implicite : toute tranche non réservée est réservable — aucun planning à
  * déclarer, la vue est opérante dès qu'un profil existe. Les événements de la
  * semaine affichée sont chargés à la volée depuis l'API calendrier.
  */
@@ -194,7 +272,7 @@ function AvailabilityScheduler({ profiles }: { profiles: Profile[] }) {
   const [hasLoaded, setHasLoaded] = useState(false)
   const [reloadKey, setReloadKey] = useState(0)
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set())
-  const [booking, setBooking] = useState<{ profile: Profile; date: Date; startMin: number; endMin: number } | null>(null)
+  const [modal, setModal] = useState<ModalState | null>(null)
 
   const weekStart = useMemo(() => startOfWeek(addWeeks(new Date(), weekOffset), { weekStartsOn: 1 }), [weekOffset])
   const weekEnd = useMemo(() => endOfWeek(weekStart, { weekStartsOn: 1 }), [weekStart])
@@ -311,23 +389,37 @@ function AvailabilityScheduler({ profiles }: { profiles: Profile[] }) {
                   <div className="px-2 pb-2 space-y-1">
                     {bands.map(({ h, ev }) => {
                       const color = ev ? (EVENT_COLORS[ev.event_type as EventType] ?? '#6B7280') : ''
+                      const evLabel = ev ? (ev.title || (EVENT_TYPE_LABELS[ev.event_type as EventType] ?? 'Événement')) : ''
+                      const editable = ev ? isEditableEvent(ev) : false
                       return (
                         <div key={h} className="flex items-center gap-2">
                           <span className="w-11 flex-shrink-0 text-xs font-bold text-gray-400 tabular-nums">{fmtMin(h * 60)}</span>
                           {ev ? (
-                            <div
-                              className="flex-1 min-w-0 flex items-center justify-between gap-2 rounded-lg px-2.5 py-1.5"
-                              style={{ backgroundColor: `${color}14`, borderLeft: `3px solid ${color}` }}
-                            >
-                              <span className="text-xs font-semibold text-gray-800 truncate">
-                                {ev.title || (EVENT_TYPE_LABELS[ev.event_type as EventType] ?? 'Événement')}
-                              </span>
-                              <span className="text-[10px] font-bold uppercase tracking-wide text-gray-500 flex-shrink-0">Réservé</span>
-                            </div>
+                            editable ? (
+                              <button
+                                type="button"
+                                onClick={() => setModal({ mode: 'edit', profile: m, date: selectedDay, event: ev })}
+                                className="flex-1 min-w-0 flex items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left transition-[filter] hover:brightness-95 active:brightness-95"
+                                style={{ backgroundColor: `${color}14`, borderLeft: `3px solid ${color}` }}
+                              >
+                                <span className="text-xs font-semibold text-gray-800 truncate">{evLabel}</span>
+                                <span className="text-[10px] font-bold uppercase tracking-wide text-gray-400 flex-shrink-0 inline-flex items-center gap-1">
+                                  <Pencil className="w-3 h-3" /> Modifier
+                                </span>
+                              </button>
+                            ) : (
+                              <div
+                                className="flex-1 min-w-0 flex items-center justify-between gap-2 rounded-lg px-2.5 py-1.5"
+                                style={{ backgroundColor: `${color}14`, borderLeft: `3px solid ${color}` }}
+                              >
+                                <span className="text-xs font-semibold text-gray-800 truncate">{evLabel}</span>
+                                <span className="text-[10px] font-bold uppercase tracking-wide text-gray-500 flex-shrink-0">Réservé</span>
+                              </div>
+                            )
                           ) : (
                             <button
                               type="button"
-                              onClick={() => setBooking({ profile: m, date: selectedDay, startMin: h * 60, endMin: h * 60 + 60 })}
+                              onClick={() => setModal({ mode: 'create', profile: m, date: selectedDay, startMin: h * 60, endMin: h * 60 + 60 })}
                               className="flex-1 flex items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 bg-white border border-dashed border-gray-200 hover:border-green-300 hover:bg-green-50/40 transition-colors group"
                             >
                               <span className="text-xs font-medium text-gray-400 group-hover:text-green-700">Libre</span>
@@ -347,14 +439,15 @@ function AvailabilityScheduler({ profiles }: { profiles: Profile[] }) {
         </div>
       )}
 
-      {booking && (
+      {modal && (
         <BookSlotModal
-          profile={booking.profile}
-          date={booking.date}
-          startMin={booking.startMin}
-          endMin={booking.endMin}
-          onClose={() => setBooking(null)}
-          onCreated={() => { setBooking(null); setReloadKey(k => k + 1) }}
+          profile={modal.profile}
+          date={modal.date}
+          startMin={modal.mode === 'create' ? modal.startMin : minutesOfDay(modal.event.start_at)}
+          endMin={modal.mode === 'create' ? modal.endMin : minutesOfDay(modal.event.end_at)}
+          event={modal.mode === 'edit' ? modal.event : null}
+          onClose={() => setModal(null)}
+          onSaved={() => { setModal(null); setReloadKey(k => k + 1) }}
         />
       )}
     </div>

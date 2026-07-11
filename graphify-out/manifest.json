@@ -370,8 +370,8 @@
     "semantic_hash": "9a9cfa85814952cc13b9c9de9f5e2fd6"
   },
   "app/(dashboard)/page.tsx": {
-    "mtime": 1783716951.937107,
-    "ast_hash": "176b11d0c091101aa34b080f3fa4aad1",
+    "mtime": 1783758835.1463487,
+    "ast_hash": "206a3be81dbf66e264461a6187a53bfc",
     "semantic_hash": ""
   },
   "app/(dashboard)/partnerships/[id]/OperationActions.tsx": {
@@ -985,8 +985,8 @@
     "semantic_hash": "ace49c057ae3e1669b959b63b56753f1"
   },
   "public/sw.js": {
-    "mtime": 1783717036.6093948,
-    "ast_hash": "e8b5574aae889923c6dbd90c3e26c23b",
+    "mtime": 1783758916.4084034,
+    "ast_hash": "ec02efdbfe013dc1bae2f8416d1f1d1c",
     "semantic_hash": ""
   },
   "scripts/seed-vehicles.ts": {
@@ -1300,8 +1300,8 @@
     "semantic_hash": "c631639fcab087606cf07ca65dc0885a"
   },
   "components/calendar/CalendarPage.tsx": {
-    "mtime": 1783666481.1090696,
-    "ast_hash": "906082a9af57440f17fcad0335d234ad",
+    "mtime": 1783758400.5816817,
+    "ast_hash": "c1b2ec6639f7e1ac41ade9a4b452dd95",
     "semantic_hash": ""
   },
   "components/calendar/CalendarSidebar.tsx": {
@@ -1420,8 +1420,8 @@
     "semantic_hash": "87cbfcfbfe59f51f11c6a304f6025ff0"
   },
   "app/(dashboard)/calendrier/disponibilites/AvailabilityClient.tsx": {
-    "mtime": 1783712430.0926487,
-    "ast_hash": "57c48292cad0d5b71754f8454ac3bd90",
+    "mtime": 1783759752.7724879,
+    "ast_hash": "066422014e54c175d77d6b6c332b4f7d",
     "semantic_hash": ""
   },
   "app/(dashboard)/calendrier/disponibilites/page.tsx": {
@@ -1885,8 +1885,8 @@
     "semantic_hash": "5c7afc5d490aa447f955173a9f5f22b2"
   },
   "components/calendar/MobileCalendar.tsx": {
-    "mtime": 1783666523.2297652,
-    "ast_hash": "16869367062045221e50e30c9b50682b",
+    "mtime": 1783758375.2462242,
+    "ast_hash": "41d0ace5cf529272bda74b0b41801a88",
     "semantic_hash": ""
   },
   "components/layout/AlertCountProvider.tsx": {
@@ -2212,6 +2212,11 @@
   "supabase/migrations/054_vehicle_status_fourriere_nonrestitue_deplacement.sql": {
     "mtime": 1783716990.9146428,
     "ast_hash": "44ef5ce19ac0b70f27da40d97d00a1fa",
+    "semantic_hash": ""
+  },
+  "components/calendar/MobileCalendarPanel.tsx": {
+    "mtime": 1783758348.3221729,
+    "ast_hash": "657f6b8fd0fad618c87ead53d448d017",
     "semantic_hash": ""
   }
 }
