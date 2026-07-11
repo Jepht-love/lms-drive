@@ -8,6 +8,7 @@ import { RESOURCE_PALETTE, UNASSIGNED_RESOURCE_ID } from '@/lib/calendar/constan
 import { getWeekDates, getMonthDates, getColumnWindow } from '@/lib/calendar/dateUtils'
 import CalendarSidebar from './CalendarSidebar'
 import MobileCalendar from './MobileCalendar'
+import MobileCalendarPanel from './MobileCalendarPanel'
 import CalendarGrid from './CalendarGrid'
 import MonthView from './MonthView'
 import EventDrawer from './EventDrawer'
@@ -65,6 +66,7 @@ export default function CalendarPage() {
 
   const [alertCount, setAlertCount] = useState(0)
   const [alertPanelOpen, setAlertPanelOpen] = useState(false)
+  const [mobilePanelOpen, setMobilePanelOpen] = useState(false)
 
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 767px)')
@@ -259,6 +261,7 @@ export default function CalendarPage() {
             onSelectAll={handleSelectAll}
             onShowAlerts={() => setAlertPanelOpen(true)}
             onCreateNew={handleCreateNew}
+            onOpenPanel={() => setMobilePanelOpen(true)}
             onEventClick={handleEventClick}
             onSlotClick={handleSlotClick}
           />
@@ -310,6 +313,22 @@ export default function CalendarPage() {
         onOpenEvent={handleOpenEventFromAlert}
         onDismissed={loadAlertCount}
       />
+
+      {isMobile && (
+        <MobileCalendarPanel
+          open={mobilePanelOpen}
+          onClose={() => setMobilePanelOpen(false)}
+          currentDate={currentDate}
+          onSelectDate={setCurrentDate}
+          events={events}
+          resources={resources}
+          onToggleResource={handleToggleResource}
+          onSelectOnlyResource={handleSelectOnlyResource}
+          canManageTeams={canManageTeams}
+          onRenameTeam={handleRenameTeam}
+          onDeleteTeam={handleDeleteTeam}
+        />
+      )}
 
       {!isMobile && (
         <CalendarBottomBar

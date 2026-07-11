@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react'
 import { addDays, addMonths, subMonths, format, startOfWeek } from 'date-fns'
 import { fr } from 'date-fns/locale'
-import { Bell, ChevronLeft, ChevronRight, Plus, Users } from 'lucide-react'
+import { Bell, ChevronLeft, ChevronRight, Plus, SlidersHorizontal, Users } from 'lucide-react'
 import type { CalendarEvent, CalendarResource, CalendarView } from '@/types/calendar'
 import {
   CALENDAR_END_HOUR,
@@ -150,6 +150,7 @@ export interface MobileCalendarProps {
   onSelectAll: () => void
   onShowAlerts: () => void
   onCreateNew: () => void
+  onOpenPanel: () => void
   onEventClick: (ev: CalendarEvent) => void
   onSlotClick: (resource: CalendarResource, date: Date, hour: number) => void
 }
@@ -157,7 +158,7 @@ export interface MobileCalendarProps {
 export default function MobileCalendar({
   currentDate, view, events, resources, alertCount,
   onSelectDate, onViewChange, onToggleResource, onSelectAll, onShowAlerts,
-  onCreateNew, onEventClick, onSlotClick,
+  onCreateNew, onOpenPanel, onEventClick, onSlotClick,
 }: MobileCalendarProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const today = new Date()
@@ -263,21 +264,30 @@ export default function MobileCalendar({
         </div>
       </div>
 
-      {/* ── View tabs ──────────────────────────────────────────────────────── */}
-      <div className="flex-shrink-0 flex px-3 gap-1 py-2 border-b border-gray-100">
-        {([['day', 'Jour'], ['month', 'Mois']] as [CalendarView, string][]).map(([v, label]) => (
-          <button
-            key={v}
-            type="button"
-            onClick={() => onViewChange(v)}
-            className={[
-              'px-4 h-7 rounded-lg text-[12px] font-semibold transition-colors',
-              view === v ? 'bg-[#111111] text-white' : 'bg-gray-100 text-gray-500',
-            ].join(' ')}
-          >
-            {label}
-          </button>
-        ))}
+      {/* ── View tabs + accès panneau (dates · calendriers · disponibilités) ── */}
+      <div className="flex-shrink-0 flex items-center justify-between px-3 py-2 border-b border-gray-100">
+        <div className="flex gap-1">
+          {([['day', 'Jour'], ['month', 'Mois']] as [CalendarView, string][]).map(([v, label]) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => onViewChange(v)}
+              className={[
+                'px-4 h-7 rounded-lg text-[12px] font-semibold transition-colors',
+                view === v ? 'bg-[#111111] text-white' : 'bg-gray-100 text-gray-500',
+              ].join(' ')}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={onOpenPanel}
+          className="flex items-center gap-1.5 px-3 h-7 rounded-lg text-[12px] font-semibold text-gray-600 bg-gray-100"
+        >
+          <SlidersHorizontal size={13} /> Calendriers
+        </button>
       </div>
 
       {view === 'month' ? (

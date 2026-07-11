@@ -89,6 +89,7 @@ const NEXT6H_TYPE_STYLE: Record<string, { badge: string; label: string }> = {
   tache:        { badge: 'bg-violet-100 text-violet-700', label: 'Tâche' },
   rdv_client:   { badge: 'bg-pink-100 text-pink-700',     label: 'RDV client' },
   rdv_garage:   { badge: 'bg-cyan-100 text-cyan-700',     label: 'RDV garage' },
+  rdv_autre:    { badge: 'bg-pink-100 text-pink-700',     label: 'RDV' },
   livraison:    { badge: 'bg-lime-100 text-lime-700',     label: 'Livraison' },
   recuperation: { badge: 'bg-orange-100 text-orange-700', label: 'Récupération' },
 }
@@ -379,7 +380,7 @@ export default async function DashboardPage() {
   const { data: rawCalendarTasks } = await supabase
     .from('calendar_events')
     .select('id, title, status, start_at, end_at, event_type, vehicle_ids, source_key, assigned_to, assigned_team_id, assignee:profiles!assigned_to(full_name), team:calendar_teams!assigned_team_id(name, color)')
-    .in('event_type', ['tache', 'rdv_client', 'rdv_garage', 'livraison', 'recuperation'])
+    .in('event_type', ['tache', 'rdv_client', 'rdv_garage', 'rdv_autre', 'livraison', 'recuperation'])
     .gte('start_at', businessDayStart.toISOString())
     .lte('start_at', in7Days.toISOString())
     .in('status', ['a_faire', 'en_cours'])
@@ -434,7 +435,7 @@ export default async function DashboardPage() {
     }
   }
   for (const t of weekCalendarTasks) {
-    const kind = (['tache', 'rdv_client', 'rdv_garage', 'livraison', 'recuperation']
+    const kind = (['tache', 'rdv_client', 'rdv_garage', 'rdv_autre', 'livraison', 'recuperation']
       .includes(t.event_type ?? '') ? t.event_type : 'tache') as WeekEvent['kind']
     const taskVehicles = (t.vehicle_ids ?? []).map((id: string) => vehicleById.get(id)).filter(Boolean)
     const subtitle = taskVehicles.length
