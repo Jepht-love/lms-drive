@@ -8,6 +8,8 @@ import { fr } from 'date-fns/locale'
 import DeleteButton from '@/components/ui/DeleteButton'
 import BackButton from '@/components/ui/BackButton'
 import { broadcastPushToManagers } from '@/lib/push/broadcastPush'
+import { isManagerRole } from '@/lib/auth/roles'
+import { logAudit } from '@/lib/audit/log'
 
 const TYPES: Record<string, string> = {
   lavage: 'Lavage', preparation: 'Préparation',
@@ -47,19 +49,48 @@ async function updateTask(id: string, formData: FormData) {
   })
 
   revalidatePath('/calendar/tasks')
+  revalidatePath('/')
   redirect('/calendar/tasks')
 }
 
 async function deleteTask(id: string) {
   'use server'
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/calendar/tasks')
+
+  // Suppression réservée au gérant / associé (comme la RLS de `tasks`). Un employé
+  // qui tente de supprimer sa tâche est refusé — la tentative est tracée pour le
+  // gérant — et renvoyé sur la fiche avec un message, plutôt que de croire à tort
+  // que la tâche a disparu (elle réapparaissait au rechargement, cf. dashboard).
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (!isManagerRole(profile?.role)) {
+    const { data: t } = await supabase.from('tasks').select('title').eq('id', id).maybeSingle()
+    await logAudit(supabase, {
+      userId: user.id,
+      action: 'task_delete_denied',
+      entityType: 'tasks',
+      entityId: id,
+      summary: `Tentative de suppression d'une tâche refusée (employé) — « ${t?.title ?? 'tâche'} »`,
+    })
+    redirect(`/calendar/tasks/${id}?denied=suppression`)
+  }
+
   await supabase.from('tasks').delete().eq('id', id)
   revalidatePath('/calendar/tasks')
+  revalidatePath('/')
   redirect('/calendar/tasks')
 }
 
-export default async function TaskDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function TaskDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>
+  searchParams: Promise<{ denied?: string }>
+}) {
   const { id } = await params
+  const { denied } = await searchParams
   const supabase = await createClient()
 
   const { data: task } = await supabase
@@ -88,6 +119,12 @@ export default async function TaskDetailPage({ params }: { params: Promise<{ id:
         <h1 className="text-xl font-black text-gray-900 flex-1 truncate">{task.title}</h1>
         <DeleteButton onConfirm={deleteWithId} confirmMessage="Supprimer cette tâche ?" />
       </div>
+
+      {denied === 'suppression' && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[13px] font-medium text-red-700">
+          Cette action n'est pas autorisée : seul le gérant ou un associé peut supprimer une tâche. Votre tentative a été enregistrée.
+        </div>
+      )}
 
       {/* Détails */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">

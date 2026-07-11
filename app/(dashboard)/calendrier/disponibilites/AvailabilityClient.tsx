@@ -41,14 +41,19 @@ const minutesOfDay = (iso: string) => {
 }
 
 // Un événement n'est modifiable/supprimable depuis ce planning que s'il a été
-// posé « à la main » ici (tâche / RDV). On exclut les miroirs de réservation
-// (depart/retour, reservation_id) et les trajets (source_key « trip- ») : les
-// toucher ici désynchroniserait la résa/le trajet, d'autant que le GET calendrier
-// recrée les miroirs manquants à la volée.
+// posé « à la main » ici (tâche / RDV). On exclut TOUT miroir d'une autre source :
+//  · réservations (reservation_id → départ/retour),
+//  · trajets internes (source_key « trip-… », syncInternalTrip),
+//  · alertes du tableau de bord (source_key = UUID d'alerte, syncAlertsToCalendar),
+//  · tâches héritées / lavages (source_key « task-… », etc.).
+// Ces miroirs sont recréés à la volée par leur synchro (idempotente via source_key
+// ou reservation_id) : les supprimer ici les ferait « réapparaître » aussitôt, et
+// désynchroniserait la source. Règle simple et robuste : un événement posé à la
+// main via cette page n'a JAMAIS de source_key → tout source_key = lecture seule.
 const isEditableEvent = (ev: Ev) =>
   (CREATE_TYPES as string[]).includes(ev.event_type) &&
   !ev.reservation_id &&
-  !(ev.source_key ?? '').startsWith('trip-')
+  !ev.source_key
 
 /**
  * Modale de créneau : en création, le créneau (membre + date + tranche horaire)

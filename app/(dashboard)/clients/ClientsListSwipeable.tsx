@@ -36,7 +36,14 @@ function NoteIndicator({ notes }: { notes: string | null | undefined }) {
   )
 }
 
-export default function ClientsListSwipeable({ clients }: { clients: Client[] }) {
+export default function ClientsListSwipeable({
+  clients,
+  showNotes = false,
+}: {
+  clients: Client[]
+  /** Vue « Note interne » : affiche le texte de la note sous chaque client. */
+  showNotes?: boolean
+}) {
   const router = useRouter()
 
   return (
@@ -88,6 +95,12 @@ export default function ClientsListSwipeable({ clients }: { clients: Client[] })
                       </span>
                     )}
                   </div>
+                  {showNotes && c.internal_notes && c.internal_notes.trim() !== '' && (
+                    <p className="mt-1.5 flex items-start gap-1.5 text-xs text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-2 py-1.5">
+                      <StickyNote className="w-3 h-3 mt-0.5 flex-shrink-0 text-amber-500" />
+                      <span className="line-clamp-3 whitespace-pre-wrap">{c.internal_notes}</span>
+                    </p>
+                  )}
                 </div>
                 <div className="text-right flex-shrink-0">
                   {c.city && <p className="text-xs font-medium text-gray-600">{c.city}</p>}

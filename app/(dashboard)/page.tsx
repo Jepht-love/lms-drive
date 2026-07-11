@@ -771,7 +771,7 @@ export default async function DashboardPage() {
               const assignee = Array.isArray((task as any).profiles) ? (task as any).profiles[0] : (task as any).profiles
               const isTaskLate = task.status === 'a_faire' && new Date(task.due_datetime) < now
               return (
-                <Link key={`task-${task.id}`} href="/calendrier">
+                <Link key={`task-${task.id}`} href={`/calendar/tasks/${task.id}`}>
                   <div className={`flex items-center gap-4 px-4 py-4 transition-colors ${isTaskLate ? 'bg-red-50/60 hover:bg-red-50' : 'hover:bg-gray-50'}`}>
                     <span className="w-12 text-sm font-mono font-bold text-gray-600 text-center flex-shrink-0">
                       {format(new Date(task.due_datetime), 'HH:mm')}

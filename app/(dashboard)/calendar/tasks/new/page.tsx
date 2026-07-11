@@ -37,6 +37,7 @@ async function createTask(formData: FormData) {
   })
 
   revalidatePath('/calendar/tasks')
+  revalidatePath('/')
   redirect('/calendar/tasks')
 }
 
