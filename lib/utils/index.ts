@@ -95,6 +95,9 @@ export function getVehicleStatusColor(status: string): string {
     immobilise: 'bg-red-100 text-red-800 border-red-200',
     mis_a_disposition: 'bg-purple-100 text-purple-800 border-purple-200',
     a_reparer: 'bg-red-100 text-red-800 border-red-200',
+    fourriere: 'bg-rose-100 text-rose-800 border-rose-200',
+    non_restitue: 'bg-red-100 text-red-800 border-red-200',
+    deplacement_pro: 'bg-indigo-100 text-indigo-800 border-indigo-200',
   }
   return colors[status] ?? 'bg-gray-100 text-gray-800 border-gray-200'
 }
@@ -110,6 +113,9 @@ export function getVehicleStatusLabel(status: string): string {
     immobilise: 'Immobilisé',
     mis_a_disposition: 'Chez partenaire',
     a_reparer: 'À réparer',
+    fourriere: 'Fourrière',
+    non_restitue: 'Non restitué',
+    deplacement_pro: 'Déplacement pro',
   }
   return labels[status] ?? status
 }

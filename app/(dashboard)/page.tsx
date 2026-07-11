@@ -166,7 +166,8 @@ export default async function DashboardPage() {
   // « mis_a_disposition » exclu : chez partenaire ≠ immobilisé (aligné avec la
   // page Flotte, où il a sa propre pastille « Chez partenaire »).
   const immobilises    = vehicles?.filter(v =>
-    ['maintenance', 'hors_service', 'en_verification', 'immobilise', 'a_reparer'].includes(v.status)
+    ['maintenance', 'hors_service', 'en_verification', 'immobilise', 'a_reparer',
+     'fourriere', 'non_restitue', 'deplacement_pro'].includes(v.status)
   ).length ?? 0
   const tauxOccupation = total > 0 ? Math.round((enLocation / total) * 100) : 0
 
@@ -538,7 +539,7 @@ export default async function DashboardPage() {
             }`}>
               <div>
                 <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">IMMOBILISÉS</p>
-                <p className="text-xs text-gray-400 mt-0.5">entretien · réparation · sinistre · CT</p>
+                <p className="text-xs text-gray-400 mt-0.5">entretien · sinistre · fourrière · non restitué · déplacement pro</p>
               </div>
               <div className="flex items-center gap-3">
                 <p className={`text-2xl font-black ${immobilises > 0 ? 'text-orange-500' : 'text-gray-300'}`}>

@@ -18,6 +18,9 @@ const STATUS_CONFIG: Record<string, { label: string; dot: string; badge: string 
   immobilise:        { label: 'Immobilisé',      dot: 'bg-red-400',    badge: 'bg-red-50 text-red-700 border-red-100' },
   mis_a_disposition: { label: 'Chez partenaire', dot: 'bg-purple-400', badge: 'bg-purple-50 text-purple-700 border-purple-100' },
   a_reparer:         { label: 'À réparer',       dot: 'bg-red-600',    badge: 'bg-red-50 text-red-700 border-red-100' },
+  fourriere:         { label: 'Fourrière',       dot: 'bg-rose-500',   badge: 'bg-rose-50 text-rose-700 border-rose-100' },
+  non_restitue:      { label: 'Non restitué',    dot: 'bg-red-700',    badge: 'bg-red-50 text-red-700 border-red-100' },
+  deplacement_pro:   { label: 'Déplacement pro', dot: 'bg-indigo-500', badge: 'bg-indigo-50 text-indigo-700 border-indigo-100' },
 }
 
 export default function VehiclesGridSwipeable({

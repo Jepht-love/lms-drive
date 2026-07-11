@@ -5,7 +5,7 @@ import { updateVehicleStatus } from '@/lib/actions/vehicles'
 import { getVehicleStatusColor, getVehicleStatusLabel } from '@/lib/utils'
 import type { VehicleStatus } from '@/types/database'
 
-const STATUSES: VehicleStatus[] = ['disponible', 'reserve', 'maintenance', 'hors_service']
+const STATUSES: VehicleStatus[] = ['disponible', 'reserve', 'maintenance', 'hors_service', 'fourriere', 'non_restitue', 'deplacement_pro']
 
 export default function VehicleStatusButton({ vehicleId, currentStatus }: {
   vehicleId: string

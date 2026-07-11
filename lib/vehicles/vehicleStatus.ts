@@ -5,7 +5,8 @@ import { createClient } from '@/lib/supabase/server'
  * de le déduire d'un seul événement ponctuel — corrige le risque de statut
  * orphelin (ex. réservation supprimée, ou contrat clôturé, sans jamais repasser
  * le véhicule à disponible). Ne touche pas un statut de maintenance (a_reparer,
- * en_verification, hors_service, immobilise, mis_a_disposition) : seuls
+ * en_verification, hors_service, immobilise, mis_a_disposition, fourriere,
+ * non_restitue, deplacement_pro) : seuls
  * disponible/loue/reserve sont pilotés par les réservations.
  */
 export async function recomputeVehicleStatus(

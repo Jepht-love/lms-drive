@@ -30,9 +30,9 @@
     "semantic_hash": "684c6a8c293dd1610472e2ec3b532ca8"
   },
   "app/(dashboard)/accounting/AccountingTransactions.tsx": {
-    "mtime": 1783326354.1755025,
-    "ast_hash": "bdddbba7533bc0a6694d0cd3e9867228",
-    "semantic_hash": "bdddbba7533bc0a6694d0cd3e9867228"
+    "mtime": 1783716819.9743974,
+    "ast_hash": "9859236fb83bd4fc9db9e714fca6097d",
+    "semantic_hash": ""
   },
   "app/(dashboard)/accounting/charts/AccountingCharts.tsx": {
     "mtime": 1782317135.2186668,
@@ -370,8 +370,8 @@
     "semantic_hash": "9a9cfa85814952cc13b9c9de9f5e2fd6"
   },
   "app/(dashboard)/page.tsx": {
-    "mtime": 1783683740.7470887,
-    "ast_hash": "2c398c4fdf508a6d1af2538f475dd3e1",
+    "mtime": 1783716951.937107,
+    "ast_hash": "176b11d0c091101aa34b080f3fa4aad1",
     "semantic_hash": ""
   },
   "app/(dashboard)/partnerships/[id]/OperationActions.tsx": {
@@ -495,14 +495,14 @@
     "semantic_hash": "3a9824897c3dec77d278f1f49dae1540"
   },
   "app/(dashboard)/vehicles/VehicleStatusButton.tsx": {
-    "mtime": 1783145115.1166923,
-    "ast_hash": "32c111b3b4f534bb7d605ca9047bd792",
-    "semantic_hash": "32c111b3b4f534bb7d605ca9047bd792"
+    "mtime": 1783716914.2013404,
+    "ast_hash": "181bfdcf63bf83dd4c4ae0972caf0944",
+    "semantic_hash": ""
   },
   "app/(dashboard)/vehicles/VehiclesGridSwipeable.tsx": {
-    "mtime": 1783325834.653151,
-    "ast_hash": "2ce1d12b4357db8d15c2c13ebda9542f",
-    "semantic_hash": "2ce1d12b4357db8d15c2c13ebda9542f"
+    "mtime": 1783716912.2243981,
+    "ast_hash": "67c23acf6eb2f0f91d8949a7e980cfdc",
+    "semantic_hash": ""
   },
   "app/(dashboard)/vehicles/[id]/VehicleMaintenanceCard.tsx": {
     "mtime": 1783145907.888591,
@@ -525,8 +525,8 @@
     "semantic_hash": "b516e3acea943c0e5eb35d60eba8eb8b"
   },
   "app/(dashboard)/vehicles/page.tsx": {
-    "mtime": 1783610761.4886491,
-    "ast_hash": "54df5104a46ee8118f947b4072896e1c",
+    "mtime": 1783716954.663685,
+    "ast_hash": "0d5e1005f093d51c328bd7b026975fba",
     "semantic_hash": ""
   },
   "app/api/alerts/count/route.ts": {
@@ -950,8 +950,8 @@
     "semantic_hash": "355752529ac14527f3e91643563c3ac5"
   },
   "lib/utils/index.ts": {
-    "mtime": 1783664840.3576963,
-    "ast_hash": "b1957095909edf0da6508d1cc7c4a9b4",
+    "mtime": 1783716961.6819906,
+    "ast_hash": "2fd6f3aeddcc026b4c5e882d5fd2a14f",
     "semantic_hash": ""
   },
   "next.config.ts": {
@@ -985,8 +985,8 @@
     "semantic_hash": "ace49c057ae3e1669b959b63b56753f1"
   },
   "public/sw.js": {
-    "mtime": 1783710562.2636917,
-    "ast_hash": "a9b60de61b6b27abb26b8f4ff8e4853e",
+    "mtime": 1783717036.6093948,
+    "ast_hash": "e8b5574aae889923c6dbd90c3e26c23b",
     "semantic_hash": ""
   },
   "scripts/seed-vehicles.ts": {
@@ -1090,9 +1090,9 @@
     "semantic_hash": "02fc19ad21338c2ab820a70136310db4"
   },
   "types/database.ts": {
-    "mtime": 1783186521.4362159,
-    "ast_hash": "77d9b5f592e08df20ca3fdc5f4208deb",
-    "semantic_hash": "77d9b5f592e08df20ca3fdc5f4208deb"
+    "mtime": 1783716947.5143926,
+    "ast_hash": "b9e2d6b2cc8d4399068cf68c7b0dc738",
+    "semantic_hash": ""
   },
   "AGENTS.md": {
     "mtime": 1780930139.0038636,
@@ -1375,9 +1375,9 @@
     "semantic_hash": "2eef9232cee3439a920393200b95c03a"
   },
   "lib/vehicles/vehicleStatus.ts": {
-    "mtime": 1782054256.0288582,
-    "ast_hash": "2972480f0d2f57a460923757279fd431",
-    "semantic_hash": "2972480f0d2f57a460923757279fd431"
+    "mtime": 1783716915.698778,
+    "ast_hash": "2103657a0ac34fb38d98a0a945e6d5bf",
+    "semantic_hash": ""
   },
   "supabase/migrations/024_calendar.sql": {
     "mtime": 1781987596.6362422,
@@ -1545,9 +1545,9 @@
     "semantic_hash": "5bdc067c5647e5a9f5ee08a348500216"
   },
   "app/(dashboard)/vehicles/immobilises/page.tsx": {
-    "mtime": 1783173733.7074015,
-    "ast_hash": "b808632404e77e93db44c72d70519e0a",
-    "semantic_hash": "b808632404e77e93db44c72d70519e0a"
+    "mtime": 1783716975.897279,
+    "ast_hash": "ca87e1ee49f42b8187f2a12e1a9a1d58",
+    "semantic_hash": ""
   },
   "lib/calendar/syncInternalTrip.ts": {
     "mtime": 1783324038.9968293,
@@ -2207,6 +2207,11 @@
   "supabase/migrations/053_calendar_rdv_autre.sql": {
     "mtime": 1783683908.1105926,
     "ast_hash": "1030d3cf808528be8d9386f612d2ac84",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/054_vehicle_status_fourriere_nonrestitue_deplacement.sql": {
+    "mtime": 1783716990.9146428,
+    "ast_hash": "44ef5ce19ac0b70f27da40d97d00a1fa",
     "semantic_hash": ""
   }
 }

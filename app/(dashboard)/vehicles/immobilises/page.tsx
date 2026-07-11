@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import { ArrowLeft, AlertTriangle, Wrench, HelpCircle, ChevronRight } from 'lucide-react'
+import { ArrowLeft, AlertTriangle, Wrench, HelpCircle, ChevronRight, Briefcase } from 'lucide-react'
 import BackButton from '@/components/ui/BackButton'
 import { formatDate } from '@/lib/utils'
 import { maintenanceType } from '@/lib/maintenance'
@@ -10,7 +10,7 @@ import { maintenanceType } from '@/lib/maintenance'
 // entretien en cours, ou statut posé manuellement sans dossier source).
 // « mis_a_disposition » exclu : chez un partenaire ≠ immobilisé (génère du
 // revenu) → il vit dans son propre filtre « Chez partenaire » sur la flotte.
-const IMMOBILISES_STATUSES = ['maintenance', 'hors_service', 'en_verification', 'immobilise', 'a_reparer']
+const IMMOBILISES_STATUSES = ['maintenance', 'hors_service', 'en_verification', 'immobilise', 'a_reparer', 'fourriere', 'non_restitue', 'deplacement_pro']
 
 const STATUS_LABEL: Record<string, string> = {
   maintenance:        'En entretien',
@@ -18,6 +18,9 @@ const STATUS_LABEL: Record<string, string> = {
   en_verification:    'En vérification (sinistre)',
   immobilise:         'Immobilisé',
   a_reparer:          'À réparer',
+  fourriere:          'Fourrière',
+  non_restitue:       'Non restitué (client)',
+  deplacement_pro:    'Déplacement professionnel',
 }
 
 interface OpenAccident { id: string; vehicle_id: string; description: string | null; accident_date: string; status: string }
@@ -89,6 +92,11 @@ export default async function ImmobilisesPage() {
             let reasonIcon = <HelpCircle className="w-4 h-4 text-gray-400" />
             let reasonText = STATUS_LABEL[v.status] ?? v.status
             let reasonSub: string | null = null
+
+            // Statuts manuels sans dossier source : icône dédiée (le bloc
+            // accident / atelier ci-dessous prime s'il existe malgré tout).
+            if (v.status === 'deplacement_pro') reasonIcon = <Briefcase className="w-4 h-4 text-indigo-500" />
+            else if (v.status === 'fourriere' || v.status === 'non_restitue') reasonIcon = <AlertTriangle className="w-4 h-4 text-rose-500" />
 
             if (accident) {
               href = `/incidents/sinistres/${accident.id}`

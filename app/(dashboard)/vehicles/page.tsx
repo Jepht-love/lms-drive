@@ -18,7 +18,7 @@ import {
 // — doit rester aligné avec le compteur IMMOBILISÉS du tableau de bord.
 // « mis_a_disposition » (chez partenaire) est EXCLU : le véhicule n'est pas
 // immobilisé, il génère du revenu → il a sa propre pastille de filtre.
-const IMMOBILISES_STATUSES = ['maintenance', 'hors_service', 'en_verification', 'immobilise', 'a_reparer']
+const IMMOBILISES_STATUSES = ['maintenance', 'hors_service', 'en_verification', 'immobilise', 'a_reparer', 'fourriere', 'non_restitue', 'deplacement_pro']
 
 // ─── Config statut (pour les filtres) ─────────────────────────────────────────
 const STATUS_CONFIG: Record<string, { label: string; dot: string }> = {
@@ -31,6 +31,9 @@ const STATUS_CONFIG: Record<string, { label: string; dot: string }> = {
   immobilise:        { label: 'Immobilisé',      dot: 'bg-red-400' },
   mis_a_disposition: { label: 'Chez partenaire', dot: 'bg-purple-400' },
   a_reparer:         { label: 'À réparer',       dot: 'bg-red-600' },
+  fourriere:         { label: 'Fourrière',       dot: 'bg-rose-500' },
+  non_restitue:      { label: 'Non restitué',    dot: 'bg-red-700' },
+  deplacement_pro:   { label: 'Déplacement pro', dot: 'bg-indigo-500' },
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
