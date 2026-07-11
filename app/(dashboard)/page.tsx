@@ -539,7 +539,7 @@ export default async function DashboardPage() {
             }`}>
               <div>
                 <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">IMMOBILISÉS</p>
-                <p className="text-xs text-gray-400 mt-0.5">entretien · sinistre · fourrière · non restitué · déplacement pro</p>
+                <p className="text-xs text-gray-400 mt-0.5">entretien · réparation · sinistre · CT · fourrière · véhicule non restitué · déplacement professionnel</p>
               </div>
               <div className="flex items-center gap-3">
                 <p className={`text-2xl font-black ${immobilises > 0 ? 'text-orange-500' : 'text-gray-300'}`}>
