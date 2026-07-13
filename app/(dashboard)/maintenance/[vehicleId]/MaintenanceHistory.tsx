@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { FileText, Check, BadgeEuro, Trash2 } from 'lucide-react'
 import { formatPrice, formatDate } from '@/lib/utils'
-import { MAINTENANCE_TYPES, maintenanceType, type MaintenanceRecord } from '@/lib/maintenance'
+import { MAINTENANCE_TYPES, MAINTENANCE_ANGLES, maintenanceType, angleOfType, type MaintenanceRecord } from '@/lib/maintenance'
 import { PAYMENT_METHODS, paymentMethodLabel } from '@/lib/accounting/categories'
 import { markMaintenancePaid, deleteMaintenanceRecord } from '@/lib/actions/maintenance'
 import { useToast } from '@/components/Toast'
@@ -18,7 +18,18 @@ export default function MaintenanceHistory({ records }: { records: MaintenanceRe
   const [pending, startTransition] = useTransition()
 
   const presentTypes = new Set(records.map(r => r.type))
-  const filtered = filter === 'tous' ? records : records.filter(r => r.type === filter)
+  const filtered =
+    filter === 'tous'            ? records
+    : filter.startsWith('angle:') ? records.filter(r => angleOfType(r.type) === filter.slice(6))
+    :                               records.filter(r => r.type === filter)
+
+  // Budget par angle (Réparation / Usure / Entretien / Autre), ordre de priorité.
+  const byAngle = MAINTENANCE_ANGLES
+    .map(a => {
+      const recs = records.filter(r => a.types.includes(r.type))
+      return { ...a, total: recs.reduce((s, r) => s + (r.amount ?? 0), 0), count: recs.length }
+    })
+    .filter(a => a.count > 0)
 
   function pay(id: string, method: string) {
     startTransition(async () => {
@@ -48,6 +59,30 @@ export default function MaintenanceHistory({ records }: { records: MaintenanceRe
 
   return (
     <div className="space-y-3">
+
+      {/* Budget par angle — Réparation / Usure / Entretien, cliquable pour filtrer */}
+      {byAngle.length > 0 && (
+        <div className="grid grid-cols-2 gap-2">
+          {byAngle.map(a => {
+            const active = filter === `angle:${a.id}`
+            return (
+              <button
+                key={a.id}
+                onClick={() => setFilter(active ? 'tous' : `angle:${a.id}`)}
+                className={`text-left rounded-2xl border p-3 transition-colors active:scale-[.99] ${
+                  active ? 'bg-[#111111] border-[#111111]' : 'bg-white border-gray-100 shadow-sm hover:bg-gray-50'
+                }`}
+              >
+                <span className={`flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide ${active ? 'text-white/70' : 'text-gray-400'}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${a.dot}`} /> {a.label}
+                </span>
+                <span className={`block text-base font-black mt-1 ${active ? 'text-white' : 'text-gray-900'}`}>{formatPrice(a.total)}</span>
+                <span className={`block text-[11px] ${active ? 'text-white/60' : 'text-gray-400'}`}>{a.count} interv.</span>
+              </button>
+            )
+          })}
+        </div>
+      )}
 
       {/* Filtres par type */}
       <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>

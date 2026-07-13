@@ -102,7 +102,7 @@ export function computeVehicleNeeds(
   for (const f of vehicle.maintenance_flags ?? []) {
     needs.push({
       key: 'degradation',
-      label: 'Dégradé',
+      label: 'Intervenir',
       severity: f.severity === 'dommage' ? 'urgent' : 'soon',
       detail: f.label,
       flagId: f.id,
@@ -148,7 +148,7 @@ export const MAINTENANCE_CATEGORIES = [
   { id: 'entretien', label: 'Entretien',          keys: ['entretien'] as NeedKey[] },
   { id: 'pneus',     label: 'Pneus',              keys: ['pneus'] as NeedKey[] },
   { id: 'ct',        label: 'Contrôle technique', keys: ['ct'] as NeedKey[] },
-  { id: 'degrade',   label: 'Dégradé',            keys: ['degradation'] as NeedKey[] },
+  { id: 'degrade',   label: 'Intervenir',         keys: ['degradation'] as NeedKey[] },
 ] as const
 
 export type MaintenanceCategoryId = (typeof MAINTENANCE_CATEGORIES)[number]['id']

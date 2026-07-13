@@ -30,6 +30,14 @@ export async function deleteClient(id: string) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non authentifié' }
 
+  // Art. 17 RGPD : supprimer les fichiers d'identité avant la ligne DB
+  const admin = createAdminClient()
+  const { data: files } = await admin.storage.from('client-documents').list(`clients/${id}`)
+  if (files && files.length > 0) {
+    const paths = files.map(f => `clients/${id}/${f.name}`)
+    await admin.storage.from('client-documents').remove(paths)
+  }
+
   const { error } = await supabase.from('clients').delete().eq('id', id)
   if (error) {
     if (error.code === '23503') return { error: 'Ce client a des réservations ou documents associés — suppression impossible. Archivez ou supprimez-les d\'abord.' }

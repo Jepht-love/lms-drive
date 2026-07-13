@@ -420,7 +420,7 @@ export default function EventDrawer({ open, event, slotContext, resources, prese
         {/* Footer collé en bas — toujours visible sans scroll */}
         <div
           className="shrink-0 px-4 pt-3 pb-4 border-t border-gray-100 flex flex-col gap-2 bg-white"
-          style={{ paddingBottom: 'max(16px, env(safe-area-inset-bottom))' }}
+          style={{ paddingBottom: 'calc(76px + env(safe-area-inset-bottom))' }}
         >
           <button
             type="button"

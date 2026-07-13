@@ -174,6 +174,7 @@ export const REVENUE_CATEGORIES = [
   { id: 'km_supplementaires', label: 'Km supplémentaires' },
   { id: 'mise_a_disposition_sortante', label: 'Mise à disposition sortante' },
   { id: 'facturation', label: 'Facturation (frais de restitution)' },
+  { id: 'recouvrement_amende', label: 'Recouvrement amende' },
   { id: 'autres_recettes', label: 'Autres recettes' },
 ]
 

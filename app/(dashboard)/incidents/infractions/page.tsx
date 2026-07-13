@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { ArrowLeft, Plus, ChevronRight, FileWarning } from 'lucide-react'
 import BackButton from '@/components/ui/BackButton'
+import SmartSearch from '@/components/ui/SmartSearch'
 import { formatPrice, formatDate } from '@/lib/utils'
 import { INFRACTION_STATUS, infractionTypeLabel } from '@/lib/incidents'
 import VehicleFilter from '@/components/incidents/VehicleFilter'
@@ -49,6 +50,9 @@ export default async function InfractionsPage({
         </Link>
       </div>
 
+      {/* Recherche */}
+      <SmartSearch scope="infractions" placeholder="Véhicule ou client…" />
+
       {/* Filtres statut */}
       <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
         <Link href={`/incidents/infractions${vehicle ? `?vehicle=${vehicle}` : ''}`} className={pill(!status)}>Tous</Link>
@@ -75,6 +79,10 @@ export default async function InfractionsPage({
             const v = Array.isArray(inf.vehicles) ? inf.vehicles[0] : inf.vehicles
             const c = Array.isArray(inf.clients) ? inf.clients[0] : inf.clients
             const st = INFRACTION_STATUS[inf.status] ?? INFRACTION_STATUS.en_attente
+            // Amende avancée par l'agence → statut de recouvrement client
+            const advanced = inf.paid_by === 'agence'
+            const totalDue = (inf.amount ?? 0) + (inf.admin_fees ?? 0)
+            const fullyRecovered = advanced && (inf.recovered_amount ?? 0) >= totalDue && totalDue > 0
             return (
               <Link key={inf.id} href={`/incidents/infractions/${inf.id}`} className="block">
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 hover:shadow-md transition-all active:scale-[.99]">
@@ -82,6 +90,11 @@ export default async function InfractionsPage({
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${st.bg} ${st.text}`}>{st.label}</span>
+                        {advanced && (
+                          fullyRecovered
+                            ? <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-green-50 text-green-700">Recouvrée</span>
+                            : <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">À recouvrer</span>
+                        )}
                         <span className="text-sm font-black text-gray-900">{v ? `${v.brand} ${v.model}` : '—'}</span>
                         {v?.plate && <span className="text-xs font-mono text-gray-400">{v.plate}</span>}
                       </div>

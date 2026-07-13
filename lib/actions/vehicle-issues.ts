@@ -51,6 +51,8 @@ export async function reportVehicleIssues(vehicleId: string, issues: NewIssue[],
 
   revalidatePath('/vehicles')
   revalidatePath(`/vehicles/${vehicleId}`)
+  revalidatePath('/maintenance')
+  revalidatePath(`/maintenance/${vehicleId}`)
   return { success: true, count: added.length }
 }
 
@@ -80,6 +82,7 @@ export async function resolveVehicleIssue(vehicleId: string, flagId: string) {
   revalidatePath('/vehicles')
   revalidatePath(`/vehicles/${vehicleId}`)
   revalidatePath('/maintenance')
+  revalidatePath(`/maintenance/${vehicleId}`)
   return { success: true }
 }
 

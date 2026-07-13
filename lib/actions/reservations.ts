@@ -179,6 +179,35 @@ async function isNameBlacklisted(
   return (data ?? []).some(c => normalizeName(`${c.first_name} ${c.last_name}`) === target)
 }
 
+function normalizePhone(s: string | null | undefined): string {
+  return (s ?? '').replace(/[^0-9]/g, '')
+}
+
+function normalizeEmail(s: string | null | undefined): string {
+  return (s ?? '').replace(/\s+/g, '').toLowerCase()
+}
+
+// Bloque le contournement « même personne, autre dossier » par les coordonnées :
+// vrai si un client blacklisté partage le même téléphone OU le même email.
+async function isContactBlacklisted(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  phone: string | null | undefined,
+  email: string | null | undefined,
+  excludeClientId?: string,
+): Promise<boolean> {
+  const p = normalizePhone(phone)
+  const e = normalizeEmail(email)
+  if (!p && !e) return false
+  let query = supabase.from('clients').select('id, phone, email').eq('status', 'blackliste')
+  if (excludeClientId) query = query.neq('id', excludeClientId)
+  const { data } = await query
+  return (data ?? []).some(c => {
+    const cp = normalizePhone(c.phone)
+    const ce = normalizeEmail(c.email)
+    return (!!p && cp === p) || (!!e && ce === e)
+  })
+}
+
 // Poste automatiquement le CA d'une location terminée en comptabilité (CDC :
 // « les données financières seront intégrées à la comptabilité »). Idempotent —
 // ne crée rien si une recette « location » existe déjà pour cette réservation.
@@ -258,6 +287,9 @@ export async function createReservation(formData: FormData) {
     if (await isNameBlacklisted(supabase, newFirstName, newLastName)) {
       return { error: 'Ce nom correspond à un client blacklisté — réservation impossible.' }
     }
+    if (await isContactBlacklisted(supabase, newPhone, null)) {
+      return { error: 'Ce numéro correspond à un client blacklisté — réservation impossible.' }
+    }
     const admin = createAdminClient()
     const { data: newClient, error: clientErr } = await admin
       .from('clients')
@@ -269,12 +301,15 @@ export async function createReservation(formData: FormData) {
     clientName = `${newFirstName} ${newLastName}`
   } else {
     const { data: selectedClient } = await supabase
-      .from('clients').select('status, first_name, last_name').eq('id', clientId).maybeSingle()
+      .from('clients').select('status, first_name, last_name, phone, email').eq('id', clientId).maybeSingle()
     if (selectedClient?.status === 'blackliste') {
       return { error: 'Ce client est blacklisté — réservation impossible.' }
     }
     if (selectedClient && await isNameBlacklisted(supabase, selectedClient.first_name, selectedClient.last_name, clientId)) {
       return { error: 'Ce nom correspond à un client blacklisté sous un autre dossier — réservation impossible.' }
+    }
+    if (selectedClient && await isContactBlacklisted(supabase, selectedClient.phone, selectedClient.email, clientId)) {
+      return { error: 'Les coordonnées de ce client correspondent à un client blacklisté sous un autre dossier — réservation impossible.' }
     }
     clientName = selectedClient ? `${selectedClient.first_name} ${selectedClient.last_name}` : ''
   }

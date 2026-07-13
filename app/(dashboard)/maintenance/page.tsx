@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import { Wrench, ChevronRight } from 'lucide-react'
+import SmartSearch from '@/components/ui/SmartSearch'
+import { Wrench, ChevronRight, User } from 'lucide-react'
 import { formatPrice, formatDate } from '@/lib/utils'
 import { maintenanceType } from '@/lib/maintenance'
 import {
@@ -28,6 +29,23 @@ export default async function MaintenancePage() {
     .select('vehicle_id, type, km_at_intervention, date, amount')
     .order('date', { ascending: false })
 
+  // « Qui s'en charge » : tâches d'entretien ouvertes, assignées à un membre.
+  const { data: entretienTasks } = await supabase
+    .from('tasks')
+    .select('vehicle_id, profiles!tasks_assigned_to_fkey(full_name)')
+    .eq('type', 'entretien')
+    .in('status', ['a_faire', 'en_cours'])
+    .not('vehicle_id', 'is', null)
+
+  const assigneeByVehicle = new Map<string, string>()
+  for (const t of entretienTasks ?? []) {
+    const p = Array.isArray(t.profiles) ? t.profiles[0] : t.profiles
+    const name = (p as any)?.full_name
+    if (t.vehicle_id && name && !assigneeByVehicle.has(t.vehicle_id)) {
+      assigneeByVehicle.set(t.vehicle_id, name)
+    }
+  }
+
   // Agrégation par véhicule (records triés date desc → 1er vu = dernier)
   const byVehicle = new Map<string, { total: number; count: number; last?: { type: string; date: string } }>()
   const recordsByVehicle = new Map<string, { type: string; km_at_intervention: number | null; date: string }[]>()
@@ -49,7 +67,7 @@ export default async function MaintenancePage() {
   const now = new Date()
   const enriched = (vehicles ?? []).map(v => {
     const needs = computeVehicleNeeds(v, buildLastByType(recordsByVehicle.get(v.id) ?? []), now)
-    return { v, agg: byVehicle.get(v.id), badges: groupNeedsForBadges(needs), worst: worstSeverity(needs) }
+    return { v, agg: byVehicle.get(v.id), badges: groupNeedsForBadges(needs), worst: worstSeverity(needs), assignee: assigneeByVehicle.get(v.id) }
   })
   enriched.sort((a, b) => SEV_ORDER[a.worst] - SEV_ORDER[b.worst])
 
@@ -74,6 +92,9 @@ export default async function MaintenancePage() {
         </div>
       </div>
 
+      {/* Recherche véhicule */}
+      <SmartSearch scope="maintenance" placeholder="Rechercher un véhicule…" />
+
       {/* Liste véhicules */}
       {!vehicles || vehicles.length === 0 ? (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 text-center">
@@ -85,7 +106,7 @@ export default async function MaintenancePage() {
         </div>
       ) : (
         <div className="space-y-2">
-          {enriched.map(({ v, agg, badges }) => (
+          {enriched.map(({ v, agg, badges, assignee }) => (
             <Link
               key={v.id}
               href={`/maintenance/${v.id}`}
@@ -109,13 +130,18 @@ export default async function MaintenancePage() {
                       <span>Aucune intervention</span>
                     )}
                     {agg && <span>· {agg.count} interv.</span>}
+                    {assignee && (
+                      <span className="inline-flex items-center gap-1 text-gray-500 font-medium">
+                        · <User className="w-3 h-3" /> {assignee}
+                      </span>
+                    )}
                   </div>
                   {badges.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       {badges.map(b => (
                         <span key={b.key} className={`text-xs px-2 py-0.5 rounded-lg font-semibold border ${NEED_BADGE[b.severity]}`}>
                           {b.key === 'degradation'
-                            ? `Dégradé${b.count > 1 ? ` (${b.count})` : ''}`
+                            ? `Intervenir${b.count > 1 ? ` (${b.count})` : ''}`
                             : `${b.label} · ${b.detail}`}
                         </span>
                       ))}

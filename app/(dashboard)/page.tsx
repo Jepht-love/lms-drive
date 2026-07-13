@@ -60,7 +60,7 @@ const ALERT_GROUPS: AlertGroup[] = [
     cardBg: 'bg-gray-50',   cardBorder: 'border-gray-200',   labelColor: 'text-gray-600',   iconColor: 'text-gray-400',   badgeBg: 'bg-gray-400',   badgeText: 'text-white' },
   { type: 'infraction', label: 'Infraction non réglée',  icon: AlertTriangle, href: '/incidents/infractions',
     cardBg: 'bg-orange-50', cardBorder: 'border-orange-100', labelColor: 'text-orange-700', iconColor: 'text-orange-500', badgeBg: 'bg-orange-500', badgeText: 'text-white' },
-  { type: 'sinistre',   label: 'Sinistre en cours',      icon: AlertTriangle, href: '/incidents/accidents',
+  { type: 'sinistre',   label: 'Sinistre en cours',      icon: AlertTriangle, href: '/incidents/sinistres',
     cardBg: 'bg-red-50',    cardBorder: 'border-red-100',    labelColor: 'text-red-700',    iconColor: 'text-red-500',    badgeBg: 'bg-red-500',    badgeText: 'text-white' },
   { type: 'document',   label: 'Document expiré',        icon: FileText,      href: '/documents',
     cardBg: 'bg-amber-50',  cardBorder: 'border-amber-100',  labelColor: 'text-amber-700',  iconColor: 'text-amber-500',  badgeBg: 'bg-amber-400',  badgeText: 'text-white' },

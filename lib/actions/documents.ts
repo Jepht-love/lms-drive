@@ -30,13 +30,11 @@ export async function uploadDocument(formData: FormData) {
 
   if (uploadError) throw new Error(`Upload échoué : ${uploadError.message}`)
 
-  const { data: { publicUrl } } = supabase.storage.from('documents').getPublicUrl(fileName)
-
   const { error } = await supabase.from('documents').insert({
     category,
     subcategory,
     name,
-    file_url: publicUrl,
+    file_url: fileName,
     file_type: file.type,
     file_size: file.size,
     entity_id:   entityId   || null,
@@ -82,13 +80,11 @@ export async function replaceDocument(existingId: string, formData: FormData) {
     .upload(fileName, arrayBuffer, { contentType: file.type })
   if (uploadError) throw new Error(`Upload échoué : ${uploadError.message}`)
 
-  const { data: { publicUrl } } = supabase.storage.from('documents').getPublicUrl(fileName)
-
   const { error: insertErr } = await supabase.from('documents').insert({
     category:     old.category,
     subcategory:  old.subcategory,
     name:         old.name,
-    file_url:     publicUrl,
+    file_url:     fileName,
     file_type:    file.type,
     file_size:    file.size,
     entity_id:    old.entity_id,
@@ -127,9 +123,14 @@ export async function deleteDocument(documentId: string) {
   if (fetchErr || !doc) throw new Error('Document introuvable')
   if (doc.is_auto_generated) throw new Error('Impossible de supprimer un document auto-généré')
 
-  // Extraire le path storage depuis l'URL publique
-  const urlPath = new URL(doc.file_url).pathname
-  const storagePath = urlPath.split('/storage/v1/object/public/documents/')[1]
+  // Accepte l'ancien format URL public et le nouveau format chemin brut
+  let storagePath: string | null = null
+  if (doc.file_url.startsWith('http')) {
+    const urlPath = new URL(doc.file_url).pathname
+    storagePath = urlPath.split('/storage/v1/object/public/documents/')[1] ?? null
+  } else {
+    storagePath = doc.file_url
+  }
   if (storagePath) {
     await supabase.storage.from('documents').remove([storagePath])
   }
@@ -152,6 +153,16 @@ export async function sendDocumentByEmail(
 
   if (error || !doc) throw new Error('Document introuvable')
 
+  // Génère une URL signée temporaire (24h) — le bucket peut être privé
+  let downloadUrl = doc.file_url as string
+  const rawPath = downloadUrl.startsWith('http')
+    ? (new URL(downloadUrl).pathname.split('/storage/v1/object/public/documents/')[1] ?? null)
+    : downloadUrl
+  if (rawPath) {
+    const { data: signed } = await supabase.storage.from('documents').createSignedUrl(rawPath, 86400)
+    if (signed?.signedUrl) downloadUrl = signed.signedUrl
+  }
+
   const { Resend } = await import('resend')
   const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -162,8 +173,8 @@ export async function sendDocumentByEmail(
     html: `
       <p>Bonjour,</p>
       ${message ? `<p>${message}</p>` : ''}
-      <p>Vous trouverez ci-dessous le lien vers le document <strong>${doc.name}</strong> :</p>
-      <p><a href="${doc.file_url}">Télécharger le document</a></p>
+      <p>Vous trouverez ci-dessous le lien vers le document <strong>${doc.name}</strong> (valable 24h) :</p>
+      <p><a href="${downloadUrl}">Télécharger le document</a></p>
       <p>Cordialement,<br>LMS Agency</p>
     `,
   })

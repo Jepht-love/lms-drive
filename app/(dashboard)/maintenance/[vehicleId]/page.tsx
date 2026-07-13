@@ -5,7 +5,9 @@ import { ArrowLeft, Plus } from 'lucide-react'
 import BackButton from '@/components/ui/BackButton'
 import { formatPrice } from '@/lib/utils'
 import type { MaintenanceRecord } from '@/lib/maintenance'
+import type { MaintenanceFlag } from '@/types/database'
 import MaintenanceHistory from './MaintenanceHistory'
+import VehicleFacts from './VehicleFacts'
 
 export default async function VehicleMaintenancePage({
   params,
@@ -17,7 +19,7 @@ export default async function VehicleMaintenancePage({
 
   const { data: vehicle } = await supabase
     .from('vehicles')
-    .select('id, plate, brand, model, current_km, next_service_km, next_service_date, last_wash_date')
+    .select('id, plate, brand, model, current_km, next_service_km, next_service_date, last_wash_date, maintenance_flags')
     .eq('id', vehicleId)
     .single()
 
@@ -75,6 +77,9 @@ export default async function VehicleMaintenancePage({
       >
         <Plus className="w-4 h-4" /> Ajouter une intervention
       </Link>
+
+      {/* Faits saisis à la main (usure, points à surveiller) */}
+      <VehicleFacts vehicleId={vehicleId} flags={(vehicle.maintenance_flags ?? []) as MaintenanceFlag[]} />
 
       {/* Historique filtrable */}
       <MaintenanceHistory records={list} />

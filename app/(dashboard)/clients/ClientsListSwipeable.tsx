@@ -2,9 +2,10 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Phone, Mail, Star, StickyNote } from 'lucide-react'
+import { Phone, Mail, Star, StickyNote, CheckCircle2, AlertCircle } from 'lucide-react'
 import SwipeableRow from '@/components/SwipeableRow'
 import { AnimatedList, AnimatedListItem } from '@/components/AnimatedList'
+import { isDossierComplet } from '@/lib/clients'
 import type { Client } from '@/types/database'
 
 function StatusBadge({ status }: { status: string }) {
@@ -23,6 +24,22 @@ function StarRating({ rating }: { rating: number | null }) {
         <Star key={i} className={`w-3 h-3 ${i < rating ? 'fill-amber-400 text-amber-400' : 'text-gray-200'}`} />
       ))}
     </div>
+  )
+}
+
+// Badge complétude du dossier (pièce d'identité + permis) directement dans la liste.
+function DossierBadge({ client }: { client: Client }) {
+  if (isDossierComplet(client)) {
+    return (
+      <span title="Dossier complet" className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-green-50 text-green-700">
+        <CheckCircle2 className="w-3 h-3" /> Dossier
+      </span>
+    )
+  }
+  return (
+    <span title="Dossier incomplet" className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-amber-50 text-amber-700">
+      <AlertCircle className="w-3 h-3" /> Incomplet
+    </span>
   )
 }
 
@@ -81,6 +98,7 @@ export default function ClientsListSwipeable({
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-bold text-gray-900 text-sm">{c.first_name} {c.last_name}</span>
                     <StatusBadge status={c.status} />
+                    <DossierBadge client={c} />
                     <StarRating rating={c.rating} />
                     <NoteIndicator notes={c.internal_notes} />
                   </div>

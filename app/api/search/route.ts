@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { formatDate } from '@/lib/utils'
 
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl
@@ -127,6 +128,120 @@ export async function GET(req: NextRequest) {
         }
       }
       if (out.length >= 6) break
+    }
+    return NextResponse.json(out.slice(0, 6))
+  }
+
+  if (scope === 'maintenance') {
+    const { data } = await supabase
+      .from('vehicles')
+      .select('id, plate, brand, model')
+      .or(`plate.ilike.%${q}%,brand.ilike.%${q}%,model.ilike.%${q}%`)
+      .eq('is_active', true)
+      .limit(6)
+    return NextResponse.json(
+      (data ?? []).map(r => ({
+        id: r.id,
+        label: `${r.brand ?? ''} ${r.model ?? ''}`.trim(),
+        sub: r.plate,
+        href: `/maintenance/${r.id}`,
+      }))
+    )
+  }
+
+  if (scope === 'infractions') {
+    const [{ data: byVehicle }, { data: byClient }] = await Promise.all([
+      supabase
+        .from('infractions')
+        .select('id, infraction_date, vehicles!inner(plate, brand, model), clients(first_name, last_name)')
+        .or(`plate.ilike.%${q}%,brand.ilike.%${q}%,model.ilike.%${q}%`, { referencedTable: 'vehicles' })
+        .order('infraction_date', { ascending: false })
+        .limit(6),
+      supabase
+        .from('infractions')
+        .select('id, infraction_date, vehicles(plate, brand, model), clients!inner(first_name, last_name)')
+        .or(`first_name.ilike.%${q}%,last_name.ilike.%${q}%`, { referencedTable: 'clients' })
+        .order('infraction_date', { ascending: false })
+        .limit(6),
+    ])
+    const seen = new Set<string>()
+    const out: { id: string; label: string; sub: string; href: string }[] = []
+    for (const r of [...(byVehicle ?? []), ...(byClient ?? [])] as any[]) {
+      if (seen.has(r.id)) continue
+      seen.add(r.id)
+      const v = Array.isArray(r.vehicles) ? r.vehicles[0] : r.vehicles
+      const c = Array.isArray(r.clients) ? r.clients[0] : r.clients
+      out.push({
+        id: r.id,
+        label: v ? `${v.brand ?? ''} ${v.model ?? ''}`.trim() : 'Infraction',
+        sub: [formatDate(r.infraction_date), v?.plate, c ? `${c.first_name ?? ''} ${c.last_name ?? ''}`.trim() : 'Interne'].filter(Boolean).join(' · '),
+        href: `/incidents/infractions/${r.id}`,
+      })
+    }
+    return NextResponse.json(out.slice(0, 6))
+  }
+
+  if (scope === 'sinistres') {
+    const [{ data: byVehicle }, { data: byClient }] = await Promise.all([
+      supabase
+        .from('accidents')
+        .select('id, accident_date, vehicles!inner(plate, brand, model), clients(first_name, last_name)')
+        .or(`plate.ilike.%${q}%,brand.ilike.%${q}%,model.ilike.%${q}%`, { referencedTable: 'vehicles' })
+        .order('accident_date', { ascending: false })
+        .limit(6),
+      supabase
+        .from('accidents')
+        .select('id, accident_date, vehicles(plate, brand, model), clients!inner(first_name, last_name)')
+        .or(`first_name.ilike.%${q}%,last_name.ilike.%${q}%`, { referencedTable: 'clients' })
+        .order('accident_date', { ascending: false })
+        .limit(6),
+    ])
+    const seen = new Set<string>()
+    const out: { id: string; label: string; sub: string; href: string }[] = []
+    for (const r of [...(byVehicle ?? []), ...(byClient ?? [])] as any[]) {
+      if (seen.has(r.id)) continue
+      seen.add(r.id)
+      const v = Array.isArray(r.vehicles) ? r.vehicles[0] : r.vehicles
+      const c = Array.isArray(r.clients) ? r.clients[0] : r.clients
+      out.push({
+        id: r.id,
+        label: v ? `${v.brand ?? ''} ${v.model ?? ''}`.trim() : 'Sinistre',
+        sub: [formatDate(r.accident_date), v?.plate, c ? `${c.first_name ?? ''} ${c.last_name ?? ''}`.trim() : 'Interne'].filter(Boolean).join(' · '),
+        href: `/incidents/sinistres/${r.id}`,
+      })
+    }
+    return NextResponse.json(out.slice(0, 6))
+  }
+
+  if (scope === 'partnerships') {
+    const [{ data: byAgency }, { data: byVehicle }] = await Promise.all([
+      supabase
+        .from('inter_agency_rentals')
+        .select('id, start_date, direction, external_vehicle_description, partner_agencies!inner(name), vehicles(plate, brand, model)')
+        .or(`name.ilike.%${q}%`, { referencedTable: 'partner_agencies' })
+        .order('start_date', { ascending: false })
+        .limit(6),
+      supabase
+        .from('inter_agency_rentals')
+        .select('id, start_date, direction, external_vehicle_description, partner_agencies(name), vehicles!inner(plate, brand, model)')
+        .or(`plate.ilike.%${q}%,brand.ilike.%${q}%,model.ilike.%${q}%`, { referencedTable: 'vehicles' })
+        .order('start_date', { ascending: false })
+        .limit(6),
+    ])
+    const seen = new Set<string>()
+    const out: { id: string; label: string; sub: string; href: string }[] = []
+    for (const r of [...(byAgency ?? []), ...(byVehicle ?? [])] as any[]) {
+      if (seen.has(r.id)) continue
+      seen.add(r.id)
+      const a = Array.isArray(r.partner_agencies) ? r.partner_agencies[0] : r.partner_agencies
+      const v = Array.isArray(r.vehicles) ? r.vehicles[0] : r.vehicles
+      const vehicleLabel = v ? v.plate : (r.external_vehicle_description || '')
+      out.push({
+        id: r.id,
+        label: a?.name || r.external_vehicle_description || 'Opération',
+        sub: [formatDate(r.start_date), r.direction === 'out' ? '→ Sortant' : '← Entrant', vehicleLabel].filter(Boolean).join(' · '),
+        href: `/partnerships/${r.id}`,
+      })
     }
     return NextResponse.json(out.slice(0, 6))
   }

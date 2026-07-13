@@ -262,7 +262,7 @@ export async function fetchAllAlerts(
       type: 'sinistre',
       label: 'SINISTRE EN COURS',
       sublabel: `${vLabel(v)} · ${new Date(acc.accident_date).toLocaleDateString('fr-FR')}`,
-      href: `/incidents/accidents/${acc.id}`,
+      href: `/incidents/sinistres/${acc.id}`,
       date: acc.accident_date,
       vehicleId: acc.vehicle_id ?? undefined,
     })
@@ -366,6 +366,37 @@ export async function fetchAllAlerts(
       date: r.start_datetime,
       vehicleId: r.vehicle_id,
       reservationId: r.id,
+    })
+  })
+
+  // ── 12. Retours partenaire en retard (opération en cours, fin prévue dépassée) ─
+  // Notre véhicule parti chez un partenaire (sortant) ou véhicule partenaire chez
+  // nous (entrant) : « rien ne tombe entre les mailles » — même logique que les
+  // retours clients, appliquée à l'inter-agence.
+  const { data: latePartnerOps } = await supabase
+    .from('inter_agency_rentals')
+    .select('id, direction, end_date_expected, vehicle_id, external_vehicle_description, partner_agencies(name), vehicles(plate, brand, model)')
+    .eq('status', 'en_cours')
+    .lt('end_date_expected', now.toISOString().split('T')[0])
+    .order('end_date_expected', { ascending: true })
+
+  latePartnerOps?.forEach(op => {
+    const v = Array.isArray(op.vehicles) ? op.vehicles[0] : op.vehicles
+    const a = Array.isArray(op.partner_agencies) ? op.partner_agencies[0] : op.partner_agencies
+    const agency = (a as any)?.name ?? 'partenaire'
+    const vehLabel = v ? vLabel(v) : (op.external_vehicle_description || '—')
+    const daysLate = Math.max(1, differenceInDays(now, new Date(op.end_date_expected)))
+    const dirText = op.direction === 'out' ? `chez ${agency}` : `à rendre à ${agency}`
+    alerts.push({
+      id: `partner-late-${op.id}`,
+      category: 'urgent',
+      urgent: true,
+      type: 'partenaire_retard',
+      label: 'RETOUR PARTENAIRE EN RETARD',
+      sublabel: `${vehLabel} · ${dirText} · ${daysLate}j de retard`,
+      href: `/partnerships/${op.id}`,
+      date: op.end_date_expected,
+      vehicleId: op.vehicle_id ?? undefined,
     })
   })
 

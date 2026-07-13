@@ -109,19 +109,26 @@ export default async function DocumentsPage() {
 
   const visibleDocuments = (documents ?? []).filter(d => visibleCategories.includes(d.category))
 
-  // URLs signées pour chaque document archivé. Les documents auto-générés
-  // (contrats, factures) stockent un file_url "public" pointant vers un bucket
-  // PRIVÉ (contracts-pdf) → "bucket not found" à l'ouverture. On re-signe donc
-  // chaque URL storage à partir de son bucket + path réels.
+  // URLs signées pour chaque document archivé. Deux formats coexistent :
+  // - Ancien : URL publique complète (ex-getPublicUrl) → regex extrait bucket+path
+  // - Nouveau : chemin brut (ex: "infractions/sub/file.pdf") → bucket = 'documents'
   const docSignedUrls: Record<string, string> = {}
   const byBucket = new Map<string, { docId: string; path: string }[]>()
   for (const d of visibleDocuments) {
     const url = d.file_url as string | null
     if (!url) continue
     const m = url.match(/\/storage\/v1\/object\/(?:public|sign|authenticated)\/([^/]+)\/([^?]+)/)
-    if (!m) continue
-    const bucket = m[1]
-    const path = decodeURIComponent(m[2])
+    let bucket: string
+    let path: string
+    if (m) {
+      bucket = m[1]
+      path = decodeURIComponent(m[2])
+    } else if (!url.startsWith('http')) {
+      bucket = 'documents'
+      path = decodeURIComponent(url)
+    } else {
+      continue
+    }
     const arr = byBucket.get(bucket) ?? []
     arr.push({ docId: d.id, path })
     byBucket.set(bucket, arr)

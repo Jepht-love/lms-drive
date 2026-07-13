@@ -42,3 +42,31 @@ const TYPE_MAP: Record<string, MaintenanceType> = Object.fromEntries(
 export function maintenanceType(key: string): MaintenanceType {
   return TYPE_MAP[key] ?? MAINTENANCE_TYPES[MAINTENANCE_TYPES.length - 1]
 }
+
+// ─── Angles d'entretien ───────────────────────────────────────────────────────
+// Le gérant veut voir l'entretien sous 3 angles regroupant les types, classés
+// par ordre de priorité (Réparation la plus urgente en tête). « Budget réparation »
+// = le total de l'angle Réparation. Chaque type appartient à exactement un angle.
+export type MaintenanceAngleId = 'reparation' | 'usure' | 'entretien' | 'autre'
+
+export interface MaintenanceAngle {
+  id: MaintenanceAngleId
+  label: string
+  types: string[]
+  dot: string
+}
+
+export const MAINTENANCE_ANGLES: MaintenanceAngle[] = [
+  { id: 'reparation', label: 'Réparation', types: ['reparation', 'carrosserie'], dot: 'bg-purple-500' },
+  { id: 'usure',      label: 'Usure',      types: ['pneus', 'freins'], dot: 'bg-red-500' },
+  { id: 'entretien',  label: 'Entretien',  types: ['revision', 'vidange', 'controle_technique', 'lavage'], dot: 'bg-amber-500' },
+  { id: 'autre',      label: 'Autre',      types: ['carburant', 'autre'], dot: 'bg-gray-400' },
+]
+
+const ANGLE_OF_TYPE: Record<string, MaintenanceAngleId> = Object.fromEntries(
+  MAINTENANCE_ANGLES.flatMap(a => a.types.map(t => [t, a.id] as const))
+)
+
+export function angleOfType(typeKey: string): MaintenanceAngleId {
+  return ANGLE_OF_TYPE[typeKey] ?? 'autre'
+}

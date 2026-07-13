@@ -110,7 +110,7 @@ export async function createClientAction(formData: FormData) {
     action: 'client_created',
     entity_type: 'clients',
     entity_id: data.id,
-    metadata: { name: `${payload.first_name} ${payload.last_name}` },
+    metadata: {},
   })
 
   revalidatePath('/clients')

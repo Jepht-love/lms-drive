@@ -11,7 +11,7 @@ import { AnimatedList, AnimatedListItem } from '@/components/AnimatedList'
 
 // ─── Statuts ──────────────────────────────────────────────────────────────────
 const STATUS_CONFIG: Record<string, { label: string; bar: string; badge: string }> = {
-  option:    { label: 'En cours',    bar: 'bg-gray-300',   badge: 'bg-gray-100 text-gray-600' },
+  option:    { label: 'À venir',     bar: 'bg-gray-300',   badge: 'bg-gray-100 text-gray-600' },
   confirmee: { label: 'Confirmée',  bar: 'bg-blue-400',   badge: 'bg-blue-50 text-blue-700' },
   en_cours:  { label: 'En location', bar: 'bg-green-500', badge: 'bg-green-50 text-green-700' },
   en_retard: { label: 'En retard',  bar: 'bg-red-500',    badge: 'bg-red-50 text-red-700' },

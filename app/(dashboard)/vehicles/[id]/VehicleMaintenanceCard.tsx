@@ -73,7 +73,7 @@ export default function VehicleMaintenanceCard({
           {/* Dégradations actives */}
           {flags.length > 0 && (
             <div className="space-y-1.5">
-              <p className="text-[11px] font-bold uppercase tracking-wide text-gray-400">Dégradations</p>
+              <p className="text-[11px] font-bold uppercase tracking-wide text-gray-400">Interventions</p>
               {flags.map(f => (
                 <div key={f.id} className="flex items-center justify-between gap-2 p-2 rounded-xl bg-gray-50">
                   <div className="flex items-center gap-2 min-w-0">

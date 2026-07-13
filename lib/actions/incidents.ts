@@ -194,6 +194,87 @@ export async function markInfractionPaid(id: string, paidBy: 'client' | 'agence'
   return { success: true }
 }
 
+/**
+ * Marque (ou dé-marque) une amende comme refacturée au client. N'a de sens
+ * que pour une amende avancée par l'agence (paid_by = 'agence') : c'est la
+ * trace qu'on a réclamé le remboursement au client avant de l'encaisser.
+ */
+export async function setInfractionRebilled(id: string, value: boolean) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié' }
+
+  const { error } = await supabase.from('infractions')
+    .update({ rebilled_to_client: value }).eq('id', id)
+  if (error) return { error: error.message }
+
+  revalidatePath(`/incidents/infractions/${id}`)
+  return { success: true }
+}
+
+/**
+ * Enregistre le montant récupéré auprès du client pour une amende avancée
+ * par l'agence. Le recouvrement est un encaissement → recette dédiée
+ * « recouvrement_amende » qui neutralise au net la dépense d'avance
+ * (markInfractionPaid('agence'), catégorie « amendes ») sans fusionner
+ * avec elle dans le bilan mensuel par catégorie.
+ * `recovered_amount` est le cumulé (source de vérité) : la recette est
+ * synchronisée dessus via reference `infraction-recovery:<id>` (pas de
+ * doublon si on ajuste le montant ; supprimée si on repasse à 0).
+ */
+export async function recordInfractionRecovery(id: string, amount: number) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié' }
+
+  const recovered = Math.max(0, Number.isFinite(amount) ? amount : 0)
+
+  const { data: inf } = await supabase
+    .from('infractions')
+    .select('amount, admin_fees, vehicle_id, type, infraction_date, paid_by')
+    .eq('id', id).single()
+  if (!inf) return { error: 'Infraction introuvable' }
+  if (inf.paid_by !== 'agence') {
+    return { error: 'Recouvrement réservé aux amendes avancées par l\'agence' }
+  }
+
+  const today = new Date().toISOString().slice(0, 10)
+  const { error } = await supabase.from('infractions')
+    .update({
+      recovered_amount: recovered,
+      recovered_at: recovered > 0 ? today : null,
+      // Récupérer implique qu'on a bien refacturé au client.
+      ...(recovered > 0 ? { rebilled_to_client: true } : {}),
+    })
+    .eq('id', id)
+  if (error) return { error: error.message }
+
+  // Synchronise la recette de recouvrement (anti-doublon par reference).
+  const admin = createAdminClient()
+  const reference = `infraction-recovery:${id}`
+  const { data: existing } = await admin
+    .from('financial_transactions').select('id').eq('reference', reference).maybeSingle()
+
+  if (recovered > 0) {
+    const payload = {
+      date: today, type: 'recette', category: 'recouvrement_amende', amount: recovered,
+      vehicle_id: inf.vehicle_id,
+      notes: `Recouvrement amende ${inf.type} — ${inf.infraction_date}`,
+      reference, infraction_id: id, created_by: user.id,
+    }
+    const { error: txError } = existing
+      ? await admin.from('financial_transactions').update({ amount: recovered, date: today }).eq('id', existing.id)
+      : await admin.from('financial_transactions').insert(payload)
+    if (txError) return { error: txError.message }
+  } else if (existing) {
+    await admin.from('financial_transactions').delete().eq('id', existing.id)
+  }
+
+  revalidatePath(`/incidents/infractions/${id}`)
+  revalidatePath('/accounting')
+  return { success: true }
+}
+
 export async function closeInfraction(id: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

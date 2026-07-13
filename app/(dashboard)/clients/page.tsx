@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { Plus, Users } from 'lucide-react'
 import ClientsListSwipeable from './ClientsListSwipeable'
+import AssignStatusButton from './AssignStatusButton'
 import SmartSearch from '@/components/ui/SmartSearch'
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -36,10 +37,14 @@ export default async function ClientsPage({
   if (status === 'note_interne') clients = clients.filter(hasNote)
 
   // Compteurs par statut / segment (sur l'ensemble, indépendamment de la recherche)
-  const { data: allClients } = await supabase.from('clients').select('id, status, internal_notes')
+  const { data: allClients } = await supabase.from('clients').select('id, status, internal_notes, first_name, last_name, phone')
+  const assignList = (allClients ?? []).map(c => ({
+    id: c.id, first_name: c.first_name, last_name: c.last_name, phone: c.phone, status: c.status,
+  }))
   const counts = {
     total:       allClients?.length ?? 0,
     vip:         allClients?.filter(c => c.status === 'vip').length ?? 0,
+    particulier: allClients?.filter(c => c.status === 'standard').length ?? 0,
     blackliste:  allClients?.filter(c => c.status === 'blackliste').length ?? 0,
     noteInterne: allClients?.filter(hasNote).length ?? 0,
   }
@@ -76,6 +81,7 @@ export default async function ClientsPage({
         {[
           { label: 'Tous', value: undefined },
           { label: '★ VIP', value: 'vip' },
+          { label: `Particulier${counts.particulier > 0 ? ` · ${counts.particulier}` : ''}`, value: 'standard' },
           { label: `✎ Note interne${counts.noteInterne > 0 ? ` · ${counts.noteInterne}` : ''}`, value: 'note_interne' },
           { label: '⚠ Blacklisté', value: 'blackliste' },
         ].map(f => (
@@ -91,6 +97,7 @@ export default async function ClientsPage({
             {f.label}
           </Link>
         ))}
+        <AssignStatusButton clients={assignList} />
       </div>
 
       {/* Liste */}

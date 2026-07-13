@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
+import SmartSearch from '@/components/ui/SmartSearch'
 import { Plus, ChevronRight, Building2, Repeat } from 'lucide-react'
 import { formatPrice, formatDate } from '@/lib/utils'
 import { OPERATION_STATUS } from '@/lib/partnerships'
@@ -44,6 +45,9 @@ export default async function PartnershipsPage({
         <Link href="/partnerships?dir=out" className={tab(direction === 'out')}>→ Sortants</Link>
         <Link href="/partnerships?dir=in" className={tab(direction === 'in')}>← Entrants</Link>
       </div>
+
+      {/* Recherche */}
+      <SmartSearch scope="partnerships" placeholder="Agence ou véhicule…" />
 
       {!ops || ops.length === 0 ? (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 text-center">

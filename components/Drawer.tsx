@@ -34,7 +34,7 @@ export default function Drawer({ open, onClose, children, title }: DrawerProps) 
                 <h3 className="font-bold text-gray-900 text-base">{title}</h3>
               </div>
             )}
-            <div className="p-5 pb-[env(safe-area-inset-bottom,16px)]">
+            <div className="p-5" style={{ paddingBottom: 'calc(76px + env(safe-area-inset-bottom))' }}>
               {children}
             </div>
           </motion.div>

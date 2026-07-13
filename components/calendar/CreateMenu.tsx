@@ -67,6 +67,10 @@ export default function CreateMenu({ open, onClose, onPickType }: CreateMenuProp
             </button>
           ))}
         </div>
+
+        {/* Mobile : dégage la barre de navigation basse (60px + safe-area) pour
+            que la dernière option ne soit pas masquée derrière. */}
+        <div className="md:hidden" aria-hidden style={{ height: 'calc(60px + env(safe-area-inset-bottom))' }} />
       </div>
     </div>
   )

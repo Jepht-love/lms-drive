@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { ArrowLeft, Plus, ChevronRight, CarFront } from 'lucide-react'
 import BackButton from '@/components/ui/BackButton'
+import SmartSearch from '@/components/ui/SmartSearch'
 import { formatPrice, formatDate } from '@/lib/utils'
 import { SINISTRE_STATUS } from '@/lib/incidents'
 import VehicleFilter from '@/components/incidents/VehicleFilter'
@@ -48,6 +49,9 @@ export default async function SinistresPage({
           <Plus className="w-4 h-4" /> Déclarer
         </Link>
       </div>
+
+      {/* Recherche */}
+      <SmartSearch scope="sinistres" placeholder="Véhicule ou client…" />
 
       <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
         <Link href={`/incidents/sinistres${vehicle ? `?vehicle=${vehicle}` : ''}`} className={pill(!status)}>Tous</Link>

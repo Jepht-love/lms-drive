@@ -74,7 +74,15 @@ export default async function InfractionDetailPage({
       </div>
 
       {/* Actions */}
-      <InfractionActions id={inf.id} status={inf.status} hasClientEmail={!!c?.email} />
+      <InfractionActions
+        id={inf.id}
+        status={inf.status}
+        hasClientEmail={!!c?.email}
+        paidBy={inf.paid_by}
+        rebilled={!!inf.rebilled_to_client}
+        recoveredAmount={inf.recovered_amount ?? 0}
+        total={total}
+      />
 
       {/* Détails */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
@@ -94,6 +102,14 @@ export default async function InfractionDetailPage({
         {inf.payment_date && (
           <Row label="Réglé le">
             {formatDate(inf.payment_date)}{inf.paid_by ? ` · ${inf.paid_by === 'agence' ? 'par l\'agence' : 'par le client'}` : ''}
+          </Row>
+        )}
+        {inf.paid_by === 'agence' && (
+          <Row label="Refacturée client">{inf.rebilled_to_client ? 'Oui' : 'Non'}</Row>
+        )}
+        {inf.paid_by === 'agence' && inf.recovered_amount > 0 && (
+          <Row label="Récupéré">
+            {formatPrice(inf.recovered_amount)}{inf.recovered_at ? ` · ${formatDate(inf.recovered_at)}` : ''}
           </Row>
         )}
       </div>

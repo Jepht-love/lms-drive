@@ -70,6 +70,12 @@ export async function POST(request: NextRequest) {
           </p>
           ${invoiceAttachment ? `<p>Une <strong>facture</strong> détaillant les éléments facturés lors de la restitution est également jointe à cet email.</p>` : ''}
           <p>Conservez ce document : il détaille les conditions de location et l'état du véhicule au départ comme au retour.</p>
+          <p style="color: #64748b; font-size: 11px; border-top: 1px solid #e2e8f0; margin-top: 16px; padding-top: 12px;">
+            Vos données personnelles (nom, coordonnées, pièce d'identité, permis de conduire) sont traitées par LMS Drive
+            dans le cadre de l'exécution du contrat de location (Art. 6.1.b RGPD). Elles sont conservées 5 ans à compter
+            de la fin du contrat. Vous disposez d'un droit d'accès, de rectification, d'effacement et de portabilité.
+            Pour exercer ces droits, contactez-nous par email.
+          </p>
           <p style="color: #64748b; font-size: 12px;">— LMS Drive</p>
         </div>
       `,
@@ -88,7 +94,7 @@ export async function POST(request: NextRequest) {
       action: 'contract_email_sent',
       entity_type: 'contracts',
       entity_id: contractId,
-      metadata: { recipient: c.email, with_arrival_edl: hasArrivee },
+      metadata: { client_id: c.id, with_arrival_edl: hasArrivee },
     })
     await logEmail({
       type: hasArrivee ? 'contrat_restitution' : 'contrat_location',
@@ -103,7 +109,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (e: any) {
-    console.error('Email send error:', e)
+    console.error('Email send error:', e instanceof Error ? e.message : String(e))
     return NextResponse.json({ error: e.message ?? 'Erreur envoi email' }, { status: 500 })
   }
 }

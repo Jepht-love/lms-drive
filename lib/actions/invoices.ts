@@ -254,7 +254,7 @@ export async function sendInvoice(invoiceId: string) {
     action: 'invoice_sent',
     entity_type: 'invoices',
     entity_id: invoiceId,
-    metadata: { recipient: c.email, total: invoice.total_amount },
+    metadata: { client_id: invoice.client_id, total: invoice.total_amount },
   })
   await logEmail({
     type: 'facture_restitution',
@@ -389,7 +389,7 @@ export async function markRestitutionInvoiceSent(invoiceId: string, buffer: Buff
     action: 'invoice_sent',
     entity_type: 'invoices',
     entity_id: invoiceId,
-    metadata: { recipient: c?.email, total: invoice.total_amount, via: 'contract_email' },
+    metadata: { client_id: invoice.client_id, total: invoice.total_amount, via: 'contract_email' },
   })
   if (c?.email) {
     await logEmail({

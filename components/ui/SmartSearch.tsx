@@ -10,7 +10,7 @@ interface Props {
   name?: string
   placeholder?: string
   defaultValue?: string
-  scope: 'clients' | 'vehicles' | 'reservations' | 'contracts'
+  scope: 'clients' | 'vehicles' | 'reservations' | 'contracts' | 'maintenance' | 'infractions' | 'sinistres' | 'partnerships'
   className?: string
 }
 

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { startTrip, endTrip, planTrip, startPlannedTrip, assignTrip, deleteTrip } from '@/lib/actions/internal-trips'
 import { useToast } from '@/components/Toast'
 import { formatDateTime, formatPrice } from '@/lib/utils'
-import { Plus, Navigation, Clock, CheckCircle2, CalendarClock, UserPlus, Play, Trash2, User } from 'lucide-react'
+import { Plus, Navigation, Clock, CheckCircle2, CalendarClock, UserPlus, Play, Trash2, User, Search } from 'lucide-react'
 import Drawer from '@/components/Drawer'
 
 interface Vehicle { id: string; plate: string; brand: string; model: string; current_km: number }
@@ -49,10 +49,17 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [search, setSearch] = useState('')
 
-  const plannedTrips   = trips.filter(t => t.status === 'planifie')
-  const activeTrips     = trips.filter(t => t.status === 'en_cours')
-  const completedTrips = trips.filter(t => t.status === 'termine')
+  // Filtre local : pas d'URL par trajet (gérés en drawer), donc recherche en mémoire.
+  const q = search.trim().toLowerCase()
+  const matchTrip = (t: Trip) =>
+    !q || [t.vehicle?.plate, t.vehicle?.brand, t.vehicle?.model, t.purpose, t.purpose_notes, t.user?.full_name]
+      .filter(Boolean).join(' ').toLowerCase().includes(q)
+
+  const plannedTrips   = trips.filter(t => t.status === 'planifie' && matchTrip(t))
+  const activeTrips     = trips.filter(t => t.status === 'en_cours' && matchTrip(t))
+  const completedTrips = trips.filter(t => t.status === 'termine' && matchTrip(t))
 
   const vehicleById = (id: string) => vehicles.find(v => v.id === id) ?? null
   const canManageTrip = (t: Trip) => isManager || t.user_id === currentUserId
@@ -103,6 +110,21 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
           <Plus className="w-4 h-4" /> Démarrer maintenant
         </button>
       </div>
+
+      {/* Recherche locale */}
+      {trips.length > 0 && (
+        <div className="relative">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+          <input
+            type="search"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Véhicule, motif ou conducteur…"
+            autoComplete="off"
+            className="w-full bg-white border border-gray-100 shadow-sm rounded-xl pl-10 pr-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-black/10"
+          />
+        </div>
+      )}
 
       {/* Planned trips */}
       {plannedTrips.length > 0 && (
@@ -216,7 +238,7 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
         {completedTrips.length === 0 ? (
           <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center">
             <Navigation className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500 text-sm">Aucun déplacement terminé</p>
+            <p className="text-gray-500 text-sm">{q ? 'Aucun déplacement terminé ne correspond' : 'Aucun déplacement terminé'}</p>
           </div>
         ) : (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden divide-y divide-gray-50">

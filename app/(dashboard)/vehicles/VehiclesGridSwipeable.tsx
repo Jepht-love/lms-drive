@@ -91,7 +91,7 @@ export default function VehiclesGridSwipeable({
                       {badges.map(b => (
                         <span key={b.key} className={`text-xs px-2 py-0.5 rounded-lg font-semibold border ${NEED_BADGE[b.severity]}`}>
                           {b.key === 'degradation'
-                            ? `Dégradé${b.count > 1 ? ` (${b.count})` : ''}`
+                            ? `Intervenir${b.count > 1 ? ` (${b.count})` : ''}`
                             : `${b.label} · ${b.detail}`}
                         </span>
                       ))}
