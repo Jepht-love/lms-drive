@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { assertManager } from '@/lib/auth/roles'
 import { removeReservationFromCalendar } from '@/lib/calendar/syncRental'
 import { recomputeVehicleStatus } from '@/lib/vehicles/vehicleStatus'
 
@@ -29,8 +30,12 @@ export async function deleteClient(id: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non authentifié' }
+  const denied = await assertManager(supabase, user.id)
+  if (denied) return denied
 
-  // Art. 17 RGPD : supprimer les fichiers d'identité avant la ligne DB
+  // Art. 17 RGPD : supprimer les fichiers d'identité avant la ligne DB.
+  // Le client admin (service role) contourne la RLS `managers_client_documents`,
+  // donc ce garde est indispensable AVANT toute suppression de fichier.
   const admin = createAdminClient()
   const { data: files } = await admin.storage.from('client-documents').list(`clients/${id}`)
   if (files && files.length > 0) {
@@ -57,6 +62,10 @@ export async function deleteReservation(id: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non authentifié' }
+  // La cascade ci-dessous passe par le client admin (bypass RLS) : sans ce garde,
+  // n'importe quel employé authentifié pourrait supprimer une réservation.
+  const denied = await assertManager(supabase, user.id)
+  if (denied) return denied
 
   const { data: reservation } = await supabase
     .from('reservations').select('vehicle_id').eq('id', id).single()
@@ -192,6 +201,9 @@ export async function updateDepositDeducted(reservationId: string, amount: numbe
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non authentifié' }
+  // Écrit dans financial_transactions via le client admin plus bas → garde requis.
+  const denied = await assertManager(supabase, user.id)
+  if (denied) return denied
 
   const { error } = await supabase
     .from('reservations')

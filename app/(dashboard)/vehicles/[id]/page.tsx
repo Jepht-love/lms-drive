@@ -169,23 +169,26 @@ export default async function VehiclePage({ params }: { params: Promise<{ id: st
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start gap-4">
-        <BackButton fallbackHref="/vehicles" className="p-2 rounded-xl hover:bg-gray-100 transition-colors mt-1">
-          <ArrowLeft className="w-5 h-5 text-gray-600" />
-        </BackButton>
-        <div className="flex-1">
-          <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-xl font-black text-gray-900">{vehicle.brand} {vehicle.model}</h1>
-            <span className="bg-gray-100 text-gray-500 text-xs font-mono font-medium px-2.5 py-1 rounded-lg tracking-wider">
-              {vehicle.plate}
-            </span>
-            <span className={`text-sm font-medium px-3 py-1 rounded-full border ${getVehicleStatusColor(vehicle.status)}`}>
-              {getVehicleStatusLabel(vehicle.status)}
-            </span>
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+        <div className="flex items-start gap-4 flex-1 min-w-0">
+          <BackButton fallbackHref="/vehicles" className="p-2 rounded-xl hover:bg-gray-100 transition-colors mt-1 shrink-0">
+            <ArrowLeft className="w-5 h-5 text-gray-600" />
+          </BackButton>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1 className="text-xl font-black text-gray-900">{vehicle.brand} {vehicle.model}</h1>
+              <span className="bg-gray-100 text-gray-500 text-xs font-mono font-medium px-2.5 py-1 rounded-lg tracking-wider">
+                {vehicle.plate}
+              </span>
+              <span className={`text-sm font-medium px-3 py-1 rounded-full border ${getVehicleStatusColor(vehicle.status)}`}>
+                {getVehicleStatusLabel(vehicle.status)}
+              </span>
+            </div>
+            {vehicle.version && <p className="text-gray-500 mt-0.5">{vehicle.version} {vehicle.year ? `· ${vehicle.year}` : ''}</p>}
           </div>
-          {vehicle.version && <p className="text-gray-500 mt-0.5">{vehicle.version} {vehicle.year ? `· ${vehicle.year}` : ''}</p>}
         </div>
-        <div className="flex items-center gap-2">
+        {/* Actions : passent sous le titre et s'enroulent sur mobile (plus de débordement hors écran) */}
+        <div className="flex items-center gap-2 flex-wrap lg:justify-end lg:shrink-0">
           <Link
             href={`/reservations/new?vehicle_id=${vehicle.id}`}
             className="flex items-center gap-2 px-4 py-2.5 bg-[#111111] text-white rounded-xl text-[13px] font-semibold active:scale-[.97] transition-transform"

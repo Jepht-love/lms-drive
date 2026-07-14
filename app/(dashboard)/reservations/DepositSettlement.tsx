@@ -36,7 +36,7 @@ export default function DepositSettlement({ reservationId, depositAmount, deposi
     setErrorMsg(null)
     const result = await updateDepositDeducted(reservationId, retenu)
     setLoading(false)
-    if (result?.error) {
+    if (result && 'error' in result && result.error) {
       setErrorMsg(result.error)
       return
     }
