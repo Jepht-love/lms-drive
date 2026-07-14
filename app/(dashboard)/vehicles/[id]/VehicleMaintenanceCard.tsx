@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation'
 import { Wrench, Check, ShieldAlert, RotateCcw } from 'lucide-react'
 import { NEED_BADGE, type VehicleNeed } from '@/lib/maintenance-health'
 import type { MaintenanceFlag } from '@/types/database'
-import { resolveVehicleIssue, setVehicleRepairStatus } from '@/lib/actions/vehicle-issues'
+import { setVehicleRepairStatus } from '@/lib/actions/vehicle-issues'
+import ResolveDamageRow from '@/components/vehicles/ResolveDamageRow'
 
 export default function VehicleMaintenanceCard({
   vehicleId,
@@ -28,15 +29,6 @@ export default function VehicleMaintenanceCard({
   // au garage doit pouvoir être marqué « réparé » sans passer par le réglage manuel.
   const inRepair = status === 'a_reparer' || status === 'maintenance'
   const nothing = serviceNeeds.length === 0 && flags.length === 0
-
-  function resolve(flagId: string) {
-    startTransition(async () => {
-      setErrorMsg(null)
-      const result = await resolveVehicleIssue(vehicleId, flagId)
-      if (result && 'error' in result) { setErrorMsg(result.error ?? null); return }
-      router.refresh()
-    })
-  }
 
   function toggleRepair() {
     startTransition(async () => {
@@ -70,26 +62,14 @@ export default function VehicleMaintenanceCard({
             </div>
           )}
 
-          {/* Dégradations actives */}
+          {/* Dommages actifs — chacun soldé individuellement avec son coût de réparation */}
           {flags.length > 0 && (
             <div className="space-y-1.5">
-              <p className="text-[11px] font-bold uppercase tracking-wide text-gray-400">Interventions</p>
+              <p className="text-[11px] font-bold uppercase tracking-wide text-gray-400">
+                Dommages à solder ({flags.length})
+              </p>
               {flags.map(f => (
-                <div key={f.id} className="flex items-center justify-between gap-2 p-2 rounded-xl bg-gray-50">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
-                      f.severity === 'dommage' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
-                    }`}>{f.severity}</span>
-                    <span className="text-sm text-gray-700 truncate">{f.label}</span>
-                  </div>
-                  <button
-                    onClick={() => resolve(f.id)}
-                    disabled={pending}
-                    className="text-xs font-semibold text-gray-500 hover:text-green-600 flex items-center gap-1 flex-shrink-0 disabled:opacity-40"
-                  >
-                    <Check className="w-3.5 h-3.5" /> Résoudre
-                  </button>
-                </div>
+                <ResolveDamageRow key={f.id} vehicleId={vehicleId} flag={f} />
               ))}
             </div>
           )}
@@ -107,7 +87,7 @@ export default function VehicleMaintenanceCard({
         }`}
       >
         {inRepair
-          ? (<><RotateCcw className="w-4 h-4" /> Réparation terminée — remettre en service</>)
+          ? (<><RotateCcw className="w-4 h-4" /> Remettre en service</>)
           : (<><ShieldAlert className="w-4 h-4" /> Marquer à réparer</>)}
       </button>
       {errorMsg && <p className="text-xs text-red-500 text-center mt-1">{errorMsg}</p>}

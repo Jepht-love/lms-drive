@@ -2,10 +2,11 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Check } from 'lucide-react'
-import { reportVehicleIssues, resolveVehicleIssue } from '@/lib/actions/vehicle-issues'
+import { Plus } from 'lucide-react'
+import { reportVehicleIssues } from '@/lib/actions/vehicle-issues'
 import { useToast } from '@/components/Toast'
 import type { MaintenanceFlag } from '@/types/database'
+import ResolveDamageRow from '@/components/vehicles/ResolveDamageRow'
 
 // Faits saisis à la main par le gérant/l'équipe (ex : « usure plaquette de frein »),
 // stockés comme maintenance_flags (source: manuel). Ils alimentent le badge
@@ -37,17 +38,6 @@ export default function VehicleFacts({ vehicleId, flags }: { vehicleId: string; 
       toast('Fait ajouté')
     })
   }
-
-  function resolve(flagId: string) {
-    startTransition(async () => {
-      const r = await resolveVehicleIssue(vehicleId, flagId)
-      if (r?.error) { toast(r.error, 'error'); return }
-      router.refresh()
-      toast('Fait résolu')
-    })
-  }
-
-  const sevCls = (s: MaintenanceFlag['severity']) => SEVERITIES.find(x => x.id === s)?.cls ?? 'bg-gray-100 text-gray-700'
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 space-y-3">
@@ -109,20 +99,7 @@ export default function VehicleFacts({ vehicleId, flags }: { vehicleId: string; 
       ) : (
         <div className="space-y-1.5">
           {flags.map(f => (
-            <div key={f.id} className="flex items-center justify-between gap-2 p-2 rounded-xl bg-gray-50">
-              <div className="flex items-center gap-2 min-w-0">
-                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${sevCls(f.severity)}`}>{f.severity}</span>
-                <span className="text-sm text-gray-700 truncate">{f.label}</span>
-                {f.source === 'manuel' && <span className="text-[10px] text-gray-400 flex-shrink-0">· manuel</span>}
-              </div>
-              <button
-                onClick={() => resolve(f.id)}
-                disabled={pending}
-                className="text-xs font-semibold text-gray-500 hover:text-green-600 flex items-center gap-1 flex-shrink-0 disabled:opacity-40"
-              >
-                <Check className="w-3.5 h-3.5" /> Résolu
-              </button>
-            </div>
+            <ResolveDamageRow key={f.id} vehicleId={vehicleId} flag={f} />
           ))}
         </div>
       )}

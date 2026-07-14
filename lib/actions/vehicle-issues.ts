@@ -3,9 +3,22 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { recomputeVehicleStatus } from '@/lib/vehicles/vehicleStatus'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { assertPeriodOpen } from '@/lib/accounting/period-lock'
 import type { MaintenanceFlag } from '@/types/database'
 
 type NewIssue = Omit<MaintenanceFlag, 'id' | 'created_at'>
+
+// Catégorie comptable déduite du libellé du dommage (« déjà catégorisé par le
+// type de dommage » — pas de sélecteur). Défaut : réparation mécanique.
+function expenseCategoryForDamage(flag: { category?: string; label?: string }): string {
+  const hay = `${flag.category ?? ''} ${flag.label ?? ''}`.toLowerCase()
+  if (/glace|vitre|pare.?brise|bris/.test(hay)) return 'bris_glace'
+  if (/carross|pare.?choc|aile|porti?[eè]re|porte|capot|hayon|r[eé]tro|jante/.test(hay)) return 'carrosserie'
+  if (/pneu|roue/.test(hay)) return 'pneumatiques'
+  if (/frein|plaquette|disque/.test(hay)) return 'freins'
+  return 'reparations'
+}
 
 async function loadFlags(supabase: Awaited<ReturnType<typeof createClient>>, vehicleId: string) {
   const { data } = await supabase
@@ -56,19 +69,51 @@ export async function reportVehicleIssues(vehicleId: string, issues: NewIssue[],
   return { success: true, count: added.length }
 }
 
-/** Résout une dégradation. Si plus aucune et statut « à réparer » → repasse disponible. */
-export async function resolveVehicleIssue(vehicleId: string, flagId: string) {
+/**
+ * Solde une dégradation. NE change PAS le statut du véhicule (dissocié de la
+ * remise en service — demande gérant). Si un montant de réparation est fourni,
+ * on crée la dépense correspondante en compta, liée au véhicule (→ Rentabilité).
+ * Tout utilisateur connecté peut solder + saisir le coût : l'écriture passe donc
+ * par le client admin (RLS compta = manager) sans garde manager, mais reste
+ * strictement contrainte (dépense, montant > 0, période ouverte, journalisée).
+ */
+export async function resolveVehicleIssue(
+  vehicleId: string,
+  flagId: string,
+  repair?: { amount?: number; date?: string | null; note?: string | null },
+) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non authentifié' }
 
-  const { status, flags } = await loadFlags(supabase, vehicleId)
+  const { flags } = await loadFlags(supabase, vehicleId)
+  const target = flags.find(f => f.id === flagId)
   const remaining = flags.filter(f => f.id !== flagId)
 
-  const update: Record<string, unknown> = { maintenance_flags: remaining }
-  if (remaining.length === 0 && status === 'a_reparer') update.status = 'disponible'
+  // Coût de réparation → écriture de dépense liée au véhicule.
+  const amount = repair?.amount && repair.amount > 0 ? repair.amount : 0
+  if (amount > 0) {
+    const date = (repair?.date || new Date().toISOString().slice(0, 10)).slice(0, 10)
+    const locked = await assertPeriodOpen(supabase, date)
+    if (locked) return { error: locked }
+    const label = target?.label ?? 'dommage'
+    const note = repair?.note?.trim()
+    const { error: txErr } = await createAdminClient().from('financial_transactions').insert({
+      date,
+      type: 'depense',
+      category: expenseCategoryForDamage(target ?? { label }),
+      amount,
+      vehicle_id: vehicleId,
+      notes: `Réparation : ${label}${note ? ` — ${note}` : ''}`,
+      created_by: user.id,
+    })
+    if (txErr) return { error: txErr.message }
+  }
 
-  const { error } = await supabase.from('vehicles').update(update).eq('id', vehicleId)
+  const { error } = await supabase
+    .from('vehicles')
+    .update({ maintenance_flags: remaining })
+    .eq('id', vehicleId)
   if (error) return { error: error.message }
 
   await supabase.from('audit_logs').insert({
@@ -76,22 +121,23 @@ export async function resolveVehicleIssue(vehicleId: string, flagId: string) {
     action: 'vehicle_issue_resolved',
     entity_type: 'vehicles',
     entity_id: vehicleId,
-    metadata: { flag_id: flagId },
+    metadata: { flag_id: flagId, repair_cost: amount || null },
   })
 
   revalidatePath('/vehicles')
   revalidatePath(`/vehicles/${vehicleId}`)
   revalidatePath('/maintenance')
   revalidatePath(`/maintenance/${vehicleId}`)
+  if (amount > 0) revalidatePath('/accounting')
   return { success: true }
 }
 
 /**
- * Bascule manuelle « à réparer » ↔ « réparé ».
- * Mise en réparation → statut `a_reparer`.
- * Réparation terminée → on remet le véhicule disponible ET on met à jour l'état
- * mécanique : les dégradations actives sont effacées (le garage les a traitées),
- * puis recompute pour qu'un véhicule encore réservé/loué retrouve son vrai statut.
+ * Bascule manuelle du statut « à réparer » ↔ remise en service.
+ * Mise en réparation → statut `a_reparer` (indisponible).
+ * Remise en service → statut recalculé (disponible/loué/réservé) SANS toucher aux
+ * dégradations : elles restent affichées (badge « Intervenir ») et se soldent une
+ * par une avec leur coût — dissocié de la remise en service (demande gérant).
  */
 export async function setVehicleRepairStatus(vehicleId: string, toRepair: boolean) {
   const supabase = await createClient()
@@ -102,10 +148,11 @@ export async function setVehicleRepairStatus(vehicleId: string, toRepair: boolea
     const { error } = await supabase.from('vehicles').update({ status: 'a_reparer' }).eq('id', vehicleId)
     if (error) return { error: error.message }
   } else {
-    // Réparation terminée : on solde l'état mécanique puis on recalcule le statut réel.
+    // Remise en service : on rend le véhicule disponible SANS toucher aux dommages,
+    // puis on recalcule le statut réel (un véhicule encore loué/réservé le reste).
     const { error } = await supabase
       .from('vehicles')
-      .update({ status: 'disponible', maintenance_flags: [] })
+      .update({ status: 'disponible' })
       .eq('id', vehicleId)
     if (error) return { error: error.message }
     await recomputeVehicleStatus(supabase, vehicleId)
