@@ -88,6 +88,11 @@ export async function resolveVehicleIssue(
 
   const { flags } = await loadFlags(supabase, vehicleId)
   const target = flags.find(f => f.id === flagId)
+  // Garde-fou : le dommage doit réellement exister sur CE véhicule avant toute
+  // écriture (compta ou statut). Bloque un coût posté contre un vehicleId/flagId
+  // arbitraire, et évite un double débit si deux personnes soldent le même
+  // dommage en même temps (le 2ᵉ ne le trouve plus).
+  if (!target) return { error: 'Dommage introuvable ou déjà soldé' }
   const remaining = flags.filter(f => f.id !== flagId)
 
   // Coût de réparation → écriture de dépense liée au véhicule.
@@ -96,15 +101,14 @@ export async function resolveVehicleIssue(
     const date = (repair?.date || new Date().toISOString().slice(0, 10)).slice(0, 10)
     const locked = await assertPeriodOpen(supabase, date)
     if (locked) return { error: locked }
-    const label = target?.label ?? 'dommage'
     const note = repair?.note?.trim()
     const { error: txErr } = await createAdminClient().from('financial_transactions').insert({
       date,
       type: 'depense',
-      category: expenseCategoryForDamage(target ?? { label }),
+      category: expenseCategoryForDamage(target),
       amount,
       vehicle_id: vehicleId,
-      notes: `Réparation : ${label}${note ? ` — ${note}` : ''}`,
+      notes: `Réparation : ${target.label}${note ? ` — ${note}` : ''}`,
       created_by: user.id,
     })
     if (txErr) return { error: txErr.message }
