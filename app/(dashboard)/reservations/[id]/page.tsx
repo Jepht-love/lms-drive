@@ -97,21 +97,8 @@ export default async function ReservationPage({
     }
   }
 
-  // Auto-annulation si délai de paiement expiré (2h après envoi email)
-  if (
-    (reservation as any).payment_email_sent_at &&
-    reservation.payment_status === 'en_attente' &&
-    reservation.status === 'confirmee'
-  ) {
-    const deadline = new Date(new Date((reservation as any).payment_email_sent_at).getTime() + 2 * 60 * 60 * 1000)
-    if (deadline < new Date()) {
-      await supabase.from('reservations')
-        .update({ status: 'annulee', payment_email_sent_at: null })
-        .eq('id', id)
-      reservation.status = 'annulee'
-      ;(reservation as any).payment_email_sent_at = null
-    }
-  }
+  // Plus d'auto-annulation : le chrono acompte 2 h est purement visuel — le gérant
+  // garde la main pour annuler ou confirmer l'option (choix « auto à la création, sans annulation »).
 
   const { data: contract } = await supabase
     .from('contracts')
@@ -159,9 +146,10 @@ export default async function ReservationPage({
   const hasExtraFees =
     (reservation.late_fee_amount > 0) || (reservation.extra_km_count > 0)
 
-  const paymentEmailSentAt = (reservation as any).payment_email_sent_at
-  const initialDeadline = paymentEmailSentAt && reservation.payment_status === 'en_attente'
-    ? new Date(new Date(paymentEmailSentAt).getTime() + 2 * 60 * 60 * 1000).toISOString()
+  // Chrono acompte : 2 h à partir de la création de l'option, tant que l'acompte
+  // n'est pas encaissé. Affichage seul, aucune annulation automatique.
+  const acompteDeadline = reservation.status === 'option' && reservation.payment_status === 'en_attente' && (reservation as any).created_at
+    ? new Date(new Date((reservation as any).created_at).getTime() + 2 * 60 * 60 * 1000).toISOString()
     : null
 
   return (
@@ -210,8 +198,8 @@ export default async function ReservationPage({
                 <AlertTriangle className="w-3.5 h-3.5" /> Retour dépassé
               </span>
             )}
-            {initialDeadline && (
-              <PaymentCountdownMini reservationId={id} deadline={initialDeadline} onDark />
+            {acompteDeadline && (
+              <PaymentCountdownMini reservationId={id} deadline={acompteDeadline} onDark />
             )}
           </div>
         </div>
@@ -424,7 +412,7 @@ export default async function ReservationPage({
           currentAmount={reservation.payment_amount ?? null}
           currentRef={reservation.payment_ref ?? null}
         />
-        {!initialDeadline && reservation.payment_status === 'en_attente' && c?.email && (
+        {reservation.status === 'option' && reservation.payment_status === 'en_attente' && c?.email && (
           <SendPaymentEmailButton
             reservationId={id}
             clientEmail={c.email}

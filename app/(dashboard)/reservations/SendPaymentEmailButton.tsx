@@ -39,7 +39,7 @@ export default function SendPaymentEmailButton({
     return (
       <div className="flex items-center gap-2 text-sm text-green-700 font-medium">
         <CheckCircle className="w-4 h-4" />
-        Email envoyé à {clientEmail} — compte à rebours lancé
+        Email de modalités de paiement envoyé à {clientEmail}
       </div>
     )
   }

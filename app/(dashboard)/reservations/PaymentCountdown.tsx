@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { cancelReservationOnPaymentTimeout } from '@/lib/actions/reservations'
 
 interface Props {
   reservationId: string
@@ -25,17 +24,11 @@ export default function PaymentCountdown({ reservationId, deadline }: Props) {
   const [done, setDone] = useState(false)
 
   useEffect(() => {
-    if (remaining <= 0) {
-      cancelReservationOnPaymentTimeout(reservationId).then(() => setDone(true))
-      return
-    }
+    if (remaining <= 0) { setDone(true); return }
     const tick = setInterval(() => {
       const r = deadlineMs - Date.now()
       setRemaining(r)
-      if (r <= 0) {
-        clearInterval(tick)
-        cancelReservationOnPaymentTimeout(reservationId).then(() => setDone(true))
-      }
+      if (r <= 0) { clearInterval(tick); setDone(true) }
     }, 1000)
     return () => clearInterval(tick)
   }, [deadlineMs, reservationId]) // eslint-disable-line
@@ -43,8 +36,8 @@ export default function PaymentCountdown({ reservationId, deadline }: Props) {
   if (done) {
     return (
       <div className="rounded-2xl bg-red-600 p-5 text-white text-center">
-        <p className="text-lg font-extrabold">⛔ Délai expiré</p>
-        <p className="text-sm mt-1 text-red-100">Réservation annulée — véhicule remis en disponibilité.</p>
+        <p className="text-lg font-extrabold">⏳ Délai dépassé</p>
+        <p className="text-sm mt-1 text-red-100">Acompte non reçu dans les 2 h — à traiter (relancer ou annuler).</p>
       </div>
     )
   }

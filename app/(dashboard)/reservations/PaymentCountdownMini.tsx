@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { cancelReservationOnPaymentTimeout } from '@/lib/actions/reservations'
 
 function pad(n: number) { return String(n).padStart(2, '0') }
 
@@ -19,17 +18,11 @@ export default function PaymentCountdownMini({
   const [expired, setExpired] = useState(false)
 
   useEffect(() => {
-    if (remaining <= 0) {
-      cancelReservationOnPaymentTimeout(reservationId).then(() => setExpired(true))
-      return
-    }
+    if (remaining <= 0) { setExpired(true); return }
     const tick = setInterval(() => {
       const r = Math.max(0, deadlineMs - Date.now())
       setRemaining(r)
-      if (r <= 0) {
-        clearInterval(tick)
-        cancelReservationOnPaymentTimeout(reservationId).then(() => setExpired(true))
-      }
+      if (r <= 0) { clearInterval(tick); setExpired(true) }
     }, 1000)
     return () => clearInterval(tick)
   }, [deadlineMs, reservationId]) // eslint-disable-line
@@ -39,7 +32,7 @@ export default function PaymentCountdownMini({
       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg flex-shrink-0 ${
         onDark ? 'text-white bg-red-500/50' : 'text-red-600 bg-red-50'
       }`}>
-        ⛔ Délai expiré
+        ⏳ Délai dépassé
       </span>
     )
   }

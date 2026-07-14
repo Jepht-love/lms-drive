@@ -161,9 +161,9 @@ export default async function ReservationsPage({
             const startDate = new Date(r.start_datetime)
             const endDate   = new Date(r.end_datetime)
 
-            const paymentEmailSentAt = (r as any).payment_email_sent_at
-            const paymentDeadline = paymentEmailSentAt && r.payment_status === 'en_attente' && r.status === 'confirmee'
-              ? new Date(new Date(paymentEmailSentAt).getTime() + 2 * 60 * 60 * 1000).toISOString()
+            // Chrono acompte : 2 h depuis la création tant que l'option attend son acompte.
+            const acompteDeadline = r.status === 'option' && r.payment_status === 'en_attente' && (r as any).created_at
+              ? new Date(new Date((r as any).created_at).getTime() + 2 * 60 * 60 * 1000).toISOString()
               : null
 
             return (
@@ -203,8 +203,8 @@ export default async function ReservationsPage({
                       </span>
                       <span className="text-gray-200">·</span>
                       <span className="text-xs text-gray-300 font-mono">{r.reservation_number}</span>
-                      {paymentDeadline && (
-                        <PaymentCountdownMini reservationId={r.id} deadline={paymentDeadline} />
+                      {acompteDeadline && (
+                        <PaymentCountdownMini reservationId={r.id} deadline={acompteDeadline} />
                       )}
                     </div>
                   </div>

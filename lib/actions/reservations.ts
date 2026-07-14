@@ -19,7 +19,6 @@ export async function sendPaymentInfoEmail(
 
   const sentAt = new Date()
   const deadline = new Date(sentAt.getTime() + 2 * 60 * 60 * 1000)
-  const deadlineStr = deadline.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
 
   const resend = new Resend(apiKey)
   const { error } = await resend.emails.send({
@@ -36,7 +35,7 @@ export async function sendPaymentInfoEmail(
           <li>💵 <strong>Espèces</strong></li>
         </ul>
         <p>Pour un paiement en espèces, merci de contacter l'agence afin de convenir d'un rendez-vous.</p>
-        <p style="color:#e55;font-weight:bold">⏳ Sans retour de votre part avant ${deadlineStr}, votre réservation sera automatiquement annulée et le véhicule remis en disponibilité.</p>
+        <p style="color:#e55;font-weight:bold">⏳ Merci de régler l'acompte sous 2 h. Sans règlement, votre réservation pourra être annulée et le véhicule remis en disponibilité.</p>
         <p style="color:#666;font-size:13px;margin-top:24px">— L'équipe LMS Drive</p>
       </div>
     `,
