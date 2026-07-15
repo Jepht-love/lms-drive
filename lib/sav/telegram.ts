@@ -64,6 +64,7 @@ export async function sendSavTelegram(
       const res = await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
         method: 'POST',
         body: form,
+        signal: AbortSignal.timeout(20000),
       })
       if (!res.ok) console.error('[SAV] Telegram sendPhoto échec:', await res.text())
     } else {
@@ -71,6 +72,7 @@ export async function sendSavTelegram(
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ chat_id: chatId, text: caption, parse_mode: 'Markdown' }),
+        signal: AbortSignal.timeout(20000),
       })
       if (!res.ok) console.error('[SAV] Telegram sendMessage échec:', await res.text())
     }

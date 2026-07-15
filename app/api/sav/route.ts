@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { roleLabel } from '@/lib/roles'
@@ -71,11 +71,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'enregistrement impossible' }, { status: 500 })
   }
 
-  // Notification Telegram (non bloquante pour la réponse à l'utilisateur).
-  await sendSavTelegram(
-    { module: moduleName, section, pagePath, reporterName, reporterRole, description },
-    photoBytes ? { bytes: photoBytes, filename: photoName, contentType: photoType } : null,
-  )
+  // Notification Telegram envoyée APRÈS la réponse HTTP (after) : le client reçoit
+  // ok immédiatement (bouton libéré) pendant que l'upload de la capture vers
+  // Telegram se poursuit en arrière-plan, sans figer l'interface.
+  const notif = { module: moduleName, section, pagePath, reporterName, reporterRole, description }
+  const photo = photoBytes ? { bytes: photoBytes, filename: photoName, contentType: photoType } : null
+  after(async () => {
+    await sendSavTelegram(notif, photo)
+  })
 
   return NextResponse.json({ ok: true })
 }

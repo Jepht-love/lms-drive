@@ -7,6 +7,31 @@ import { useToast } from '@/components/Toast'
 import { useSavContext } from '@/lib/sav/context'
 import { moduleFromPath, sectionFromPath } from '@/lib/sav/modules'
 
+// Compresse/redimensionne la capture dans le navigateur avant l'envoi pour
+// accélérer l'upload (réseau mobile) et l'envoi Telegram. Repli sur le fichier
+// original en cas d'échec.
+async function compressImage(file: File, maxDim = 1600, quality = 0.7): Promise<Blob> {
+  try {
+    const bitmap = await createImageBitmap(file)
+    let { width, height } = bitmap
+    if (width > maxDim || height > maxDim) {
+      const scale = Math.min(maxDim / width, maxDim / height)
+      width = Math.round(width * scale)
+      height = Math.round(height * scale)
+    }
+    const canvas = document.createElement('canvas')
+    canvas.width = width
+    canvas.height = height
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return file
+    ctx.drawImage(bitmap, 0, 0, width, height)
+    const blob = await new Promise<Blob | null>(res => canvas.toBlob(res, 'image/jpeg', quality))
+    return blob && blob.size < file.size ? blob : file
+  } catch {
+    return file
+  }
+}
+
 export default function SavButton() {
   const pathname = usePathname()
   const { section } = useSavContext()
@@ -47,7 +72,10 @@ export default function SavButton() {
       form.append('section', section)
       form.append('page_path', pathname)
       form.append('user_agent', navigator.userAgent)
-      if (file) form.append('screenshot', file)
+      if (file) {
+        const compressed = await compressImage(file)
+        form.append('screenshot', compressed, 'capture.jpg')
+      }
 
       const res = await fetch('/api/sav', { method: 'POST', body: form })
       if (!res.ok) throw new Error('échec')
