@@ -42,8 +42,10 @@ export async function sendSavTelegram(
   ticket: TelegramTicket,
   photo?: TelegramPhoto | null,
 ): Promise<void> {
-  const token = process.env.TELEGRAM_BOT_TOKEN
-  const chatId = process.env.TELEGRAM_CHAT_ID
+  // .trim() défensif : sur Vercel, un espace ou retour à la ligne collé par
+  // erreur dans la valeur casse l'appel Telegram (404 token / 400 chat not found).
+  const token = process.env.TELEGRAM_BOT_TOKEN?.trim()
+  const chatId = process.env.TELEGRAM_CHAT_ID?.trim()
   if (!token || !chatId) {
     console.warn('[SAV] Telegram non configuré (TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID manquants) — ticket enregistré sans notification.')
     return
