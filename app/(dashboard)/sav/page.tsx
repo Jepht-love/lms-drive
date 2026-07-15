@@ -22,17 +22,20 @@ export default async function SavPage() {
 
   const tickets = (rows ?? []) as SavTicket[]
 
-  // URLs signées pour les captures (bucket privé), valides 1 h.
+  // Les nouvelles captures ne sont plus stockées (marqueur 'telegram') : elles
+  // sont visualisables sur Telegram. Pour les anciens tickets (chemin réel dans
+  // le bucket), on génère encore un lien signé valide 1 h.
   const withUrls = await Promise.all(
     tickets.map(async (t) => {
       let signedUrl: string | null = null
-      if (t.screenshot_url) {
+      const onTelegram = t.screenshot_url === 'telegram'
+      if (t.screenshot_url && !onTelegram) {
         const { data } = await admin.storage
           .from('sav-screenshots')
           .createSignedUrl(t.screenshot_url, 3600)
         signedUrl = data?.signedUrl ?? null
       }
-      return { ...t, signedUrl }
+      return { ...t, signedUrl, onTelegram }
     }),
   )
 

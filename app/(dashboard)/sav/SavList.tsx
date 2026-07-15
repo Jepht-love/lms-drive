@@ -1,12 +1,12 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Bug, ExternalLink } from 'lucide-react'
+import { Bug, ExternalLink, Camera } from 'lucide-react'
 import { updateSavStatus } from '@/lib/actions/sav'
 import { SAV_STATUS_LABELS, type SavStatus, type SavTicket } from '@/lib/sav/admin'
 import { useToast } from '@/components/Toast'
 
-type Ticket = SavTicket & { signedUrl: string | null }
+type Ticket = SavTicket & { signedUrl: string | null; onTelegram?: boolean }
 
 const STATUS_STYLE: Record<SavStatus, { bg: string; text: string }> = {
   nouveau:  { bg: '#FEE2E2', text: '#B91C1C' },
@@ -99,7 +99,11 @@ export default function SavList({ tickets }: { tickets: Ticket[] }) {
                   <p className="text-[11px] text-gray-400 mt-2 font-mono">{t.page_path}</p>
                 )}
 
-                {t.signedUrl && (
+                {t.onTelegram ? (
+                  <span className="inline-flex items-center gap-1.5 mt-3 text-xs font-semibold text-gray-400">
+                    <Camera size={13} /> Capture envoyée sur Telegram
+                  </span>
+                ) : t.signedUrl && (
                   <a href={t.signedUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 mt-3 text-xs font-semibold text-[#C4A35A] hover:underline">
                     <ExternalLink size={13} /> Voir la capture
                   </a>

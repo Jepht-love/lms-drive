@@ -43,16 +43,14 @@ export async function POST(req: Request) {
     if (screenshot.size > MAX_SCREENSHOT_BYTES) {
       return NextResponse.json({ error: 'capture trop volumineuse (max 10 Mo)' }, { status: 400 })
     }
+    // La capture n'est PAS stockée dans Supabase : elle est uniquement transmise
+    // à Telegram (visualisable là-bas). On garde juste un marqueur en base pour
+    // indiquer qu'une capture accompagne le ticket.
     const ext = (screenshot.name.split('.').pop() || 'jpg').toLowerCase()
-    const path = `${user.id}/${Date.now()}.${ext}`
     photoBytes = await screenshot.arrayBuffer()
     photoType = screenshot.type || 'image/jpeg'
     photoName = screenshot.name || `capture.${ext}`
-    const { error: upErr } = await admin.storage
-      .from('sav-screenshots')
-      .upload(path, photoBytes, { contentType: photoType })
-    if (!upErr) screenshotPath = path
-    else console.error('[SAV] upload capture échec:', upErr.message)
+    screenshotPath = 'telegram'
   }
 
   // Enregistrement du ticket.
