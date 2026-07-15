@@ -66,10 +66,15 @@ export default function SavButton() {
       <button
         onClick={openForm}
         aria-label="Signaler un bug"
-        className="fixed z-40 bottom-[76px] right-4 lg:bottom-6 lg:right-6 w-12 h-12 rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform"
-        style={{ background: 'linear-gradient(135deg, #C4A35A, #D4B870)' }}
+        className="fixed z-40 right-3 w-9 h-9 rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform opacity-90 hover:opacity-100"
+        style={{
+          // Toujours au-dessus de la barre de navigation basse (60px + zone sécurisée),
+          // avec une marge confortable, sur tous les formats (mobile, iPad, desktop).
+          bottom: 'calc(84px + env(safe-area-inset-bottom))',
+          background: 'linear-gradient(135deg, #C4A35A, #D4B870)',
+        }}
       >
-        <HelpCircle className="w-6 h-6 text-[#0A0A0A]" strokeWidth={2.2} />
+        <HelpCircle className="w-[18px] h-[18px] text-[#0A0A0A]" strokeWidth={2.2} />
       </button>
 
       {/* Modal formulaire */}
