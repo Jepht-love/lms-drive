@@ -429,6 +429,112 @@ function InspectionPage({ insp, contractNumber, clientName, vehiclePlate, vehicl
   )
 }
 
+// ─── Comparatif EDL départ / retour (page paysage, lisible sur iPad) ──────────
+
+function EDLCompareColumn({ insp, edlImage }: { insp: InspectionPDFData; edlImage?: string }) {
+  const isDepart = insp.type === 'depart'
+  const color = isDepart ? '#2563eb' : '#7c3aed'
+  return (
+    <View style={{ flex: 1 }}>
+      <View style={{ backgroundColor: color, borderRadius: 4, paddingVertical: 5, paddingHorizontal: 8, marginBottom: 8 }}>
+        <Text style={{ color: '#ffffff', fontFamily: 'Helvetica-Bold', fontSize: 12 }}>
+          {isDepart ? 'DÉPART' : 'RETOUR'}
+        </Text>
+        {insp.signedAt ? (
+          <Text style={{ color: '#e0e7ff', fontSize: 7, marginTop: 1 }}>Signé le {fmtDate(insp.signedAt)}</Text>
+        ) : null}
+      </View>
+
+      <View style={{ flexDirection: 'row', gap: 4, marginBottom: 8 }}>
+        <View style={s.metricBox}>
+          <Text style={s.metricValue}>{insp.kmReading.toLocaleString('fr-FR')}</Text>
+          <Text style={s.metricLabel}>Kilométrage</Text>
+        </View>
+        <View style={s.metricBox}>
+          <Text style={s.metricValue}>{insp.fuelRangeKm} km</Text>
+          <Text style={s.metricLabel}>Autonomie</Text>
+        </View>
+        <View style={[s.metricBox, { backgroundColor: insp.damagedZones.length > 0 ? '#fff7ed' : '#f0fdf4' }]}>
+          <Text style={[s.metricValue, { color: insp.damagedZones.length > 0 ? '#ea580c' : '#16a34a' }]}>
+            {insp.damagedZones.length}
+          </Text>
+          <Text style={s.metricLabel}>Dommage(s)</Text>
+        </View>
+      </View>
+
+      <View style={{ alignItems: 'center', marginBottom: 4 }}>
+        <VehicleSchemaImage damages={insp.damagedZones} bgImage={edlImage} size={200} />
+        <SchemaLegend />
+      </View>
+
+      <View style={{ marginTop: 6 }}>
+        <DamageTable zones={insp.damagedZones} />
+      </View>
+
+      <View style={{ marginTop: 6 }}>
+        <Text style={s.sigLabel}>Signature client</Text>
+        {insp.clientSignature ? (
+          <Image src={insp.clientSignature} style={{ height: 42, objectFit: 'contain' }} />
+        ) : (
+          <View style={{ height: 42, backgroundColor: '#f8fafc', borderRadius: 4 }} />
+        )}
+      </View>
+    </View>
+  )
+}
+
+function EDLComparePage({ dep, arr, contractNumber, clientName, vehiclePlate, vehicleModel, edlImage }: {
+  dep: InspectionPDFData
+  arr: InspectionPDFData
+  contractNumber: string
+  clientName: string
+  vehiclePlate: string
+  vehicleModel: string
+  edlImage?: string
+}) {
+  const kmDriven = Math.max(0, arr.kmReading - dep.kmReading)
+  const depIds = new Set(dep.damagedZones.map(z => z.id))
+  const newDamages = arr.damagedZones.filter(z => !depIds.has(z.id)).length
+
+  const Delta = ({ label, value, warn }: { label: string; value: string; warn?: boolean }) => (
+    <View style={{ flex: 1, backgroundColor: warn ? '#fff7ed' : '#f1f5f9', borderRadius: 4, paddingVertical: 5, paddingHorizontal: 8 }}>
+      <Text style={{ fontSize: 13, fontFamily: 'Helvetica-Bold', color: warn ? '#ea580c' : '#0f172a' }}>{value}</Text>
+      <Text style={{ fontSize: 7, color: '#64748b' }}>{label}</Text>
+    </View>
+  )
+
+  return (
+    <Page size="A4" orientation="landscape" style={s.edlPage}>
+      <View style={[s.edlHeader, { borderBottomColor: '#0f172a' }]}>
+        <View>
+          <Text style={[s.edlTitle, { color: '#0f172a' }]}>Comparatif état des lieux — Départ / Retour</Text>
+          <Text style={s.edlSubtitle}>{vehicleModel} — {vehiclePlate} · Client : {clientName}</Text>
+        </View>
+        <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 9, color: '#1e293b' }}>{contractNumber}</Text>
+      </View>
+
+      {/* Bandeau des différences départ → retour */}
+      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 10 }}>
+        <Delta label="Kilomètres parcourus" value={`${kmDriven.toLocaleString('fr-FR')} km`} />
+        <Delta label="Nouveaux dommages au retour" value={`${newDamages}`} warn={newDamages > 0} />
+        <Delta label="Dommages au départ" value={`${dep.damagedZones.length}`} />
+        <Delta label="Dommages au retour" value={`${arr.damagedZones.length}`} warn={arr.damagedZones.length > dep.damagedZones.length} />
+      </View>
+
+      {/* Deux colonnes côte à côte : départ | retour */}
+      <View style={{ flexDirection: 'row', gap: 14 }}>
+        <EDLCompareColumn insp={dep} edlImage={edlImage} />
+        <View style={{ width: 1, backgroundColor: '#e2e8f0' }} />
+        <EDLCompareColumn insp={arr} edlImage={edlImage} />
+      </View>
+
+      <Text style={{ fontSize: 7, color: '#cbd5e1', textAlign: 'center', marginTop: 12 }}>
+        {contractNumber} — Comparatif état des lieux départ / retour — LMS Drive
+      </Text>
+    </Page>
+  )
+}
+
 // ─── Main PDF Component ───────────────────────────────────────────────────────
 
 export function ContractPDF({ data }: { data: ContractData }) {
@@ -757,7 +863,20 @@ export function ContractPDF({ data }: { data: ContractData }) {
         </Text>
       </Page>
 
-      {/* ── Pages EDL ── */}
+      {/* ── Comparatif départ/retour côte à côte (page paysage, format iPad) ── */}
+      {depInsp && arrInsp && (
+        <EDLComparePage
+          dep={depInsp}
+          arr={arrInsp}
+          contractNumber={data.contractNumber}
+          clientName={data.clientName}
+          vehiclePlate={data.vehiclePlate}
+          vehicleModel={`${data.vehicleBrand} ${data.vehicleModel}`}
+          edlImage={data.edlSchemaImage}
+        />
+      )}
+
+      {/* ── Pages EDL détaillées ── */}
       {depInsp && (
         <InspectionPage
           insp={depInsp}
