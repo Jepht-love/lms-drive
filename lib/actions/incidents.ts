@@ -88,14 +88,13 @@ export async function createInfraction(formData: FormData) {
     const ab = await justificatif.arrayBuffer()
     const { error: upErr } = await supabase.storage.from('documents').upload(path, ab, { contentType: justificatif.type })
     if (!upErr) {
-      const { data: { publicUrl } } = supabase.storage.from('documents').getPublicUrl(path)
       const { data: veh } = await supabase.from('vehicles').select('brand, model, plate').eq('id', vehicleId).single()
       const vehLabel = veh ? `${veh.brand} ${veh.model}${veh.plate ? ` (${veh.plate})` : ''}` : ''
       await supabase.from('documents').insert({
         category: 'vehicule',
         subcategory: 'infraction',
         name: `Infraction ${infractionDate} — ${vehLabel}`,
-        file_url: publicUrl,
+        file_url: path,
         file_type: justificatif.type,
         file_size: justificatif.size,
         entity_id: vehicleId,
@@ -357,14 +356,13 @@ export async function createAccident(formData: FormData) {
     const ab = await justificatif.arrayBuffer()
     const { error: upErr } = await supabase.storage.from('documents').upload(path, ab, { contentType: justificatif.type })
     if (!upErr) {
-      const { data: { publicUrl } } = supabase.storage.from('documents').getPublicUrl(path)
       const { data: veh } = await supabase.from('vehicles').select('brand, model, plate').eq('id', vehicleId).single()
       const vehLabel = veh ? `${veh.brand} ${veh.model}${veh.plate ? ` (${veh.plate})` : ''}` : ''
       await supabase.from('documents').insert({
         category: 'vehicule',
         subcategory: 'pv_expertise',
         name: `Sinistre ${accidentDate} — ${vehLabel}`,
-        file_url: publicUrl,
+        file_url: path,
         file_type: justificatif.type,
         file_size: justificatif.size,
         entity_id: vehicleId,

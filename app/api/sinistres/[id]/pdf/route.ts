@@ -64,13 +64,12 @@ export async function GET(
       .from('documents')
       .upload(path, bytes, { contentType: 'application/pdf', upsert: true })
     if (!upErr) {
-      const { data: { publicUrl } } = supabase.storage.from('documents').getPublicUrl(path)
       const existing = await supabase.from('documents').select('id').eq('entity_id', id).eq('subcategory', 'rapport_sinistre').maybeSingle()
       if (!existing.data) {
         await supabase.from('documents').insert({
           category: 'vehicule', subcategory: 'rapport_sinistre',
           name: `Rapport sinistre — ${v?.brand ?? ''} ${v?.model ?? ''} (${acc.accident_date})`,
-          file_url: publicUrl, file_type: 'application/pdf',
+          file_url: path, file_type: 'application/pdf',
           entity_id: acc.vehicle_id, entity_type: 'vehicle',
           is_auto_generated: true, created_by: user.id,
         })

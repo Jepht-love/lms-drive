@@ -8,6 +8,8 @@ import {
 } from 'lucide-react'
 import { logout } from '@/lib/actions/auth'
 import { allowedHrefSet } from '@/lib/navigation/tabs'
+import { isSavAdmin } from '@/lib/sav/admin'
+import { Bug } from 'lucide-react'
 
 // ─── Modules principaux ───────────────────────────────────────────────────────
 const modules = [
@@ -60,6 +62,7 @@ export default async function MenuPage() {
     .maybeSingle()
 
   const isManager = profile?.role === 'gerant' || profile?.role === 'associe'
+  const savAdmin = isSavAdmin(user.email)
 
   // Permissions par onglet : un employé ne voit que ses sections autorisées
   // (allowed_tabs null/vide = accès complet). Les managers voient tout.
@@ -156,6 +159,30 @@ export default async function MenuPage() {
                   <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
                 </Link>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* SAV — réservé au super-admin (éditeur) */}
+        {savAdmin && (
+          <div>
+            <p className="px-1 pb-2 pt-1 text-[10px] font-black uppercase tracking-[0.15em] text-gray-400">
+              Éditeur
+            </p>
+            <div className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm">
+              <Link
+                href="/sav"
+                className="flex items-center gap-4 px-4 py-4 hover:bg-gray-50 transition-colors active:bg-gray-100"
+              >
+                <div className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0">
+                  <Bug className="w-4 h-4 text-[#111111]" strokeWidth={1.8} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-[#111111] leading-snug">SAV — Tickets</p>
+                  <p className="text-xs text-gray-400 mt-0.5 leading-none">Signalements de bugs des utilisateurs</p>
+                </div>
+                <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
+              </Link>
             </div>
           </div>
         )}

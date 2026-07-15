@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>LMS Drive</title>
+    <style>
+      html, body { margin: 0; height: 100%; background: #111111; color: #ffffff;
+        font-family: -apple-system, system-ui, sans-serif; }
+      .wrap { height: 100%; display: flex; flex-direction: column; align-items: center;
+        justify-content: center; gap: 16px; text-align: center; padding: 24px; }
+      .spin { width: 38px; height: 38px; border: 3px solid #333333; border-top-color: #ffffff;
+        border-radius: 50%; animation: s 0.8s linear infinite; }
+      @keyframes s { to { transform: rotate(360deg); } }
+      p { margin: 0; }
+      .hint { opacity: 0.55; font-size: 13px; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="spin"></div>
+      <p>Chargement de LMS Drive…</p>
+      <p class="hint">Vérifiez votre connexion si cet écran reste affiché.</p>
+    </div>
+  </body>
+</html>

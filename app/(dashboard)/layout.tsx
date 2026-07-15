@@ -6,6 +6,8 @@ import PageTransition from '@/components/layout/PageTransition'
 import ContentWrapper from '@/app/(dashboard)/ContentWrapper'
 import AlertCountProvider from '@/components/layout/AlertCountProvider'
 import { ToastProvider } from '@/components/Toast'
+import { SavProvider } from '@/lib/sav/context'
+import SavButton from '@/components/sav/SavButton'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -39,24 +41,27 @@ export default async function DashboardLayout({ children }: { children: React.Re
   return (
     <ToastProvider>
       <AlertCountProvider>
-        <div
-          className="bg-[#F2F2F7]"
-          style={{
-            position: 'fixed',
-            inset: 0,
-            display: 'grid',
-            gridTemplateRows: 'auto 1fr auto',
-            overflow: 'hidden',
-          }}
-        >
-          <PageHeader />
-          <main style={{ overflowY: 'auto', overscrollBehavior: 'none', WebkitOverflowScrolling: 'touch', minHeight: 0 } as React.CSSProperties}>
-            <PageTransition>
-              <ContentWrapper>{children}</ContentWrapper>
-            </PageTransition>
-          </main>
-          <BottomNav allowedTabs={allowedTabs} />
-        </div>
+        <SavProvider>
+          <div
+            className="bg-[#F2F2F7]"
+            style={{
+              position: 'fixed',
+              inset: 0,
+              display: 'grid',
+              gridTemplateRows: 'auto 1fr auto',
+              overflow: 'hidden',
+            }}
+          >
+            <PageHeader />
+            <main style={{ overflowY: 'auto', overscrollBehavior: 'none', WebkitOverflowScrolling: 'touch', minHeight: 0 } as React.CSSProperties}>
+              <PageTransition>
+                <ContentWrapper>{children}</ContentWrapper>
+              </PageTransition>
+            </main>
+            <BottomNav allowedTabs={allowedTabs} />
+          </div>
+          <SavButton />
+        </SavProvider>
       </AlertCountProvider>
     </ToastProvider>
   )

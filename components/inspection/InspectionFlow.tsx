@@ -6,6 +6,7 @@ import VehicleInspectionMap from '@/components/vehicle-schema/VehicleInspectionM
 import SignatureCanvas from '@/components/signature/SignatureCanvas'
 import { MANDATORY_PHOTOS } from '@/components/vehicle-schema/zones'
 import { VEHICLE_ZONES as NEW_ZONES, INTERIOR_DAMAGE_ITEMS, graviteLabel, defaultDamagePrice, type DamageEntry } from '@/components/vehicle-schema/inspection-types'
+import { useSavSection } from '@/lib/sav/context'
 import { createClient } from '@/lib/supabase/client'
 import { compressImageToBase64 } from '@/lib/utils'
 import { calculateLateFee, calculateExtraKm } from '@/lib/calculations/fees'
@@ -94,6 +95,13 @@ export default function InspectionFlow({
   const supabase = createClient()
 
   const [step, setStep] = useState<Step>('info')
+
+  // Contexte SAV : précise l'EDL (départ/retour) et l'étape en cours dans le ticket.
+  const STEP_LABELS: Record<Step, string> = {
+    info: 'infos', schema: 'schéma dégâts', photos: 'photos', signatures: 'signature', done: 'terminé',
+  }
+  useSavSection(`État des lieux ${type === 'depart' ? 'départ' : 'retour'} · ${STEP_LABELS[step]}`)
+
   const [kmReading, setKmReading] = useState(vehicleKm)
   const [fuelRangeKm, setFuelRangeKm] = useState(0)
   const [exteriorCleanliness, setExteriorCleanliness] = useState(3)
