@@ -3,6 +3,21 @@
 html, body {
   overscroll-behavior: none;
   background-color: #111111;
+  /* Feel « application native » : pas de menu au clic long (Enregistrer l'image /
+     Ouvrir le lien…) qui trahit une page web. Réactivé sur les champs. */
+  -webkit-touch-callout: none;
+}
+
+/* Supprime le flash bleu au toucher (comportement navigateur). */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Les champs de saisie restent pleinement fonctionnels (sélection + menu). */
+input, textarea, [contenteditable="true"] {
+  -webkit-touch-callout: default;
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 /* Placeholder de chargement : bloc gris statique et sobre — aucune animation
