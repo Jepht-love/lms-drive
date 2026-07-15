@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import ServiceWorkerRegistration from '@/components/pwa/ServiceWorkerRegistration'
 import OfflineBanner from '@/components/pwa/OfflineBanner'
+import PushPermissionBanner from '@/components/pwa/PushPermissionBanner'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 
@@ -35,6 +36,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="bg-white text-[#111111] antialiased font-sans">
         <OfflineBanner />
+        <PushPermissionBanner />
         {children}
         <ServiceWorkerRegistration />
       </body>
