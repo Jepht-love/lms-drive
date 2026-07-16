@@ -27,7 +27,7 @@ export default async function ContractPage({ params }: { params: Promise<{ id: s
   return (
     <div className="space-y-6">
       <div className="flex items-start gap-4">
-        <BackButton fallbackHref={reservation?.id ? `/reservations/${reservation.id}` : '/reservations'} className="p-2 rounded-xl hover:bg-gray-100 transition-colors mt-1">
+        <BackButton fallbackHref="/contracts" className="p-2 rounded-xl hover:bg-gray-100 transition-colors mt-1">
           <ArrowLeft className="w-5 h-5 text-gray-600" />
         </BackButton>
         <div className="flex-1">
@@ -40,7 +40,7 @@ export default async function ContractPage({ params }: { params: Promise<{ id: s
               'bg-gray-100 text-gray-600'
             }`}>
               {contract.status === 'cloture' ? 'Clôturé' :
-               contract.status === 'signe'   ? 'Signé' :
+               contract.status === 'signe'   ? 'En cours' :
                contract.status === 'a_signer'? 'À signer' : contract.status}
             </span>
           </div>

@@ -322,6 +322,28 @@ function AvailabilityScheduler({ profiles }: { profiles: Profile[] }) {
         </button>
       </div>
 
+      {/* M — navigateur rapide : saut à une date */}
+      <div className="flex items-center gap-2 mb-3">
+        <input
+          type="date"
+          value={format(weekStart, 'yyyy-MM-dd')}
+          onChange={e => {
+            if (!e.target.value) return
+            const target = startOfWeek(new Date(e.target.value + 'T00:00:00'), { weekStartsOn: 1 })
+            const origin = startOfWeek(new Date(), { weekStartsOn: 1 })
+            setWeekOffset(Math.round((target.getTime() - origin.getTime()) / (7 * 24 * 3600 * 1000)))
+          }}
+          className="flex-1 text-xs border border-gray-200 rounded-xl px-2.5 py-2 text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-black/10"
+        />
+        <button
+          type="button"
+          onClick={() => setWeekOffset(0)}
+          className="text-xs font-semibold text-gray-500 border border-gray-200 rounded-xl px-3 py-2 hover:bg-gray-50 whitespace-nowrap transition-colors"
+        >
+          Auj.
+        </button>
+      </div>
+
       {/* Onglets jour */}
       <div className="grid grid-cols-7 gap-1 mb-3">
         {days.map((day, i) => {
@@ -356,14 +378,17 @@ function AvailabilityScheduler({ profiles }: { profiles: Profile[] }) {
           {profiles.map(m => {
             const dayEvents = events.filter(e => e.assigned_to === m.id && isSameDay(new Date(e.start_at), selectedDay))
 
-            const bands: { h: number; ev: Ev | undefined }[] = []
+            const startsAtHour = new Map<string, number>()
+            dayEvents.forEach(e => startsAtHour.set(e.id, Math.floor(minutesOfDay(e.start_at) / 60)))
+
+            const bands: { h: number; ev: Ev | undefined; continuation: boolean }[] = []
             let freeCount = 0
             for (let h = 0; h < 24; h++) {
               const bandStart = h * 60
               const bandEnd = h * 60 + 60
               const ev = dayEvents.find(e => minutesOfDay(e.start_at) < bandEnd && minutesOfDay(e.end_at) > bandStart)
-              if (!ev) freeCount++
-              bands.push({ h, ev })
+              if (!ev) { freeCount++; bands.push({ h, ev: undefined, continuation: false }) }
+              else bands.push({ h, ev, continuation: startsAtHour.get(ev.id) !== h })
             }
             const reservedCount = 24 - freeCount
             const expanded = expandedIds.has(m.id)
@@ -378,13 +403,13 @@ function AvailabilityScheduler({ profiles }: { profiles: Profile[] }) {
                   <div className="flex items-center gap-1.5 flex-shrink-0">
                     {reservedCount > 0 && (
                       <span className="text-xs font-bold px-2.5 py-1 rounded-full text-amber-600 bg-amber-50">
-                        {reservedCount} réservé{reservedCount > 1 ? 's' : ''}
+                        {reservedCount}h réservée{reservedCount > 1 ? 's' : ''}
                       </span>
                     )}
                     <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
                       freeCount > 0 ? 'text-green-700 bg-green-50' : 'text-amber-600 bg-amber-50'
                     }`}>
-                      {freeCount > 0 ? `${freeCount} libre${freeCount > 1 ? 's' : ''}` : 'Complet'}
+                      {freeCount > 0 ? `${freeCount}h libre${freeCount > 1 ? 's' : ''}` : 'Complet'}
                     </span>
                     <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${expanded ? 'rotate-180' : ''}`} />
                   </div>
@@ -392,14 +417,16 @@ function AvailabilityScheduler({ profiles }: { profiles: Profile[] }) {
 
                 {expanded && (
                   <div className="px-2 pb-2 space-y-1">
-                    {bands.map(({ h, ev }) => {
+                    {bands.map(({ h, ev, continuation }) => {
                       const color = ev ? (EVENT_COLORS[ev.event_type as EventType] ?? '#6B7280') : ''
                       const evLabel = ev ? (ev.title || (EVENT_TYPE_LABELS[ev.event_type as EventType] ?? 'Événement')) : ''
-                      const editable = ev ? isEditableEvent(ev) : false
+                      const editable = ev && !continuation ? isEditableEvent(ev) : false
                       return (
                         <div key={h} className="flex items-center gap-2">
                           <span className="w-11 flex-shrink-0 text-xs font-bold text-gray-400 tabular-nums">{fmtMin(h * 60)}</span>
-                          {ev ? (
+                          {ev && continuation ? (
+                            <div className="flex-1 h-3 rounded-sm opacity-25" style={{ backgroundColor: color }} />
+                          ) : ev ? (
                             editable ? (
                               <button
                                 type="button"

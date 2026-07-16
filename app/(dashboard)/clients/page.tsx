@@ -2,7 +2,6 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { Plus, Users } from 'lucide-react'
 import ClientsListSwipeable from './ClientsListSwipeable'
-import AssignStatusButton from './AssignStatusButton'
 import SmartSearch from '@/components/ui/SmartSearch'
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -38,9 +37,6 @@ export default async function ClientsPage({
 
   // Compteurs par statut / segment (sur l'ensemble, indépendamment de la recherche)
   const { data: allClients } = await supabase.from('clients').select('id, status, internal_notes, first_name, last_name, phone')
-  const assignList = (allClients ?? []).map(c => ({
-    id: c.id, first_name: c.first_name, last_name: c.last_name, phone: c.phone, status: c.status,
-  }))
   const counts = {
     total:       allClients?.length ?? 0,
     vip:         allClients?.filter(c => c.status === 'vip').length ?? 0,
@@ -97,7 +93,6 @@ export default async function ClientsPage({
             {f.label}
           </Link>
         ))}
-        <AssignStatusButton clients={assignList} />
       </div>
 
       {/* Liste */}

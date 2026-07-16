@@ -12,7 +12,7 @@ type PaymentMethodType = 'especes' | 'virement' | 'cb' | 'cheque'
 const PAYMENT_STATUSES = [
   { value: 'en_attente', label: 'En attente', description: 'Paiement non encore reçu', color: 'bg-gray-100 text-gray-700 border-gray-200', dot: 'bg-gray-400' },
   { value: 'paye',       label: 'Payé',        description: 'Paiement intégral reçu',   color: 'bg-green-50 text-green-800 border-green-200', dot: 'bg-green-500' },
-  { value: 'partiel',    label: 'Partiel',      description: 'Paiement partiel reçu',   color: 'bg-amber-50 text-amber-800 border-amber-200', dot: 'bg-amber-500' },
+  { value: 'partiel',    label: 'Acompte',      description: 'Acompte encaissé',        color: 'bg-amber-50 text-amber-800 border-amber-200', dot: 'bg-amber-500' },
   { value: 'impaye',     label: 'Impayé',       description: 'Aucun paiement reçu',     color: 'bg-red-50 text-red-800 border-red-200', dot: 'bg-red-500' },
 ]
 

@@ -32,9 +32,11 @@ interface Props {
   clients: Client[]
   defaultClientId?: string
   defaultVehicleId?: string
+  defaultStartDatetime?: string
+  defaultEndDatetime?: string
 }
 
-export default function ReservationForm({ action, vehicles, clients, defaultClientId, defaultVehicleId }: Props) {
+export default function ReservationForm({ action, vehicles, clients, defaultClientId, defaultVehicleId, defaultStartDatetime, defaultEndDatetime }: Props) {
   const { show } = useToast()
   const [state, formAction, pending] = useActionState(async (_prev: any, formData: FormData) => {
     const result = await action(formData)
@@ -43,8 +45,8 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
   }, null)
 
   const [selectedVehicleId, setSelectedVehicleId] = useState(defaultVehicleId ?? '')
-  const [startDatetime, setStartDatetime] = useState('')
-  const [endDatetime, setEndDatetime] = useState('')
+  const [startDatetime, setStartDatetime] = useState(defaultStartDatetime ? toDatetimeLocal(new Date(defaultStartDatetime)) : '')
+  const [endDatetime, setEndDatetime] = useState(defaultEndDatetime ? toDatetimeLocal(new Date(defaultEndDatetime)) : '')
   const [dailyPrice, setDailyPrice] = useState('')
   const [creatingNewClient, setCreatingNewClient] = useState(false)
   const [acompte, setAcompte] = useState('')
@@ -75,11 +77,24 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
     if (selectedVehicle?.daily_price) {
       setDailyPrice(selectedVehicle.daily_price.toString())
     }
-  }, [selectedVehicleId, selectedVehicle])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedVehicleId])
 
   // Changer de client réinitialise la confirmation « dossier incomplet »
   // pour éviter qu'une validation précédente ne s'applique au nouveau client.
   useEffect(() => { setDossierConfirmed(false) }, [selectedClientId])
+
+  // Synchronise les champs durée quand les dates sont saisies manuellement
+  useEffect(() => {
+    if (startDatetime && endDatetime) {
+      const diffMs = new Date(endDatetime).getTime() - new Date(startDatetime).getTime()
+      if (diffMs > 0) {
+        const totalHours = Math.floor(diffMs / 3600000)
+        setDurDays(Math.floor(totalHours / 24))
+        setDurHours(totalHours % 24)
+      }
+    }
+  }, [startDatetime, endDatetime])
 
   const days = startDatetime && endDatetime
     ? calculateRentalDays(startDatetime, endDatetime)

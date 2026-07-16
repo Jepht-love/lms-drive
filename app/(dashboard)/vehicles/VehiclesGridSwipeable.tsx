@@ -27,10 +27,12 @@ export default function VehiclesGridSwipeable({
   vehicles,
   needsByVehicle = {},
   returnDateByVehicle = {},
+  nextStartByVehicle = {},
 }: {
   vehicles: Vehicle[]
   needsByVehicle?: Record<string, NeedBadge[]>
   returnDateByVehicle?: Record<string, string>
+  nextStartByVehicle?: Record<string, string>
 }) {
   return (
     <AnimatedList className="grid sm:grid-cols-2 gap-3 items-stretch">
@@ -109,13 +111,25 @@ export default function VehiclesGridSwipeable({
               )}
               {['loue', 'reserve'].includes(v.status) && (
                 <div className="border-t border-gray-50">
-                  {returnDateByVehicle[v.id] && (
+                  {v.status === 'reserve' && nextStartByVehicle[v.id] ? (
+                    <p className="text-center text-xs text-gray-400 pt-2">
+                      Réservé à partir du {format(new Date(nextStartByVehicle[v.id]), "d MMM 'à' HH:mm", { locale: fr })}
+                    </p>
+                  ) : returnDateByVehicle[v.id] ? (
                     <p className="text-center text-xs text-gray-400 pt-2">
                       Retour le {format(new Date(returnDateByVehicle[v.id]), "d MMM 'à' HH:mm", { locale: fr })}
                     </p>
+                  ) : null}
+                  {v.status === 'reserve' && nextStartByVehicle[v.id] && (
+                    <Link
+                      href={`/reservations/new?vehicle=${v.id}&end=${encodeURIComponent(nextStartByVehicle[v.id])}`}
+                      className="flex items-center justify-center gap-2 py-3 text-sm font-bold text-green-700 bg-green-50/40 hover:bg-green-50 transition-colors active:scale-[.99]"
+                    >
+                      <Plus className="w-4 h-4" /> Réserver avant le {format(new Date(nextStartByVehicle[v.id]), 'd MMM', { locale: fr })}
+                    </Link>
                   )}
                   <Link
-                    href={`/reservations/new?vehicle=${v.id}`}
+                    href={`/reservations/new?vehicle=${v.id}${returnDateByVehicle[v.id] ? `&start=${encodeURIComponent(returnDateByVehicle[v.id])}` : ''}`}
                     className="flex items-center justify-center gap-2 py-3 text-sm font-bold text-blue-700 bg-blue-50/40 hover:bg-blue-50 transition-colors active:scale-[.99]"
                   >
                     <Plus className="w-4 h-4" /> Réserver après

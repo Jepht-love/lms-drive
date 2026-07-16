@@ -121,7 +121,7 @@ export default function AssignStatusButton({ clients }: { clients: MiniClient[] 
                   onClick={() => assign('standard')}
                   className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-40"
                 >
-                  <RotateCcw className="w-4 h-4" /> Particulier (retirer le statut)
+                  <RotateCcw className="w-4 h-4" /> Retirer le statut
                 </button>
                 <div className="rounded-xl border border-red-100 bg-red-50 p-3 space-y-2">
                   <label className="block text-xs font-bold text-red-700 uppercase tracking-wide">Blacklister</label>

@@ -144,7 +144,7 @@ export default async function DashboardPage() {
     .eq('id', user?.id ?? '')
     .maybeSingle()
   const canViewFleet = (fleetPerm as { can_view_fleet?: boolean | null } | null)?.can_view_fleet
-  const showFleet = isManager || canViewFleet !== false
+  const showFleet = isManager || canViewFleet === true
 
   // ── Flotte ────────────────────────────────────────────────────────────────
   const { data: vehiclesRaw } = await supabase
@@ -609,7 +609,143 @@ export default async function DashboardPage() {
         </section>
       )}
 
-      {/* ═══ 2. TÂCHES DU JOUR (départs + retours + interventions) ══════════ */}
+
+      {enLocationNow.length > 0 && (
+        <section>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-[11px] font-bold uppercase tracking-widest text-gray-900">
+              En location · {enLocationNow.length}
+            </h2>
+            <Link href="/reservations?status=en_cours" className="text-[11px] text-gray-400 font-medium flex items-center gap-1">
+              TOUT VOIR <ChevronRight className="w-3 h-3" />
+            </Link>
+          </div>
+
+          <div className="space-y-2">
+            {enLocationNow.map(r => {
+              const v           = getVehicle(r)
+              const c           = getClient(r)
+              const start       = new Date(r.start_datetime)
+              const end         = new Date(r.end_datetime)
+              // États possibles dans « En location » :
+              const isDeparted  = r.status === 'en_cours' || r.status === 'en_retard'
+              const isLate      = r.status === 'en_retard'                 // retour dépassé
+              const pickupDue   = r.status === 'confirmee' && start <= now  // départ dépassé, pas récupéré
+              const isReserved  = r.status === 'confirmee' && start > now   // réservée, départ futur
+
+              const daysLeft    = differenceInDays(startOfDay(end), todayStart)   // avant retour
+              const isReturnToday = isDeparted && daysLeft === 0 && !isLate
+              const daysToStart = differenceInDays(startOfDay(start), todayStart)  // avant départ
+              const daysLatePickup = differenceInDays(todayStart, startOfDay(start))
+
+              const nextBooking = v?.id ? nextBookingByVehicle.get(v.id) : undefined
+              const hasNextBooking = isDeparted && nextBooking && nextBooking.start_datetime > r.end_datetime
+
+              // Cadre + pastille de coin selon l'état
+              const cardClass = isLate || pickupDue ? 'border-orange-200 bg-orange-50/40' : 'border-gray-100'
+
+              return (
+                <Link key={r.id} href={`/reservations/${r.id}`}>
+                  <div className={`bg-white rounded-2xl p-4 border shadow-sm ${cardClass}`}>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <span className="text-base font-black text-gray-900">{v?.brand} {v?.model}</span>
+                          <span className="text-xs text-gray-400">{v?.plate}</span>
+                          {pickupDue && (
+                            <span className="text-[9px] font-black uppercase tracking-wide text-white bg-orange-600 px-2 py-0.5 rounded-full">
+                              À récupérer
+                            </span>
+                          )}
+                          {isReserved && (
+                            <span className="text-[9px] font-black uppercase tracking-wide text-blue-700 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-full">
+                              Réservé
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-600">{c?.first_name} {c?.last_name}</p>
+                        {isDeparted ? (
+                          <p className="text-xs text-gray-400 mt-1">
+                            Retour : {format(end, 'dd MMM à HH:mm', { locale: fr })}
+                          </p>
+                        ) : pickupDue ? (
+                          <p className="text-xs text-orange-600 font-semibold mt-1">
+                            Départ prévu {format(start, 'dd MMM à HH:mm', { locale: fr })} · en attente de récupération
+                          </p>
+                        ) : (
+                          <p className="text-xs text-gray-400 mt-1">
+                            Départ {format(start, 'dd MMM à HH:mm', { locale: fr })} · Retour {format(end, 'dd MMM à HH:mm', { locale: fr })}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Countdown 64×64 */}
+                      {isDeparted ? (
+                        <div className={`w-16 h-16 rounded-2xl flex flex-col items-center justify-center flex-shrink-0 ${
+                          isLate          ? 'bg-red-500'
+                          : isReturnToday ? 'bg-orange-500'
+                          : daysLeft <= 2 ? 'bg-orange-100'
+                          : 'bg-gray-100'
+                        }`}>
+                          <span className={`text-2xl font-black leading-none ${
+                            isLate || isReturnToday ? 'text-white' : daysLeft <= 2 ? 'text-orange-600' : 'text-gray-700'
+                          }`}>
+                            {isLate ? `+${Math.abs(daysLeft)}` : daysLeft}
+                          </span>
+                          <span className={`text-[10px] font-bold mt-0.5 ${
+                            isLate          ? 'text-red-100'
+                            : isReturnToday ? 'text-orange-100'
+                            : daysLeft <= 2 ? 'text-orange-500'
+                            : 'text-gray-400'
+                          }`}>
+                            {isLate ? 'j retard' : isReturnToday ? 'auj.' : 'jours'}
+                          </span>
+                        </div>
+                      ) : pickupDue ? (
+                        <div className="w-16 h-16 rounded-2xl flex flex-col items-center justify-center flex-shrink-0 bg-orange-500">
+                          <span className="text-2xl font-black leading-none text-white">
+                            {daysLatePickup >= 1 ? `+${daysLatePickup}` : '!'}
+                          </span>
+                          <span className="text-[10px] font-bold mt-0.5 text-orange-100">
+                            {daysLatePickup >= 1 ? 'j retard' : 'à récup.'}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="w-16 h-16 rounded-2xl flex flex-col items-center justify-center flex-shrink-0 bg-blue-50 border border-blue-100">
+                          <span className="text-2xl font-black leading-none text-blue-700">
+                            {daysToStart === 0 ? 'auj.' : daysToStart}
+                          </span>
+                          <span className="text-[10px] font-bold mt-0.5 text-blue-400">
+                            {daysToStart === 0 ? 'départ' : 'j départ'}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {hasNextBooking && (
+                      <div className="mt-2 pt-2 border-t border-gray-100">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-black uppercase tracking-wide text-blue-600 flex-shrink-0">
+                            Puis réservé
+                          </span>
+                          <span className="text-xs text-gray-500 truncate">
+                            {getClient(nextBooking)?.first_name} {getClient(nextBooking)?.last_name}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-gray-400 mt-0.5">
+                          Prochain départ {format(new Date(nextBooking.start_datetime), 'd MMM à HH:mm', { locale: fr })}
+                          {' · '}
+                          Prochain retour {format(new Date(nextBooking.end_datetime), 'd MMM à HH:mm', { locale: fr })}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </Link>
+              )
+            })}
+          </div>
+        </section>
+      )}
       <section>
         <div className="mb-3">
           <div className="flex items-center justify-between">
@@ -830,6 +966,11 @@ export default async function DashboardPage() {
                           : <span className="text-[10px] font-semibold text-amber-600">{vehicleLabel ? '· ' : ''}Non attribué</span>}
                       </div>
                     </div>
+                    <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-full flex-shrink-0 ${
+                      t.status === 'en_cours' ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-600'
+                    }`}>
+                      {t.status === 'en_cours' ? 'En cours' : 'À faire'}
+                    </span>
                     <ChevronRight className="w-4 h-4 text-gray-200 flex-shrink-0" />
                   </div>
                 </Link>
@@ -840,174 +981,50 @@ export default async function DashboardPage() {
       </section>
 
       {/* ═══ 2a. ALERTES — résumé compact + lien vers la page complète ══════ */}
-      {alerts.length > 0 && (
-        <section>
-          <div className="flex items-center gap-2 mb-3">
-            <h2 className="text-[11px] font-black uppercase tracking-widest text-gray-900">Alertes</h2>
-            <span className="w-5 h-5 bg-red-500 rounded-full text-white text-[10px] font-bold flex items-center justify-center">
-              {alerts.length > 9 ? '9+' : alerts.length}
-            </span>
-          </div>
-
-          <Link href="/alerts" className="block bg-white rounded-2xl border border-gray-100 shadow-sm p-4 hover:bg-gray-50 transition-colors active:scale-[.99] transition-transform">
-            <div className="flex items-center gap-2 flex-wrap mb-3">
-              {ALERT_GROUPS.map(group => {
-                const count = alerts.filter(a => a.type === group.type).length
-                if (count === 0) return null
-                const GroupIcon = group.icon
-                return (
-                  <span key={group.type} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold ${group.cardBg} ${group.labelColor}`}>
-                    <GroupIcon className={`w-3 h-3 ${group.iconColor}`} />
-                    {group.label} · {count}
-                  </span>
-                )
-              })}
+      {/* B — alertes toujours visibles */}
+      {(()=>{
+        if (alerts.length === 0) return (
+          <section>
+            <div className="flex items-center gap-2 mb-3">
+              <h2 className="text-[11px] font-black uppercase tracking-widest text-gray-900">Alertes</h2>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-bold text-gray-900">Voir toutes les alertes</span>
-              <ChevronRight className="w-4 h-4 text-gray-400" />
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center gap-3">
+              <CheckCircle2 className="w-5 h-5 text-green-400 flex-shrink-0" />
+              <p className="text-sm text-gray-400 font-medium">Aucune alerte active</p>
             </div>
-          </Link>
-        </section>
-      )}
-
-      {/* ═══ 3. VÉHICULES EN LOCATION avec countdown 64×64 ════════════════ */}
-      {enLocationNow.length > 0 && (
-        <section>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-[11px] font-bold uppercase tracking-widest text-gray-900">
-              En location · {enLocationNow.length}
-            </h2>
-            <Link href="/reservations?status=en_cours" className="text-[11px] text-gray-400 font-medium flex items-center gap-1">
-              TOUT VOIR <ChevronRight className="w-3 h-3" />
+          </section>
+        )
+        return (
+          <section>
+            <div className="flex items-center gap-2 mb-3">
+              <h2 className="text-[11px] font-black uppercase tracking-widest text-gray-900">Alertes</h2>
+              <span className="w-5 h-5 bg-red-500 rounded-full text-white text-[10px] font-bold flex items-center justify-center">
+                {alerts.length > 9 ? '9+' : alerts.length}
+              </span>
+            </div>
+            <Link href="/alerts" className="block bg-white rounded-2xl border border-gray-100 shadow-sm p-4 hover:bg-gray-50 transition-colors active:scale-[.99] transition-transform">
+              <div className="flex items-center gap-2 flex-wrap mb-3">
+                {ALERT_GROUPS.map(group => {
+                  const count = alerts.filter(a => a.type === group.type).length
+                  if (count === 0) return null
+                  const GroupIcon = group.icon
+                  return (
+                    <span key={group.type} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold ${group.cardBg} ${group.labelColor}`}>
+                      <GroupIcon className={`w-3 h-3 ${group.iconColor}`} />
+                      {group.label} · {count}
+                    </span>
+                  )
+                })}
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-bold text-gray-900">Voir toutes les alertes</span>
+                <ChevronRight className="w-4 h-4 text-gray-400" />
+              </div>
             </Link>
-          </div>
+          </section>
+        )
+      })()}
 
-          <div className="space-y-2">
-            {enLocationNow.map(r => {
-              const v           = getVehicle(r)
-              const c           = getClient(r)
-              const start       = new Date(r.start_datetime)
-              const end         = new Date(r.end_datetime)
-              // États possibles dans « En location » :
-              const isDeparted  = r.status === 'en_cours' || r.status === 'en_retard'
-              const isLate      = r.status === 'en_retard'                 // retour dépassé
-              const pickupDue   = r.status === 'confirmee' && start <= now  // départ dépassé, pas récupéré
-              const isReserved  = r.status === 'confirmee' && start > now   // réservée, départ futur
-
-              const daysLeft    = differenceInDays(startOfDay(end), todayStart)   // avant retour
-              const isReturnToday = isDeparted && daysLeft === 0 && !isLate
-              const daysToStart = differenceInDays(startOfDay(start), todayStart)  // avant départ
-              const daysLatePickup = differenceInDays(todayStart, startOfDay(start))
-
-              const nextBooking = v?.id ? nextBookingByVehicle.get(v.id) : undefined
-              const hasNextBooking = isDeparted && nextBooking && nextBooking.start_datetime > r.end_datetime
-
-              // Cadre + pastille de coin selon l'état
-              const cardClass = isLate || pickupDue ? 'border-orange-200 bg-orange-50/40' : 'border-gray-100'
-
-              return (
-                <Link key={r.id} href={`/reservations/${r.id}`}>
-                  <div className={`bg-white rounded-2xl p-4 border shadow-sm ${cardClass}`}>
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <span className="text-base font-black text-gray-900">{v?.brand} {v?.model}</span>
-                          <span className="text-xs text-gray-400">{v?.plate}</span>
-                          {pickupDue && (
-                            <span className="text-[9px] font-black uppercase tracking-wide text-white bg-orange-600 px-2 py-0.5 rounded-full">
-                              À récupérer
-                            </span>
-                          )}
-                          {isReserved && (
-                            <span className="text-[9px] font-black uppercase tracking-wide text-blue-700 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-full">
-                              Réservé
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-sm text-gray-600">{c?.first_name} {c?.last_name}</p>
-                        {isDeparted ? (
-                          <p className="text-xs text-gray-400 mt-1">
-                            Retour : {format(end, 'dd MMM à HH:mm', { locale: fr })}
-                          </p>
-                        ) : pickupDue ? (
-                          <p className="text-xs text-orange-600 font-semibold mt-1">
-                            Départ prévu {format(start, 'dd MMM à HH:mm', { locale: fr })} · en attente de récupération
-                          </p>
-                        ) : (
-                          <p className="text-xs text-gray-400 mt-1">
-                            Départ {format(start, 'dd MMM à HH:mm', { locale: fr })} · Retour {format(end, 'dd MMM à HH:mm', { locale: fr })}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Countdown 64×64 */}
-                      {isDeparted ? (
-                        <div className={`w-16 h-16 rounded-2xl flex flex-col items-center justify-center flex-shrink-0 ${
-                          isLate          ? 'bg-red-500'
-                          : isReturnToday ? 'bg-orange-500'
-                          : daysLeft <= 2 ? 'bg-orange-100'
-                          : 'bg-gray-100'
-                        }`}>
-                          <span className={`text-2xl font-black leading-none ${
-                            isLate || isReturnToday ? 'text-white' : daysLeft <= 2 ? 'text-orange-600' : 'text-gray-700'
-                          }`}>
-                            {isLate ? `+${Math.abs(daysLeft)}` : daysLeft}
-                          </span>
-                          <span className={`text-[10px] font-bold mt-0.5 ${
-                            isLate          ? 'text-red-100'
-                            : isReturnToday ? 'text-orange-100'
-                            : daysLeft <= 2 ? 'text-orange-500'
-                            : 'text-gray-400'
-                          }`}>
-                            {isLate ? 'j retard' : isReturnToday ? 'auj.' : 'jours'}
-                          </span>
-                        </div>
-                      ) : pickupDue ? (
-                        <div className="w-16 h-16 rounded-2xl flex flex-col items-center justify-center flex-shrink-0 bg-orange-500">
-                          <span className="text-2xl font-black leading-none text-white">
-                            {daysLatePickup >= 1 ? `+${daysLatePickup}` : '!'}
-                          </span>
-                          <span className="text-[10px] font-bold mt-0.5 text-orange-100">
-                            {daysLatePickup >= 1 ? 'j retard' : 'à récup.'}
-                          </span>
-                        </div>
-                      ) : (
-                        <div className="w-16 h-16 rounded-2xl flex flex-col items-center justify-center flex-shrink-0 bg-blue-50 border border-blue-100">
-                          <span className="text-2xl font-black leading-none text-blue-700">
-                            {daysToStart === 0 ? 'auj.' : daysToStart}
-                          </span>
-                          <span className="text-[10px] font-bold mt-0.5 text-blue-400">
-                            {daysToStart === 0 ? 'départ' : 'j départ'}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    {hasNextBooking && (
-                      <div className="mt-2 pt-2 border-t border-gray-100">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-black uppercase tracking-wide text-blue-600 flex-shrink-0">
-                            Puis réservé
-                          </span>
-                          <span className="text-xs text-gray-500 truncate">
-                            {getClient(nextBooking)?.first_name} {getClient(nextBooking)?.last_name}
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-gray-400 mt-0.5">
-                          Prochain départ {format(new Date(nextBooking.start_datetime), 'd MMM à HH:mm', { locale: fr })}
-                          {' · '}
-                          Prochain retour {format(new Date(nextBooking.end_datetime), 'd MMM à HH:mm', { locale: fr })}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </Link>
-              )
-            })}
-          </div>
-        </section>
-      )}
 
       {/* ═══ 5. SEMAINE ════════════════════════════════════════════════════ */}
       <section>

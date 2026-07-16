@@ -11,6 +11,7 @@ import MobileCalendar from './MobileCalendar'
 import MobileCalendarPanel from './MobileCalendarPanel'
 import CalendarGrid from './CalendarGrid'
 import MonthView from './MonthView'
+import DayEventsPanel from './DayEventsPanel'
 import EventDrawer from './EventDrawer'
 import AlertPanel from './AlertPanel'
 import CalendarBottomBar from './CalendarBottomBar'
@@ -272,6 +273,14 @@ export default function CalendarPage() {
             resources={visibleResources}
             onEventClick={handleEventClick}
             onDayClick={d => { setCurrentDate(d); setView('day') }}
+          />
+        ) : view === 'day' ? (
+          <DayEventsPanel
+            currentDate={currentDate}
+            events={events}
+            resources={visibleResources}
+            onEventClick={handleEventClick}
+            onBack={() => setView('month')}
           />
         ) : loading ? (
           <div className="flex-1 flex items-center justify-center text-[13px] text-gray-400">

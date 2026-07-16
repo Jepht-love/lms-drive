@@ -15,11 +15,6 @@ interface CalendarToolbarProps {
   onShowAlerts: () => void
 }
 
-const VIEW_OPTIONS: { key: CalendarView; label: string }[] = [
-  { key: 'day', label: 'Jour' },
-  { key: 'week_7d', label: 'Semaine' },
-  { key: 'month', label: 'Mois' },
-]
 
 function rangeLabel(view: CalendarView, currentDate: Date): string {
   const monthYear = format(currentDate, 'MMMM yyyy', { locale: fr })
@@ -40,29 +35,8 @@ function rangeLabel(view: CalendarView, currentDate: Date): string {
 
 /** Vue compacte, pensée pour vivre dans la sidebar (220px) plutôt qu'en barre pleine largeur. */
 export default function CalendarToolbar({ currentDate, view, onViewChange, onNavigate, alertCount, onShowAlerts }: CalendarToolbarProps) {
-  const activeLabel = VIEW_OPTIONS.find(o => o.key === view)?.label ?? ''
-
   return (
     <div className="pb-2">
-      <div className="grid grid-cols-3 gap-1 mb-2">
-        {VIEW_OPTIONS.map(opt => {
-          const active = opt.key === view
-          return (
-            <button
-              key={opt.key}
-              type="button"
-              onClick={() => onViewChange(opt.key)}
-              className={[
-                'h-9 rounded-lg text-[10px] font-medium flex items-center justify-center',
-                active ? 'bg-[#111111] text-white' : 'bg-white border border-gray-200 text-gray-600',
-              ].join(' ')}
-            >
-              {opt.label}
-            </button>
-          )
-        })}
-      </div>
-
       <div className="flex items-center justify-between mb-2">
         <button
           type="button"
@@ -71,7 +45,7 @@ export default function CalendarToolbar({ currentDate, view, onViewChange, onNav
         >
           <ChevronLeft size={14} />
         </button>
-        <span className="text-[13px] font-semibold">{activeLabel}</span>
+        <span className="text-[13px] font-semibold capitalize">{rangeLabel(view, currentDate)}</span>
         <button
           type="button"
           onClick={() => onNavigate('next')}
@@ -111,7 +85,6 @@ export default function CalendarToolbar({ currentDate, view, onViewChange, onNav
         </button>
       </div>
 
-      <p className="text-[11px] text-gray-400 text-center">{rangeLabel(view, currentDate)}</p>
     </div>
   )
 }

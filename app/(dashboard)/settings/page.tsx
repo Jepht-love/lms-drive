@@ -88,6 +88,7 @@ export default async function SettingsPage() {
         </h3>
         <AuditLogList logs={auditLogs ?? []} profiles={profiles ?? []} />
       </div>
+
     </div>
   )
 }

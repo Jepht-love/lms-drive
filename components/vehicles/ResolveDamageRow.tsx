@@ -42,7 +42,12 @@ export default function ResolveDamageRow({ vehicleId, flag }: { vehicleId: strin
 
   return (
     <div className="rounded-xl bg-gray-50 p-2">
-      <div className="flex items-center justify-between gap-2">
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        disabled={pending}
+        className="w-full flex items-center justify-between gap-2 text-left disabled:opacity-40"
+      >
         <div className="flex items-center gap-2 min-w-0">
           <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${SEV_CLS[flag.severity] ?? 'bg-gray-100 text-gray-700'}`}>
             {flag.severity}
@@ -51,15 +56,11 @@ export default function ResolveDamageRow({ vehicleId, flag }: { vehicleId: strin
           {flag.source === 'manuel' && <span className="text-[10px] text-gray-400 flex-shrink-0">· manuel</span>}
         </div>
         {!open && (
-          <button
-            onClick={() => setOpen(true)}
-            disabled={pending}
-            className="text-xs font-semibold text-gray-500 hover:text-green-600 flex items-center gap-1 flex-shrink-0 disabled:opacity-40"
-          >
+          <span className="text-xs font-semibold text-gray-500 flex items-center gap-1 flex-shrink-0">
             <Check className="w-3.5 h-3.5" /> Résoudre
-          </button>
+          </span>
         )}
-      </div>
+      </button>
 
       {open && (
         <div className="mt-2 space-y-2 border-t border-gray-100 pt-2">

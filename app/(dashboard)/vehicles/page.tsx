@@ -58,10 +58,11 @@ export default async function VehiclesPage({
   // "Réserver après" pour savoir à partir de quand le véhicule est libre.
   const busyVehicleIds = allVehicles.filter(v => ['loue', 'reserve'].includes(v.status)).map(v => v.id)
   const returnDateByVehicle: Record<string, string> = {}
+  const nextStartByVehicle: Record<string, string> = {}
   if (busyVehicleIds.length > 0) {
     const { data: activeReservations } = await supabase
       .from('reservations')
-      .select('vehicle_id, end_datetime, status')
+      .select('vehicle_id, start_datetime, end_datetime, status')
       .in('vehicle_id', busyVehicleIds)
       .not('status', 'in', '("annulee","terminee")')
 
@@ -76,6 +77,16 @@ export default async function VehiclesPage({
       const arr = activeStatusesByVehicle.get(r.vehicle_id) ?? []
       arr.push(r.status)
       activeStatusesByVehicle.set(r.vehicle_id, arr)
+    }
+
+    // Première date de début de réservation confirmée/option (pour "Réserver avant le X")
+    for (const r of activeReservations ?? []) {
+      if (r.start_datetime && ['confirmee', 'option'].includes(r.status)) {
+        const current = nextStartByVehicle[r.vehicle_id]
+        if (!current || r.start_datetime < current) {
+          nextStartByVehicle[r.vehicle_id] = r.start_datetime
+        }
+      }
     }
 
     // Réconciliation des statuts : un véhicule marqué loué/réservé mais SANS
@@ -273,7 +284,7 @@ export default async function VehiclesPage({
           </Link>
         </div>
       ) : (
-        <VehiclesGridSwipeable vehicles={vehicles} needsByVehicle={needsByVehicle} returnDateByVehicle={returnDateByVehicle} />
+        <VehiclesGridSwipeable vehicles={vehicles} needsByVehicle={needsByVehicle} returnDateByVehicle={returnDateByVehicle} nextStartByVehicle={nextStartByVehicle} />
       )}
     </div>
   )

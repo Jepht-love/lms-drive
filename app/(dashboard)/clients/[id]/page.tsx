@@ -252,10 +252,16 @@ export default async function ClientPage({
         </div>
       </div>
 
-      {/* ─── Statut client (VIP / Blacklist) ─── */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-        <SectionLabel>Statut client</SectionLabel>
-        <ClientStatusActions clientId={id} status={client.status} />
+      {/* ─── Statut client (VIP / Blacklist) + Note interne ─── */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 space-y-4">
+        <div>
+          <SectionLabel>Statut client</SectionLabel>
+          <ClientStatusActions clientId={id} status={client.status} />
+        </div>
+        <div className="border-t border-gray-100 pt-4">
+          <SectionLabel>Note interne</SectionLabel>
+          <ClientNotesEditor clientId={client.id} notes={client.internal_notes ?? null} />
+        </div>
       </div>
 
       {/* ─── Alerte blacklist ─── */}
@@ -525,12 +531,6 @@ export default async function ClientPage({
             <InfoRow label="CA total terminé">{formatPrice(totalCA)}</InfoRow>
           )}
         </div>
-      </div>
-
-      {/* ─── Notes internes ─── */}
-      <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4">
-        <SectionLabel>Notes internes</SectionLabel>
-        <ClientNotesEditor clientId={client.id} notes={client.internal_notes ?? null} />
       </div>
 
       {/* ─── Historique des locations ─── */}

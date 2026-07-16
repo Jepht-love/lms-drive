@@ -279,6 +279,7 @@ export default async function ReservationPage({
           contractId={contract?.id}
           currentStatus={reservation.status as ReservationStatus}
           contractClosed={contractClosed}
+          totalPrice={reservation.total_price}
         />
       </div>
 

@@ -40,7 +40,7 @@ export default function ClientStatusActions({ clientId, status }: { clientId: st
             onClick={() => setStatus('vip')}
             className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
           >
-            <Star className="w-4 h-4" /> Marquer VIP
+            <Star className="w-4 h-4" /> VIP
           </button>
         )}
         {status !== 'blackliste' && (

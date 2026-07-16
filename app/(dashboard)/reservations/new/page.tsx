@@ -6,9 +6,9 @@ import BackButton from '@/components/ui/BackButton'
 export default async function NewReservationPage({
   searchParams,
 }: {
-  searchParams: Promise<{ client?: string; vehicle?: string }>
+  searchParams: Promise<{ client?: string; vehicle?: string; start?: string; end?: string }>
 }) {
-  const { client: clientId, vehicle: vehicleId } = await searchParams
+  const { client: clientId, vehicle: vehicleId, start, end } = await searchParams
   const supabase = await createClient()
 
   const [{ data: vehicles }, { data: clients }] = await Promise.all([
@@ -31,6 +31,8 @@ export default async function NewReservationPage({
         clients={clients ?? []}
         defaultClientId={clientId}
         defaultVehicleId={vehicleId}
+        defaultStartDatetime={start}
+        defaultEndDatetime={end}
       />
     </div>
   )

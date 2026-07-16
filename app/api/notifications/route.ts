@@ -6,6 +6,17 @@ import { broadcastPushToManagers } from '@/lib/push/broadcastPush'
 import { RESEND_FROM, resendTo } from '@/lib/email/config'
 import { addHours, subMinutes } from 'date-fns'
 
+// POST: push immédiat depuis le client (ex : alerte clôture contrat après EDL retour)
+export async function POST(request: NextRequest) {
+  try {
+    const { title, body } = await request.json() as { title: string; body: string }
+    if (title) await broadcastPushToManagers({ title, body: body ?? '', url: '/reservations' })
+    return NextResponse.json({ ok: true })
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message }, { status: 500 })
+  }
+}
+
 // GET: détecte départs imminents et retours en retard, bascule le statut des
 // retours en `en_retard`. Appelé toutes les heures par un crontab local
 // (pas d'hébergement Vercel) avec `Authorization: Bearer CRON_SECRET`.

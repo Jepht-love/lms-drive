@@ -332,6 +332,47 @@ export default function InspectionFlow({
           damage_fee_amount: totalDamageFee,
         }).eq('id', reservationId)
 
+        // Alerte clôture contrat : notification + événement calendrier (fire & forget)
+        if (reservationId) {
+          const { data: ctInfo } = await supabase
+            .from('contracts')
+            .select('contract_number, reservation:reservations(client:clients(first_name, last_name), vehicle:vehicles(plate, brand, model))')
+            .eq('id', contractId)
+            .single()
+          const clt = (ctInfo?.reservation as any)?.client
+          const veh = (ctInfo?.reservation as any)?.vehicle
+          const clientLabel = clt ? `${clt.first_name} ${clt.last_name}` : ''
+          const vehLabel   = veh ? `${veh.brand} ${veh.model} (${veh.plate})` : ''
+          const notifBody  = [clientLabel, vehLabel].filter(Boolean).join(' — ')
+
+          await Promise.all([
+            supabase.from('notifications').insert({
+              user_id: null,
+              type: 'contract_to_close',
+              title: 'Clôture de contrat à valider',
+              body: notifBody,
+              entity_type: 'reservations',
+              entity_id: reservationId,
+            }),
+            supabase.from('calendar_events').insert({
+              title: `Clôturer contrat${clientLabel ? ' — ' + clientLabel : ''}`,
+              description: vehLabel || null,
+              event_type: 'tache',
+              status: 'a_faire',
+              start_at: now.toISOString(),
+              end_at: new Date(now.getTime() + 60 * 60 * 1000).toISOString(),
+              reservation_id: reservationId,
+              vehicle_id: vehicleId,
+            }),
+          ])
+
+          fetch('/api/notifications', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: 'Clôture de contrat à valider', body: notifBody }),
+          }).catch(() => {})
+        }
+
         // Dégradations relevées au retour → drapeaux « Dégradé » sur le véhicule
         // (badge visible, sans retirer le véhicule de la disponibilité)
         const issues = Object.entries(damages)
