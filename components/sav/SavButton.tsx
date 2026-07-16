@@ -94,10 +94,11 @@ export default function SavButton() {
       <button
         onClick={openForm}
         aria-label="Signaler un bug"
-        className="fixed z-40 right-3 w-9 h-9 rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform opacity-90 hover:opacity-100"
+        className="fixed z-40 left-3 w-9 h-9 rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform opacity-90 hover:opacity-100"
         style={{
-          // Toujours au-dessus de la barre de navigation basse (60px + zone sécurisée),
-          // avec une marge confortable, sur tous les formats (mobile, iPad, desktop).
+          // En bas à GAUCHE : les boutons d'action des pages (recherche, création…)
+          // sont alignés à droite, donc ce coin reste libre et évite tout chevauchement.
+          // Toujours au-dessus de la barre de navigation basse (60px + zone sécurisée).
           bottom: 'calc(84px + env(safe-area-inset-bottom))',
           background: 'linear-gradient(135deg, #C4A35A, #D4B870)',
         }}

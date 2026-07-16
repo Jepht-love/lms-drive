@@ -40,7 +40,6 @@ export default async function ClientsPage({
   const counts = {
     total:       allClients?.length ?? 0,
     vip:         allClients?.filter(c => c.status === 'vip').length ?? 0,
-    particulier: allClients?.filter(c => c.status === 'standard').length ?? 0,
     blackliste:  allClients?.filter(c => c.status === 'blackliste').length ?? 0,
     noteInterne: allClients?.filter(hasNote).length ?? 0,
   }
@@ -77,7 +76,6 @@ export default async function ClientsPage({
         {[
           { label: 'Tous', value: undefined },
           { label: '★ VIP', value: 'vip' },
-          { label: `Particulier${counts.particulier > 0 ? ` · ${counts.particulier}` : ''}`, value: 'standard' },
           { label: `✎ Note interne${counts.noteInterne > 0 ? ` · ${counts.noteInterne}` : ''}`, value: 'note_interne' },
           { label: '⚠ Blacklisté', value: 'blackliste' },
         ].map(f => (
