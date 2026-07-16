@@ -422,7 +422,7 @@ function InspectionPage({ insp, contractNumber, clientName, vehiclePlate, vehicl
         </View>
       </View>
 
-      <Text style={{ fontSize: 7, color: '#cbd5e1', textAlign: 'center', marginTop: 20 }}>
+      <Text fixed style={{ position: 'absolute', bottom: 18, left: 36, right: 36, fontSize: 7, color: '#cbd5e1', textAlign: 'center' }}>
         {contractNumber} — État des lieux {isDepart ? 'départ' : 'retour'} — LMS Drive
       </Text>
     </Page>
@@ -528,8 +528,67 @@ function EDLComparePage({ dep, arr, contractNumber, clientName, vehiclePlate, ve
         <EDLCompareColumn insp={arr} edlImage={edlImage} />
       </View>
 
-      <Text style={{ fontSize: 7, color: '#cbd5e1', textAlign: 'center', marginTop: 12 }}>
+      <Text fixed style={{ position: 'absolute', bottom: 18, left: 36, right: 36, fontSize: 7, color: '#cbd5e1', textAlign: 'center' }}>
         {contractNumber} — Comparatif état des lieux départ / retour — LMS Drive
+      </Text>
+    </Page>
+  )
+}
+
+// ─── Comparatif PHOTOS départ / retour (page paysage, même format) ────────────
+
+function EDLPhotosCompareColumn({ insp }: { insp: InspectionPDFData }) {
+  const isDepart = insp.type === 'depart'
+  const color = isDepart ? '#2563eb' : '#7c3aed'
+  return (
+    <View style={{ flex: 1 }}>
+      <View style={{ backgroundColor: color, borderRadius: 4, paddingVertical: 5, paddingHorizontal: 8, marginBottom: 8 }}>
+        <Text style={{ color: '#ffffff', fontFamily: 'Helvetica-Bold', fontSize: 12 }}>
+          {isDepart ? 'DÉPART' : 'RETOUR'} — Photos ({insp.photos.length})
+        </Text>
+      </View>
+      {insp.photos.length > 0 ? (
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}>
+          {insp.photos.map((p, i) => (
+            <View key={i} style={{ width: '48.5%' }}>
+              <Image src={p.url} style={{ width: '100%', aspectRatio: 4 / 3, objectFit: 'cover', borderRadius: 3, border: '1px solid #e2e8f0' }} />
+              <Text style={{ fontSize: 6, color: '#94a3b8', marginTop: 1 }}>{p.label.replace(/_/g, ' ')}</Text>
+            </View>
+          ))}
+        </View>
+      ) : (
+        <Text style={{ fontSize: 8, color: '#94a3b8', fontStyle: 'italic' }}>Aucune photo</Text>
+      )}
+    </View>
+  )
+}
+
+function EDLPhotosComparePage({ dep, arr, contractNumber, clientName, vehiclePlate, vehicleModel }: {
+  dep: InspectionPDFData
+  arr: InspectionPDFData
+  contractNumber: string
+  clientName: string
+  vehiclePlate: string
+  vehicleModel: string
+}) {
+  return (
+    <Page size="A4" orientation="landscape" style={s.edlPage}>
+      <View style={[s.edlHeader, { borderBottomColor: '#0f172a' }]}>
+        <View>
+          <Text style={[s.edlTitle, { color: '#0f172a' }]}>Photos — Départ / Retour</Text>
+          <Text style={s.edlSubtitle}>{vehicleModel} — {vehiclePlate} · Client : {clientName}</Text>
+        </View>
+        <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 9, color: '#1e293b' }}>{contractNumber}</Text>
+      </View>
+
+      <View style={{ flexDirection: 'row', gap: 14 }}>
+        <EDLPhotosCompareColumn insp={dep} />
+        <View style={{ width: 1, backgroundColor: '#e2e8f0' }} />
+        <EDLPhotosCompareColumn insp={arr} />
+      </View>
+
+      <Text fixed style={{ position: 'absolute', bottom: 18, left: 36, right: 36, fontSize: 7, color: '#cbd5e1', textAlign: 'center' }}>
+        {contractNumber} — Photos état des lieux départ / retour — LMS Drive
       </Text>
     </Page>
   )
@@ -873,6 +932,18 @@ export function ContractPDF({ data }: { data: ContractData }) {
           vehiclePlate={data.vehiclePlate}
           vehicleModel={`${data.vehicleBrand} ${data.vehicleModel}`}
           edlImage={data.edlSchemaImage}
+        />
+      )}
+
+      {/* ── Photos départ/retour côte à côte (page paysage) ── */}
+      {depInsp && arrInsp && (depInsp.photos.length > 0 || arrInsp.photos.length > 0) && (
+        <EDLPhotosComparePage
+          dep={depInsp}
+          arr={arrInsp}
+          contractNumber={data.contractNumber}
+          clientName={data.clientName}
+          vehiclePlate={data.vehiclePlate}
+          vehicleModel={`${data.vehicleBrand} ${data.vehicleModel}`}
         />
       )}
 
