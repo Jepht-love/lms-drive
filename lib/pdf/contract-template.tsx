@@ -482,7 +482,7 @@ function EDLCompareColumn({ insp, edlImage }: { insp: InspectionPDFData; edlImag
       </View>
 
       <View style={{ alignItems: 'center', marginBottom: 4 }}>
-        <VehicleSchemaImage damages={insp.damagedZones} bgImage={edlImage} size={200} />
+        <VehicleSchemaImage damages={insp.damagedZones} bgImage={edlImage} size={175} />
         <SchemaLegend />
       </View>
 
@@ -494,7 +494,7 @@ function EDLCompareColumn({ insp, edlImage }: { insp: InspectionPDFData; edlImag
   )
 }
 
-function EDLComparePage({ dep, arr, contractNumber, clientName, vehiclePlate, vehicleModel, edlImage, contractSignature }: {
+function EDLComparePage({ dep, arr, contractNumber, clientName, vehiclePlate, vehicleModel, edlImage }: {
   dep: InspectionPDFData
   arr: InspectionPDFData
   contractNumber: string
@@ -502,7 +502,6 @@ function EDLComparePage({ dep, arr, contractNumber, clientName, vehiclePlate, ve
   vehiclePlate: string
   vehicleModel: string
   edlImage?: string
-  contractSignature?: string
 }) {
   const kmDriven = Math.max(0, arr.kmReading - dep.kmReading)
   const depIds = new Set(dep.damagedZones.map(z => z.id))
@@ -540,15 +539,29 @@ function EDLComparePage({ dep, arr, contractNumber, clientName, vehiclePlate, ve
         <EDLCompareColumn insp={arr} edlImage={edlImage} />
       </View>
 
-      {/* Paraphe : signature du contrat, ancrée en coin (n'occupe pas le flux). */}
-      {contractSignature ? (
-        <View fixed style={{ position: 'absolute', bottom: 30, right: 36, alignItems: 'center' }}>
-          <Text style={{ fontSize: 6, color: '#94a3b8', marginBottom: 1 }}>Signature client (contrat)</Text>
-          <Image src={contractSignature} style={{ width: 85, height: 28, objectFit: 'contain' }} />
+      {/* Signatures EDL départ / retour, compactes, sous chaque colonne (wrap=false
+          → jamais coupées, jamais rejetées seules sur une page). */}
+      <View wrap={false} style={{ flexDirection: 'row', gap: 14, marginTop: 8, paddingTop: 6, borderTop: '1px solid #e2e8f0' }}>
+        <View style={{ flex: 1, alignItems: 'center' }}>
+          <Text style={{ fontSize: 6, color: '#94a3b8', marginBottom: 1 }}>Signature client — EDL départ</Text>
+          {dep.clientSignature ? (
+            <Image src={dep.clientSignature} style={{ height: 28, objectFit: 'contain' }} />
+          ) : (
+            <Text style={{ fontSize: 8, color: '#cbd5e1' }}>—</Text>
+          )}
         </View>
-      ) : null}
+        <View style={{ width: 1, backgroundColor: '#e2e8f0' }} />
+        <View style={{ flex: 1, alignItems: 'center' }}>
+          <Text style={{ fontSize: 6, color: '#94a3b8', marginBottom: 1 }}>Signature client — EDL retour</Text>
+          {arr.clientSignature ? (
+            <Image src={arr.clientSignature} style={{ height: 28, objectFit: 'contain' }} />
+          ) : (
+            <Text style={{ fontSize: 8, color: '#cbd5e1' }}>—</Text>
+          )}
+        </View>
+      </View>
 
-      <Text fixed style={{ position: 'absolute', bottom: 18, left: 36, right: 36, fontSize: 7, color: '#cbd5e1', textAlign: 'center' }}>
+      <Text fixed style={{ position: 'absolute', bottom: 14, left: 36, right: 36, fontSize: 7, color: '#cbd5e1', textAlign: 'center' }}>
         {contractNumber} — Comparatif état des lieux départ / retour — LMS Drive
       </Text>
     </Page>
@@ -952,7 +965,6 @@ export function ContractPDF({ data }: { data: ContractData }) {
           vehiclePlate={data.vehiclePlate}
           vehicleModel={`${data.vehicleBrand} ${data.vehicleModel}`}
           edlImage={data.edlSchemaImage}
-          contractSignature={data.clientSignature}
         />
       )}
 
@@ -968,8 +980,10 @@ export function ContractPDF({ data }: { data: ContractData }) {
         />
       )}
 
-      {/* ── Pages EDL détaillées ── */}
-      {depInsp && (
+      {/* ── EDL unique (l'autre pas encore fait) : page détaillée complète ──
+          Quand les deux EDL existent, la vue comparative + photos ci-dessus les
+          couvre ; on n'ajoute donc PAS de pages détaillées (zéro page en trop). */}
+      {depInsp && !arrInsp && (
         <InspectionPage
           insp={depInsp}
           contractNumber={data.contractNumber}
@@ -981,7 +995,7 @@ export function ContractPDF({ data }: { data: ContractData }) {
           edlImage={data.edlSchemaImage}
         />
       )}
-      {arrInsp && (
+      {arrInsp && !depInsp && (
         <InspectionPage
           insp={arrInsp}
           contractNumber={data.contractNumber}
