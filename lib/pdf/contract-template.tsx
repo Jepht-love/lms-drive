@@ -297,6 +297,29 @@ function DamageChips({ zones }: { zones: DamagedZone[] }) {
   )
 }
 
+// Liste dommages compacte AVEC description (zone + sévérité + texte), une ligne
+// par dommage, police réduite → dense mais complète (garde le détail pour litige).
+function DamageListMini({ zones }: { zones: DamagedZone[] }) {
+  if (zones.length === 0) {
+    return <Text style={{ fontSize: 8, color: '#16a34a', fontFamily: 'Helvetica-Bold' }}>Aucun dommage constaté</Text>
+  }
+  const dot = (sev: string) => (sev === 'dommage' ? '#ef4444' : sev === 'rayure' ? '#eab308' : '#f97316')
+  const sevLabel = (sev: string) => (sev === 'dommage' ? 'Dommage' : sev === 'rayure' ? 'Rayure' : 'À surveiller')
+  return (
+    <View style={{ gap: 2 }}>
+      {zones.map((z, i) => (
+        <View key={i} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 3 }}>
+          <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: dot(z.severity), marginTop: 2 }} />
+          <Text style={{ fontSize: 7, color: '#1e293b', flex: 1 }}>
+            <Text style={{ fontFamily: 'Helvetica-Bold' }}>{z.label}</Text>
+            <Text style={{ color: '#64748b' }}>{`  ·  ${sevLabel(z.severity)}${z.description ? ` — ${z.description}` : ''}`}</Text>
+          </Text>
+        </View>
+      ))}
+    </View>
+  )
+}
+
 /**
  * Photos des dommages signalés : pour chaque zone endommagée disposant d'au moins
  * une photo, on affiche l'élément (label + sévérité + description) À CÔTÉ de la ou
@@ -488,7 +511,7 @@ function EDLCompareColumn({ insp, edlImage }: { insp: InspectionPDFData; edlImag
 
       <View style={{ marginTop: 6 }}>
         <Text style={{ fontSize: 7, fontFamily: 'Helvetica-Bold', color: '#64748b', marginBottom: 3 }}>DOMMAGES</Text>
-        <DamageChips zones={insp.damagedZones} />
+        <DamageListMini zones={insp.damagedZones} />
       </View>
     </View>
   )
@@ -591,6 +614,25 @@ function EDLPhotosCompareColumn({ insp }: { insp: InspectionPDFData }) {
         </View>
       ) : (
         <Text style={{ fontSize: 8, color: '#94a3b8', fontStyle: 'italic' }}>Aucune photo</Text>
+      )}
+
+      {/* Photos rattachées à chaque dommage (preuve pour litige). */}
+      {insp.damagedZones.some(z => (z.photos?.length ?? 0) > 0) && (
+        <View style={{ marginTop: 8 }}>
+          <Text style={{ fontSize: 7, fontFamily: 'Helvetica-Bold', color: '#64748b', marginBottom: 3 }}>PHOTOS DES DOMMAGES</Text>
+          {insp.damagedZones.filter(z => (z.photos?.length ?? 0) > 0).map((z, i) => (
+            <View key={i} wrap={false} style={{ marginBottom: 5 }}>
+              <Text style={{ fontSize: 6, color: '#1e293b', fontFamily: 'Helvetica-Bold', marginBottom: 1 }}>
+                {z.label}{z.description ? ` — ${z.description}` : ''}
+              </Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 3 }}>
+                {z.photos!.map((url, j) => (
+                  <Image key={j} src={url} style={{ width: '31.5%', aspectRatio: 4 / 3, objectFit: 'cover', borderRadius: 3, border: '1px solid #e2e8f0' }} />
+                ))}
+              </View>
+            </View>
+          ))}
+        </View>
       )}
     </View>
   )
@@ -969,7 +1011,9 @@ export function ContractPDF({ data }: { data: ContractData }) {
       )}
 
       {/* ── Photos départ/retour côte à côte (page paysage) ── */}
-      {depInsp && arrInsp && (depInsp.photos.length > 0 || arrInsp.photos.length > 0) && (
+      {depInsp && arrInsp && [depInsp, arrInsp].some(
+        ins => ins.photos.length > 0 || ins.damagedZones.some(z => (z.photos?.length ?? 0) > 0)
+      ) && (
         <EDLPhotosComparePage
           dep={depInsp}
           arr={arrInsp}
