@@ -470,15 +470,6 @@ function EDLCompareColumn({ insp, edlImage }: { insp: InspectionPDFData; edlImag
       <View style={{ marginTop: 6 }}>
         <DamageTable zones={insp.damagedZones} />
       </View>
-
-      <View style={{ marginTop: 6 }}>
-        <Text style={s.sigLabel}>Signature client</Text>
-        {insp.clientSignature ? (
-          <Image src={insp.clientSignature} style={{ height: 42, objectFit: 'contain' }} />
-        ) : (
-          <View style={{ height: 42, backgroundColor: '#f8fafc', borderRadius: 4 }} />
-        )}
-      </View>
     </View>
   )
 }
