@@ -278,6 +278,25 @@ function DamageTable({ zones }: { zones: DamagedZone[] }) {
   )
 }
 
+// Dommages en étiquettes compactes qui s'enroulent (hauteur bornée) : même une
+// longue liste tient en quelques lignes → ne crée jamais de page supplémentaire.
+function DamageChips({ zones }: { zones: DamagedZone[] }) {
+  if (zones.length === 0) {
+    return <Text style={{ fontSize: 8, color: '#16a34a', fontFamily: 'Helvetica-Bold' }}>Aucun dommage constaté</Text>
+  }
+  const dot = (sev: string) => (sev === 'dommage' ? '#ef4444' : sev === 'rayure' ? '#eab308' : '#f97316')
+  return (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 3 }}>
+      {zones.map((z, i) => (
+        <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 3, paddingVertical: 2, paddingHorizontal: 4 }}>
+          <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: dot(z.severity) }} />
+          <Text style={{ fontSize: 7, color: '#1e293b' }}>{z.label}</Text>
+        </View>
+      ))}
+    </View>
+  )
+}
+
 /**
  * Photos des dommages signalés : pour chaque zone endommagée disposant d'au moins
  * une photo, on affiche l'élément (label + sévérité + description) À CÔTÉ de la ou
@@ -468,13 +487,14 @@ function EDLCompareColumn({ insp, edlImage }: { insp: InspectionPDFData; edlImag
       </View>
 
       <View style={{ marginTop: 6 }}>
-        <DamageTable zones={insp.damagedZones} />
+        <Text style={{ fontSize: 7, fontFamily: 'Helvetica-Bold', color: '#64748b', marginBottom: 3 }}>DOMMAGES</Text>
+        <DamageChips zones={insp.damagedZones} />
       </View>
     </View>
   )
 }
 
-function EDLComparePage({ dep, arr, contractNumber, clientName, vehiclePlate, vehicleModel, edlImage }: {
+function EDLComparePage({ dep, arr, contractNumber, clientName, vehiclePlate, vehicleModel, edlImage, contractSignature }: {
   dep: InspectionPDFData
   arr: InspectionPDFData
   contractNumber: string
@@ -482,6 +502,7 @@ function EDLComparePage({ dep, arr, contractNumber, clientName, vehiclePlate, ve
   vehiclePlate: string
   vehicleModel: string
   edlImage?: string
+  contractSignature?: string
 }) {
   const kmDriven = Math.max(0, arr.kmReading - dep.kmReading)
   const depIds = new Set(dep.damagedZones.map(z => z.id))
@@ -518,6 +539,14 @@ function EDLComparePage({ dep, arr, contractNumber, clientName, vehiclePlate, ve
         <View style={{ width: 1, backgroundColor: '#e2e8f0' }} />
         <EDLCompareColumn insp={arr} edlImage={edlImage} />
       </View>
+
+      {/* Paraphe : signature du contrat, ancrée en coin (n'occupe pas le flux). */}
+      {contractSignature ? (
+        <View fixed style={{ position: 'absolute', bottom: 30, right: 36, alignItems: 'center' }}>
+          <Text style={{ fontSize: 6, color: '#94a3b8', marginBottom: 1 }}>Signature client (contrat)</Text>
+          <Image src={contractSignature} style={{ width: 85, height: 28, objectFit: 'contain' }} />
+        </View>
+      ) : null}
 
       <Text fixed style={{ position: 'absolute', bottom: 18, left: 36, right: 36, fontSize: 7, color: '#cbd5e1', textAlign: 'center' }}>
         {contractNumber} — Comparatif état des lieux départ / retour — LMS Drive
@@ -923,6 +952,7 @@ export function ContractPDF({ data }: { data: ContractData }) {
           vehiclePlate={data.vehiclePlate}
           vehicleModel={`${data.vehicleBrand} ${data.vehicleModel}`}
           edlImage={data.edlSchemaImage}
+          contractSignature={data.clientSignature}
         />
       )}
 
