@@ -12,7 +12,7 @@ import MobileCalendarPanel from './MobileCalendarPanel'
 import CalendarGrid from './CalendarGrid'
 import MonthView from './MonthView'
 import DayEventsPanel from './DayEventsPanel'
-import EventDrawer from './EventDrawer'
+import EventDrawer, { type CreatePrefill } from './EventDrawer'
 import AlertPanel from './AlertPanel'
 import CalendarBottomBar from './CalendarBottomBar'
 import CreateMenu from './CreateMenu'
@@ -70,14 +70,35 @@ export default function CalendarPage() {
   const [mobilePanelOpen, setMobilePanelOpen] = useState(false)
 
   // Ouverture ciblée depuis un lien externe (ex. tableau de bord « À assigner ») :
-  // /calendrier?event=<id> ouvre directement le tiroir de l'événement pour
-  // l'assigner « exactement à cet endroit ». Lu une fois au montage via window
-  // (évite la contrainte Suspense de useSearchParams), puis l'URL est nettoyée.
+  //  - /calendrier?event=<id>  → ouvre le tiroir de l'événement existant à affecter
+  //  - /calendrier?create=…    → ouvre un tiroir de création pré-rempli (tâche à
+  //    assigner) quand l'événement n'existe pas encore
+  // Lu une fois au montage via window (évite la contrainte Suspense de
+  // useSearchParams), puis l'URL est nettoyée.
   const [pendingEventId, setPendingEventId] = useState<string | null>(null)
+  const [createPrefill, setCreatePrefill] = useState<CreatePrefill | null>(null)
   useEffect(() => {
-    const ev = new URLSearchParams(window.location.search).get('event')
+    const p = new URLSearchParams(window.location.search)
+    const ev = p.get('event')
     if (ev) {
       setPendingEventId(ev)
+      window.history.replaceState(null, '', '/calendrier')
+      return
+    }
+    if (p.get('create')) {
+      const prefill: CreatePrefill = {
+        title: p.get('title') ?? undefined,
+        eventType: 'tache',
+        start: p.get('date') ?? undefined,
+        vehicleIds: p.get('vehicle') ? [p.get('vehicle') as string] : undefined,
+        clientId: p.get('client') ?? undefined,
+      }
+      if (prefill.start) setCurrentDate(new Date(prefill.start))
+      setSelectedEvent(null)
+      setSlotContext(null)
+      setPresetType('tache')
+      setCreatePrefill(prefill)
+      setDrawerOpen(true)
       window.history.replaceState(null, '', '/calendrier')
     }
   }, [])
@@ -334,7 +355,8 @@ export default function CalendarPage() {
         slotContext={slotContext}
         resources={resources}
         presetType={presetType}
-        onClose={() => setDrawerOpen(false)}
+        prefill={createPrefill}
+        onClose={() => { setDrawerOpen(false); setCreatePrefill(null) }}
         onSave={() => { loadEvents(); loadAlertCount() }}
         onDelete={() => { loadEvents(); setSelectedEvent(null) }}
       />

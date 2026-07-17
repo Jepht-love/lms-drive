@@ -280,7 +280,7 @@ export default function DueDatesClient({ dueDates, vehicles }: { dueDates: DueDa
 
       {/* Bannière « Annuler » — restaure la dernière échéance supprimée. */}
       {deleted && (
-        <div className="fixed inset-x-0 bottom-0 z-40 px-4 pb-[calc(72px+env(safe-area-inset-bottom))] sm:pb-6 flex justify-center pointer-events-none">
+        <div className="fixed inset-x-0 bottom-0 z-[60] px-4 pb-[calc(72px+env(safe-area-inset-bottom))] sm:pb-6 flex justify-center pointer-events-none">
           <div className="pointer-events-auto flex items-center gap-3 bg-[#111111] text-white rounded-2xl shadow-2xl px-4 py-3 w-full sm:max-w-md">
             <span className="flex-1 text-sm font-medium truncate">Échéance supprimée</span>
             <button onClick={onRestore} disabled={pending}

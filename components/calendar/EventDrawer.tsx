@@ -50,6 +50,18 @@ interface SlotContext {
   hour: number
 }
 
+// Pré-remplissage du tiroir en mode CRÉATION (ex. depuis « À assigner » du
+// tableau de bord : on ouvre une tâche déjà renseignée qu'il ne reste qu'à
+// affecter à quelqu'un, même si aucun événement n'existait encore).
+export interface CreatePrefill {
+  title?: string
+  eventType?: EventType
+  start?: string        // ISO
+  end?: string          // ISO
+  vehicleIds?: string[]
+  clientId?: string
+}
+
 interface EventDrawerProps {
   open: boolean
   event: CalendarEvent | null
@@ -57,6 +69,8 @@ interface EventDrawerProps {
   resources: CalendarResource[]
   // Type présélectionné via le menu de création contextuel ("+" → Tâche / RDV…)
   presetType?: EventType | null
+  // Pré-remplissage en création (titre, véhicule, date…) — voir CreatePrefill.
+  prefill?: CreatePrefill | null
   onClose: () => void
   onSave: () => void
   onDelete: () => void
@@ -76,7 +90,7 @@ function assigneeValue(e: CalendarEvent | null): string {
   return ''
 }
 
-export default function EventDrawer({ open, event, slotContext, resources, presetType, onClose, onSave, onDelete }: EventDrawerProps) {
+export default function EventDrawer({ open, event, slotContext, resources, presetType, prefill, onClose, onSave, onDelete }: EventDrawerProps) {
   const isEdit = !!event
   const links = eventLinks(event)
   const sync = syncInfo(event)
@@ -114,13 +128,21 @@ export default function EventDrawer({ open, event, slotContext, resources, prese
       setClientId(event.client_id ?? '')
       setNotes(event.notes ?? '')
     } else {
-      setTitle('')
-      setEventType(presetType ?? 'tache')
+      setTitle(prefill?.title ?? '')
+      setEventType(prefill?.eventType ?? presetType ?? 'tache')
       setStatus('a_faire')
-      setVehicleIds([])
-      setClientId('')
+      setVehicleIds(prefill?.vehicleIds ?? [])
+      setClientId(prefill?.clientId ?? '')
       setNotes('')
-      if (slotContext) {
+      if (prefill?.start) {
+        // Création pré-remplie (ex. « À assigner » du tableau de bord) : date de
+        // la tâche = celle de l'événement métier (départ/retour), reste à affecter.
+        const start = new Date(prefill.start)
+        const end = prefill.end ? new Date(prefill.end) : new Date(start.getTime() + 3600_000)
+        setStartAt(toLocalInput(start))
+        setEndAt(toLocalInput(end))
+        setAssignee('')
+      } else if (slotContext) {
         const start = new Date(slotContext.date)
         start.setHours(slotContext.hour, 0, 0, 0)
         const end = new Date(start)
@@ -141,7 +163,7 @@ export default function EventDrawer({ open, event, slotContext, resources, prese
         setAssignee('')
       }
     }
-  }, [open, event, slotContext, presetType])
+  }, [open, event, slotContext, presetType, prefill])
 
   useEffect(() => {
     if (!open) return

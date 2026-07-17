@@ -18,6 +18,17 @@ import {
 function getVehicle(r: any) { return Array.isArray(r.vehicles) ? r.vehicles[0] : r.vehicles }
 function getClient(r: any)  { return Array.isArray(r.clients)  ? r.clients[0]  : r.clients  }
 
+// Lien « À assigner » sans événement calendrier existant : ouvre le calendrier
+// sur un tiroir de CRÉATION pré-rempli (tâche de préparation datée + véhicule +
+// client), qu'il ne reste qu'à affecter à un collaborateur. Répond à la demande
+// « crée la tâche même si elle n'existe pas et on peut l'assigner ».
+function assignCreateHref(label: string, startIso: string, vehicleId?: string | null, clientId?: string | null): string {
+  const params = new URLSearchParams({ create: 'prep', date: startIso, title: label })
+  if (vehicleId) params.set('vehicle', vehicleId)
+  if (clientId) params.set('client', clientId)
+  return `/calendrier?${params.toString()}`
+}
+
 const TASK_STATUS_BADGE: Record<string, string> = {
   a_faire:  'bg-gray-100 text-gray-600',
   en_cours: 'bg-blue-50 text-blue-700',
@@ -805,12 +816,15 @@ export default async function DashboardPage() {
             {retoursEnRetard.map(r => {
               const v = getVehicle(r); const c = getClient(r)
               const daysLate = daysLateOf(r)
-              // « À assigner » → tiroir de l'événement retour dans le calendrier.
+              // « À assigner » → tiroir de l'événement retour, sinon création
+              // pré-remplie d'une tâche de préparation retour à affecter.
               const retourAssignee = retourAssigneeByRes.get(r.id) ?? null
               const retourEventId  = retourEventByRes.get(r.id)
-              const lateHref = !retourAssignee && retourEventId
-                ? `/calendrier?event=${retourEventId}`
-                : `/reservations/${r.id}?from=accueil`
+              const lateHref = retourAssignee
+                ? `/reservations/${r.id}?from=accueil`
+                : retourEventId
+                  ? `/calendrier?event=${retourEventId}`
+                  : assignCreateHref(`Préparer retour — ${v ? `${v.brand} ${v.model}` : ''}`.trim(), r.end_datetime, v?.id, c?.id)
               return (
                 <Link key={`late-${r.id}`} href={lateHref}>
                   <div className="flex items-center gap-4 px-4 py-4 bg-red-50 hover:bg-red-100 border-l-4 border-red-600 transition-colors">
@@ -847,13 +861,16 @@ export default async function DashboardPage() {
             {departsAujourdhui.map(r => {
               const v = getVehicle(r); const c = getClient(r)
               const isQuickTurnaround = v?.id && quickTurnaroundVehicleIds.has(v.id)
-              // « À assigner » → ouvre le tiroir de l'événement départ dans le
-              // calendrier pour l'affecter ; sinon la fiche réservation.
+              // « À assigner » → ouvre le tiroir dans le calendrier pour affecter :
+              // l'événement départ s'il existe, sinon une tâche de préparation
+              // pré-remplie à créer. Assigné → fiche réservation.
               const departAssignee = departAssigneeByRes.get(r.id) ?? null
               const departEventId  = departEventByRes.get(r.id)
-              const departHref = !departAssignee && departEventId
-                ? `/calendrier?event=${departEventId}`
-                : `/reservations/${r.id}?from=accueil`
+              const departHref = departAssignee
+                ? `/reservations/${r.id}?from=accueil`
+                : departEventId
+                  ? `/calendrier?event=${departEventId}`
+                  : assignCreateHref(`Préparer départ — ${v ? `${v.brand} ${v.model}` : ''}`.trim(), r.start_datetime, v?.id, c?.id)
               return (
                 <Link key={r.id} href={departHref}>
                   <div className={`flex items-center gap-4 px-4 py-4 transition-colors ${
@@ -892,12 +909,15 @@ export default async function DashboardPage() {
               const v = getVehicle(r); const c = getClient(r)
               const isLate = r.status === 'en_retard'
               const isQuickTurnaround = v?.id && quickTurnaroundVehicleIds.has(v.id)
-              // « À assigner » → tiroir de l'événement retour dans le calendrier.
+              // « À assigner » → tiroir de l'événement retour, sinon création
+              // pré-remplie d'une tâche de préparation retour à affecter.
               const retourAssignee = retourAssigneeByRes.get(r.id) ?? null
               const retourEventId  = retourEventByRes.get(r.id)
-              const retourHref = !retourAssignee && retourEventId
-                ? `/calendrier?event=${retourEventId}`
-                : `/reservations/${r.id}?from=accueil`
+              const retourHref = retourAssignee
+                ? `/reservations/${r.id}?from=accueil`
+                : retourEventId
+                  ? `/calendrier?event=${retourEventId}`
+                  : assignCreateHref(`Préparer retour — ${v ? `${v.brand} ${v.model}` : ''}`.trim(), r.end_datetime, v?.id, c?.id)
               return (
                 <Link key={r.id} href={retourHref}>
                   <div className={`flex items-center gap-4 px-4 py-4 transition-colors ${
