@@ -379,16 +379,23 @@ export async function createReservation(formData: FormData) {
   const { data: cli } = await supabase
     .from('clients').select('discount_percent').eq('id', clientId).maybeSingle()
   const discountPct = Math.min(100, Math.max(0, Number((cli as { discount_percent?: number } | null)?.discount_percent ?? 0) || 0))
-  const totalPrice = discountPct > 0
+  const loyaltyPrice = discountPct > 0
     ? Math.round(grossPrice * (1 - discountPct / 100) * 100) / 100
     : grossPrice
+
+  // Réduction manuelle (montant € saisi sur la résa), déduite APRÈS la remise
+  // fidélité. total_price la reflète → CA / compta / reste à payer cohérents.
+  const manualDiscount = Math.max(0, Number(formData.get('discount_amount')) || 0)
+  const totalPrice = Math.max(0, Math.round((loyaltyPrice - manualDiscount) * 100) / 100)
 
   const paymentAmount = formData.get('payment_amount') ? Number(formData.get('payment_amount')) : 0
 
   const baseNotes = (formData.get('internal_notes') as string) || ''
-  const internalNotes = discountPct > 0
-    ? `${baseNotes}${baseNotes ? '\n' : ''}Remise fidélité ${discountPct}% appliquée (tarif ${grossPrice}€ → ${totalPrice}€).`.trim()
-    : (baseNotes || null)
+  const noteParts: string[] = []
+  if (baseNotes) noteParts.push(baseNotes)
+  if (discountPct > 0) noteParts.push(`Remise fidélité ${discountPct}% appliquée (tarif ${grossPrice}€ → ${loyaltyPrice}€).`)
+  if (manualDiscount > 0) noteParts.push(`Réduction ${manualDiscount}€ appliquée (${loyaltyPrice}€ → ${totalPrice}€).`)
+  const internalNotes = noteParts.length ? noteParts.join('\n') : null
 
   const payload = {
     reservation_number: generateReservationNumber(),

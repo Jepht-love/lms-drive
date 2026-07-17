@@ -50,6 +50,7 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
   const [dailyPrice, setDailyPrice] = useState('')
   const [creatingNewClient, setCreatingNewClient] = useState(false)
   const [acompte, setAcompte] = useState('')
+  const [discount, setDiscount] = useState('')
   const [selectedClientId, setSelectedClientId] = useState(defaultClientId ?? '')
   const [clientQuery, setClientQuery] = useState('')
   const [showClientResults, setShowClientResults] = useState(false)
@@ -110,6 +111,8 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
   const totalPrice = days > 0 && dailyPrice
     ? calculateRentalPrice(Number(dailyPrice), selectedVehicle?.weekly_price ?? null, days)
     : 0
+  const discountNum = Math.max(0, Number(discount) || 0)
+  const netTotal = Math.max(0, totalPrice - discountNum)
 
   return (
     <form action={formAction} className="space-y-6">
@@ -375,16 +378,45 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
           </div>
         </div>
 
+        {/* Réduction manuelle (montant fixe en €), déduite du total */}
+        <div className="mt-1">
+          <label className="block text-[11px] font-bold text-gray-400 mb-1.5 uppercase tracking-wide">Réduction (€)</label>
+          <input
+            type="number"
+            name="discount_amount"
+            value={discount}
+            onChange={e => setDiscount(e.target.value)}
+            step="0.01"
+            min="0"
+            placeholder="0"
+            inputMode="decimal"
+            enterKeyHint="done"
+            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm"
+          />
+        </div>
+
         {totalPrice > 0 && (
           <div className="mt-4 p-4 bg-gray-50 rounded-xl border border-gray-100 space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-blue-800">Total estimé ({days} jour{days > 1 ? 's' : ''})</span>
-              <span className="text-xl font-bold text-blue-900">{formatPrice(totalPrice)}</span>
+              <span className={discountNum > 0 ? 'text-base font-bold text-blue-900 line-through opacity-60' : 'text-xl font-bold text-blue-900'}>{formatPrice(totalPrice)}</span>
             </div>
+            {discountNum > 0 && (
+              <>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-green-700">Réduction</span>
+                  <span className="text-sm font-bold text-green-700">− {formatPrice(discountNum)}</span>
+                </div>
+                <div className="flex items-center justify-between pt-2 border-t border-blue-100">
+                  <span className="text-sm font-medium text-blue-800">Total après réduction</span>
+                  <span className="text-xl font-bold text-blue-900">{formatPrice(netTotal)}</span>
+                </div>
+              </>
+            )}
             {Number(acompte) > 0 && (
               <div className="flex items-center justify-between pt-2 border-t border-blue-100">
                 <span className="text-sm font-medium text-blue-700">Reste à payer (acompte {formatPrice(Number(acompte))})</span>
-                <span className="text-lg font-bold text-blue-900">{formatPrice(Math.max(0, totalPrice - Number(acompte)))}</span>
+                <span className="text-lg font-bold text-blue-900">{formatPrice(Math.max(0, netTotal - Number(acompte)))}</span>
               </div>
             )}
           </div>
