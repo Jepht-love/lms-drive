@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, CheckCircle2, AlertTriangle, Trash2, X, Undo2 } from 'lucide-react'
+import { Plus, CheckCircle2, AlertTriangle, Trash2, Undo2 } from 'lucide-react'
 import Toggle from '@/components/ui/Toggle'
 import { formatPrice, formatDate } from '@/lib/utils'
 import { REVENUE_CATEGORIES, getCategoryLabel, expenseCategoriesByFamily } from '@/lib/accounting/categories'
@@ -132,10 +132,20 @@ export default function DueDatesClient({ dueDates, vehicles }: { dueDates: DueDa
 
   return (
     <div className="space-y-4">
-      <button onClick={() => setShowForm(v => !v)}
-        className="flex items-center gap-2 px-4 py-2.5 bg-[#111111] text-white rounded-xl font-semibold text-sm hover:bg-gray-800 transition-colors active:scale-[.98]">
-        <Plus className="w-4 h-4" /> Nouvelle échéance
-      </button>
+      <div className="flex items-center gap-2 flex-wrap">
+        <button onClick={() => setShowForm(v => !v)}
+          className="flex items-center gap-2 px-4 py-2.5 bg-[#111111] text-white rounded-xl font-semibold text-sm hover:bg-gray-800 transition-colors active:scale-[.98]">
+          <Plus className="w-4 h-4" /> Nouvelle échéance
+        </button>
+        {/* Restaurer la dernière échéance supprimée — à côté de « Nouvelle
+            échéance » pour être immédiatement visible en haut de page. */}
+        {deleted && (
+          <button onClick={onRestore} disabled={pending}
+            className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 text-gray-800 rounded-xl font-semibold text-sm hover:bg-gray-50 transition-colors active:scale-[.98] disabled:opacity-40">
+            <Undo2 className="w-4 h-4" /> Restaurer l’échéance
+          </button>
+        )}
+      </div>
 
       {showForm && (
         <form onSubmit={onCreate} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 space-y-4">
@@ -278,22 +288,6 @@ export default function DueDatesClient({ dueDates, vehicles }: { dueDates: DueDa
         </div>
       )}
 
-      {/* Bannière « Annuler » — restaure la dernière échéance supprimée. */}
-      {deleted && (
-        <div className="fixed inset-x-0 bottom-0 z-[60] px-4 pb-[calc(72px+env(safe-area-inset-bottom))] sm:pb-6 flex justify-center pointer-events-none">
-          <div className="pointer-events-auto flex items-center gap-3 bg-[#111111] text-white rounded-2xl shadow-2xl px-4 py-3 w-full sm:max-w-md">
-            <span className="flex-1 text-sm font-medium truncate">Échéance supprimée</span>
-            <button onClick={onRestore} disabled={pending}
-              className="flex items-center gap-1.5 text-sm font-bold text-white bg-white/15 hover:bg-white/25 rounded-lg px-3 py-1.5 transition-colors disabled:opacity-40">
-              <Undo2 className="w-4 h-4" /> Restaurer
-            </button>
-            <button onClick={() => setDeleted(null)} aria-label="Fermer"
-              className="w-7 h-7 flex items-center justify-center text-white/60 hover:text-white">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
