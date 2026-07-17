@@ -4,6 +4,7 @@ import './globals.css'
 import ServiceWorkerRegistration from '@/components/pwa/ServiceWorkerRegistration'
 import OfflineBanner from '@/components/pwa/OfflineBanner'
 import PushPermissionBanner from '@/components/pwa/PushPermissionBanner'
+import ApnsTokenRegistrar from '@/components/pwa/ApnsTokenRegistrar'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 
@@ -37,6 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="bg-white text-[#111111] antialiased font-sans">
         <OfflineBanner />
         <PushPermissionBanner />
+        <ApnsTokenRegistrar />
         {children}
         <ServiceWorkerRegistration />
       </body>
