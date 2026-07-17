@@ -274,33 +274,39 @@ export default function InspectionFlow({
 
       if (inspErr || !inspection) throw new Error(inspErr?.message ?? 'Erreur création état des lieux')
 
-      for (const [photoType, dataUrl] of Object.entries(photos)) {
-        const base64 = dataUrl.split(',')[1]
-        const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0))
-        const path = `inspections/${inspection.id}/${photoType}.jpg`
-        await supabase.storage.from('vehicle-photos').upload(path, bytes, {
-          contentType: 'image/jpeg',
-          upsert: true,
-        })
-        await supabase.from('inspection_photos').insert({
-          inspection_id: inspection.id,
-          photo_type: photoType,
-          storage_path: path,
-          taken_by: user.id,
-        })
-      }
+      // Perf (fluidité au moment de la signature) : les photos étaient
+      // uploadées + enregistrées UNE PAR UNE → « Enregistrement… » lent quand il
+      // y a plusieurs clichés. On lance tous les uploads en parallèle.
+      await Promise.all(
+        Object.entries(photos).map(async ([photoType, dataUrl]) => {
+          const base64 = dataUrl.split(',')[1]
+          const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0))
+          const path = `inspections/${inspection.id}/${photoType}.jpg`
+          await supabase.storage.from('vehicle-photos').upload(path, bytes, {
+            contentType: 'image/jpeg',
+            upsert: true,
+          })
+          await supabase.from('inspection_photos').insert({
+            inspection_id: inspection.id,
+            photo_type: photoType,
+            storage_path: path,
+            taken_by: user.id,
+          })
+        }),
+      )
 
-      // Km monotone : n'avance jamais le compteur à la baisse (saisie erronée)
-      await supabase.from('vehicles')
-        .update({ current_km: kmReading })
-        .eq('id', vehicleId)
-        .lt('current_km', kmReading)
-
-      // Niveau carburant actuel — reporté sur la fiche véhicule à chaque EDL
-      // (départ ou retour), même unité que fuel_range_km sur l'inspection.
-      await supabase.from('vehicles')
-        .update({ current_fuel_range_km: fuelRangeKm })
-        .eq('id', vehicleId)
+      // Deux mises à jour indépendantes de la fiche véhicule, en parallèle :
+      //  - Km monotone : n'avance jamais le compteur à la baisse (saisie erronée)
+      //  - Niveau carburant actuel — reporté à chaque EDL (départ ou retour)
+      await Promise.all([
+        supabase.from('vehicles')
+          .update({ current_km: kmReading })
+          .eq('id', vehicleId)
+          .lt('current_km', kmReading),
+        supabase.from('vehicles')
+          .update({ current_fuel_range_km: fuelRangeKm })
+          .eq('id', vehicleId),
+      ])
 
       if (type === 'depart') {
         if (reservationId) await supabase.from('reservations').update({ status: 'en_cours' }).eq('id', reservationId)
