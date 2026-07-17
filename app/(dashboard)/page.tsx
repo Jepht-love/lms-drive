@@ -171,10 +171,13 @@ export default async function DashboardPage() {
   const vehicles = (vehiclesRaw ?? []).filter(v => !externalIds.has(v.id))
 
   const total          = vehicles?.length ?? 0
-  const disponibles    = vehicles?.filter(v => v.status === 'disponible').length ?? 0
-  // « mis_a_disposition » (chez partenaire) compte comme en exploitation : le
-  // véhicule est sorti et génère du revenu → il entre dans le taux d'occupation.
-  const enLocation     = vehicles?.filter(v => ['loue', 'reserve', 'mis_a_disposition'].includes(v.status)).length ?? 0
+  // « Réservé » = départ à venir, le véhicule est TOUJOURS physiquement sur le
+  // parc → il compte comme DISPONIBLE tant qu'il n'est pas parti (demande gérant :
+  // « les autres sont juste réservés, ils doivent être dans disponibles »).
+  const disponibles    = vehicles?.filter(v => ['disponible', 'reserve'].includes(v.status)).length ?? 0
+  // « En location » = réellement sorti : loué (client) ou mis à disposition (chez
+  // partenaire). Le réservé n'en fait PAS partie. C'est aussi le taux d'occupation.
+  const enLocation     = vehicles?.filter(v => ['loue', 'mis_a_disposition'].includes(v.status)).length ?? 0
   // « mis_a_disposition » exclu : chez partenaire ≠ immobilisé (aligné avec la
   // page Flotte, où il a sa propre pastille « Chez partenaire »).
   const immobilises    = vehicles?.filter(v =>
@@ -261,7 +264,11 @@ export default async function DashboardPage() {
       vehicles ( id, plate, brand, model ),
       clients  ( id, first_name, last_name, phone )
     `)
-    .in('status', ['confirmee', 'en_cours', 'en_retard'])
+    // « En location » = réellement sorti : uniquement en_cours / en_retard. Une
+    // réservation confirmée mais pas encore partie N'EST PAS en location (c'est
+    // du « réservé », section dédiée) ; si son départ est dépassé, elle remonte
+    // en alerte « récupération en retard », pas ici.
+    .in('status', ['en_cours', 'en_retard'])
     .order('start_datetime', { ascending: true })
     .limit(100)
 
@@ -295,12 +302,11 @@ export default async function DashboardPage() {
     }
   }
 
-  // ── OPTIONS (réservations non encore confirmées) → section « Réservé » ──────
-  // Les réservations CONFIRMÉES basculent dans « En location » (voir plus haut).
-  // Ici on ne garde que les « options » : un pré-blocage non confirmé (pas
-  // d'avance), départ à venir. Requête dédiée SANS plafond à 7 jours pour ne pas
-  // masquer une option lointaine. Pas de montant : le CDC interdit toute donnée
-  // financière sur l'accueil.
+  // ── RÉSERVÉ (départ à venir, véhicule pas encore parti) → section « Réservé » ─
+  // Un véhicule RÉSERVÉ n'est PAS en location : options (pré-blocage) ET
+  // confirmées (avance versée) dont le départ est à venir. Elles restent
+  // « disponibles » côté flotte tant qu'elles ne sont pas parties. Pas de montant :
+  // le CDC interdit toute donnée financière sur l'accueil.
   const { data: reservedRaw } = await supabase
     .from('reservations')
     .select(`
@@ -308,7 +314,7 @@ export default async function DashboardPage() {
       vehicles ( id, plate, brand, model ),
       clients  ( id, first_name, last_name, phone )
     `)
-    .eq('status', 'option')
+    .in('status', ['option', 'confirmee'])
     .gt('start_datetime', businessDayEnd.toISOString())
     .order('start_datetime', { ascending: true })
     .limit(50)
@@ -542,7 +548,7 @@ export default async function DashboardPage() {
 
           {/* DISPONIBLES + EN LOCATION */}
           <div className="grid grid-cols-2 gap-3">
-            <Link href="/vehicles?status=disponible" className="active:scale-[.99] transition-transform">
+            <Link href="/vehicles?status=disponibles" className="active:scale-[.99] transition-transform">
               <div className="bg-white rounded-3xl p-4 border border-gray-100 shadow-sm flex flex-col gap-2.5">
                 <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">DISPONIBLES</span>
                 <p className="font-black text-gray-900 leading-none" style={{ fontSize: 28 }}>{disponibles}</p>

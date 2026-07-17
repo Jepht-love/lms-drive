@@ -20,12 +20,13 @@ import {
 // immobilisé, il génère du revenu → il a sa propre pastille de filtre.
 const IMMOBILISES_STATUSES = ['maintenance', 'hors_service', 'en_verification', 'immobilise', 'a_reparer', 'fourriere', 'non_restitue', 'deplacement_pro']
 
-// « En location » (filtre composite depuis le tableau de bord) : tout véhicule qui
-// génère du revenu locatif — loué (parti), réservé (départ à venir) ou chez
-// partenaire. Doit rester aligné avec le compteur EN LOCATION du tableau de bord
-// (app/(dashboard)/page.tsx), sinon on clique « 4 en location » et on tombe sur
-// un filtre « loué » vide (les véhicules étant en réalité au statut « réservé »).
-const EN_LOCATION_STATUSES = ['loue', 'reserve', 'mis_a_disposition']
+// Filtres composites du tableau de bord — doivent rester alignés avec les
+// compteurs de app/(dashboard)/page.tsx.
+// « En location » = véhicule réellement SORTI (loué ou chez partenaire). Le
+// réservé n'en fait PAS partie : départ à venir, véhicule encore sur le parc.
+const EN_LOCATION_STATUSES = ['loue', 'mis_a_disposition']
+// « Disponibles » = disponible OU réservé (départ à venir mais toujours là).
+const DISPONIBLE_STATUSES  = ['disponible', 'reserve']
 
 // ─── Config statut (pour les filtres) ─────────────────────────────────────────
 const STATUS_CONFIG: Record<string, { label: string; dot: string }> = {
@@ -163,6 +164,7 @@ export default async function VehiclesPage({
     !status ||
     (status === 'immobilises'  ? IMMOBILISES_STATUSES.includes(v.status)
      : status === 'en_location' ? EN_LOCATION_STATUSES.includes(v.status)
+     : status === 'disponibles' ? DISPONIBLE_STATUSES.includes(v.status)
      : v.status === status)
   const needle = q?.trim().toLowerCase()
   const vehicles = allVehicles.filter(v =>
