@@ -51,6 +51,8 @@ function rangeFor(view: CalendarView, currentDate: Date): [Date, Date] {
 }
 
 export default function CalendarPage() {
+  // Vue par défaut = MOIS (mobile comme desktop) : on arrive directement sur le
+  // mois, plus sur la timeline du jour. Taper un jour ouvre ce jour au besoin.
   const [view, setView] = useState<CalendarView>('month')
   const [currentDate, setCurrentDate] = useState(new Date())
   const [resources, setResources] = useState<CalendarResource[]>([])
@@ -106,10 +108,9 @@ export default function CalendarPage() {
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 767px)')
     setIsMobile(mq.matches)
-    if (mq.matches) setView('day')
-    // On ne re-force PAS « jour » sur un simple changement de viewport (rotation,
-    // barre d'URL mobile qui apparaît/disparaît) : sinon le choix « Mois » de
-    // l'utilisateur pourrait être écrasé. On ne met à jour que isMobile.
+    // Plus de forçage « jour » sur mobile : on ouvre sur la vue Mois par défaut
+    // (demande explicite). On ne met à jour que isMobile aux changements de
+    // viewport, jamais la vue choisie.
     const handler = (e: MediaQueryListEvent) => {
       setIsMobile(e.matches)
     }
