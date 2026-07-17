@@ -33,10 +33,12 @@ export async function broadcastPushToManagers(payload: PushPayload): Promise<voi
     }
 
     // APNs (app iOS native)
-    const { data: apnsRows } = await supabase
+    const { data: apnsRows, error: apnsErr } = await supabase
       .from('apns_tokens')
       .select('token')
       .in('user_id', managerIds)
+
+    console.log(`[APNs] broadcast: ${managerIds.length} managers, ${apnsRows?.length ?? 0} tokens APNs`, apnsErr ?? '')
 
     if (apnsRows?.length) {
       await sendApnsToTokens(

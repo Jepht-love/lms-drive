@@ -8,7 +8,12 @@ function getProvider(): apn.Provider | null {
   const key = process.env.APNS_KEY
   const keyId = process.env.APNS_KEY_ID
   const teamId = process.env.APNS_TEAM_ID
-  if (!key || !keyId || !teamId) return null
+  if (!key || !keyId || !teamId) {
+    console.error('[APNs] variables d\'env manquantes:', {
+      APNS_KEY: !!key, APNS_KEY_ID: !!keyId, APNS_TEAM_ID: !!teamId,
+    })
+    return null
+  }
 
   // Passerelle APNs : sandbox pour un build Development (câble/Xcode Debug),
   // production pour un build TestFlight/App Store. Piloté par APNS_PRODUCTION
