@@ -250,13 +250,15 @@ export default async function DashboardPage() {
     [...departVehicleIds].filter(id => retourVehicleIds.has(id))
   )
 
-  // ── « En location » : locations engagées ───────────────────────────────────
-  // Requête dédiée SANS plafond de date. Dès qu'une réservation est CONFIRMÉE
-  // (le client a bloqué une avance), le véhicule est considéré comme loué et doit
-  // apparaître ici — même si le départ / l'état des lieux n'est pas encore fait,
-  // et même si la récupération est en retard. Statuts inclus : confirmee (engagée,
-  // pas encore partie), en_cours (partie), en_retard (retour dépassé). Les
-  // « options » (non confirmées) restent dans la section « Réservé ».
+  // ── « En location » : une seule liste, un badge par ligne ───────────────────
+  // Demande gérant : ne PAS scinder en deux sections. Une seule section « En
+  // location » qui liste tout ce qui touche un véhicule (sorti OU à venir), et
+  // c'est le BADGE de chaque ligne qui distingue « Loué » (réellement sorti :
+  // en_cours / en_retard) de « Réservé » (départ à venir : option / confirmee).
+  // Le KPI de la flotte, lui, reste strict (seuls les loués comptent « en
+  // location », les réservés restent « disponibles »). Requête SANS plafond de
+  // date : options (pré-blocage), confirmées (avance versée, à venir OU départ
+  // dépassé non récupéré), en_cours (partie), en_retard (retour dépassé).
   const { data: locationRaw } = await supabase
     .from('reservations')
     .select(`
@@ -264,27 +266,27 @@ export default async function DashboardPage() {
       vehicles ( id, plate, brand, model ),
       clients  ( id, first_name, last_name, phone )
     `)
-    // « En location » = réellement sorti : uniquement en_cours / en_retard. Une
-    // réservation confirmée mais pas encore partie N'EST PAS en location (c'est
-    // du « réservé », section dédiée) ; si son départ est dépassé, elle remonte
-    // en alerte « récupération en retard », pas ici.
-    .in('status', ['en_cours', 'en_retard'])
+    .in('status', ['option', 'confirmee', 'en_cours', 'en_retard'])
     .order('start_datetime', { ascending: true })
     .limit(100)
 
   // Une confirmée dont l'heure de départ est atteinte mais non récupérée = à
   // récupérer (prioritaire). Ordre : à récupérer → retour en retard → en cours
   // (par retour) → confirmée future (par départ).
+  // Ordre : loués actifs d'abord (à récupérer → retour en retard → en cours),
+  // puis les réservés à venir (confirmée future, puis option), triés par date.
   const locationRank = (r: { status: string; start_datetime: string }) => {
     if (r.status === 'confirmee') return new Date(r.start_datetime) <= now ? 0 : 3
     if (r.status === 'en_retard') return 1
-    return 2 // en_cours
+    if (r.status === 'en_cours')  return 2
+    return 4 // option (réservé, non confirmé)
   }
   const enLocationNow = (locationRaw ?? []).slice().sort((a, b) => {
     const ra = locationRank(a), rb = locationRank(b)
     if (ra !== rb) return ra - rb
-    const da = ra === 3 ? a.start_datetime : a.end_datetime
-    const db = rb === 3 ? b.start_datetime : b.end_datetime
+    // Loués actifs (rangs 0-2) triés par retour ; réservés (rangs 3-4) par départ.
+    const da = ra >= 3 ? a.start_datetime : a.end_datetime
+    const db = rb >= 3 ? b.start_datetime : b.end_datetime
     return da.localeCompare(db)
   })
 
@@ -301,24 +303,6 @@ export default async function DashboardPage() {
       nextBookingByVehicle.set(ov.id, other)
     }
   }
-
-  // ── RÉSERVÉ (départ à venir, véhicule pas encore parti) → section « Réservé » ─
-  // Un véhicule RÉSERVÉ n'est PAS en location : options (pré-blocage) ET
-  // confirmées (avance versée) dont le départ est à venir. Elles restent
-  // « disponibles » côté flotte tant qu'elles ne sont pas parties. Pas de montant :
-  // le CDC interdit toute donnée financière sur l'accueil.
-  const { data: reservedRaw } = await supabase
-    .from('reservations')
-    .select(`
-      id, status, start_datetime, end_datetime,
-      vehicles ( id, plate, brand, model ),
-      clients  ( id, first_name, last_name, phone )
-    `)
-    .in('status', ['option', 'confirmee'])
-    .gt('start_datetime', businessDayEnd.toISOString())
-    .order('start_datetime', { ascending: true })
-    .limit(50)
-  const reservationsAVenir = reservedRaw ?? []
 
   // ── Contrats ouverts → réservations « à préparer » ──────────────────────────
   // Un contrat non signé (brouillon / à signer) ou absent = réservation à préparer.
@@ -583,63 +567,6 @@ export default async function DashboardPage() {
         </section>
       )}
 
-      {/* ═══ 1b. RÉSERVATIONS À VENIR (départ à venir, pas encore effectué) ═ */}
-      {reservationsAVenir.length > 0 && (
-        <section>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-[11px] font-bold uppercase tracking-widest text-gray-900">
-              Réservé · {reservationsAVenir.length}
-            </h2>
-            <Link href="/reservations?status=confirmee" className="text-[11px] text-gray-400 font-medium flex items-center gap-1">
-              TOUT VOIR <ChevronRight className="w-3 h-3" />
-            </Link>
-          </div>
-
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden divide-y divide-gray-50">
-            {reservationsAVenir.map(r => {
-              const v = getVehicle(r); const c = getClient(r)
-              const start = new Date(r.start_datetime)
-              const end   = new Date(r.end_datetime)
-              const days  = Math.max(1, differenceInDays(startOfDay(end), startOfDay(start)))
-              const isOption = r.status === 'option'
-              return (
-                <Link key={r.id} href={`/reservations/${r.id}?from=accueil`}>
-                  <div className="flex items-center gap-4 px-4 py-3.5 hover:bg-gray-50 transition-colors">
-                    {/* Date de DÉPART (jour / heure) */}
-                    <div className="flex flex-col items-center w-12 flex-shrink-0">
-                      <span className="text-[10px] font-bold uppercase text-gray-400 capitalize">
-                        {format(start, 'EEE', { locale: fr })}
-                      </span>
-                      <span className="text-sm font-black text-gray-900">{format(start, 'd')}</span>
-                      <span className="text-[10px] text-gray-400 font-mono">{format(start, 'HH:mm')}</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-bold text-gray-900 truncate">{c?.first_name} {c?.last_name}</p>
-                        {isOption && (
-                          <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500 flex-shrink-0">En cours</span>
-                        )}
-                      </div>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        {v?.brand} {v?.model} <span className="text-gray-300 font-mono">· {v?.plate}</span>
-                      </p>
-                      {/* Départ ET retour prévus */}
-                      <p className="text-[11px] text-gray-500 mt-1">
-                        Départ {format(start, 'd MMM à HH:mm', { locale: fr })}
-                        <span className="text-gray-300"> · </span>
-                        <span className="font-semibold text-gray-700">Retour {format(end, 'd MMM à HH:mm', { locale: fr })}</span>
-                      </p>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-gray-200 flex-shrink-0" />
-                  </div>
-                </Link>
-              )
-            })}
-          </div>
-        </section>
-      )}
-
-
       {enLocationNow.length > 0 && (
         <section>
           <div className="flex items-center justify-between mb-3">
@@ -657,11 +584,11 @@ export default async function DashboardPage() {
               const c           = getClient(r)
               const start       = new Date(r.start_datetime)
               const end         = new Date(r.end_datetime)
-              // États possibles dans « En location » :
-              const isDeparted  = r.status === 'en_cours' || r.status === 'en_retard'
+              // États possibles dans « En location » (un badge par ligne) :
+              const isDeparted  = r.status === 'en_cours' || r.status === 'en_retard' // LOUÉ (sorti)
               const isLate      = r.status === 'en_retard'                 // retour dépassé
               const pickupDue   = r.status === 'confirmee' && start <= now  // départ dépassé, pas récupéré
-              const isReserved  = r.status === 'confirmee' && start > now   // réservée, départ futur
+              const isReserved  = !isDeparted && !pickupDue                 // RÉSERVÉ (départ à venir : option / confirmée)
 
               const daysLeft    = differenceInDays(startOfDay(end), todayStart)   // avant retour
               const isReturnToday = isDeparted && daysLeft === 0 && !isLate
@@ -682,6 +609,11 @@ export default async function DashboardPage() {
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
                           <span className="text-base font-black text-gray-900">{v?.brand} {v?.model}</span>
                           <span className="text-xs text-gray-400">{v?.plate}</span>
+                          {isDeparted && (
+                            <span className="text-[9px] font-black uppercase tracking-wide text-white bg-green-600 px-2 py-0.5 rounded-full">
+                              Loué
+                            </span>
+                          )}
                           {pickupDue && (
                             <span className="text-[9px] font-black uppercase tracking-wide text-white bg-orange-600 px-2 py-0.5 rounded-full">
                               Départ en retard
@@ -1230,7 +1162,6 @@ export default async function DashboardPage() {
 
       {/* État vide global */}
       {enLocationNow.length === 0 && alerts.length === 0 && retoursEnRetard.length === 0 &&
-       reservationsAVenir.length === 0 &&
        departsAujourdhui.length === 0 && retoursAujourdhui.length === 0 &&
        (todayTasks?.length ?? 0) === 0 && todayCalendarTasks.length === 0 && (
         <div className="flex flex-col items-center gap-3 py-16 text-center">
