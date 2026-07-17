@@ -196,6 +196,18 @@ export async function fetchAllAlerts(
     .gte('start_datetime', now.toISOString())
     .lte('start_datetime', in24h.toISOString())
 
+  // Tâches lavage déjà au calendrier pour ces départs → l'alerte ouvre la tâche.
+  const washTaskByRes = new Map<string, string>()
+  const departIds = (upcomingDeparts ?? []).map(r => r.id)
+  if (departIds.length) {
+    const { data: washTasks } = await supabase
+      .from('calendar_events')
+      .select('id, reservation_id')
+      .eq('event_type', 'tache')
+      .in('reservation_id', departIds)
+    washTasks?.forEach(t => { if (t.reservation_id) washTaskByRes.set(t.reservation_id, t.id) })
+  }
+
   upcomingDeparts?.forEach(r => {
     const v = Array.isArray(r.vehicles) ? r.vehicles[0] : r.vehicles
     if (!v) return
@@ -215,9 +227,9 @@ export async function fetchAllAlerts(
         label: 'LAVAGE AVANT LOCATION',
         sublabel: `${vLabel(v)} · départ dans ${hoursLeft}h`,
         // Le lavage est une TÂCHE de préparation (reflétée sur le calendrier via
-        // syncAlertsToCalendar), pas la réservation : l'alerte doit ouvrir la
-        // tâche à traiter, pas la fiche réservation du client.
-        href: `/calendrier`,
+        // syncWashTask), pas la réservation : l'alerte ouvre la tâche à traiter
+        // (?event=<id>) si elle existe, sinon le calendrier.
+        href: washTaskByRes.get(r.id) ? `/calendrier?event=${washTaskByRes.get(r.id)}` : `/calendrier`,
         date: r.start_datetime,
         vehicleId: r.vehicle_id,
         reservationId: r.id,

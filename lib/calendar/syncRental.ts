@@ -136,6 +136,20 @@ async function syncWashTask(
     .limit(1)
     .maybeSingle()
 
+  // Besoin de lavage : véhicule jamais lavé ou lavé il y a plus de 2 j avant ce
+  // départ (même critère que l'alerte lavage). Uniquement pour les départs à
+  // venir (a_faire), pas les résas terminées/annulées.
+  const { data: veh } = await admin
+    .from('vehicles')
+    .select('last_wash_date')
+    .eq('id', reservation.vehicle_id)
+    .maybeSingle()
+  const lastWash = (veh as { last_wash_date?: string | null } | null)?.last_wash_date
+  const daysSinceWash = lastWash
+    ? Math.floor((newStart.getTime() - new Date(lastWash).getTime()) / 86_400_000)
+    : 999
+  const needsWash = departStatus === 'a_faire' && daysSinceWash > 2
+
   const { data: existingWash } = await admin
     .from('calendar_events')
     .select('id')
@@ -143,7 +157,8 @@ async function syncWashTask(
     .eq('event_type', 'tache')
     .maybeSingle()
 
-  if (!previousRental) {
+  // Tâche créée/gardée si rotation rapide OU si un lavage est nécessaire.
+  if (!previousRental && !needsWash) {
     if (existingWash) await admin.from('calendar_events').delete().eq('id', existingWash.id)
     return
   }
