@@ -28,7 +28,7 @@ export default function MonthView({ currentDate, events, resources, onEventClick
   const currentWeekStart = startOfWeek(today, { weekStartsOn: 1 }).getTime()
 
   return (
-    <div className="flex-1 flex flex-col overflow-auto" style={{ paddingBottom: '56px' }}>
+    <div className="flex-1 min-h-0 flex flex-col overflow-auto" style={{ paddingBottom: '56px' }}>
       <div className="grid grid-cols-7 flex-shrink-0">
         {DAY_HEADERS.map(d => (
           <div key={d} className="text-[10px] text-gray-400 uppercase text-center py-1.5 border-b border-gray-100">

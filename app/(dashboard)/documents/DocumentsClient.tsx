@@ -627,31 +627,33 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
         </div>
       </Drawer>
 
-      {/* Visualiseur intégré — reste dans l'application, fermeture par le X. */}
+      {/* Visualiseur intégré — feuille partielle (≈85 % de l'écran) : on voit le
+          document sans quitter l'app, la liste reste visible derrière, et le X
+          referme la prévisualisation. */}
       {viewDoc && (
-        <div className="fixed inset-0 z-[70] flex flex-col bg-black">
-          <div
-            className="flex items-center justify-between gap-3 px-4 py-3 bg-[#111111] text-white flex-shrink-0"
-            style={{ paddingTop: 'calc(env(safe-area-inset-top) + 10px)' }}
-          >
-            <span className="text-[13px] font-semibold truncate">{viewDoc.name}</span>
-            <div className="flex items-center gap-1 flex-shrink-0">
-              <button onClick={() => handleShare(viewDoc)} disabled={sharingId === viewDoc.id}
-                className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-white/10 disabled:opacity-40" title="Partager">
-                <Share2 className="w-[18px] h-[18px]" />
-              </button>
-              <button onClick={() => setViewDoc(null)} aria-label="Fermer"
-                className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-white/10" title="Fermer">
-                <X className="w-5 h-5" />
-              </button>
+        <div className="fixed inset-0 z-[70] flex items-end sm:items-center sm:justify-center">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setViewDoc(null)} />
+          <div className="relative w-full sm:max-w-2xl h-[85vh] sm:h-[80vh] bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-gray-100 flex-shrink-0">
+              <span className="text-[13px] font-bold text-[#111111] truncate">{viewDoc.name}</span>
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <button onClick={() => handleShare(viewDoc)} disabled={sharingId === viewDoc.id}
+                  className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 disabled:opacity-40 text-gray-500" title="Partager">
+                  <Share2 className="w-[18px] h-[18px]" />
+                </button>
+                <button onClick={() => setViewDoc(null)} aria-label="Fermer la prévisualisation"
+                  className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500" title="Fermer">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
-          </div>
-          <div className="flex-1 bg-white overflow-hidden">
-            {viewDoc.file_type?.startsWith('image/') ? (
-              <img src={urlFor(viewDoc)} alt={viewDoc.name} className="w-full h-full object-contain" />
-            ) : (
-              <iframe src={urlFor(viewDoc)} title={viewDoc.name} className="w-full h-full border-0" />
-            )}
+            <div className="flex-1 bg-gray-50 overflow-hidden">
+              {viewDoc.file_type?.startsWith('image/') ? (
+                <img src={urlFor(viewDoc)} alt={viewDoc.name} className="w-full h-full object-contain" />
+              ) : (
+                <iframe src={urlFor(viewDoc)} title={viewDoc.name} className="w-full h-full border-0" />
+              )}
+            </div>
           </div>
         </div>
       )}
