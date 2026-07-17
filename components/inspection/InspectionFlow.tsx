@@ -532,6 +532,19 @@ export default function InspectionFlow({
 
   return (
     <div className="space-y-4">
+      {/* Input photo PARTAGÉ — monté en permanence (pas seulement à l'étape
+          « Photos »). Sinon, à l'étape « Zones / schéma », le bouton caméra des
+          dégâts intérieurs déclenche photoInputRef.current?.click() alors que
+          l'input n'est pas dans le DOM → rien ne se passe (bug EDL retour). */}
+      <input
+        ref={photoInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={handlePhotoCapture}
+      />
+
       {/* Barre de progression */}
       <div className="flex items-center gap-2">
         {(['info', 'schema', 'photos', 'signatures'] as Step[]).map((s, i) => {
@@ -899,15 +912,6 @@ export default function InspectionFlow({
               })}
             </div>
           </div>
-
-          <input
-            ref={photoInputRef}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            className="hidden"
-            onChange={handlePhotoCapture}
-          />
 
           {!mandatoryCompleted && (
             <p className="text-sm text-amber-600 bg-amber-50 rounded-xl px-4 py-3 flex items-center gap-2">

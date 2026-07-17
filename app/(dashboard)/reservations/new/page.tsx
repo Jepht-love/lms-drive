@@ -6,10 +6,15 @@ import BackButton from '@/components/ui/BackButton'
 export default async function NewReservationPage({
   searchParams,
 }: {
-  searchParams: Promise<{ client?: string; vehicle?: string; start?: string; end?: string }>
+  searchParams: Promise<{ client?: string; vehicle?: string; start?: string; end?: string; from?: string }>
 }) {
-  const { client: clientId, vehicle: vehicleId, start, end } = await searchParams
+  const { client: clientId, vehicle: vehicleId, start, end, from } = await searchParams
   const supabase = await createClient()
+
+  // Retour contextuel : quand on arrive depuis le calendrier (bouton « + »), le
+  // bouton retour doit ramener au calendrier, pas à la liste des réservations.
+  // On n'accepte qu'un chemin interne (commençant par « / ») par sécurité.
+  const backHref = from && from.startsWith('/') ? from : '/reservations'
 
   const [{ data: vehicles }, { data: clients }] = await Promise.all([
     supabase.from('vehicles').select('id, plate, brand, model, daily_price, weekly_price, deposit_amount, km_included_daily, extra_km_price').eq('is_active', true).order('brand'),
@@ -19,7 +24,7 @@ export default async function NewReservationPage({
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <BackButton fallbackHref="/reservations" />
+        <BackButton fallbackHref={backHref} />
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Nouvelle réservation</h1>
           <p className="text-gray-500 mt-0.5">Créez une réservation pour un véhicule</p>

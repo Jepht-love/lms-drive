@@ -20,6 +20,13 @@ import {
 // immobilisé, il génère du revenu → il a sa propre pastille de filtre.
 const IMMOBILISES_STATUSES = ['maintenance', 'hors_service', 'en_verification', 'immobilise', 'a_reparer', 'fourriere', 'non_restitue', 'deplacement_pro']
 
+// « En location » (filtre composite depuis le tableau de bord) : tout véhicule qui
+// génère du revenu locatif — loué (parti), réservé (départ à venir) ou chez
+// partenaire. Doit rester aligné avec le compteur EN LOCATION du tableau de bord
+// (app/(dashboard)/page.tsx), sinon on clique « 4 en location » et on tombe sur
+// un filtre « loué » vide (les véhicules étant en réalité au statut « réservé »).
+const EN_LOCATION_STATUSES = ['loue', 'reserve', 'mis_a_disposition']
+
 // ─── Config statut (pour les filtres) ─────────────────────────────────────────
 const STATUS_CONFIG: Record<string, { label: string; dot: string }> = {
   disponible:        { label: 'Disponible',      dot: 'bg-green-500' },
@@ -154,7 +161,9 @@ export default async function VehiclesPage({
   // Filtres (statut OU groupe « immobilisés » OU besoin maintenance) appliqués en JS
   const matchesStatus = (v: Vehicle) =>
     !status ||
-    (status === 'immobilises' ? IMMOBILISES_STATUSES.includes(v.status) : v.status === status)
+    (status === 'immobilises'  ? IMMOBILISES_STATUSES.includes(v.status)
+     : status === 'en_location' ? EN_LOCATION_STATUSES.includes(v.status)
+     : v.status === status)
   const needle = q?.trim().toLowerCase()
   const vehicles = allVehicles.filter(v =>
     matchesStatus(v) &&
@@ -164,6 +173,7 @@ export default async function VehiclesPage({
 
   const total = allVehicles.length
   const immobilisesCount = allVehicles.filter(v => IMMOBILISES_STATUSES.includes(v.status)).length
+  const enLocationCount = allVehicles.filter(v => EN_LOCATION_STATUSES.includes(v.status)).length
 
   return (
     <div className="space-y-4">
@@ -205,6 +215,19 @@ export default async function VehiclesPage({
         >
           Tous ({total})
         </Link>
+        {enLocationCount > 0 && (
+          <Link
+            href="/vehicles?status=en_location"
+            className={`px-3.5 py-2 min-h-[44px] rounded-xl text-sm font-semibold whitespace-nowrap transition-colors flex-shrink-0 flex items-center gap-1.5 ${
+              status === 'en_location'
+                ? 'bg-[#111111] text-white'
+                : 'bg-white border border-blue-100 text-blue-600 hover:bg-blue-50 shadow-sm'
+            }`}
+          >
+            <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${status === 'en_location' ? 'bg-white' : 'bg-blue-500'}`} />
+            En location ({enLocationCount})
+          </Link>
+        )}
         {immobilisesCount > 0 && (
           <Link
             href="/vehicles/immobilises"

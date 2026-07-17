@@ -2,11 +2,11 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, CheckCircle2, AlertTriangle, Trash2 } from 'lucide-react'
+import { Plus, CheckCircle2, AlertTriangle, Trash2, X, Undo2 } from 'lucide-react'
 import Toggle from '@/components/ui/Toggle'
 import { formatPrice, formatDate } from '@/lib/utils'
 import { REVENUE_CATEGORIES, getCategoryLabel, expenseCategoriesByFamily } from '@/lib/accounting/categories'
-import { createDueDate, createRecurringDueDates, markDuePaid, deleteDueDate } from '@/lib/actions/dueDates'
+import { createDueDate, createRecurringDueDates, markDuePaid, deleteDueDate, restoreDueDate } from '@/lib/actions/dueDates'
 
 interface Vehicle { id: string; plate: string; brand: string; model: string }
 interface DueDate {
@@ -18,6 +18,7 @@ interface DueDate {
   due_date: string
   is_paid: boolean
   notes: string | null
+  vehicle_id?: string | null
   vehicles?: { plate: string } | { plate: string }[] | null
 }
 
@@ -29,6 +30,10 @@ export default function DueDatesClient({ dueDates, vehicles }: { dueDates: DueDa
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
+  // Suppression protégée : d'abord une confirmation (évite la suppression
+  // accidentelle), puis une bannière « Annuler » qui restaure l'échéance.
+  const [confirmDelete, setConfirmDelete] = useState<DueDate | null>(null)
+  const [deleted, setDeleted] = useState<DueDate | null>(null)
 
   const today = new Date().toISOString().slice(0, 10)
   const unpaid = dueDates.filter(d => !d.is_paid)
@@ -60,9 +65,35 @@ export default function DueDatesClient({ dueDates, vehicles }: { dueDates: DueDa
     })
   }
 
-  function onDelete(id: string) {
+  function onConfirmDelete() {
+    const d = confirmDelete
+    if (!d) return
+    setConfirmDelete(null)
+    setError(null)
     startTransition(async () => {
-      await deleteDueDate(id)
+      const res = await deleteDueDate(d.id)
+      if (res?.error) { setError(res.error); return }
+      setDeleted(d)          // ouvre la bannière « Annuler / Restaurer »
+      router.refresh()
+    })
+  }
+
+  function onRestore() {
+    const d = deleted
+    if (!d) return
+    setDeleted(null)
+    setError(null)
+    startTransition(async () => {
+      const res = await restoreDueDate({
+        description: d.description,
+        type: d.type,
+        category: d.category,
+        amount: d.amount,
+        due_date: d.due_date,
+        vehicle_id: d.vehicle_id ?? null,
+        notes: d.notes,
+      })
+      if (res?.error) { setError(res.error); return }
       router.refresh()
     })
   }
@@ -89,7 +120,7 @@ export default function DueDatesClient({ dueDates, vehicles }: { dueDates: DueDa
               className="w-8 h-8 rounded-xl bg-green-50 text-green-600 flex items-center justify-center hover:bg-green-100" title="Marquer réglée">
               <CheckCircle2 className="w-4 h-4" />
             </button>
-            <button onClick={() => onDelete(d.id)} disabled={pending}
+            <button onClick={() => setConfirmDelete(d)} disabled={pending}
               className="w-8 h-8 rounded-xl bg-gray-50 text-gray-400 flex items-center justify-center hover:bg-red-50 hover:text-red-500" title="Supprimer">
               <Trash2 className="w-4 h-4" />
             </button>
@@ -211,6 +242,56 @@ export default function DueDatesClient({ dueDates, vehicles }: { dueDates: DueDa
         <div>
           <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2">Réglées récemment</p>
           <div className="space-y-2 opacity-60">{paid.map(d => <Row key={d.id} d={d} />)}</div>
+        </div>
+      )}
+
+      {/* Modale de confirmation de suppression — protège contre les suppressions
+          accidentelles (« j'ai supprimé un échéancier sans faire exprès »). */}
+      {confirmDelete && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setConfirmDelete(null)} />
+          <div className="relative w-full sm:max-w-sm bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl p-5 space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-red-50 text-red-500 flex items-center justify-center flex-shrink-0">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-base font-black text-gray-900">Supprimer cette échéance ?</h3>
+                <p className="text-sm text-gray-500 mt-0.5 truncate">{confirmDelete.description}</p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {formatDate(confirmDelete.due_date)} · {confirmDelete.type === 'recette' ? '+' : '−'}{formatPrice(confirmDelete.amount)}
+                </p>
+              </div>
+            </div>
+            <p className="text-xs text-gray-400">Vous pourrez la restaurer juste après si c’est une erreur.</p>
+            <div className="flex gap-2.5">
+              <button onClick={() => setConfirmDelete(null)}
+                className="flex-1 py-3 rounded-xl bg-gray-100 text-gray-700 font-bold text-sm hover:bg-gray-200 transition-colors">
+                Annuler
+              </button>
+              <button onClick={onConfirmDelete} disabled={pending}
+                className="flex-1 py-3 rounded-xl bg-red-600 text-white font-bold text-sm hover:bg-red-700 transition-colors disabled:opacity-40">
+                Supprimer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bannière « Annuler » — restaure la dernière échéance supprimée. */}
+      {deleted && (
+        <div className="fixed inset-x-0 bottom-0 z-40 px-4 pb-[calc(72px+env(safe-area-inset-bottom))] sm:pb-6 flex justify-center pointer-events-none">
+          <div className="pointer-events-auto flex items-center gap-3 bg-[#111111] text-white rounded-2xl shadow-2xl px-4 py-3 w-full sm:max-w-md">
+            <span className="flex-1 text-sm font-medium truncate">Échéance supprimée</span>
+            <button onClick={onRestore} disabled={pending}
+              className="flex items-center gap-1.5 text-sm font-bold text-white bg-white/15 hover:bg-white/25 rounded-lg px-3 py-1.5 transition-colors disabled:opacity-40">
+              <Undo2 className="w-4 h-4" /> Restaurer
+            </button>
+            <button onClick={() => setDeleted(null)} aria-label="Fermer"
+              className="w-7 h-7 flex items-center justify-center text-white/60 hover:text-white">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       )}
     </div>

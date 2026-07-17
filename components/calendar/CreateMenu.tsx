@@ -31,7 +31,9 @@ export default function CreateMenu({ open, onClose, onPickType }: CreateMenuProp
   const pick = (opt: (typeof OPTIONS)[number]) => {
     onClose()
     if (opt.type) onPickType(opt.type)
-    else router.push('/reservations/new')
+    // from=/calendrier → le bouton retour de la page « Nouvelle réservation »
+    // ramène au calendrier (et non à la liste des réservations).
+    else router.push('/reservations/new?from=/calendrier')
   }
 
   return (

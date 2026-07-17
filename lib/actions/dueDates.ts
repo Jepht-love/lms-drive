@@ -133,3 +133,42 @@ export async function deleteDueDate(id: string) {
   revalidatePath('/accounting/due-dates')
   return { success: true }
 }
+
+/**
+ * Restaure une échéance supprimée par erreur en la ré-insérant à l'identique
+ * (contenu conservé côté client le temps de la fenêtre « Annuler »). L'id change
+ * mais la ligne est fonctionnellement identique — suffisant pour rattraper une
+ * suppression accidentelle sans introduire de suppression logique en base.
+ */
+export async function restoreDueDate(due: {
+  description: string
+  type: string
+  category: string
+  amount: number
+  due_date: string
+  vehicle_id: string | null
+  notes: string | null
+}) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié' }
+
+  if (!due?.description || !due?.category || !(due.amount > 0) || !due?.due_date) {
+    return { error: 'Données de restauration incomplètes' }
+  }
+
+  const { error } = await supabase.from('financial_due_dates').insert({
+    description: due.description,
+    type: due.type || 'depense',
+    category: due.category,
+    amount: due.amount,
+    due_date: due.due_date,
+    vehicle_id: due.vehicle_id || null,
+    notes: due.notes || null,
+    created_by: user.id,
+  })
+  if (error) return { error: error.message }
+
+  revalidatePath('/accounting/due-dates')
+  return { success: true }
+}

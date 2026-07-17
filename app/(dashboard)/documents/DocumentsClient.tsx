@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition, useMemo } from 'react'
-import { Search, Eye, Download, Printer, Plus, Paperclip, Trash2, RefreshCw, History, ChevronDown } from 'lucide-react'
+import { Search, Eye, Share2, Download, Printer, Plus, Paperclip, Trash2, RefreshCw, History, ChevronDown } from 'lucide-react'
 import {
   DOCUMENT_CATEGORIES,
   DOCUMENT_SUBCATEGORIES,
@@ -258,6 +258,47 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
     })
   }
 
+  // Partage natif : ouvre la feuille de partage iOS/Android (Enregistrer dans
+  // Fichiers, Messages, AirDrop…) SANS quitter l'application. Sur WKWebView / PC
+  // sans Web Share, on retombe sur l'ouverture du document dans un nouvel onglet.
+  // Corrige le piège du « Télécharger » qui affichait le PDF sans retour possible.
+  const [sharingId, setSharingId] = useState<string | null>(null)
+  async function handleShare(doc: Document) {
+    const url = urlFor(doc)
+    setSharingId(doc.id)
+    try {
+      const nav = navigator as Navigator & { canShare?: (d?: any) => boolean }
+      // 1) Partage du fichier lui-même (l'utilisateur peut l'enregistrer dans Fichiers)
+      if (nav.canShare && typeof nav.share === 'function') {
+        try {
+          const res  = await fetch(url)
+          const blob = await res.blob()
+          const ext  = (doc.file_type?.split('/')[1] ?? 'pdf').split('+')[0]
+          const safeName = doc.name.replace(/[^\w.\- ]+/g, '').trim() || 'document'
+          const fileObj = new File([blob], `${safeName}.${ext}`, {
+            type: blob.type || doc.file_type || 'application/octet-stream',
+          })
+          if (nav.canShare({ files: [fileObj] })) {
+            await nav.share({ files: [fileObj], title: doc.name })
+            return
+          }
+        } catch { /* repli sur le partage d'URL ci-dessous */ }
+      }
+      // 2) Partage de l'URL (signée) à défaut du fichier
+      if (typeof navigator.share === 'function') {
+        await navigator.share({ title: doc.name, url })
+        return
+      }
+      // 3) Repli desktop : nouvel onglet
+      window.open(url, '_blank', 'noopener,noreferrer')
+    } catch (e: any) {
+      // L'utilisateur a annulé la feuille de partage → ne rien faire.
+      if (e?.name !== 'AbortError') window.open(url, '_blank', 'noopener,noreferrer')
+    } finally {
+      setSharingId(null)
+    }
+  }
+
   function resetReplace() {
     setReplaceTarget(null); setReplaceFile(null); setReplaceExpiry(''); setReplaceError('')
   }
@@ -426,10 +467,10 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
                               className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100" title="Visualiser">
                               <Eye className="w-4 h-4 text-gray-400" />
                             </a>
-                            <a href={urlFor(doc)} download target="_blank" rel="noopener noreferrer"
-                              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100" title="Télécharger">
-                              <Download className="w-4 h-4 text-gray-400" />
-                            </a>
+                            <button onClick={() => handleShare(doc)} disabled={sharingId === doc.id}
+                              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 disabled:opacity-40" title="Partager / Enregistrer dans Fichiers">
+                              <Share2 className="w-4 h-4 text-gray-400" />
+                            </button>
                             <a href={urlFor(doc)} target="_blank" rel="noopener noreferrer"
                               className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100" title="Imprimer">
                               <Printer className="w-4 h-4 text-gray-400" />
@@ -440,12 +481,10 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
                                 <RefreshCw className="w-4 h-4 text-gray-400" />
                               </button>
                             )}
-                            {!doc.is_auto_generated && (
-                              <button onClick={() => handleDelete(doc)} disabled={isPending}
-                                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 disabled:opacity-40">
-                                <Trash2 className="w-4 h-4 text-red-400" />
-                              </button>
-                            )}
+                            <button onClick={() => handleDelete(doc)} disabled={isPending}
+                              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 disabled:opacity-40" title="Supprimer">
+                              <Trash2 className="w-4 h-4 text-red-400" />
+                            </button>
                           </div>
                         </div>
 
@@ -467,10 +506,10 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
                                       className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100" title="Visualiser">
                                       <Eye className="w-3.5 h-3.5 text-gray-400" />
                                     </a>
-                                    <a href={urlFor(h)} download target="_blank" rel="noopener noreferrer"
-                                      className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100" title="Télécharger">
-                                      <Download className="w-3.5 h-3.5 text-gray-400" />
-                                    </a>
+                                    <button onClick={() => handleShare(h)} disabled={sharingId === h.id}
+                                      className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 disabled:opacity-40" title="Partager / Enregistrer dans Fichiers">
+                                      <Share2 className="w-3.5 h-3.5 text-gray-400" />
+                                    </button>
                                   </div>
                                 ))}
                               </div>

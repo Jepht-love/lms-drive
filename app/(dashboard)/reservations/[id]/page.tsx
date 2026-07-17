@@ -75,7 +75,14 @@ export default async function ReservationPage({
 }) {
   const { id } = await params
   const { from } = await searchParams
-  const backHref = from === 'calendrier' ? '/calendrier' : '/reservations'
+  // Retour contextuel : depuis le calendrier, la page Alertes ou le tableau de
+  // bord (accueil), le bouton retour ramène à la source (et non à la liste des
+  // réservations, où l'on n'était pas).
+  const backHref =
+    from === 'calendrier' ? '/calendrier'
+    : from === 'alerts'   ? '/alerts'
+    : from === 'accueil'  ? '/'
+    : '/reservations'
   const supabase = await createClient()
 
   const { data: reservation } = await supabase

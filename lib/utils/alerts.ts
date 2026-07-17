@@ -73,7 +73,7 @@ export async function fetchAllAlerts(
       type: 'retard',
       label: 'RETOUR EN RETARD',
       sublabel: `${vLabel(v)} · ${(c as any)?.first_name ?? ''} ${(c as any)?.last_name ?? ''} · ${lateHours}h de retard`,
-      href: `/reservations/${r.id}`,
+      href: `/reservations/${r.id}?from=alerts`,
       date: r.end_datetime,
       vehicleId: r.vehicle_id,
       reservationId: r.id,
@@ -214,7 +214,10 @@ export async function fetchAllAlerts(
         type: 'lavage',
         label: 'LAVAGE AVANT LOCATION',
         sublabel: `${vLabel(v)} · départ dans ${hoursLeft}h`,
-        href: `/reservations/${r.id}`,
+        // Le lavage est une TÂCHE de préparation (reflétée sur le calendrier via
+        // syncAlertsToCalendar), pas la réservation : l'alerte doit ouvrir la
+        // tâche à traiter, pas la fiche réservation du client.
+        href: `/calendrier`,
         date: r.start_datetime,
         vehicleId: r.vehicle_id,
         reservationId: r.id,
@@ -289,7 +292,7 @@ export async function fetchAllAlerts(
       type: 'depart_imminent',
       label: 'DÉPART IMMINENT',
       sublabel: `${vLabel(v)} · dans ${minutesLeft} min`,
-      href: `/reservations/${r.id}`,
+      href: `/reservations/${r.id}?from=alerts`,
       date: r.start_datetime,
       vehicleId: r.vehicle_id,
       reservationId: r.id,
@@ -362,7 +365,7 @@ export async function fetchAllAlerts(
       type: 'recuperation_retard',
       label: 'RÉCUPÉRATION EN RETARD',
       sublabel: `${vLabel(v)} · ${(c as any)?.first_name ?? ''} ${(c as any)?.last_name ?? ''} · ${daysLate > 0 ? `${daysLate}j de retard` : `${hoursLate}h de retard`}`,
-      href: `/reservations/${r.id}`,
+      href: `/reservations/${r.id}?from=alerts`,
       date: r.start_datetime,
       vehicleId: r.vehicle_id,
       reservationId: r.id,

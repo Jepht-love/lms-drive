@@ -121,7 +121,10 @@ export async function deleteDocument(documentId: string) {
     .single()
 
   if (fetchErr || !doc) throw new Error('Document introuvable')
-  if (doc.is_auto_generated) throw new Error('Impossible de supprimer un document auto-généré')
+  // Les documents auto-générés (contrats, factures) sont désormais supprimables :
+  // ils sont régénérables depuis la réservation, et le gérant doit pouvoir retirer
+  // les doublons (ex. contrat listé deux fois). La confirmation UI protège du geste
+  // accidentel.
 
   // Accepte l'ancien format URL public et le nouveau format chemin brut
   let storagePath: string | null = null

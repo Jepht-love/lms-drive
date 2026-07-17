@@ -190,7 +190,12 @@ export default async function DashboardPage() {
   const departsAujourdhui = reservations?.filter(r =>
     isDepart(r.status) &&
     new Date(r.start_datetime) >= businessDayStart &&
-    new Date(r.start_datetime) <= businessDayEnd
+    new Date(r.start_datetime) <= businessDayEnd &&
+    // Un départ CONFIRMÉ dont l'heure est déjà passée n'est plus une tâche « à
+    // préparer » du jour : il bascule en RÉCUPÉRATION EN RETARD (alerte dédiée +
+    // carte « En location · Départ en retard »). On l'exclut ici pour ne pas
+    // l'afficher une 2ᵉ fois dans « Tâches du jour ».
+    !(r.status === 'confirmee' && new Date(r.start_datetime) < now)
   ) ?? []
 
   // Retours du jour : fenêtre calendaire (minuit→23h59) pour ne pas rater
@@ -323,14 +328,22 @@ export default async function DashboardPage() {
   // la liste Semaine, sans changer le modèle de données.
   const departAssigneeByRes = new Map<string, string>()
   const retourAssigneeByRes = new Map<string, string>()
+  // Id de l'événement calendrier départ/retour par réservation — pour ouvrir
+  // directement son tiroir d'assignation (/calendrier?event=<id>) quand la carte
+  // affiche « À assigner ». Renseigné même sans assigné (c'est justement le cas
+  // où on veut assigner).
+  const departEventByRes = new Map<string, string>()
+  const retourEventByRes = new Map<string, string>()
   if (weekResIds.length) {
     const { data: resEvents } = await supabase
       .from('calendar_events')
-      .select('reservation_id, event_type, assignee:profiles!assigned_to(full_name), team:calendar_teams!assigned_team_id(name)')
+      .select('id, reservation_id, event_type, assignee:profiles!assigned_to(full_name), team:calendar_teams!assigned_team_id(name)')
       .in('reservation_id', weekResIds)
       .in('event_type', ['depart_vehicule', 'retour_vehicule'])
     for (const ev of resEvents ?? []) {
       if (!ev.reservation_id) continue
+      if (ev.event_type === 'depart_vehicule') departEventByRes.set(ev.reservation_id, ev.id)
+      else if (ev.event_type === 'retour_vehicule') retourEventByRes.set(ev.reservation_id, ev.id)
       const assignee = Array.isArray(ev.assignee) ? ev.assignee[0] : ev.assignee
       const team     = Array.isArray(ev.team) ? ev.team[0] : ev.team
       const label    = assignee?.full_name ?? team?.name ?? null
@@ -422,7 +435,7 @@ export default async function DashboardPage() {
         key: `wdep-${r.id}`, time: new Date(r.start_datetime),
         kind: isToPrepare(r.id) ? 'apreparer' : 'depart',
         title: clientName, subtitle: vehLabel,
-        assignee: a, needsAssignee: !a, href: `/reservations/${r.id}`,
+        assignee: a, needsAssignee: !a, href: `/reservations/${r.id}?from=accueil`,
       })
     }
     if (r.status === 'en_cours' || r.status === 'en_retard') {
@@ -430,7 +443,7 @@ export default async function DashboardPage() {
       weekEvents.push({
         key: `wret-${r.id}`, time: new Date(r.end_datetime), kind: 'retour',
         title: clientName, subtitle: vehLabel,
-        assignee: a, needsAssignee: !a, href: `/reservations/${r.id}`,
+        assignee: a, needsAssignee: !a, href: `/reservations/${r.id}?from=accueil`,
       })
     }
   }
@@ -445,7 +458,7 @@ export default async function DashboardPage() {
     weekEvents.push({
       key: `wcal-${t.id}`, time: new Date(t.start_at), kind,
       title: t.title, subtitle,
-      assignee, needsAssignee: !assignee, href: '/calendrier',
+      assignee, needsAssignee: !assignee, href: `/calendrier?event=${t.id}`,
     })
   }
   // Tâches legacy (table `tasks`) — créées depuis le calendrier, sans miroir
@@ -525,7 +538,7 @@ export default async function DashboardPage() {
               </div>
             </Link>
 
-            <Link href="/vehicles?status=loue" className="active:scale-[.99] transition-transform">
+            <Link href="/vehicles?status=en_location" className="active:scale-[.99] transition-transform">
               <div className="bg-white rounded-3xl p-4 border border-gray-100 shadow-sm flex flex-col gap-2.5">
                 <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">EN LOCATION</span>
                 <p className="font-black text-gray-900 leading-none" style={{ fontSize: 28 }}>{enLocation}</p>
@@ -573,7 +586,7 @@ export default async function DashboardPage() {
               const days  = Math.max(1, differenceInDays(startOfDay(end), startOfDay(start)))
               const isOption = r.status === 'option'
               return (
-                <Link key={r.id} href={`/reservations/${r.id}`}>
+                <Link key={r.id} href={`/reservations/${r.id}?from=accueil`}>
                   <div className="flex items-center gap-4 px-4 py-3.5 hover:bg-gray-50 transition-colors">
                     {/* Date de DÉPART (jour / heure) */}
                     <div className="flex flex-col items-center w-12 flex-shrink-0">
@@ -645,7 +658,7 @@ export default async function DashboardPage() {
               const cardClass = isLate || pickupDue ? 'border-orange-200 bg-orange-50/40' : 'border-gray-100'
 
               return (
-                <Link key={r.id} href={`/reservations/${r.id}`}>
+                <Link key={r.id} href={`/reservations/${r.id}?from=accueil`}>
                   <div className={`bg-white rounded-2xl p-4 border shadow-sm ${cardClass}`}>
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex-1 min-w-0">
@@ -654,7 +667,7 @@ export default async function DashboardPage() {
                           <span className="text-xs text-gray-400">{v?.plate}</span>
                           {pickupDue && (
                             <span className="text-[9px] font-black uppercase tracking-wide text-white bg-orange-600 px-2 py-0.5 rounded-full">
-                              À récupérer
+                              Départ en retard
                             </span>
                           )}
                           {isReserved && (
@@ -670,7 +683,7 @@ export default async function DashboardPage() {
                           </p>
                         ) : pickupDue ? (
                           <p className="text-xs text-orange-600 font-semibold mt-1">
-                            Départ prévu {format(start, 'dd MMM à HH:mm', { locale: fr })} · en attente de récupération
+                            Départ prévu {format(start, 'dd MMM à HH:mm', { locale: fr })} · client pas encore venu
                           </p>
                         ) : (
                           <p className="text-xs text-gray-400 mt-1">
@@ -707,7 +720,7 @@ export default async function DashboardPage() {
                             {daysLatePickup >= 1 ? `+${daysLatePickup}` : '!'}
                           </span>
                           <span className="text-[10px] font-bold mt-0.5 text-orange-100">
-                            {daysLatePickup >= 1 ? 'j retard' : 'à récup.'}
+                            {daysLatePickup >= 1 ? 'j retard' : 'départ'}
                           </span>
                         </div>
                       ) : (
@@ -792,8 +805,14 @@ export default async function DashboardPage() {
             {retoursEnRetard.map(r => {
               const v = getVehicle(r); const c = getClient(r)
               const daysLate = daysLateOf(r)
+              // « À assigner » → tiroir de l'événement retour dans le calendrier.
+              const retourAssignee = retourAssigneeByRes.get(r.id) ?? null
+              const retourEventId  = retourEventByRes.get(r.id)
+              const lateHref = !retourAssignee && retourEventId
+                ? `/calendrier?event=${retourEventId}`
+                : `/reservations/${r.id}?from=accueil`
               return (
-                <Link key={`late-${r.id}`} href={`/reservations/${r.id}`}>
+                <Link key={`late-${r.id}`} href={lateHref}>
                   <div className="flex items-center gap-4 px-4 py-4 bg-red-50 hover:bg-red-100 border-l-4 border-red-600 transition-colors">
                     <span className="w-12 flex flex-col items-center flex-shrink-0 leading-tight">
                       <span className="text-[10px] font-bold text-red-500 capitalize">
@@ -828,8 +847,15 @@ export default async function DashboardPage() {
             {departsAujourdhui.map(r => {
               const v = getVehicle(r); const c = getClient(r)
               const isQuickTurnaround = v?.id && quickTurnaroundVehicleIds.has(v.id)
+              // « À assigner » → ouvre le tiroir de l'événement départ dans le
+              // calendrier pour l'affecter ; sinon la fiche réservation.
+              const departAssignee = departAssigneeByRes.get(r.id) ?? null
+              const departEventId  = departEventByRes.get(r.id)
+              const departHref = !departAssignee && departEventId
+                ? `/calendrier?event=${departEventId}`
+                : `/reservations/${r.id}?from=accueil`
               return (
-                <Link key={r.id} href={`/reservations/${r.id}`}>
+                <Link key={r.id} href={departHref}>
                   <div className={`flex items-center gap-4 px-4 py-4 transition-colors ${
                     isQuickTurnaround ? 'bg-orange-100 hover:bg-orange-200/70 border-l-4 border-orange-500' : 'hover:bg-gray-50'
                   }`}>
@@ -866,8 +892,14 @@ export default async function DashboardPage() {
               const v = getVehicle(r); const c = getClient(r)
               const isLate = r.status === 'en_retard'
               const isQuickTurnaround = v?.id && quickTurnaroundVehicleIds.has(v.id)
+              // « À assigner » → tiroir de l'événement retour dans le calendrier.
+              const retourAssignee = retourAssigneeByRes.get(r.id) ?? null
+              const retourEventId  = retourEventByRes.get(r.id)
+              const retourHref = !retourAssignee && retourEventId
+                ? `/calendrier?event=${retourEventId}`
+                : `/reservations/${r.id}?from=accueil`
               return (
-                <Link key={r.id} href={`/reservations/${r.id}`}>
+                <Link key={r.id} href={retourHref}>
                   <div className={`flex items-center gap-4 px-4 py-4 transition-colors ${
                     isLate ? 'bg-red-50/60 hover:bg-red-50'
                     : isQuickTurnaround ? 'bg-orange-100 hover:bg-orange-200/70 border-l-4 border-orange-500'
@@ -945,7 +977,7 @@ export default async function DashboardPage() {
               const plates = taskVehicles.map((tv: any) => tv.plate).join(', ')
               const assignee = assigneeLabel(t)
               return (
-                <Link key={`caltask-${t.id}`} href="/calendrier">
+                <Link key={`caltask-${t.id}`} href={`/calendrier?event=${t.id}`}>
                   <div className="flex items-center gap-4 px-4 py-4 transition-colors hover:bg-gray-50">
                     <span className="w-12 text-sm font-mono font-bold text-gray-600 text-center flex-shrink-0">
                       {format(new Date(t.start_at), 'HH:mm')}

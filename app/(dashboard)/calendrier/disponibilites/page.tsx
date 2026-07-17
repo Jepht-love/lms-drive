@@ -12,10 +12,14 @@ export default async function AvailabilityPage() {
   // Vue « disponibilité = 24 h − créneaux réservés » : plus de planning à
   // déclarer, seuls les membres sont chargés ici. Les événements (créneaux
   // occupés) sont récupérés côté client par semaine affichée.
+  // is_active = true : un collaborateur désactivé (ex. « jefe ») ne doit plus
+  // apparaître dans le planning des disponibilités — aligné avec l'API du
+  // calendrier (/api/calendar/resources) qui filtre déjà les profils inactifs.
   const { data: profiles } = await supabase
     .from('profiles')
     .select('id, full_name, role')
     .in('role', ['gerant', 'associe', 'employe', 'prestataire'])
+    .eq('is_active', true)
     .order('full_name')
 
   return (

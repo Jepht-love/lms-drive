@@ -69,6 +69,19 @@ export default function CalendarPage() {
   const [alertPanelOpen, setAlertPanelOpen] = useState(false)
   const [mobilePanelOpen, setMobilePanelOpen] = useState(false)
 
+  // Ouverture ciblée depuis un lien externe (ex. tableau de bord « À assigner ») :
+  // /calendrier?event=<id> ouvre directement le tiroir de l'événement pour
+  // l'assigner « exactement à cet endroit ». Lu une fois au montage via window
+  // (évite la contrainte Suspense de useSearchParams), puis l'URL est nettoyée.
+  const [pendingEventId, setPendingEventId] = useState<string | null>(null)
+  useEffect(() => {
+    const ev = new URLSearchParams(window.location.search).get('event')
+    if (ev) {
+      setPendingEventId(ev)
+      window.history.replaceState(null, '', '/calendrier')
+    }
+  }, [])
+
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 767px)')
     setIsMobile(mq.matches)
@@ -124,6 +137,22 @@ export default function CalendarPage() {
   }, [view, currentDate])
 
   useEffect(() => { loadEvents() }, [loadEvents])
+
+  // Quand les événements sont chargés, ouvre le tiroir de l'événement ciblé par
+  // /calendrier?event=<id> (assignation depuis le tableau de bord). On cale aussi
+  // la date/vue sur ce jour pour qu'il soit visible derrière le tiroir.
+  useEffect(() => {
+    if (!pendingEventId || events.length === 0) return
+    const ev = events.find(e => e.id === pendingEventId)
+    if (ev) {
+      setCurrentDate(new Date(ev.start_at))
+      setSelectedEvent(ev)
+      setSlotContext(null)
+      setPresetType(null)
+      setDrawerOpen(true)
+      setPendingEventId(null)
+    }
+  }, [pendingEventId, events])
 
   const loadAlertCount = useCallback(() => {
     fetch('/api/calendar/alerts?count=true&pending=true')

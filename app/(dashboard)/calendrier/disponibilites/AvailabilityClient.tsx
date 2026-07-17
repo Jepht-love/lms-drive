@@ -329,9 +329,13 @@ function AvailabilityScheduler({ profiles }: { profiles: Profile[] }) {
           value={format(weekStart, 'yyyy-MM-dd')}
           onChange={e => {
             if (!e.target.value) return
-            const target = startOfWeek(new Date(e.target.value + 'T00:00:00'), { weekStartsOn: 1 })
+            const picked = new Date(e.target.value + 'T00:00:00')
+            const target = startOfWeek(picked, { weekStartsOn: 1 })
             const origin = startOfWeek(new Date(), { weekStartsOn: 1 })
             setWeekOffset(Math.round((target.getTime() - origin.getTime()) / (7 * 24 * 3600 * 1000)))
+            // Aligne le jour sélectionné sur la date choisie (lundi = 0) —
+            // sinon on garde le jour d'aujourd'hui et on retombe sur un autre jour.
+            setSelectedDayIdx((picked.getDay() + 6) % 7)
           }}
           className="flex-1 text-xs border border-gray-200 rounded-xl px-2.5 py-2 text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-black/10"
         />
