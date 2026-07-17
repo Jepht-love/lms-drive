@@ -126,14 +126,12 @@ export default function DueDatesClient({ dueDates, deletedDueDates = [], vehicle
           className="flex items-center gap-2 px-4 py-2.5 bg-[#111111] text-white rounded-xl font-semibold text-sm hover:bg-gray-800 transition-colors active:scale-[.98]">
           <Plus className="w-4 h-4" /> Nouvelle échéance
         </button>
-        {/* Corbeille — à côté de « Nouvelle échéance », toujours visible dès
-            qu'il y a au moins une échéance supprimée à restaurer. */}
-        {deletedDueDates.length > 0 && (
-          <button onClick={() => setTrashOpen(true)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 text-gray-800 rounded-xl font-semibold text-sm hover:bg-gray-50 transition-colors active:scale-[.98]">
-            <Trash2 className="w-4 h-4" /> Corbeille ({deletedDueDates.length})
-          </button>
-        )}
+        {/* Corbeille — toujours visible à côté de « Nouvelle échéance » pour
+            être découvrable (affiche « vide » tant qu'aucune suppression). */}
+        <button onClick={() => setTrashOpen(true)}
+          className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 text-gray-800 rounded-xl font-semibold text-sm hover:bg-gray-50 transition-colors active:scale-[.98]">
+          <Trash2 className="w-4 h-4" /> Corbeille{deletedDueDates.length > 0 ? ` (${deletedDueDates.length})` : ''}
+        </button>
       </div>
 
       {showForm && (
