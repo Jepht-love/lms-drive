@@ -36,6 +36,16 @@ export async function POST(request: NextRequest) {
       .getPublicUrl(pdfPath)
     const clientName = `${client?.first_name ?? ''} ${client?.last_name ?? ''}`.trim()
     try {
+      // Anti-doublon : un contrat régénéré (ex. après l'EDL de retour) remplace
+      // l'entrée auto-générée précédente au lieu d'en empiler une nouvelle
+      // (corrige « le même contrat apparaît deux fois » dans Documents).
+      if (contract.reservation_id) {
+        await supabase.from('documents')
+          .delete()
+          .eq('reservation_id', contract.reservation_id)
+          .eq('subcategory', 'contrat_location')
+          .eq('is_auto_generated', true)
+      }
       await supabase.from('documents').insert({
         category: 'client',
         subcategory: 'contrat_location',

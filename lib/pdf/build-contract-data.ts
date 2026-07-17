@@ -81,33 +81,41 @@ export async function buildContractPdfData(
     .in('type', ['depart', 'arrivee'])
     .order('signed_at')
 
-  const inspectionData: InspectionPDFData[] = []
-  for (const insp of rawInspections ?? []) {
-    const { data: photos } = await supabase
-      .from('inspection_photos')
-      .select('storage_path, photo_type')
-      .eq('inspection_id', insp.id)
-      .limit(12)
+  // Perf : les EDL (départ + retour) et leurs photos sont assemblés EN PARALLÈLE.
+  // Avant, jusqu'à 2×8 = 16 photos étaient téléchargées une par une depuis le
+  // storage (≈14 s pour générer le PDF). On lance tous les téléchargements de
+  // front tout en conservant l'ordre (Promise.all préserve l'ordre du tableau).
+  const inspectionData: InspectionPDFData[] = await Promise.all(
+    (rawInspections ?? []).map(async (insp): Promise<InspectionPDFData> => {
+      const { data: photos } = await supabase
+        .from('inspection_photos')
+        .select('storage_path, photo_type')
+        .eq('inspection_id', insp.id)
+        .limit(12)
 
-    const photoUrls: { url: string; label: string }[] = []
-    for (const p of (photos ?? []).slice(0, 8)) {
-      const url = await fetchPhotoAsDataUrl(supabase, p.storage_path)
-      if (url) photoUrls.push({ url, label: p.photo_type })
-    }
+      const photoUrls = (
+        await Promise.all(
+          (photos ?? []).slice(0, 8).map(async p => {
+            const url = await fetchPhotoAsDataUrl(supabase, p.storage_path)
+            return url ? { url, label: p.photo_type } : null
+          }),
+        )
+      ).filter(Boolean) as { url: string; label: string }[]
 
-    inspectionData.push({
-      type: insp.type as 'depart' | 'arrivee',
-      kmReading: insp.km_reading ?? 0,
-      fuelRangeKm: insp.fuel_range_km ?? 0,
-      exteriorCleanliness: insp.exterior_cleanliness ?? 3,
-      interiorCleanliness: insp.interior_cleanliness ?? 3,
-      damagedZones: (insp.damaged_zones as any[]) ?? [],
-      clientSignature: insp.client_signature_svg ?? undefined,
-      agentSignature: insp.agent_signature_svg ?? undefined,
-      signedAt: insp.signed_at ?? undefined,
-      photos: photoUrls,
-    })
-  }
+      return {
+        type: insp.type as 'depart' | 'arrivee',
+        kmReading: insp.km_reading ?? 0,
+        fuelRangeKm: insp.fuel_range_km ?? 0,
+        exteriorCleanliness: insp.exterior_cleanliness ?? 3,
+        interiorCleanliness: insp.interior_cleanliness ?? 3,
+        damagedZones: (insp.damaged_zones as any[]) ?? [],
+        clientSignature: insp.client_signature_svg ?? undefined,
+        agentSignature: insp.agent_signature_svg ?? undefined,
+        signedAt: insp.signed_at ?? undefined,
+        photos: photoUrls,
+      }
+    }),
+  )
 
   // Documents d'identité du client (bucket client-docs)
   const [idFrontUrl, idBackUrl, licFrontUrl, licBackUrl] = await Promise.all([
