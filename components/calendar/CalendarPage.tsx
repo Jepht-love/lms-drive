@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { addDays, addMonths, addWeeks, subDays, subMonths, subWeeks } from 'date-fns'
 import type { CalendarEvent, CalendarResource, CalendarView, EventType } from '@/types/calendar'
 import type { UserRole } from '@/types/database'
@@ -70,6 +70,9 @@ export default function CalendarPage() {
   const [alertCount, setAlertCount] = useState(0)
   const [alertPanelOpen, setAlertPanelOpen] = useState(false)
   const [mobilePanelOpen, setMobilePanelOpen] = useState(false)
+
+  // Suivre si c'est le montage initial pour empêcher les changements de vue automatiques
+  const isInitialMount = useRef(true)
 
   // Ouverture ciblée depuis un lien externe (ex. tableau de bord « À assigner ») :
   //  - /calendrier?event=<id>  → ouvre le tiroir de l'événement existant à affecter
@@ -162,13 +165,25 @@ export default function CalendarPage() {
 
   useEffect(() => { loadEvents() }, [loadEvents])
 
+  // Empêche le changement automatique de vue lors du montage initial
+  // (évite que le composant MonthDefect sélectionne automatiquement aujourd'hui et passe en vue jour)
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false
+      // S'assurer que la vue est bien définie sur 'month' après le montage initial
+      // au cas où un effet secondaire l'aurait changée
+      setView('month')
+    }
+  }, [])
+
   // Quand les événements sont chargés, ouvre le tiroir de l'événement ciblé par
   // /calendrier?event=<id> (assignation depuis le tableau de bord). On cale aussi
-  // la date/vue sur ce jour pour qu'il soit visible derrière le tiroir.
+  // la date sur ce jour pour qu'il soit visible derrière le tiroir.
+  // NOTE: Ne modifie plus la vue ici pour éviter de forcer la vue jour
   useEffect(() => {
-    if (!pendingEventId || events.length === 0) return
-    const ev = events.find(e => e.id === pendingEventId)
-    if (ev) {
+    if (!pendingEventId) return
+    let cancelled = false
+    const openEvent = (ev: CalendarEvent) => {
       setCurrentDate(new Date(ev.start_at))
       setSelectedEvent(ev)
       setSlotContext(null)
@@ -176,6 +191,16 @@ export default function CalendarPage() {
       setDrawerOpen(true)
       setPendingEventId(null)
     }
+    // 1) Déjà chargé dans la plage/vue courante ?
+    const local = events.find(e => e.id === pendingEventId)
+    if (local) { openEvent(local); return }
+    // 2) Sinon on va chercher l'événement directement (il peut être sur un autre
+    //    mois/vue, ou fraîchement créé et absent de la plage chargée).
+    fetch(`/api/calendar/events/${pendingEventId}`)
+      .then(r => (r.ok ? r.json() : null))
+      .then(ev => { if (!cancelled && ev?.id) openEvent(ev) })
+      .catch(() => {})
+    return () => { cancelled = true }
   }, [pendingEventId, events])
 
   const loadAlertCount = useCallback(() => {
