@@ -593,10 +593,11 @@ export default function InspectionFlow({
                 <input
                   type="number"
                   inputMode="numeric"
-                  value={kmReading}
+                  value={kmReading === 0 ? '' : kmReading}
                   onChange={e => setKmReading(Number(e.target.value))}
                   min={vehicleKm}
-                  className="w-full bg-gray-700 text-white text-xl font-bold px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 text-center tracking-widest"
+                  placeholder="0"
+                  className="w-full bg-gray-700 text-white text-xl font-bold px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 text-center tracking-widest placeholder:text-gray-500"
                 />
                 <p className="text-[10px] text-gray-500 text-center">
                   {type === 'arrivee' && kmReading > (kmAtDeparture ?? vehicleKm) ? (
@@ -623,10 +624,11 @@ export default function InspectionFlow({
                 <input
                   type="number"
                   inputMode="numeric"
-                  value={fuelRangeKm}
+                  value={fuelRangeKm === 0 ? '' : fuelRangeKm}
                   onChange={e => setFuelRangeKm(Number(e.target.value))}
                   min={0}
-                  className="w-full bg-gray-700 text-white text-xl font-bold px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 text-center tracking-widest"
+                  placeholder="0"
+                  className="w-full bg-gray-700 text-white text-xl font-bold px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 text-center tracking-widest placeholder:text-gray-500"
                 />
                 <p className="text-[10px] text-gray-500 text-center">
                   {type === 'arrivee' && fuelRangeAtDeparture != null ? (

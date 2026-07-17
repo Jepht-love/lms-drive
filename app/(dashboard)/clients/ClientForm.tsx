@@ -97,7 +97,9 @@ function PhotoUpload({ label, name, existingUrl }: { label: string; name: string
       <div className="min-h-[2.5rem] flex items-end mb-1.5">
         <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">{label}</label>
       </div>
-      <input ref={inputRef} type="file" name={name} accept="image/*" capture="environment" className="hidden" onChange={handleChange} />
+      {/* Pas de `capture` : laisse iOS proposer Photothèque / Prendre une photo /
+          Choisir un fichier (sinon la caméra s'ouvre de force, import fichier impossible). */}
+      <input ref={inputRef} type="file" name={name} accept="image/*" className="hidden" onChange={handleChange} />
       <button
         type="button"
         onClick={() => inputRef.current?.click()}
