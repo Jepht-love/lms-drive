@@ -107,9 +107,11 @@ export default function CalendarPage() {
     const mq = window.matchMedia('(max-width: 767px)')
     setIsMobile(mq.matches)
     if (mq.matches) setView('day')
+    // On ne re-force PAS « jour » sur un simple changement de viewport (rotation,
+    // barre d'URL mobile qui apparaît/disparaît) : sinon le choix « Mois » de
+    // l'utilisateur pourrait être écrasé. On ne met à jour que isMobile.
     const handler = (e: MediaQueryListEvent) => {
       setIsMobile(e.matches)
-      if (e.matches) setView('day')
     }
     mq.addEventListener('change', handler)
     return () => mq.removeEventListener('change', handler)

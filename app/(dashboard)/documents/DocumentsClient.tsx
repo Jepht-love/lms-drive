@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition, useMemo } from 'react'
-import { Search, Eye, Share2, Download, Printer, Plus, Paperclip, Trash2, RefreshCw, History, ChevronDown } from 'lucide-react'
+import { Search, Eye, Share2, Download, Printer, Plus, Paperclip, Trash2, RefreshCw, History, ChevronDown, X } from 'lucide-react'
 import {
   DOCUMENT_CATEGORIES,
   DOCUMENT_SUBCATEGORIES,
@@ -262,6 +262,9 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
   // Fichiers, Messages, AirDrop…) SANS quitter l'application. Sur WKWebView / PC
   // sans Web Share, on retombe sur l'ouverture du document dans un nouvel onglet.
   // Corrige le piège du « Télécharger » qui affichait le PDF sans retour possible.
+  // Visualiseur intégré : ouvrir un document dans l'app (avec un bouton X pour
+  // fermer) au lieu de le charger « en plein écran » sans retour possible.
+  const [viewDoc, setViewDoc] = useState<Document | null>(null)
   const [sharingId, setSharingId] = useState<string | null>(null)
   async function handleShare(doc: Document) {
     const url = urlFor(doc)
@@ -463,10 +466,10 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
                             </p>
                           </div>
                           <div className="flex items-center gap-1 flex-shrink-0">
-                            <a href={urlFor(doc)} target="_blank" rel="noopener noreferrer"
+                            <button onClick={() => setViewDoc(doc)}
                               className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100" title="Visualiser">
                               <Eye className="w-4 h-4 text-gray-400" />
-                            </a>
+                            </button>
                             <button onClick={() => handleShare(doc)} disabled={sharingId === doc.id}
                               className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 disabled:opacity-40" title="Partager / Enregistrer dans Fichiers">
                               <Share2 className="w-4 h-4 text-gray-400" />
@@ -502,10 +505,10 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
                                   <div key={h.id} className="flex items-center gap-2">
                                     <span className="text-[10px] font-bold text-gray-400 w-7">v{h.version ?? 1}</span>
                                     <span className="text-[11px] text-gray-400 flex-1 min-w-0 truncate">{formatDate(h.created_at)}</span>
-                                    <a href={urlFor(h)} target="_blank" rel="noopener noreferrer"
+                                    <button onClick={() => setViewDoc(h)}
                                       className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100" title="Visualiser">
                                       <Eye className="w-3.5 h-3.5 text-gray-400" />
-                                    </a>
+                                    </button>
                                     <button onClick={() => handleShare(h)} disabled={sharingId === h.id}
                                       className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 disabled:opacity-40" title="Partager / Enregistrer dans Fichiers">
                                       <Share2 className="w-3.5 h-3.5 text-gray-400" />
@@ -623,6 +626,35 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
           </button>
         </div>
       </Drawer>
+
+      {/* Visualiseur intégré — reste dans l'application, fermeture par le X. */}
+      {viewDoc && (
+        <div className="fixed inset-0 z-[70] flex flex-col bg-black">
+          <div
+            className="flex items-center justify-between gap-3 px-4 py-3 bg-[#111111] text-white flex-shrink-0"
+            style={{ paddingTop: 'calc(env(safe-area-inset-top) + 10px)' }}
+          >
+            <span className="text-[13px] font-semibold truncate">{viewDoc.name}</span>
+            <div className="flex items-center gap-1 flex-shrink-0">
+              <button onClick={() => handleShare(viewDoc)} disabled={sharingId === viewDoc.id}
+                className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-white/10 disabled:opacity-40" title="Partager">
+                <Share2 className="w-[18px] h-[18px]" />
+              </button>
+              <button onClick={() => setViewDoc(null)} aria-label="Fermer"
+                className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-white/10" title="Fermer">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+          <div className="flex-1 bg-white overflow-hidden">
+            {viewDoc.file_type?.startsWith('image/') ? (
+              <img src={urlFor(viewDoc)} alt={viewDoc.name} className="w-full h-full object-contain" />
+            ) : (
+              <iframe src={urlFor(viewDoc)} title={viewDoc.name} className="w-full h-full border-0" />
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

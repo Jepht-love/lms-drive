@@ -39,9 +39,12 @@ export default function CreateMenu({ open, onClose, onPickType }: CreateMenuProp
   return (
     <div className="fixed inset-0 z-[60] flex items-end md:items-center md:justify-center">
       <button type="button" aria-label="Fermer" onClick={onClose} className="absolute inset-0 bg-black/30" />
+      {/* La feuille flotte AU-DESSUS de la barre de navigation basse (60px +
+          safe-area) au lieu de la recouvrir : sinon son fond blanc masquait la
+          barre noire (Accueil/Véhicules…) qui « devenait blanche » au clic « + ».
+          La barre reste visible (assombrie par le fond) sous la feuille. */}
       <div
-        className="relative w-full md:w-[360px] bg-white rounded-t-2xl md:rounded-2xl shadow-sm border border-gray-100 p-3"
-        style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}
+        className="relative w-full md:w-[360px] bg-white rounded-t-2xl md:rounded-2xl shadow-sm border border-gray-100 p-3 mb-[calc(60px+env(safe-area-inset-bottom))] md:mb-0"
       >
         <div className="md:hidden flex justify-center pb-2">
           <div className="w-10 h-1 bg-gray-200 rounded-full" />
@@ -69,10 +72,6 @@ export default function CreateMenu({ open, onClose, onPickType }: CreateMenuProp
             </button>
           ))}
         </div>
-
-        {/* Mobile : dégage la barre de navigation basse (60px + safe-area) pour
-            que la dernière option ne soit pas masquée derrière. */}
-        <div className="md:hidden" aria-hidden style={{ height: 'calc(60px + env(safe-area-inset-bottom))' }} />
       </div>
     </div>
   )
