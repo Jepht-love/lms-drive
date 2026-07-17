@@ -322,13 +322,16 @@ export async function fetchAllAlerts(
   })
 
   // ── 10. Échéances financières courtes (J-2 et moins = urgent) ──────────────
-  const { data: dueDates } = await supabase
+  const { data: dueDatesRaw } = await supabase
     .from('financial_due_dates')
-    .select('id, description, type, amount, due_date, vehicle_id, vehicles(plate, brand, model)')
+    .select('*, vehicles(plate, brand, model)')
     .eq('is_paid', false)
     .lte('due_date', new Date(now.getTime() + 7 * 24 * 3600 * 1000).toISOString().split('T')[0])
 
-  dueDates?.forEach(d => {
+  // Exclut les échéances en corbeille (suppression logique) — filtre en mémoire
+  // pour rester tolérant si la colonne deleted_at n'existe pas encore.
+  const dueDates = (dueDatesRaw ?? []).filter((d: any) => !d.deleted_at)
+  dueDates.forEach(d => {
     const v = Array.isArray(d.vehicles) ? d.vehicles[0] : d.vehicles
     const days = differenceInDays(new Date(d.due_date), now)
     const overdue = days < 0

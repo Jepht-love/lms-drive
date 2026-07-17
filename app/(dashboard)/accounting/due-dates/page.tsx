@@ -14,13 +14,22 @@ export default async function DueDatesPage() {
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user?.id).single()
   if (!profile || !['gerant', 'associe'].includes(profile.role)) redirect('/')
 
-  const [{ data: dueDates }, { data: vehicles }] = await Promise.all([
+  const [{ data: allDue }, { data: vehicles }] = await Promise.all([
     supabase
       .from('financial_due_dates')
       .select('*, vehicles(plate)')
       .order('due_date', { ascending: true }),
     supabase.from('vehicles').select('id, plate, brand, model').eq('is_active', true).order('brand'),
   ])
+
+  // Suppression logique : deleted_at != null = en corbeille. Filtre en mémoire
+  // (tolérant : si la colonne n'existe pas, deleted_at est undefined → tout est
+  // « actif », comportement inchangé).
+  const dueDates = (allDue ?? []).filter((d: any) => !d.deleted_at)
+  const deletedDueDates = (allDue ?? [])
+    .filter((d: any) => !!d.deleted_at)
+    .sort((a: any, b: any) => String(b.deleted_at).localeCompare(String(a.deleted_at)))
+    .slice(0, 50)
 
   // Prévisionnel mensuel — uniquement les échéances pas encore réglées,
   // groupées par mois (potentiellement plusieurs années pour un loyer sur 36
@@ -65,7 +74,7 @@ export default async function DueDatesPage() {
       <h1 className="text-xl font-black text-gray-900">Échéances à venir</h1>
       <VehicleDueSummary schedules={vehicleSchedules} />
       <DueDatesChart monthlyForecast={monthlyForecast} />
-      <DueDatesClient dueDates={dueDates ?? []} vehicles={vehicles ?? []} />
+      <DueDatesClient dueDates={dueDates ?? []} deletedDueDates={deletedDueDates ?? []} vehicles={vehicles ?? []} />
     </div>
   )
 }

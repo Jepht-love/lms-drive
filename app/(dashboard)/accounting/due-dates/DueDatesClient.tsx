@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, CheckCircle2, AlertTriangle, Trash2, Undo2 } from 'lucide-react'
+import { Plus, CheckCircle2, AlertTriangle, Trash2, Undo2, X } from 'lucide-react'
 import Toggle from '@/components/ui/Toggle'
 import { formatPrice, formatDate } from '@/lib/utils'
 import { REVENUE_CATEGORIES, getCategoryLabel, expenseCategoriesByFamily } from '@/lib/accounting/categories'
@@ -22,7 +22,7 @@ interface DueDate {
   vehicles?: { plate: string } | { plate: string }[] | null
 }
 
-export default function DueDatesClient({ dueDates, vehicles }: { dueDates: DueDate[]; vehicles: Vehicle[] }) {
+export default function DueDatesClient({ dueDates, deletedDueDates = [], vehicles }: { dueDates: DueDate[]; deletedDueDates?: DueDate[]; vehicles: Vehicle[] }) {
   const router = useRouter()
   const [showForm, setShowForm] = useState(false)
   const [type, setType] = useState<'recette' | 'depense'>('depense')
@@ -30,10 +30,11 @@ export default function DueDatesClient({ dueDates, vehicles }: { dueDates: DueDa
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
-  // Suppression protégée : d'abord une confirmation (évite la suppression
-  // accidentelle), puis une bannière « Annuler » qui restaure l'échéance.
+  // Suppression protégée : confirmation avant suppression (évite la suppression
+  // accidentelle). Les supprimées vont en CORBEILLE (deleted_at) et restent
+  // restaurables via la modale ci-dessous.
   const [confirmDelete, setConfirmDelete] = useState<DueDate | null>(null)
-  const [deleted, setDeleted] = useState<DueDate | null>(null)
+  const [trashOpen, setTrashOpen] = useState(false)
 
   const today = new Date().toISOString().slice(0, 10)
   const unpaid = dueDates.filter(d => !d.is_paid)
@@ -73,26 +74,14 @@ export default function DueDatesClient({ dueDates, vehicles }: { dueDates: DueDa
     startTransition(async () => {
       const res = await deleteDueDate(d.id)
       if (res?.error) { setError(res.error); return }
-      setDeleted(d)          // ouvre la bannière « Annuler / Restaurer »
-      router.refresh()
+      router.refresh()          // l'échéance bascule dans la corbeille
     })
   }
 
-  function onRestore() {
-    const d = deleted
-    if (!d) return
-    setDeleted(null)
+  function onRestore(id: string) {
     setError(null)
     startTransition(async () => {
-      const res = await restoreDueDate({
-        description: d.description,
-        type: d.type,
-        category: d.category,
-        amount: d.amount,
-        due_date: d.due_date,
-        vehicle_id: d.vehicle_id ?? null,
-        notes: d.notes,
-      })
+      const res = await restoreDueDate(id)
       if (res?.error) { setError(res.error); return }
       router.refresh()
     })
@@ -137,12 +126,12 @@ export default function DueDatesClient({ dueDates, vehicles }: { dueDates: DueDa
           className="flex items-center gap-2 px-4 py-2.5 bg-[#111111] text-white rounded-xl font-semibold text-sm hover:bg-gray-800 transition-colors active:scale-[.98]">
           <Plus className="w-4 h-4" /> Nouvelle échéance
         </button>
-        {/* Restaurer la dernière échéance supprimée — à côté de « Nouvelle
-            échéance » pour être immédiatement visible en haut de page. */}
-        {deleted && (
-          <button onClick={onRestore} disabled={pending}
-            className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 text-gray-800 rounded-xl font-semibold text-sm hover:bg-gray-50 transition-colors active:scale-[.98] disabled:opacity-40">
-            <Undo2 className="w-4 h-4" /> Restaurer l’échéance
+        {/* Corbeille — à côté de « Nouvelle échéance », toujours visible dès
+            qu'il y a au moins une échéance supprimée à restaurer. */}
+        {deletedDueDates.length > 0 && (
+          <button onClick={() => setTrashOpen(true)}
+            className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 text-gray-800 rounded-xl font-semibold text-sm hover:bg-gray-50 transition-colors active:scale-[.98]">
+            <Trash2 className="w-4 h-4" /> Corbeille ({deletedDueDates.length})
           </button>
         )}
       </div>
@@ -273,7 +262,7 @@ export default function DueDatesClient({ dueDates, vehicles }: { dueDates: DueDa
                 </p>
               </div>
             </div>
-            <p className="text-xs text-gray-400">Vous pourrez la restaurer juste après si c’est une erreur.</p>
+            <p className="text-xs text-gray-400">Elle ira dans la corbeille et pourra être restaurée si c’est une erreur.</p>
             <div className="flex gap-2.5">
               <button onClick={() => setConfirmDelete(null)}
                 className="flex-1 py-3 rounded-xl bg-gray-100 text-gray-700 font-bold text-sm hover:bg-gray-200 transition-colors">
@@ -283,6 +272,49 @@ export default function DueDatesClient({ dueDates, vehicles }: { dueDates: DueDa
                 className="flex-1 py-3 rounded-xl bg-red-600 text-white font-bold text-sm hover:bg-red-700 transition-colors disabled:opacity-40">
                 Supprimer
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Corbeille — liste des échéances supprimées, restaurables une par une. */}
+      {trashOpen && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setTrashOpen(false)} />
+          <div className="relative w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[80vh] flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between px-5 pt-5 pb-3 flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <Trash2 className="w-5 h-5 text-gray-400" />
+                <h3 className="text-base font-black text-gray-900">Corbeille</h3>
+                <span className="text-xs font-bold text-gray-400">— {deletedDueDates.length}</span>
+              </div>
+              <button onClick={() => setTrashOpen(false)} aria-label="Fermer" className="p-2 text-gray-400 hover:text-gray-700">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="px-5 pb-5 overflow-y-auto space-y-2">
+              {deletedDueDates.length === 0 ? (
+                <p className="text-sm text-gray-400 text-center py-6">La corbeille est vide</p>
+              ) : deletedDueDates.map(d => {
+                const v = Array.isArray(d.vehicles) ? d.vehicles[0] : d.vehicles
+                return (
+                  <div key={d.id} className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-gray-900 truncate">{d.description}</p>
+                      <p className="text-xs text-gray-400">
+                        {formatDate(d.due_date)} · {getCategoryLabel(d.category)}{v?.plate ? ` · ${v.plate}` : ''}
+                      </p>
+                    </div>
+                    <span className={`text-sm font-black flex-shrink-0 ${d.type === 'recette' ? 'text-green-600' : 'text-red-500'}`}>
+                      {d.type === 'recette' ? '+' : '−'}{formatPrice(d.amount)}
+                    </span>
+                    <button onClick={() => onRestore(d.id)} disabled={pending}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#111111] text-white text-xs font-bold hover:bg-gray-800 transition-colors disabled:opacity-40 flex-shrink-0">
+                      <Undo2 className="w-3.5 h-3.5" /> Restaurer
+                    </button>
+                  </div>
+                )
+              })}
             </div>
           </div>
         </div>

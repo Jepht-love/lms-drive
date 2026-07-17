@@ -36,15 +36,17 @@ export async function GET(request: NextRequest) {
   const dueMax = localDateStr(addDays(today, maxUpcoming))
   const dueMin = localDateStr(addDays(today, -maxOverdue))
 
-  const { data: dues } = await supabase
+  const { data: duesRaw } = await supabase
     .from('financial_due_dates')
-    .select('id, description, amount, due_date, category, vehicle_id, vehicles(brand, model, plate)')
+    .select('*, vehicles(brand, model, plate)')
     .eq('is_paid', false)
     .gte('due_date', dueMin)
     .lte('due_date', dueMax)
     .order('due_date')
 
-  if (!dues?.length) return NextResponse.json({ sent: 0 })
+  // Exclut les échéances en corbeille (suppression logique) — filtre tolérant.
+  const dues = (duesRaw ?? []).filter((d: any) => !d.deleted_at)
+  if (!dues.length) return NextResponse.json({ sent: 0 })
 
   // Abonnés push (gérant + associé)
   const { data: subs } = await supabase

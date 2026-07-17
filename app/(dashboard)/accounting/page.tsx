@@ -34,15 +34,19 @@ export default async function AccountingPage({
     ? { from: customFrom, to: customTo, label: `${customFrom} → ${customTo}` }
     : periodRange(period)
 
-  const [{ data: txs }, { count: dueCount }] = await Promise.all([
+  const [{ data: txs }, { data: dueRows }] = await Promise.all([
     supabase
       .from('financial_transactions')
       .select('*, vehicles(plate)')
       .gte('date', from).lte('date', to)
       .order('date', { ascending: false })
       .order('created_at', { ascending: false }),
-    supabase.from('financial_due_dates').select('id', { count: 'exact', head: true }).eq('is_paid', false),
+    supabase.from('financial_due_dates').select('*').eq('is_paid', false),
   ])
+
+  // Compte les échéances à venir hors corbeille (select('*') + filtre en mémoire
+  // = tolérant si la colonne deleted_at n'existe pas encore).
+  const dueCount = (dueRows ?? []).filter((d: any) => !d.deleted_at).length
 
   const all = txs ?? []
   const totalRevenue = all.filter(t => t.type === 'recette').reduce((s, t) => s + (t.amount ?? 0), 0)

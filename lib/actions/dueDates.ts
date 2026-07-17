@@ -122,53 +122,47 @@ export async function markDuePaid(id: string) {
   return { success: true }
 }
 
+/**
+ * Suppression LOGIQUE (corbeille) : marque deleted_at pour pouvoir restaurer.
+ * Repli sur une suppression dure si la colonne deleted_at n'existe pas encore
+ * (migration 057 non appliquée) — l'app reste fonctionnelle dans les deux cas.
+ */
 export async function deleteDueDate(id: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non authentifié' }
 
-  const { error } = await supabase.from('financial_due_dates').delete().eq('id', id).eq('is_paid', false)
-  if (error) return { error: error.message }
+  const soft = await supabase.from('financial_due_dates')
+    .update({ deleted_at: new Date().toISOString() })
+    .eq('id', id)
+    .eq('is_paid', false)
+
+  if (soft.error) {
+    // Colonne deleted_at absente → suppression classique (repli).
+    const hard = await supabase.from('financial_due_dates').delete().eq('id', id).eq('is_paid', false)
+    if (hard.error) return { error: hard.error.message }
+  }
 
   revalidatePath('/accounting/due-dates')
+  revalidatePath('/accounting')
   return { success: true }
 }
 
 /**
- * Restaure une échéance supprimée par erreur en la ré-insérant à l'identique
- * (contenu conservé côté client le temps de la fenêtre « Annuler »). L'id change
- * mais la ligne est fonctionnellement identique — suffisant pour rattraper une
- * suppression accidentelle sans introduire de suppression logique en base.
+ * Restaure une échéance depuis la corbeille (deleted_at → null). Fonctionne tant
+ * que la suppression logique a été utilisée (migration 057 appliquée).
  */
-export async function restoreDueDate(due: {
-  description: string
-  type: string
-  category: string
-  amount: number
-  due_date: string
-  vehicle_id: string | null
-  notes: string | null
-}) {
+export async function restoreDueDate(id: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non authentifié' }
 
-  if (!due?.description || !due?.category || !(due.amount > 0) || !due?.due_date) {
-    return { error: 'Données de restauration incomplètes' }
-  }
-
-  const { error } = await supabase.from('financial_due_dates').insert({
-    description: due.description,
-    type: due.type || 'depense',
-    category: due.category,
-    amount: due.amount,
-    due_date: due.due_date,
-    vehicle_id: due.vehicle_id || null,
-    notes: due.notes || null,
-    created_by: user.id,
-  })
+  const { error } = await supabase.from('financial_due_dates')
+    .update({ deleted_at: null })
+    .eq('id', id)
   if (error) return { error: error.message }
 
   revalidatePath('/accounting/due-dates')
+  revalidatePath('/accounting')
   return { success: true }
 }
