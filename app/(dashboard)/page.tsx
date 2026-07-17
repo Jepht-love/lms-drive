@@ -290,6 +290,40 @@ export default async function DashboardPage() {
     return da.localeCompare(db)
   })
 
+  // ── Mises à disposition inter-agences (véhicule loué CHEZ un partenaire) ─────
+  // Une mise à disposition n'est PAS une réservation : c'est une ligne
+  // `inter_agency_rentals` (direction "out") qui passe le véhicule en
+  // `mis_a_disposition`. Elle compte pourtant « en location » (KPI flotte), donc
+  // elle doit apparaître dans la liste « En location » — badge « Loué · chez
+  // partenaire ». On part des véhicules réellement `mis_a_disposition` (source de
+  // vérité, alignée sur le KPI) puis on récupère l'opération active associée pour
+  // les détails (partenaire, dates, client). Statut hors clôture / annulation.
+  const partnerVehicleIds = (vehicles ?? [])
+    .filter(v => v.status === 'mis_a_disposition')
+    .map(v => v.id)
+  let misesADispo: any[] = []
+  if (partnerVehicleIds.length) {
+    const { data: rentalsOut } = await supabase
+      .from('inter_agency_rentals')
+      .select(`
+        id, vehicle_id, start_date, end_date_expected, status,
+        vehicles ( id, plate, brand, model ),
+        partner_agencies ( name ),
+        clients ( first_name, last_name )
+      `)
+      .eq('direction', 'out')
+      .in('vehicle_id', partnerVehicleIds)
+      .not('status', 'in', '("cloture","annule")')
+      .order('start_date', { ascending: true })
+    // Une seule opération active par véhicule (la plus récente prime).
+    const seen = new Set<string>()
+    for (const op of rentalsOut ?? []) {
+      if (!op.vehicle_id || seen.has(op.vehicle_id)) continue
+      seen.add(op.vehicle_id)
+      misesADispo.push(op)
+    }
+  }
+
   // Prochaine réservation par véhicule (confirmee/option la plus proche) — permet
   // de repérer, sur une location en cours, si quelqu'un a déjà réservé après,
   // pour éviter d'accepter une prolongation qui chevaucherait cette résa.
@@ -567,11 +601,11 @@ export default async function DashboardPage() {
         </section>
       )}
 
-      {enLocationNow.length > 0 && (
+      {(enLocationNow.length + misesADispo.length) > 0 && (
         <section>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-[11px] font-bold uppercase tracking-widest text-gray-900">
-              En location · {enLocationNow.length}
+              En location · {enLocationNow.length + misesADispo.length}
             </h2>
             <Link href="/reservations?status=en_cours" className="text-[11px] text-gray-400 font-medium flex items-center gap-1">
               TOUT VOIR <ChevronRight className="w-3 h-3" />
@@ -579,6 +613,69 @@ export default async function DashboardPage() {
           </div>
 
           <div className="space-y-2">
+            {/* Mises à disposition inter-agences : véhicule loué CHEZ un partenaire.
+                Affichées en tête (réellement dehors), badge « Loué · chez partenaire ». */}
+            {misesADispo.map(op => {
+              const v = getVehicle(op)
+              const c = getClient(op)
+              const agency = Array.isArray(op.partner_agencies) ? op.partner_agencies[0] : op.partner_agencies
+              const end = op.end_date_expected ? new Date(op.end_date_expected) : null
+              const daysLeft = end ? differenceInDays(startOfDay(end), todayStart) : null
+              const isLate = daysLeft != null && daysLeft < 0
+              const isReturnToday = daysLeft === 0
+              return (
+                <Link key={`dispo-${op.id}`} href={`/partnerships/${op.id}`}>
+                  <div className={`bg-white rounded-2xl p-4 border shadow-sm ${isLate ? 'border-orange-200 bg-orange-50/40' : 'border-gray-100'}`}>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <span className="text-base font-black text-gray-900">{v?.brand} {v?.model}</span>
+                          <span className="text-xs text-gray-400">{v?.plate}</span>
+                          <span className="text-[9px] font-black uppercase tracking-wide text-white bg-green-600 px-2 py-0.5 rounded-full">
+                            Loué
+                          </span>
+                          <span className="text-[9px] font-black uppercase tracking-wide text-purple-700 bg-purple-50 border border-purple-100 px-2 py-0.5 rounded-full">
+                            Chez partenaire
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-600">
+                          {agency?.name ?? 'Partenaire'}
+                          {c?.first_name && <span className="text-gray-400"> · {c.first_name} {c.last_name}</span>}
+                        </p>
+                        {end && (
+                          <p className={`text-xs mt-1 ${isLate ? 'text-orange-600 font-semibold' : 'text-gray-400'}`}>
+                            Retour prévu : {format(end, 'dd MMM', { locale: fr })}
+                          </p>
+                        )}
+                      </div>
+                      {end && (
+                        <div className={`w-16 h-16 rounded-2xl flex flex-col items-center justify-center flex-shrink-0 ${
+                          isLate          ? 'bg-red-500'
+                          : isReturnToday ? 'bg-orange-500'
+                          : (daysLeft ?? 9) <= 2 ? 'bg-orange-100'
+                          : 'bg-gray-100'
+                        }`}>
+                          <span className={`text-2xl font-black leading-none ${
+                            isLate || isReturnToday ? 'text-white' : (daysLeft ?? 9) <= 2 ? 'text-orange-600' : 'text-gray-700'
+                          }`}>
+                            {isLate ? `+${Math.abs(daysLeft!)}` : daysLeft}
+                          </span>
+                          <span className={`text-[10px] font-bold mt-0.5 ${
+                            isLate          ? 'text-red-100'
+                            : isReturnToday ? 'text-orange-100'
+                            : (daysLeft ?? 9) <= 2 ? 'text-orange-500'
+                            : 'text-gray-400'
+                          }`}>
+                            {isLate ? 'j retard' : isReturnToday ? 'auj.' : 'jours'}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </Link>
+              )
+            })}
+
             {enLocationNow.map(r => {
               const v           = getVehicle(r)
               const c           = getClient(r)
@@ -1161,7 +1258,7 @@ export default async function DashboardPage() {
       </section>
 
       {/* État vide global */}
-      {enLocationNow.length === 0 && alerts.length === 0 && retoursEnRetard.length === 0 &&
+      {enLocationNow.length === 0 && misesADispo.length === 0 && alerts.length === 0 && retoursEnRetard.length === 0 &&
        departsAujourdhui.length === 0 && retoursAujourdhui.length === 0 &&
        (todayTasks?.length ?? 0) === 0 && todayCalendarTasks.length === 0 && (
         <div className="flex flex-col items-center gap-3 py-16 text-center">
