@@ -27,12 +27,20 @@ function getJwt(): string | null {
   if (cachedJwt && now - cachedJwt.iat < 2700) return cachedJwt.token
 
   const privateKey = key.replace(/\\n/g, '\n')
-  const token = jwt.sign({ iss: teamId, iat: now }, privateKey, {
-    algorithm: 'ES256',
-    keyid: keyId,
-  })
-  cachedJwt = { token, iat: now }
-  return token
+  try {
+    const token = jwt.sign({ iss: teamId, iat: now }, privateKey, {
+      algorithm: 'ES256',
+      keyid: keyId,
+    })
+    cachedJwt = { token, iat: now }
+    return token
+  } catch (e) {
+    // Cause n°1 : APNS_KEY mal formée (sans lignes BEGIN/END, retours à la ligne
+    // perdus, ou pas une clé EC .p8). Sans ce log, l'erreur était avalée
+    // silencieusement et aucun envoi n'aboutissait sans trace.
+    console.error('[APNs] signature JWT échouée (APNS_KEY mal formée ?):', (e as Error).message)
+    return null
+  }
 }
 
 export async function sendApnsToTokens(

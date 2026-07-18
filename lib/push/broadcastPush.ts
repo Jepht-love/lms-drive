@@ -46,7 +46,9 @@ export async function broadcastPushToManagers(payload: PushPayload): Promise<voi
         { title: payload.title, body: payload.body, url: payload.url }
       )
     }
-  } catch {
-    // push non bloquant
+  } catch (e) {
+    // Push non bloquant, mais on trace : un catch muet ici masquait toute panne
+    // (clé APNs invalide, réseau…) et rendait le diagnostic impossible.
+    console.error('[APNs/push] broadcast échoué:', (e as Error).message)
   }
 }
