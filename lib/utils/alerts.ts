@@ -226,10 +226,20 @@ export async function fetchAllAlerts(
         type: 'lavage',
         label: 'LAVAGE AVANT LOCATION',
         sublabel: `${vLabel(v)} · départ dans ${hoursLeft}h`,
-        // Le lavage est une TÂCHE de préparation (reflétée sur le calendrier via
-        // syncWashTask), pas la réservation : l'alerte ouvre la tâche à traiter
-        // (?event=<id>) si elle existe, sinon le calendrier.
-        href: washTaskByRes.get(r.id) ? `/calendrier?event=${washTaskByRes.get(r.id)}` : `/calendrier`,
+        // Le lavage est une TÂCHE de préparation, pas la réservation. Si la tâche
+        // calendrier existe (syncWashTask), l'alerte l'ouvre (?event=<id>). Sinon
+        // — cas d'une voiture devenue « à laver » APRÈS la dernière synchro de la
+        // réservation, où aucune tâche n'a été créée — l'alerte ouvre un tiroir de
+        // création pré-rempli (véhicule + créneau 1h avant départ + intitulé) qu'il
+        // ne reste qu'à assigner, au lieu de tomber sur un calendrier vide.
+        href: washTaskByRes.get(r.id)
+          ? `/calendrier?event=${washTaskByRes.get(r.id)}`
+          : `/calendrier?${new URLSearchParams({
+              create: 'prep',
+              date: new Date(new Date(r.start_datetime).getTime() - 60 * 60_000).toISOString(),
+              title: `Lavage avant location — ${vLabel(v)}`,
+              ...(r.vehicle_id ? { vehicle: r.vehicle_id } : {}),
+            }).toString()}`,
         date: r.start_datetime,
         vehicleId: r.vehicle_id,
         reservationId: r.id,
