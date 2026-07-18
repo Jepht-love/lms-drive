@@ -113,6 +113,7 @@ function PhotoUpload({ label, name, existingUrl }: { label: string; name: string
 }
 
 const PHOTO_SLOTS = ['id_doc_front', 'id_doc_back', 'license_front', 'license_back', 'proof_of_address'] as const
+type PhotoSlot = typeof PHOTO_SLOTS[number]
 
 export default function ClientForm({ action, client: c }: ClientFormProps) {
   const [error, setError] = useState<string | null>(null)
@@ -130,8 +131,9 @@ export default function ClientForm({ action, client: c }: ClientFormProps) {
     try {
       // Téléchargez chaque fichier directement vers Supabase
       for (const [key, value] of raw.entries()) {
-        if (value instanceof File && value.size > 0 && PHOTO_SLOTS.includes(key)) {
-          const filePath = await uploadFileToSupabase(value, key)
+        // Fix TypeScript: ensure key is string and check against PHOTO_SLOTS
+        if (value instanceof File && value.size > 0 && typeof key === 'string' && PHOTO_SLOTS.includes(key as PhotoSlot)) {
+          const filePath = await uploadFileToSupabase(value, key as PhotoSlot)
           if (filePath) {
             uploadedPaths[`${key}_path`] = filePath
           }
@@ -141,7 +143,8 @@ export default function ClientForm({ action, client: c }: ClientFormProps) {
       // Préparer les données pour l'action serveur (seuls les chemins)
       const formDataToSend = new FormData()
       for (const [key, value] of raw.entries()) {
-        if (!(value instanceof File) || !PHOTO_SLOTS.includes(key)) {
+        // Fix TypeScript: ensure key is string and check against PHOTO_SLOTS
+        if (!(value instanceof File) || typeof key !== 'string' || !PHOTO_SLOTS.includes(key as PhotoSlot)) {
           formDataToSend.append(key, value as string)
         }
       }
