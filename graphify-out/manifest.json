@@ -80,9 +80,9 @@
     "semantic_hash": "368fe61f77d80e8f05cd2d322c805b44"
   },
   "app/(dashboard)/accounting/page.tsx": {
-    "mtime": 1782753956.9494956,
-    "ast_hash": "f26fa8f42b0630e02ace2f2f9748447b",
-    "semantic_hash": "f26fa8f42b0630e02ace2f2f9748447b"
+    "mtime": 1784275137.0749402,
+    "ast_hash": "04c92effc1293d584eb792608b83acf9",
+    "semantic_hash": ""
   },
   "app/(dashboard)/accounting/report/page.tsx": {
     "mtime": 1782458819.5065067,
@@ -120,9 +120,9 @@
     "semantic_hash": ""
   },
   "app/(dashboard)/clients/ClientForm.tsx": {
-    "mtime": 1783186468.3585129,
-    "ast_hash": "d2b761e83a68b10a2cab0a8795956650",
-    "semantic_hash": "d2b761e83a68b10a2cab0a8795956650"
+    "mtime": 1784324918.7610662,
+    "ast_hash": "a51ed524673f7f6a925819d51c887421",
+    "semantic_hash": ""
   },
   "app/(dashboard)/clients/ClientsListSwipeable.tsx": {
     "mtime": 1783982117.8276818,
@@ -155,8 +155,8 @@
     "semantic_hash": "ded065c0057ac711466b32542975a8f4"
   },
   "app/(dashboard)/clients/page.tsx": {
-    "mtime": 1784199320.3571374,
-    "ast_hash": "1f73fac8e78d453999e34d8192ab3bb6",
+    "mtime": 1784222182.6553333,
+    "ast_hash": "e423a72ca4cbe98f3b5bfbe121bd7ce9",
     "semantic_hash": ""
   },
   "app/(dashboard)/contracts/[id]/ContractSigningPanel.tsx": {
@@ -185,8 +185,8 @@
     "semantic_hash": ""
   },
   "app/(dashboard)/documents/DocumentsClient.tsx": {
-    "mtime": 1783664854.4139705,
-    "ast_hash": "7a61dcb67b908b19eee3e9f5a752e1be",
+    "mtime": 1784308598.5173876,
+    "ast_hash": "f220e22913d30670930834ed6e1ca718",
     "semantic_hash": ""
   },
   "app/(dashboard)/documents/page.tsx": {
@@ -370,8 +370,8 @@
     "semantic_hash": ""
   },
   "app/(dashboard)/page.tsx": {
-    "mtime": 1784218237.769217,
-    "ast_hash": "172cc587e68bfe8e0e981909b0292b08",
+    "mtime": 1784292253.9324212,
+    "ast_hash": "e7fe268c9a69cc278851c72f2ab9da3c",
     "semantic_hash": ""
   },
   "app/(dashboard)/partnerships/[id]/OperationActions.tsx": {
@@ -445,8 +445,8 @@
     "semantic_hash": "014fa30b167bdcb1343b6bbd8c46c72c"
   },
   "app/(dashboard)/reservations/ReservationForm.tsx": {
-    "mtime": 1784221135.476705,
-    "ast_hash": "60e407f220de94c80637c644aef7add6",
+    "mtime": 1784319859.6806257,
+    "ast_hash": "4a70f5ab585a72966e7295203d46fff5",
     "semantic_hash": ""
   },
   "app/(dashboard)/reservations/ReservationStatusButtons.tsx": {
@@ -465,13 +465,13 @@
     "semantic_hash": "b1b641ec952175efb359e58478c5fb71"
   },
   "app/(dashboard)/reservations/[id]/page.tsx": {
-    "mtime": 1784198762.299498,
-    "ast_hash": "605e442ad8b8b575bfb0c917bbe58101",
+    "mtime": 1784254684.045444,
+    "ast_hash": "19d7dd966f4dd0ab70dbe75538f95335",
     "semantic_hash": ""
   },
   "app/(dashboard)/reservations/new/page.tsx": {
-    "mtime": 1784221142.1058016,
-    "ast_hash": "ca232c5bb53f466918eb415237fb26f3",
+    "mtime": 1784254310.7105987,
+    "ast_hash": "598e3e7eb0bac207a1e9dac6e44923b3",
     "semantic_hash": ""
   },
   "app/(dashboard)/reservations/page.tsx": {
@@ -525,8 +525,8 @@
     "semantic_hash": "b516e3acea943c0e5eb35d60eba8eb8b"
   },
   "app/(dashboard)/vehicles/page.tsx": {
-    "mtime": 1784221082.019432,
-    "ast_hash": "113f57d887b351d9093647245c9945b3",
+    "mtime": 1784278638.965857,
+    "ast_hash": "1f67fa14e5a241d1288fa48519d64de6",
     "semantic_hash": ""
   },
   "app/api/alerts/count/route.ts": {
@@ -535,9 +535,9 @@
     "semantic_hash": "481538820cd3e1ca98ac56f596266cdf"
   },
   "app/api/contracts/generate-pdf/route.ts": {
-    "mtime": 1781702047.8324416,
-    "ast_hash": "22460a8af7b19f8f412bf1335e240b60",
-    "semantic_hash": "22460a8af7b19f8f412bf1335e240b60"
+    "mtime": 1784257902.7183857,
+    "ast_hash": "7f57b5fae5cb9c2ac8525fec32094103",
+    "semantic_hash": ""
   },
   "app/api/contracts/send-email/route.ts": {
     "mtime": 1783982175.3562782,
@@ -570,8 +570,8 @@
     "semantic_hash": "1fc691e44ebb2900cb93cba9bc4a7eac"
   },
   "app/layout.tsx": {
-    "mtime": 1784131300.796371,
-    "ast_hash": "21e3fc9e38c448a27dde53e98b54d6e9",
+    "mtime": 1784312477.4467661,
+    "ast_hash": "3d64fcd00b35a1dbabc8997364ed3739",
     "semantic_hash": ""
   },
   "components.json": {
@@ -620,8 +620,8 @@
     "semantic_hash": "546b3ca2f3aa5cee1fe33f7d41c9034c"
   },
   "components/inspection/InspectionFlow.tsx": {
-    "mtime": 1784220889.8571813,
-    "ast_hash": "f0e48ce790cd09113eeae1d302b21dc6",
+    "mtime": 1784319679.5071843,
+    "ast_hash": "9103ca40dbb33f6c952fc033f8add63c",
     "semantic_hash": ""
   },
   "components/layout/BottomNav.tsx": {
@@ -810,8 +810,8 @@
     "semantic_hash": ""
   },
   "lib/actions/documents.ts": {
-    "mtime": 1783982120.9745486,
-    "ast_hash": "5c3d4bb737e17abd1e1c7073a528856c",
+    "mtime": 1784255101.8395617,
+    "ast_hash": "7fb1b426e793592cfdf2b6c996126084",
     "semantic_hash": ""
   },
   "lib/actions/incidents.ts": {
@@ -835,8 +835,8 @@
     "semantic_hash": "9d01894e323faaed200e301b05ca964b"
   },
   "lib/actions/reservations.ts": {
-    "mtime": 1784004880.3290792,
-    "ast_hash": "3439b5b8178cf923e43e4d146be1817f",
+    "mtime": 1784319880.2519069,
+    "ast_hash": "dce91b2a90977d8c9d91b9e016e2fed5",
     "semantic_hash": ""
   },
   "lib/actions/vehicle-issues.ts": {
@@ -910,9 +910,9 @@
     "semantic_hash": "f8b3f5ed87174d6e51a971d0c679e480"
   },
   "lib/pdf/build-contract-data.ts": {
-    "mtime": 1783009496.718618,
-    "ast_hash": "a7fcea311cfa80080f98ee28302b2bc2",
-    "semantic_hash": "a7fcea311cfa80080f98ee28302b2bc2"
+    "mtime": 1784257865.7220068,
+    "ast_hash": "aaa52e8b5bc23d70de93458a5b262225",
+    "semantic_hash": ""
   },
   "lib/pdf/contract-template.tsx": {
     "mtime": 1784186481.734962,
@@ -940,8 +940,8 @@
     "semantic_hash": "673744143eb5649a0d685f6b3b71487f"
   },
   "lib/utils/alerts.ts": {
-    "mtime": 1783850286.6520107,
-    "ast_hash": "90f728667a3003dc6122bac22c1b8809",
+    "mtime": 1784320093.1137767,
+    "ast_hash": "a9041002be5d3f37a04f8cf7d71eb7fe",
     "semantic_hash": ""
   },
   "lib/utils/findDriverAtDate.ts": {
@@ -955,13 +955,13 @@
     "semantic_hash": ""
   },
   "next.config.ts": {
-    "mtime": 1782898718.965087,
-    "ast_hash": "ffaccf9b240e21ebc5aea86695051a04",
-    "semantic_hash": "ffaccf9b240e21ebc5aea86695051a04"
+    "mtime": 1784325385.8589118,
+    "ast_hash": "5796018ff9f88b9f683d0148e7cfb200",
+    "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1784036866.4327962,
-    "ast_hash": "d2766500a3dad74335674f21d5ad17df",
+    "mtime": 1784319081.0325763,
+    "ast_hash": "cae9f981e523d88635bfdf48d06956c5",
     "semantic_hash": ""
   },
   "postcss.config.mjs": {
@@ -985,8 +985,8 @@
     "semantic_hash": "ace49c057ae3e1669b959b63b56753f1"
   },
   "public/sw.js": {
-    "mtime": 1784024748.3511996,
-    "ast_hash": "c9c2dc9a79ddf39a9d38b338ef93555b",
+    "mtime": 1784320944.1976368,
+    "ast_hash": "156273c979e876218d239cf17feae063",
     "semantic_hash": ""
   },
   "scripts/seed-vehicles.ts": {
@@ -1100,9 +1100,9 @@
     "semantic_hash": "9e09241799026ac05be315a2f0b50055"
   },
   "CLAUDE.md": {
-    "mtime": 1781109997.5978754,
-    "ast_hash": "03e3d38ba74cf8886d3d8fc322d9da8a",
-    "semantic_hash": "03e3d38ba74cf8886d3d8fc322d9da8a"
+    "mtime": 1784325748.9982743,
+    "ast_hash": "8bb16150447892cad828198836f595ec",
+    "semantic_hash": ""
   },
   "README.md": {
     "mtime": 1780947026.2440526,
@@ -1260,8 +1260,8 @@
     "semantic_hash": "59fc8f7e974d3a4b9bee147a8a157b07"
   },
   "app/api/calendar/events/[id]/route.ts": {
-    "mtime": 1783780685.703509,
-    "ast_hash": "0e55bfc93ffc4b7fb4def547c43f0165",
+    "mtime": 1784320890.1262703,
+    "ast_hash": "9a8ca189605102e360ef49a7a8061698",
     "semantic_hash": ""
   },
   "app/api/calendar/events/[id]/status/route.ts": {
@@ -1300,8 +1300,8 @@
     "semantic_hash": "c631639fcab087606cf07ca65dc0885a"
   },
   "components/calendar/CalendarPage.tsx": {
-    "mtime": 1784198986.8538475,
-    "ast_hash": "e03f67935262e44b0703ec6c420df913",
+    "mtime": 1784320970.3286965,
+    "ast_hash": "30bca53ca5a39e4c71db96eb2a613770",
     "semantic_hash": ""
   },
   "components/calendar/CalendarSidebar.tsx": {
@@ -1320,8 +1320,8 @@
     "semantic_hash": "73cf465222b07bfbf0f0c2f289c80a7b"
   },
   "components/calendar/EventDrawer.tsx": {
-    "mtime": 1783980954.8906379,
-    "ast_hash": "075fecca14e50722ebd7db128f34bf84",
+    "mtime": 1784257151.105304,
+    "ast_hash": "6d8ee57a2e4f24d5755c0b3c4aadd590",
     "semantic_hash": ""
   },
   "components/calendar/MiniCalendar.tsx": {
@@ -1330,8 +1330,8 @@
     "semantic_hash": "4685904c896b1e82eb84bf541d6f6f1c"
   },
   "components/calendar/MonthView.tsx": {
-    "mtime": 1783666474.8524034,
-    "ast_hash": "9fd3049d592315600e90d5c672e457b9",
+    "mtime": 1784274328.9553146,
+    "ast_hash": "4a74e31556b867e4f33542b3799e0b92",
     "semantic_hash": ""
   },
   "components/calendar/ResourceColumn.tsx": {
@@ -1370,9 +1370,9 @@
     "semantic_hash": "9d2864dcfba6ad41d225f36870fd092c"
   },
   "lib/calendar/syncRental.ts": {
-    "mtime": 1782050456.8362813,
-    "ast_hash": "2eef9232cee3439a920393200b95c03a",
-    "semantic_hash": "2eef9232cee3439a920393200b95c03a"
+    "mtime": 1784320072.1447327,
+    "ast_hash": "ef719ed4e12c7e7e22cd9cc8ed90cdfb",
+    "semantic_hash": ""
   },
   "lib/vehicles/vehicleStatus.ts": {
     "mtime": 1783716915.698778,
@@ -1410,23 +1410,23 @@
     "semantic_hash": ""
   },
   "app/(dashboard)/accounting/due-dates/DueDatesClient.tsx": {
-    "mtime": 1782887983.526571,
-    "ast_hash": "a642252c645b1c199818bd9270f7afa0",
-    "semantic_hash": "a642252c645b1c199818bd9270f7afa0"
+    "mtime": 1784277399.8639047,
+    "ast_hash": "97890edea1794e75440589d682521dd5",
+    "semantic_hash": ""
   },
   "app/(dashboard)/accounting/due-dates/page.tsx": {
-    "mtime": 1782686767.5490148,
-    "ast_hash": "87cbfcfbfe59f51f11c6a304f6025ff0",
-    "semantic_hash": "87cbfcfbfe59f51f11c6a304f6025ff0"
+    "mtime": 1784274954.100042,
+    "ast_hash": "f7ca1bee49a0e094956e9c2be7507f73",
+    "semantic_hash": ""
   },
   "app/(dashboard)/calendrier/disponibilites/AvailabilityClient.tsx": {
-    "mtime": 1784199134.767946,
-    "ast_hash": "91dc2f1ce070432ce4448292e07659fd",
+    "mtime": 1784222492.3399756,
+    "ast_hash": "ab106e79be8bb714a43a55874656bb70",
     "semantic_hash": ""
   },
   "app/(dashboard)/calendrier/disponibilites/page.tsx": {
-    "mtime": 1783712448.1556246,
-    "ast_hash": "9866bcd5b72ff7b4b88e6997e824d29d",
+    "mtime": 1784254259.9380877,
+    "ast_hash": "04136d9b996f77cdcb8f1a3013630931",
     "semantic_hash": ""
   },
   "lib/actions/availability.ts": {
@@ -1435,9 +1435,9 @@
     "semantic_hash": "961c8e67f2d2a4548a7a412eca82383e"
   },
   "lib/actions/dueDates.ts": {
-    "mtime": 1782317420.1237552,
-    "ast_hash": "629c0b212b1d30455615adc28e2ffe11",
-    "semantic_hash": "629c0b212b1d30455615adc28e2ffe11"
+    "mtime": 1784274922.1211112,
+    "ast_hash": "97ddbb1e3cfe85275a6d595e0a46080a",
+    "semantic_hash": ""
   },
   "supabase/migrations/029_vehicle_fiche_fields.sql": {
     "mtime": 1782101114.0538185,
@@ -1735,8 +1735,8 @@
     "semantic_hash": "b16cc1df06fe21b99e712fc74d0a110d"
   },
   "app/api/cron/due-dates/route.ts": {
-    "mtime": 1783459386.5669959,
-    "ast_hash": "5943021903c1f2a6e358df390243bfb1",
+    "mtime": 1784275084.953396,
+    "ast_hash": "548f15b37fd173310fff040d5d89cd60",
     "semantic_hash": ""
   },
   "app/api/push/subscribe/route.ts": {
@@ -1785,9 +1785,9 @@
     "semantic_hash": "66d032c07155d786dcbca379e160583e"
   },
   "lib/push/broadcastPush.ts": {
-    "mtime": 1782803137.3005786,
-    "ast_hash": "7d511d43d7f41ad3510bf559ec8dc166",
-    "semantic_hash": "7d511d43d7f41ad3510bf559ec8dc166"
+    "mtime": 1784315964.4678864,
+    "ast_hash": "1b51ebc006ea7cddbae36da1469a52f0",
+    "semantic_hash": ""
   },
   "lib/push/sendPush.ts": {
     "mtime": 1782787656.6083527,
@@ -1980,8 +1980,8 @@
     "semantic_hash": "09ed49a526fccf7f71e2aebf169d7165"
   },
   "components/calendar/CreateMenu.tsx": {
-    "mtime": 1783980969.2976942,
-    "ast_hash": "c42e1b1c99bba16bb19a420f6da9e78a",
+    "mtime": 1784273505.2182338,
+    "ast_hash": "849aca9030b444461231f2e9fdd26bf2",
     "semantic_hash": ""
   },
   "components/layout/OfflineBanner.tsx": {
@@ -2350,8 +2350,8 @@
     "semantic_hash": ""
   },
   "components/sav/SavButton.tsx": {
-    "mtime": 1784126724.9251125,
-    "ast_hash": "6437e5bc5ec0fb9b79d37d311a4cd0fe",
+    "mtime": 1784222170.5878253,
+    "ast_hash": "6f7ba2b3d1b4ab2b9f44bb376d82d160",
     "semantic_hash": ""
   },
   "lib/actions/sav.ts": {
@@ -2387,6 +2387,31 @@
   "components/calendar/DayEventsPanel.tsx": {
     "mtime": 1784198972.3451288,
     "ast_hash": "54bbab4b3309ba502095400adcf73c7d",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/057_financial_due_dates_soft_delete.sql": {
+    "mtime": 1784274905.2345526,
+    "ast_hash": "bdf2d25b414995f9a4e98de11e964b34",
+    "semantic_hash": ""
+  },
+  "app/api/push/apns/register/route.ts": {
+    "mtime": 1784312454.8338854,
+    "ast_hash": "2d6db6def67dd51c1c9f8bbf337fc8c1",
+    "semantic_hash": ""
+  },
+  "components/pwa/ApnsTokenRegistrar.tsx": {
+    "mtime": 1784312471.423566,
+    "ast_hash": "4304de6c519ebb1689db012c50d38f5a",
+    "semantic_hash": ""
+  },
+  "lib/push/sendApns.ts": {
+    "mtime": 1784319104.0820358,
+    "ast_hash": "ccac290c57f84822ff4d03f090758446",
+    "semantic_hash": ""
+  },
+  "app/api/cron/backfill-calendar/route.ts": {
+    "mtime": 1784320392.8068132,
+    "ast_hash": "69f85eca1fce083d086fa20956dfd20d",
     "semantic_hash": ""
   }
 }
