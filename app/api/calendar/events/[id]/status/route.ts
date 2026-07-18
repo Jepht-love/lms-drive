@@ -39,13 +39,13 @@ export async function PATCH(
       title: 'Départ confirmé',
       body: eventTitle,
       url: '/calendrier',
-    })
+    }, 'departure_alert')
   } else if (status === 'termine') {
     await broadcastPushToManagers({
       title: 'Retour effectué',
       body: eventTitle,
       url: '/calendrier',
-    })
+    }, 'return_alert')
   }
 
   return NextResponse.json(data)

@@ -1,8 +1,17 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendPushToSubscription, type PushPayload } from './sendPush'
 import { sendApnsToTokens } from './sendApns'
+import { businessNow } from '@/lib/calendar/dateUtils'
+import type { NotificationType } from './notificationTypes'
 
-export async function broadcastPushToManagers(payload: PushPayload): Promise<void> {
+// Diffuse une notification push aux managers. Si un `type` est fourni, l'envoi
+// est filtré par destinataire : seul un manager qui a laissé ce type activé
+// dans ses réglages ET qui est dans sa plage horaire de réception le reçoit.
+// Sans `type` (rétro-compat), l'envoi part à tous les managers, sans filtre.
+export async function broadcastPushToManagers(
+  payload: PushPayload,
+  type?: NotificationType,
+): Promise<void> {
   try {
     const supabase = createAdminClient()
 
@@ -12,8 +21,27 @@ export async function broadcastPushToManagers(payload: PushPayload): Promise<voi
       .in('role', ['gerant', 'associe'])
 
     if (!managers?.length) return
+    let managerIds = managers.map(m => m.id)
 
-    const managerIds = managers.map(m => m.id)
+    // Filtrage par réglages utilisateur (défaut : activé, fenêtre 7h-22h).
+    if (type) {
+      const { data: settingsRows } = await supabase
+        .from('notification_settings')
+        .select('*')
+        .in('user_id', managerIds)
+      const byUser = new Map((settingsRows ?? []).map((s: any) => [s.user_id, s]))
+      const hour = businessNow().getHours()
+      managerIds = managerIds.filter(uid => {
+        const s: any = byUser.get(uid)
+        const enabled  = s ? s[type] !== false : true
+        const wStart   = s?.alert_window_start ?? 7
+        const wEnd     = s?.alert_window_end ?? 22
+        const inWindow = hour >= wStart && hour < wEnd
+        return enabled && inWindow
+      })
+    }
+
+    if (!managerIds.length) return
 
     // Web push (navigateur / PWA)
     const { data: subs } = await supabase
@@ -38,7 +66,7 @@ export async function broadcastPushToManagers(payload: PushPayload): Promise<voi
       .select('token')
       .in('user_id', managerIds)
 
-    console.log(`[APNs] broadcast: ${managerIds.length} managers, ${apnsRows?.length ?? 0} tokens APNs`, apnsErr ?? '')
+    console.log(`[APNs] broadcast${type ? ` (${type})` : ''}: ${managerIds.length} managers, ${apnsRows?.length ?? 0} tokens APNs`, apnsErr ?? '')
 
     if (apnsRows?.length) {
       await sendApnsToTokens(

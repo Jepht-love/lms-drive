@@ -1,5 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { NOTIFICATION_DEFAULTS } from '@/lib/push/notificationTypes'
+
+const SETTINGS_DEFAULTS = {
+  ...NOTIFICATION_DEFAULTS,
+  alert_window_start: 7,
+  alert_window_end: 22,
+  late_return_threshold_minutes: 30,
+}
 
 export async function GET() {
   const supabase = await createClient()
@@ -12,12 +20,7 @@ export async function GET() {
     .eq('user_id', user.id)
     .maybeSingle()
 
-  return NextResponse.json(data ?? {
-    departure_alert: true, return_alert: true, late_return_alert: true,
-    new_reservation_alert: true, new_task_alert: true,
-    alert_window_start: 7, alert_window_end: 22,
-    late_return_threshold_minutes: 30,
-  })
+  return NextResponse.json({ ...SETTINGS_DEFAULTS, ...(data ?? {}) })
 }
 
 export async function PATCH(request: NextRequest) {

@@ -34,7 +34,7 @@ async function createTask(formData: FormData) {
     title: 'Nouvelle tâche créée',
     body: `${title} — prévu le ${dueDate}`,
     url: '/calendar/tasks',
-  })
+  }, 'new_task_alert')
 
   revalidatePath('/calendar/tasks')
   revalidatePath('/')

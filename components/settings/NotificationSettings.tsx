@@ -3,24 +3,28 @@
 import { useEffect, useState } from 'react'
 import { Bell, Clock, AlertTriangle } from 'lucide-react'
 import UiToggle from '@/components/ui/Toggle'
+import {
+  NOTIFICATION_TYPES, NOTIFICATION_DEFAULTS, type NotificationType,
+} from '@/lib/push/notificationTypes'
 
-type Settings = {
-  departure_alert: boolean
-  return_alert: boolean
-  late_return_alert: boolean
-  new_reservation_alert: boolean
-  new_task_alert: boolean
+type Settings = Record<NotificationType, boolean> & {
   alert_window_start: number
   alert_window_end: number
   late_return_threshold_minutes: number
 }
 
 const DEFAULTS: Settings = {
-  departure_alert: true, return_alert: true, late_return_alert: true,
-  new_reservation_alert: true, new_task_alert: true,
-  alert_window_start: 7, alert_window_end: 22,
+  ...NOTIFICATION_DEFAULTS,
+  alert_window_start: 7,
+  alert_window_end: 22,
   late_return_threshold_minutes: 30,
 }
+
+// Catégories dans l'ordre du catalogue, sans doublon.
+const CATEGORIES = NOTIFICATION_TYPES.reduce<string[]>((acc, t) => {
+  if (!acc.includes(t.category)) acc.push(t.category)
+  return acc
+}, [])
 
 export default function NotificationSettings() {
   const [settings, setSettings] = useState<Settings>(DEFAULTS)
@@ -52,25 +56,25 @@ export default function NotificationSettings() {
     }
   }
 
-  const Toggle = ({ label, value, onChange }: { label: string; value: boolean; onChange: (v: boolean) => void }) => (
-    <div className="py-2.5 border-b border-gray-50 last:border-0">
-      <UiToggle label={label} checked={value} onChange={onChange} />
-    </div>
-  )
-
   return (
     <div className="space-y-4">
-      {/* Types d'alertes */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-        <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-          <Bell className="w-4 h-4" /> Alertes push actives
-        </h3>
-        <Toggle label="Nouvelle réservation" value={settings.new_reservation_alert} onChange={v => save({ new_reservation_alert: v })} />
-        <Toggle label="Départ véhicule" value={settings.departure_alert} onChange={v => save({ departure_alert: v })} />
-        <Toggle label="Retour véhicule" value={settings.return_alert} onChange={v => save({ return_alert: v })} />
-        <Toggle label="Retour en retard" value={settings.late_return_alert} onChange={v => save({ late_return_alert: v })} />
-        <Toggle label="Nouvelle tâche calendrier" value={settings.new_task_alert} onChange={v => save({ new_task_alert: v })} />
-      </div>
+      {/* Types d'alertes, groupés par catégorie */}
+      {CATEGORIES.map(cat => (
+        <div key={cat} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+          <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+            <Bell className="w-4 h-4" /> {cat}
+          </h3>
+          {NOTIFICATION_TYPES.filter(t => t.category === cat).map(t => (
+            <div key={t.key} className="py-2.5 border-b border-gray-50 last:border-0">
+              <UiToggle
+                label={t.label}
+                checked={settings[t.key]}
+                onChange={v => save({ [t.key]: v } as Partial<Settings>)}
+              />
+            </div>
+          ))}
+        </div>
+      ))}
 
       {/* Fenêtre horaire */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">

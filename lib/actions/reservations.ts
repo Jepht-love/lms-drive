@@ -154,6 +154,7 @@ import { generateReservationNumber, generateContractNumber, calculateRentalDays,
 import { syncReservationToCalendar } from '@/lib/calendar/syncRental'
 import { recomputeVehicleStatus } from '@/lib/vehicles/vehicleStatus'
 import { broadcastPushToManagers } from '@/lib/push/broadcastPush'
+import type { NotificationType } from '@/lib/push/notificationTypes'
 import { generateInvoiceDraft } from '@/lib/actions/invoices'
 import type { ReservationStatus } from '@/types/database'
 
@@ -440,7 +441,7 @@ export async function createReservation(formData: FormData) {
     title: 'Nouvelle réservation',
     body: `${clientName || payload.reservation_number}${vehLabel ? ' — ' + vehLabel : ''} · départ le ${startFmt}`,
     url: `/reservations/${data.id}`,
-  })
+  }, 'new_reservation_alert')
 
   revalidatePath('/')
   revalidatePath('/reservations')
@@ -482,9 +483,15 @@ export async function updateReservationStatus(id: string, status: ReservationSta
     en_retard:  { title: 'Retour en retard',       body: `${pushClientName} — ${pushVehicle}${retourFmt ? ' · prévu le ' + retourFmt : ''}` },
     terminee:   { title: 'Retour effectué',        body: `${pushClientName} — ${pushVehicle} rendu` },
   }
+  const PUSH_TYPES: Partial<Record<ReservationStatus, NotificationType>> = {
+    confirmee: 'departure_alert',
+    en_cours:  'departure_alert',
+    en_retard: 'late_return_alert',
+    terminee:  'return_alert',
+  }
   const pushMsg = PUSH_LABELS[status]
   if (pushMsg) {
-    await broadcastPushToManagers({ ...pushMsg, url: `/reservations/${id}` })
+    await broadcastPushToManagers({ ...pushMsg, url: `/reservations/${id}` }, PUSH_TYPES[status])
   }
 
   // If starting, create contract

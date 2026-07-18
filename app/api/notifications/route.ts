@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { fetchAllAlerts } from '@/lib/utils/alerts'
 import { syncAlertsToCalendar } from '@/lib/calendar/syncAlerts'
 import { broadcastPushToManagers } from '@/lib/push/broadcastPush'
+import { ALERT_TYPE_TO_NOTIF } from '@/lib/push/notificationTypes'
 import { RESEND_FROM, resendTo } from '@/lib/email/config'
 import { addHours, subMinutes } from 'date-fns'
 
@@ -10,7 +11,7 @@ import { addHours, subMinutes } from 'date-fns'
 export async function POST(request: NextRequest) {
   try {
     const { title, body } = await request.json() as { title: string; body: string }
-    if (title) await broadcastPushToManagers({ title, body: body ?? '', url: '/reservations' })
+    if (title) await broadcastPushToManagers({ title, body: body ?? '', url: '/reservations' }, 'contract_alert')
     return NextResponse.json({ ok: true })
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 })
@@ -66,7 +67,7 @@ export async function GET(request: NextRequest) {
           title: 'Départ imminent', body,
           entity_type: 'reservations', entity_id: r.id,
         })
-        await broadcastPushToManagers({ title: 'Départ imminent', body, url: '/reservations' })
+        await broadcastPushToManagers({ title: 'Départ imminent', body, url: '/reservations' }, 'departure_alert')
         created.push(r.id)
       }
     }
@@ -106,7 +107,7 @@ export async function GET(request: NextRequest) {
           title: 'Retour du jour', body,
           entity_type: 'reservations', entity_id: r.id,
         })
-        await broadcastPushToManagers({ title: 'Retour du jour', body, url: '/reservations' })
+        await broadcastPushToManagers({ title: 'Retour du jour', body, url: '/reservations' }, 'return_alert')
         created.push(r.id)
       }
     }
@@ -149,7 +150,7 @@ export async function GET(request: NextRequest) {
           title: 'Retour en retard', body,
           entity_type: 'reservations', entity_id: r.id,
         })
-        await broadcastPushToManagers({ title: 'Retour en retard', body, url: '/reservations' })
+        await broadcastPushToManagers({ title: 'Retour en retard', body, url: '/reservations' }, 'late_return_alert')
         created.push(r.id)
       }
     }
@@ -243,7 +244,7 @@ export async function GET(request: NextRequest) {
           title: 'Retour en retard', body,
           entity_type: 'calendar_events', entity_id: ev.id,
         })
-        await broadcastPushToManagers({ title: 'Retour en retard', body, url: '/calendrier' })
+        await broadcastPushToManagers({ title: 'Retour en retard', body, url: '/calendrier' }, 'task_late_alert')
         created.push(ev.id)
       }
     }
@@ -252,6 +253,37 @@ export async function GET(request: NextRequest) {
     // sur le calendrier — même mécanisme de rattrapage que /alertes, en filet de
     // sécurité horaire pour les alertes qui n'ont pas de date d'échéance proche.
     const alerts = await fetchAllAlerts(supabase)
+
+    // Push mobile des alertes flotte / incidents (CT, assurance, révision, lavage,
+    // sinistre, infraction, document, contrat, récupération en retard). Jusqu'ici
+    // seulement affichées dans l'app. Une notification par jour et par entité
+    // (anti-doublon via `notifications`), filtrée par les réglages de chaque
+    // manager dans broadcastPushToManagers. Les types déjà poussés plus haut
+    // (retour en retard, tâche en retard) ne sont pas dans ALERT_TYPE_TO_NOTIF.
+    for (const a of alerts) {
+      const notifType = ALERT_TYPE_TO_NOTIF[a.type]
+      if (!notifType) continue
+      const entityId = a.vehicleId ?? a.reservationId
+      if (!entityId) continue
+      const dedupType = `push_${a.type}`
+      const { data: alreadyPushed } = await supabase
+        .from('notifications')
+        .select('id')
+        .eq('type', dedupType)
+        .eq('entity_id', entityId)
+        .gte('created_at', todayStart.toISOString())
+        .limit(1)
+      if (alreadyPushed && alreadyPushed.length > 0) continue
+      await supabase.from('notifications').insert({
+        user_id: null, type: dedupType,
+        title: a.label, body: a.sublabel,
+        entity_type: a.vehicleId ? 'vehicles' : 'reservations',
+        entity_id: entityId,
+      })
+      await broadcastPushToManagers({ title: a.label, body: a.sublabel, url: a.href }, notifType)
+      created.push(entityId)
+    }
+
     await syncAlertsToCalendar(supabase, alerts)
 
     return NextResponse.json({ created: created.length })
