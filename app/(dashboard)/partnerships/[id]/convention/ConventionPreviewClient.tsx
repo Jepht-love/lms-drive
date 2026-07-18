@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
-import { ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, AlertCircle, Download } from 'lucide-react'
 import SignatureCanvas from '@/components/signature/SignatureCanvas'
 
 interface Props {
@@ -47,6 +47,35 @@ export default function ConventionPreviewClient({ operationId, contract, operati
   const [signing, setSigning] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState(false)
+  const [downloading, setDownloading] = useState(false)
+
+  async function downloadPdf() {
+    setDownloading(true); setError(null)
+    try {
+      const res = await fetch('/api/contracts/convention-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ operationId }),
+      })
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        setError(d?.error ?? 'Erreur lors de la génération du PDF')
+        return
+      }
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${contract.contract_number}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+      router.refresh()
+    } catch {
+      setError('Erreur lors de la génération du PDF')
+    } finally {
+      setDownloading(false)
+    }
+  }
 
   const isSigned = contract.status === 'signe' || contract.status === 'cloture'
   const partnerName = partner?.name ?? 'Agence partenaire'
@@ -88,6 +117,17 @@ export default function ConventionPreviewClient({ operationId, contract, operati
           <h1 className="font-bold text-gray-900 truncate">{contract.contract_number}</h1>
           <p className="text-xs text-gray-500">Convention de mise à disposition</p>
         </div>
+        <button
+          onClick={downloadPdf}
+          disabled={downloading}
+          className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-xl bg-gray-900 text-white hover:bg-gray-800 disabled:bg-gray-300 transition-colors"
+        >
+          {downloading ? (
+            <><span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" /> PDF…</>
+          ) : (
+            <><Download className="w-3.5 h-3.5" /> Télécharger</>
+          )}
+        </button>
         <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${isSigned ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
           {isSigned ? 'Signée' : 'À signer'}
         </span>
