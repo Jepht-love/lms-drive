@@ -163,7 +163,7 @@ export async function fetchAllAlerts(
   // ── 4. Tâches en retard ─────────────────────────────────────────────────────
   const { data: overdueTasks } = await supabase
     .from('tasks')
-    .select(`id, title, type, due_datetime, vehicle_id,
+    .select(`id, title, type, due_datetime, vehicle_id, reservation_id,
       vehicles(plate, brand, model),
       profiles!tasks_assigned_to_fkey(full_name)`)
     .eq('status', 'a_faire')
@@ -181,9 +181,11 @@ export async function fetchAllAlerts(
       type: 'tache',
       label: 'TÂCHE EN RETARD',
       sublabel: `${t.title}${(v as any)?.plate ? ` · ${vLabel(v)}` : ''}${(a as any)?.full_name ? ` · ${(a as any).full_name}` : ''} · ${lateHours}h de retard`,
-      href: `/calendar/tasks/${t.id}`,
+      // Clic → droit à l'action : la réservation liée, sinon la fiche tâche.
+      href: t.reservation_id ? `/reservations/${t.reservation_id}` : `/calendar/tasks/${t.id}`,
       date: t.due_datetime,
       vehicleId: t.vehicle_id ?? undefined,
+      reservationId: t.reservation_id ?? undefined,
     })
   })
 

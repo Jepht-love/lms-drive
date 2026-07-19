@@ -61,6 +61,16 @@ export function calculateRentalDays(start: string | Date, end: string | Date): n
   return Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24)))
 }
 
+// Destination d'un clic sur une tâche : on va DROIT à l'action à réaliser.
+// Si la tâche est rattachée à une réservation, on ouvre la réservation (où se
+// font l'EDL, le contrat, la préparation…). Sinon (tâche autonome : RDV garage,
+// marketing…), on retombe sur la fiche tâche, qui EST l'action dans ce cas.
+export function taskActionHref(task: { id: string; reservation_id?: string | null }): string {
+  return task.reservation_id
+    ? `/reservations/${task.reservation_id}`
+    : `/calendar/tasks/${task.id}`
+}
+
 export function calculateRentalPrice(
   dailyPrice: number,
   weeklyPrice: number | null,

@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Check } from 'lucide-react'
 import { revalidatePath } from 'next/cache'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
@@ -32,10 +32,16 @@ async function updateTask(id: string, formData: FormData) {
   'use server'
   const supabase = await createClient()
   const status = formData.get('status') as string
-  const notes  = (formData.get('notes') as string)?.trim() || null
+  // Notes seulement si le champ est soumis — le bouton « Marquer comme fait »
+  // n'envoie pas de notes et ne doit pas écraser celles déjà saisies.
+  const update: { status: string; completed_at: string | null; notes?: string | null } = {
+    status,
+    completed_at: status === 'termine' ? new Date().toISOString() : null,
+  }
+  if (formData.has('notes')) update.notes = (formData.get('notes') as string)?.trim() || null
   const { data: updated } = await supabase
     .from('tasks')
-    .update({ status, notes, completed_at: status === 'termine' ? new Date().toISOString() : null })
+    .update(update)
     .eq('id', id)
     .select('title')
     .single()
@@ -163,32 +169,16 @@ export default async function TaskDetailPage({
         )}
       </div>
 
-      {/* Formulaire mise à jour statut */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-        <form action={updateWithId} className="space-y-4">
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-2">Changer le statut</p>
-            <div className="grid grid-cols-2 gap-2">
-              {STATUSES.map(s => (
-                <label key={s.id} className="flex items-center gap-2 cursor-pointer">
-                  <input type="radio" name="status" value={s.id} defaultChecked={task.status === s.id} className="accent-black" />
-                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${s.color}`}>{s.label}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Notes</p>
-            <textarea name="notes" rows={3} defaultValue={task.notes ?? ''} placeholder="Notes de suivi..."
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px] resize-none focus:outline-none focus:ring-2 focus:ring-black/10" />
-          </div>
-
-          <button type="submit" className="w-full py-3 bg-[#111111] text-white rounded-xl font-semibold text-sm active:scale-[.97] transition-transform">
-            Enregistrer
+      {/* Action à l'essentiel : marquer la tâche comme faite. Le suivi fin par
+          statut (en cours / reporté…) reste disponible sur le Kanban des tâches. */}
+      {task.status !== 'termine' && (
+        <form action={updateWithId}>
+          <input type="hidden" name="status" value="termine" />
+          <button type="submit" className="w-full py-3.5 bg-green-600 text-white rounded-xl font-semibold text-sm active:scale-[.97] transition-transform flex items-center justify-center gap-2">
+            <Check className="w-4 h-4" /> Marquer comme fait
           </button>
         </form>
-      </div>
+      )}
     </div>
   )
 }

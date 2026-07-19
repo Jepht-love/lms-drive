@@ -8,6 +8,7 @@ import {
   ChevronRight, Plus, CheckCircle2, Clock,
 } from 'lucide-react'
 import BackButton from '@/components/ui/BackButton'
+import { taskActionHref } from '@/lib/utils'
 import MemberTabsEditor from './MemberTabsEditor'
 import MemberActiveToggle from './MemberActiveToggle'
 
@@ -84,7 +85,7 @@ export default async function MemberProfilePage({
   const { data: upcomingTasks } = await supabase
     .from('tasks')
     .select(`
-      id, title, type, status, due_datetime,
+      id, title, type, status, due_datetime, reservation_id,
       vehicles ( plate, brand, model )
     `)
     .eq('assigned_to', id)
@@ -243,7 +244,7 @@ export default async function MemberProfilePage({
               const tv = Array.isArray((task as any).vehicles) ? (task as any).vehicles[0] : (task as any).vehicles
               const isToday = isSameDay(new Date(task.due_datetime), today)
               return (
-                <Link key={task.id} href={`/calendar/tasks/${task.id}`}>
+                <Link key={task.id} href={taskActionHref(task)}>
                   <div className="flex items-center gap-3 px-4 py-3.5 hover:bg-gray-50 transition-colors">
                     <div className="flex flex-col items-center flex-shrink-0 w-12 text-center">
                       <span className={`text-[10px] font-bold capitalize ${isToday ? 'text-black' : 'text-gray-400'}`}>

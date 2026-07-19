@@ -6,6 +6,7 @@ import {
   startOfDay, endOfDay, addDays, subDays,
 } from 'date-fns'
 import { getColumnWindow, businessNow } from '@/lib/calendar/dateUtils'
+import { taskActionHref } from '@/lib/utils'
 import { CALENDAR_START_HOUR } from '@/lib/calendar/constants'
 import { fr } from 'date-fns/locale'
 import {
@@ -400,7 +401,7 @@ export default async function DashboardPage() {
   const { data: weekTasks } = await supabase
     .from('tasks')
     .select(`
-      id, title, type, status, due_datetime,
+      id, title, type, status, due_datetime, reservation_id,
       vehicles ( plate ),
       profiles!tasks_assigned_to_fkey ( full_name )
     `)
@@ -505,7 +506,7 @@ export default async function DashboardPage() {
       key: `wtask-${task.id}`, time: new Date(task.due_datetime), kind: 'tache',
       title: task.title, subtitle: tv ? (tv as any).plate : undefined,
       assignee: assignee ? (assignee as any).full_name : null,
-      needsAssignee: !assignee, href: '/calendrier',
+      needsAssignee: !assignee, href: taskActionHref(task),
     })
   }
   const weekEventsByDay = Array.from({ length: 7 }, (_, i) => addDays(todayStart, i))
@@ -994,7 +995,7 @@ export default async function DashboardPage() {
               const assignee = Array.isArray((task as any).profiles) ? (task as any).profiles[0] : (task as any).profiles
               const isTaskLate = task.status === 'a_faire' && new Date(task.due_datetime) < now
               return (
-                <Link key={`task-${task.id}`} href={`/calendar/tasks/${task.id}`}>
+                <Link key={`task-${task.id}`} href={taskActionHref(task)}>
                   <div className={`flex items-center gap-4 px-4 py-4 transition-colors ${isTaskLate ? 'bg-red-50/60 hover:bg-red-50' : 'hover:bg-gray-50'}`}>
                     <span className="w-12 text-sm font-mono font-bold text-gray-600 text-center flex-shrink-0">
                       {format(new Date(task.due_datetime), 'HH:mm')}
