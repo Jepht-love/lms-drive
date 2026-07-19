@@ -204,20 +204,22 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Seuil de retard : lit la config du gérant (défaut 30 min)
+    // Seuil de retard : config du gérant (défaut 30 min).
     const { data: notifCfg } = await supabase
       .from('notification_settings')
-      .select('late_return_threshold_minutes, alert_window_start, alert_window_end')
+      .select('late_return_threshold_minutes')
       .limit(1)
       .maybeSingle()
     const thresholdMin = notifCfg?.late_return_threshold_minutes ?? 30
-    const windowStart  = notifCfg?.alert_window_start ?? 7
-    const windowEnd    = notifCfg?.alert_window_end   ?? 22
-    // Heure de PARIS, pas UTC : sur Vercel `now.getHours()` renvoyait l'heure
-    // UTC (5-6h), donc < 7h → le cron sortait en avance et n'envoyait jamais les
-    // alertes lavage/récupération/CT/etc. C'était la cause du « 0 notification ».
-    const currentHour  = businessNow().getHours()
-    if (currentHour < windowStart || currentHour >= windowEnd) {
+
+    // Garde-fou anti-nuit GLOBAL : aucun envoi hors 7h-22h (heure de Paris).
+    // On NE lit plus une fenêtre "globale" en base : `.limit(1)` tombait sur le
+    // réglage d'un utilisateur au hasard, dont la plage pouvait exclure l'heure
+    // courante et bloquer TOUT le cron (« outside alert window »). La fenêtre
+    // PERSONNELLE de chaque manager est appliquée en aval, par destinataire,
+    // dans broadcastPushToManagers.
+    const currentHour = businessNow().getHours()
+    if (currentHour < 7 || currentHour >= 22) {
       return NextResponse.json({ skipped: 'outside alert window' })
     }
 
