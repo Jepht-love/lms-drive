@@ -5,6 +5,7 @@ import { syncAlertsToCalendar } from '@/lib/calendar/syncAlerts'
 import { broadcastPushToManagers } from '@/lib/push/broadcastPush'
 import { ALERT_TYPE_TO_NOTIF } from '@/lib/push/notificationTypes'
 import { RESEND_FROM, resendTo } from '@/lib/email/config'
+import { businessNow } from '@/lib/calendar/dateUtils'
 import { addHours, subMinutes } from 'date-fns'
 
 // POST: push immédiat depuis le client (ex : alerte clôture contrat après EDL retour)
@@ -164,9 +165,50 @@ export async function GET(request: NextRequest) {
     const thresholdMin = notifCfg?.late_return_threshold_minutes ?? 30
     const windowStart  = notifCfg?.alert_window_start ?? 7
     const windowEnd    = notifCfg?.alert_window_end   ?? 22
-    const currentHour  = now.getHours()
+    // Heure de PARIS, pas UTC : sur Vercel `now.getHours()` renvoyait l'heure
+    // UTC (5-6h), donc < 7h → le cron sortait en avance et n'envoyait jamais les
+    // alertes lavage/récupération/CT/etc. C'était la cause du « 0 notification ».
+    const currentHour  = businessNow().getHours()
     if (currentHour < windowStart || currentHour >= windowEnd) {
       return NextResponse.json({ skipped: 'outside alert window' })
+    }
+
+    // ── Digest du matin ───────────────────────────────────────────────────────
+    // Un récap du jour, une seule fois par jour, au premier passage du cron dans
+    // la fenêtre horaire (≈ 8h). Départs, retours et tâches du jour. Anti-doublon
+    // via une notification `daily_digest` posée pour la journée.
+    const { data: digestSent } = await supabase
+      .from('notifications')
+      .select('id')
+      .eq('type', 'daily_digest')
+      .gte('created_at', todayStart.toISOString())
+      .limit(1)
+    if (!digestSent || digestSent.length === 0) {
+      const [departsCount, retoursCount, tachesCount] = await Promise.all([
+        supabase.from('reservations').select('id', { count: 'exact', head: true })
+          .eq('status', 'confirmee')
+          .gte('start_datetime', todayStart.toISOString()).lte('start_datetime', todayEnd.toISOString()),
+        supabase.from('reservations').select('id', { count: 'exact', head: true })
+          .in('status', ['en_cours', 'en_retard'])
+          .gte('end_datetime', todayStart.toISOString()).lte('end_datetime', todayEnd.toISOString()),
+        supabase.from('tasks').select('id', { count: 'exact', head: true })
+          .not('status', 'in', '("termine","annule")')
+          .gte('due_datetime', todayStart.toISOString()).lte('due_datetime', todayEnd.toISOString()),
+      ])
+      const nbDep = departsCount.count ?? 0
+      const nbRet = retoursCount.count ?? 0
+      const nbTac = tachesCount.count ?? 0
+      const parts: string[] = []
+      if (nbDep) parts.push(`${nbDep} départ${nbDep > 1 ? 's' : ''}`)
+      if (nbRet) parts.push(`${nbRet} retour${nbRet > 1 ? 's' : ''}`)
+      if (nbTac) parts.push(`${nbTac} tâche${nbTac > 1 ? 's' : ''}`)
+      const digestBody = parts.length ? parts.join(' · ') : 'Rien de programmé aujourd\'hui'
+      await supabase.from('notifications').insert({
+        user_id: null, type: 'daily_digest',
+        title: 'Programme du jour', body: digestBody,
+      })
+      await broadcastPushToManagers({ title: 'Programme du jour', body: digestBody, url: '/' })
+      created.push('digest')
     }
 
     // ── Relance automatique par email au client en retard ────────────────────

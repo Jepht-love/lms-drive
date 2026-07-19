@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/notifications",
-      "schedule": "0 5 * * *"
+      "schedule": "0 6 * * *"
     },
     {
       "path": "/api/cron/due-dates",
