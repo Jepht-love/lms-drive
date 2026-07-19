@@ -73,6 +73,54 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // ── Tâches imminentes : rappel ~1h avant une tâche / RDV programmé ─────────
+    // Actif grâce au passage horaire du cron. Une seule fois par tâche (dédup
+    // permanent sur le type `task_soon`). Couvre la table `tasks` (lavage,
+    // préparation, RDV…) et les événements calendrier de type tâche/RDV/livraison.
+    const in1h = addHours(now, 1).toISOString()
+
+    const { data: soonTasks } = await supabase
+      .from('tasks')
+      .select('id, title, due_datetime, vehicle:vehicles(plate, brand, model)')
+      .not('status', 'in', '("termine","annule")')
+      .gte('due_datetime', now.toISOString())
+      .lte('due_datetime', in1h)
+    for (const t of soonTasks ?? []) {
+      const { data: exists } = await supabase.from('notifications')
+        .select('id').eq('type', 'task_soon').eq('entity_id', t.id).limit(1)
+      if (exists && exists.length) continue
+      const veh = t.vehicle as any
+      const heure = new Date(t.due_datetime).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+      const body = `${t.title}${veh?.plate ? ` — ${veh.brand} ${veh.model} (${veh.plate})` : ''} · prévu à ${heure}`
+      await supabase.from('notifications').insert({
+        user_id: null, type: 'task_soon', title: 'Tâche imminente', body,
+        entity_type: 'tasks', entity_id: t.id,
+      })
+      await broadcastPushToManagers({ title: 'Tâche imminente', body, url: '/calendar/tasks' }, 'new_task_alert')
+      created.push(t.id)
+    }
+
+    const { data: soonEvents } = await supabase
+      .from('calendar_events')
+      .select('id, title, start_at')
+      .in('event_type', ['tache', 'rdv_client', 'rdv_garage', 'rdv_autre', 'livraison', 'recuperation'])
+      .in('status', ['a_faire', 'en_cours'])
+      .gte('start_at', now.toISOString())
+      .lte('start_at', in1h)
+    for (const ev of soonEvents ?? []) {
+      const { data: exists } = await supabase.from('notifications')
+        .select('id').eq('type', 'task_soon').eq('entity_id', ev.id).limit(1)
+      if (exists && exists.length) continue
+      const heure = new Date(ev.start_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+      const body = `${ev.title} · prévu à ${heure}`
+      await supabase.from('notifications').insert({
+        user_id: null, type: 'task_soon', title: 'Tâche imminente', body,
+        entity_type: 'calendar_events', entity_id: ev.id,
+      })
+      await broadcastPushToManagers({ title: 'Tâche imminente', body, url: '/calendrier' }, 'new_task_alert')
+      created.push(ev.id)
+    }
+
     // Retours du jour : toutes les réservations en_cours revenant aujourd'hui
     // Notif envoyée une fois par heure (rappel toutes les heures + digest 8h)
     const todayStart = new Date(now); todayStart.setHours(0, 0, 0, 0)
