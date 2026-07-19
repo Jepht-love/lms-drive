@@ -205,12 +205,11 @@ export default async function DashboardPage() {
   const departsAujourdhui = reservations?.filter(r =>
     isDepart(r.status) &&
     new Date(r.start_datetime) >= businessDayStart &&
-    new Date(r.start_datetime) <= businessDayEnd &&
-    // Un départ CONFIRMÉ dont l'heure est déjà passée n'est plus une tâche « à
-    // préparer » du jour : il bascule en RÉCUPÉRATION EN RETARD (alerte dédiée +
-    // carte « En location · Départ en retard »). On l'exclut ici pour ne pas
-    // l'afficher une 2ᵉ fois dans « Tâches du jour ».
-    !(r.status === 'confirmee' && new Date(r.start_datetime) < now)
+    new Date(r.start_datetime) <= businessDayEnd
+    // On garde les départs du jour MÊME quand l'heure est passée et que le client
+    // n'est pas venu : ça reste une tâche « à récupérer », pas une location. Ces
+    // réservations n'apparaissent plus dans « En location » (réservé aux
+    // véhicules réellement sortis), uniquement ici.
   ) ?? []
 
   // Retours du jour : fenêtre calendaire (minuit→23h59) pour ne pas rater
@@ -282,14 +281,19 @@ export default async function DashboardPage() {
     if (r.status === 'en_cours')  return 2
     return 4 // option (réservé, non confirmé)
   }
-  const enLocationNow = (locationRaw ?? []).slice().sort((a, b) => {
-    const ra = locationRank(a), rb = locationRank(b)
-    if (ra !== rb) return ra - rb
-    // Loués actifs (rangs 0-2) triés par retour ; réservés (rangs 3-4) par départ.
-    const da = ra >= 3 ? a.start_datetime : a.end_datetime
-    const db = rb >= 3 ? b.start_datetime : b.end_datetime
-    return da.localeCompare(db)
-  })
+  // « En location » = uniquement les véhicules réellement SORTIS (départ fait) :
+  // en_cours / en_retard. Les réservations simplement réservées/confirmées (pas
+  // encore parties) ne sont PAS ici — elles restent dans « Tâches du jour » comme
+  // départ à préparer, jusqu'à ce que l'EDL départ soit validé.
+  const enLocationNow = (locationRaw ?? [])
+    .filter(r => r.status === 'en_cours' || r.status === 'en_retard')
+    .slice().sort((a, b) => {
+      const ra = locationRank(a), rb = locationRank(b)
+      if (ra !== rb) return ra - rb
+      const da = ra >= 3 ? a.start_datetime : a.end_datetime
+      const db = rb >= 3 ? b.start_datetime : b.end_datetime
+      return da.localeCompare(db)
+    })
 
   // ── Mises à disposition inter-agences (véhicule loué CHEZ un partenaire) ─────
   // Une mise à disposition n'est PAS une réservation : c'est une ligne
@@ -928,6 +932,11 @@ export default async function DashboardPage() {
                         {v?.brand} {v?.model} <span className="text-gray-300 font-mono">· {v?.plate}</span>
                       </p>
                       <AssigneeLine name={departAssigneeByRes.get(r.id) ?? null} />
+                      {new Date(r.start_datetime) < now && (
+                        <p className="text-[10px] font-bold text-orange-600 mt-1">
+                          Client pas encore venu · à récupérer
+                        </p>
+                      )}
                       {isQuickTurnaround && (
                         <p className="text-[10px] font-bold text-orange-600 flex items-center gap-1 mt-1">
                           <ArrowLeftRight className="w-3 h-3" /> Retour du même véhicule aujourd'hui
