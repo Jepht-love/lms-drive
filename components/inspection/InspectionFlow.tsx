@@ -11,6 +11,7 @@ import { createClient } from '@/lib/supabase/client'
 import { compressImageToBase64 } from '@/lib/utils'
 import { calculateLateFee, calculateExtraKm } from '@/lib/calculations/fees'
 import { reportVehicleIssues } from '@/lib/actions/vehicle-issues'
+import { markReservationDeparted } from '@/lib/actions/reservations'
 import { buildDamageFlag } from '@/lib/maintenance-health'
 import { Camera, CheckCircle2, AlertTriangle, X, ChevronRight, ChevronLeft, Clock, Gauge, Fuel } from 'lucide-react'
 
@@ -309,7 +310,9 @@ export default function InspectionFlow({
       ])
 
       if (type === 'depart') {
-        if (reservationId) await supabase.from('reservations').update({ status: 'en_cours' }).eq('id', reservationId)
+        // Bascule en_cours + sync calendrier + recalcul véhicule, uniquement
+        // maintenant que l'EDL départ est validé (plus à l'ouverture de l'écran).
+        if (reservationId) await markReservationDeparted(reservationId)
       } else {
         // Calcul frais retard
         const now = new Date()

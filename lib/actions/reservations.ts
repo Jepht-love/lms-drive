@@ -449,6 +449,28 @@ export async function createReservation(formData: FormData) {
   redirect(`/reservations/${data.id}`)
 }
 
+// Bascule une réservation en « en cours » — appelée à la VALIDATION de l'état
+// des lieux de départ (pas à l'ouverture de l'écran). Synchronise l'événement
+// calendrier et recalcule le statut du véhicule.
+export async function markReservationDeparted(reservationId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié' }
+
+  const { data: r } = await supabase
+    .from('reservations')
+    .select('vehicle_id')
+    .eq('id', reservationId)
+    .single()
+
+  const { error } = await supabase.from('reservations').update({ status: 'en_cours' }).eq('id', reservationId)
+  if (error) return { error: error.message }
+
+  await syncReservationToCalendar(reservationId)
+  if (r?.vehicle_id) await recomputeVehicleStatus(supabase, r.vehicle_id)
+  return { ok: true }
+}
+
 export async function updateReservationStatus(id: string, status: ReservationStatus) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

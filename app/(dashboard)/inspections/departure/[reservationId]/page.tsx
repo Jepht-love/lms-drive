@@ -5,8 +5,6 @@ import { ArrowLeft } from 'lucide-react'
 import BackButton from '@/components/ui/BackButton'
 import InspectionFlow from '@/components/inspection/InspectionFlow'
 import { generateContractNumber } from '@/lib/utils'
-import { syncReservationToCalendar } from '@/lib/calendar/syncRental'
-import { recomputeVehicleStatus } from '@/lib/vehicles/vehicleStatus'
 
 export default async function DepartureInspectionPage({ params }: { params: Promise<{ reservationId: string }> }) {
   const { reservationId } = await params
@@ -43,16 +41,13 @@ export default async function DepartureInspectionPage({ params }: { params: Prom
       .select('id')
       .single()
     contract = newContract
-
-    // Passer la réservation en_cours — mutation directe (pas l'action updateReservationStatus,
-    // qui appelle revalidatePath : interdit pendant le rendu d'une page, Next.js plante).
-    await supabase.from('reservations').update({ status: 'en_cours' }).eq('id', reservationId)
-    // Sans ce sync, l'événement "Départ" reste figé en statut a_faire dans calendar_events :
-    // toujours visible comme tâche en attente sur le calendrier alors que le dashboard,
-    // qui relit reservations.status à chaque rendu, l'exclut déjà de "Tâches du jour".
-    await syncReservationToCalendar(reservationId)
-    await recomputeVehicleStatus(supabase, (reservation.vehicle as any)?.id)
   }
+
+  // La réservation ne passe PAS « en cours » ici : ouvrir l'écran d'EDL ne doit
+  // pas marquer le véhicule comme parti. Sinon un EDL commencé puis abandonné
+  // laisse la résa « loué » à tort (départ fantôme, absent des « à préparer » du
+  // jour). La bascule en_cours + sync calendrier + recalcul véhicule se fait à la
+  // VALIDATION de l'EDL (InspectionFlow → markReservationDeparted).
 
   if (!contract) notFound()
 
