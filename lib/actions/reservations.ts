@@ -59,11 +59,18 @@ export async function cancelReservationOnPaymentTimeout(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non authentifié' }
 
-  await supabase
+  // On récupère le véhicule AVANT de savoir si l'annulation s'applique, pour
+  // pouvoir recalculer son statut ensuite (sinon un véhicule reste « réservé »
+  // orphelin après annulation pour non-paiement).
+  const { data: cancelled } = await supabase
     .from('reservations')
     .update({ status: 'annulee', payment_email_sent_at: null })
     .eq('id', reservationId)
     .eq('payment_status', 'en_attente')
+    .select('vehicle_id')
+    .maybeSingle()
+
+  if (cancelled?.vehicle_id) await recomputeVehicleStatus(supabase, cancelled.vehicle_id)
 
   revalidatePath(`/reservations/${reservationId}`)
   revalidatePath('/reservations')

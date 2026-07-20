@@ -40,13 +40,21 @@ export async function GET(request: NextRequest) {
     const now = new Date()
     const created: string[] = []
 
-    // Departures within 1h (confirmed reservations)
+    // Préavis des rappels « à préparer » (départs + tâches/RDV). Demande gérant :
+    // être prévenu ~2 h AVANT une tâche du jour (départ à préparer, EDL, RDV…),
+    // pour distinguer les véhicules qui vont PARTIR des locations déjà sorties.
+    // Une seule constante → délai ajustable. Le cron tournant à l'heure, chaque
+    // échéance reçoit une notification unique (dédup permanente) dès qu'elle
+    // entre dans la fenêtre des 2 h.
+    const REMINDER_LEAD_HOURS = 2
+
+    // Départs à préparer dans les 2 h (réservations confirmées = acompte versé)
     const { data: upcomingDepartures } = await supabase
       .from('reservations')
       .select('id, reservation_number, start_datetime, vehicle:vehicles(plate, brand, model, color), client:clients(first_name, last_name)')
       .eq('status', 'confirmee')
       .gte('start_datetime', now.toISOString())
-      .lte('start_datetime', addHours(now, 1).toISOString())
+      .lte('start_datetime', addHours(now, REMINDER_LEAD_HOURS).toISOString())
 
     for (const r of upcomingDepartures ?? []) {
       const { data: existing } = await supabase
@@ -65,26 +73,26 @@ export async function GET(request: NextRequest) {
         const body = `${clientLabel}${vehLabel ? ' — ' + vehLabel : ''} · départ le ${departFmt}`
         await supabase.from('notifications').insert({
           user_id: null, type: 'departure_soon',
-          title: 'Départ imminent', body,
+          title: 'Départ à préparer', body,
           entity_type: 'reservations', entity_id: r.id,
         })
-        await broadcastPushToManagers({ title: 'Départ imminent', body, url: '/reservations' }, 'departure_alert')
+        await broadcastPushToManagers({ title: 'Départ à préparer', body, url: '/reservations' }, 'departure_alert')
         created.push(r.id)
       }
     }
 
-    // ── Tâches imminentes : rappel ~1h avant une tâche / RDV programmé ─────────
+    // ── Tâches imminentes : rappel ~2h avant une tâche / RDV programmé ─────────
     // Actif grâce au passage horaire du cron. Une seule fois par tâche (dédup
     // permanent sur le type `task_soon`). Couvre la table `tasks` (lavage,
     // préparation, RDV…) et les événements calendrier de type tâche/RDV/livraison.
-    const in1h = addHours(now, 1).toISOString()
+    const inLead = addHours(now, REMINDER_LEAD_HOURS).toISOString()
 
     const { data: soonTasks } = await supabase
       .from('tasks')
       .select('id, title, due_datetime, vehicle:vehicles(plate, brand, model)')
       .not('status', 'in', '("termine","annule")')
       .gte('due_datetime', now.toISOString())
-      .lte('due_datetime', in1h)
+      .lte('due_datetime', inLead)
     for (const t of soonTasks ?? []) {
       const { data: exists } = await supabase.from('notifications')
         .select('id').eq('type', 'task_soon').eq('entity_id', t.id).limit(1)
@@ -106,7 +114,7 @@ export async function GET(request: NextRequest) {
       .in('event_type', ['tache', 'rdv_client', 'rdv_garage', 'rdv_autre', 'livraison', 'recuperation'])
       .in('status', ['a_faire', 'en_cours'])
       .gte('start_at', now.toISOString())
-      .lte('start_at', in1h)
+      .lte('start_at', inLead)
     for (const ev of soonEvents ?? []) {
       const { data: exists } = await supabase.from('notifications')
         .select('id').eq('type', 'task_soon').eq('entity_id', ev.id).limit(1)
