@@ -23,7 +23,14 @@ export default function BottomNav({ allowedTabs }: { allowedTabs?: string[] | nu
     : TABS.filter(t => !t.tabKey || allowedTabs.includes(t.tabKey))
 
   return (
-    <nav className="shrink-0 bg-[#111111]" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 8px)' }}>
+    // position:relative + z-index → symétrie avec le PageHeader : la barre du bas
+    // gagne toujours l'empilement contre tout contenu de page qui créerait un
+    // stacking context (transform, sticky, opacity…), sinon elle pouvait paraître
+    // « transparente »/recouverte sur certaines pages (ex. Disponibilités).
+    <nav
+      className="shrink-0 bg-[#111111]"
+      style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 8px)', position: 'relative', zIndex: 10 }}
+    >
       <div className="flex items-center h-[60px] px-1">
         {visibleTabs.map(({ label, href, Icon, badge }) => {
           const isActive = pathname === href || (href !== '/' && pathname.startsWith(href))
