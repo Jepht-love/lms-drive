@@ -4,7 +4,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { roleLabel } from '@/lib/roles'
 import { sendSavTelegram } from '@/lib/sav/telegram'
 
-const MAX_SCREENSHOT_BYTES = 10 * 1024 * 1024 // 10 Mo
+const MAX_SCREENSHOT_BYTES = 10 * 1024 * 1024 // 10 Mo (par photo)
+const MAX_SCREENSHOTS = 10 // limite album Telegram
 
 export async function POST(req: Request) {
   const supabase = await createClient()
@@ -21,7 +22,10 @@ export async function POST(req: Request) {
   const section = (form.get('section') as string | null)?.trim() || null
   const pagePath = (form.get('page_path') as string | null)?.trim() || null
   const userAgent = (form.get('user_agent') as string | null)?.trim() || null
-  const screenshot = form.get('screenshot') as File | null
+  // Plusieurs captures possibles : toutes envoyées sous la même clé `screenshot`.
+  const screenshots = (form.getAll('screenshot') as unknown[])
+    .filter((f): f is File => f instanceof File && f.size > 0)
+    .slice(0, MAX_SCREENSHOTS)
 
   const admin = createAdminClient()
 
@@ -34,24 +38,22 @@ export async function POST(req: Request) {
   const reporterName = profile?.full_name ?? user.email ?? null
   const reporterRole = profile?.role ? roleLabel(profile.role) : null
 
-  // Upload de la capture (optionnelle) dans le bucket privé.
-  let screenshotPath: string | null = null
-  let photoBytes: ArrayBuffer | null = null
-  let photoType = 'image/jpeg'
-  let photoName = 'capture.jpg'
-  if (screenshot && screenshot.size > 0) {
-    if (screenshot.size > MAX_SCREENSHOT_BYTES) {
+  // Captures (optionnelles). Elles ne sont PAS stockées dans Supabase : elles sont
+  // uniquement transmises à Telegram (visualisables là-bas). On garde juste un
+  // marqueur en base pour indiquer qu'au moins une capture accompagne le ticket.
+  const photos: { bytes: ArrayBuffer; filename: string; contentType: string }[] = []
+  for (const [i, shot] of screenshots.entries()) {
+    if (shot.size > MAX_SCREENSHOT_BYTES) {
       return NextResponse.json({ error: 'capture trop volumineuse (max 10 Mo)' }, { status: 400 })
     }
-    // La capture n'est PAS stockée dans Supabase : elle est uniquement transmise
-    // à Telegram (visualisable là-bas). On garde juste un marqueur en base pour
-    // indiquer qu'une capture accompagne le ticket.
-    const ext = (screenshot.name.split('.').pop() || 'jpg').toLowerCase()
-    photoBytes = await screenshot.arrayBuffer()
-    photoType = screenshot.type || 'image/jpeg'
-    photoName = screenshot.name || `capture.${ext}`
-    screenshotPath = 'telegram'
+    const ext = (shot.name.split('.').pop() || 'jpg').toLowerCase()
+    photos.push({
+      bytes: await shot.arrayBuffer(),
+      contentType: shot.type || 'image/jpeg',
+      filename: shot.name || `capture-${i + 1}.${ext}`,
+    })
   }
+  const screenshotPath: string | null = photos.length > 0 ? 'telegram' : null
 
   // Enregistrement du ticket.
   const { error: insErr } = await admin.from('sav_tickets').insert({
@@ -75,9 +77,8 @@ export async function POST(req: Request) {
   // ok immédiatement (bouton libéré) pendant que l'upload de la capture vers
   // Telegram se poursuit en arrière-plan, sans figer l'interface.
   const notif = { module: moduleName, section, pagePath, reporterName, reporterRole, description }
-  const photo = photoBytes ? { bytes: photoBytes, filename: photoName, contentType: photoType } : null
   after(async () => {
-    await sendSavTelegram(notif, photo)
+    await sendSavTelegram(notif, photos)
   })
 
   return NextResponse.json({ ok: true })

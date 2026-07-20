@@ -40,7 +40,7 @@ function buildCaption(t: TelegramTicket): string {
 
 export async function sendSavTelegram(
   ticket: TelegramTicket,
-  photo?: TelegramPhoto | null,
+  photos?: TelegramPhoto[] | null,
 ): Promise<void> {
   // .trim() défensif : sur Vercel, un espace ou retour à la ligne collé par
   // erreur dans la valeur casse l'appel Telegram (404 token / 400 chat not found).
@@ -52,10 +52,23 @@ export async function sendSavTelegram(
   }
 
   const caption = buildCaption(ticket)
+  const list = (photos ?? []).filter(Boolean)
 
   try {
-    if (photo) {
+    if (list.length === 0) {
+      const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: chatId, text: caption, parse_mode: 'Markdown' }),
+        signal: AbortSignal.timeout(20000),
+      })
+      if (!res.ok) console.error('[SAV] Telegram sendMessage échec:', await res.text())
+      return
+    }
+
+    if (list.length === 1) {
       // sendPhoto : la légende est limitée à 1024 caractères par Telegram.
+      const photo = list[0]
       const form = new FormData()
       form.append('chat_id', chatId)
       form.append('caption', caption.slice(0, 1024))
@@ -67,14 +80,34 @@ export async function sendSavTelegram(
         signal: AbortSignal.timeout(20000),
       })
       if (!res.ok) console.error('[SAV] Telegram sendPhoto échec:', await res.text())
-    } else {
-      const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: chatId, text: caption, parse_mode: 'Markdown' }),
-        signal: AbortSignal.timeout(20000),
+      return
+    }
+
+    // Plusieurs photos → album (sendMediaGroup, 2 à 10 par lot). La légende va
+    // uniquement sur la 1ʳᵉ photo du 1ᵉʳ lot. Au-delà de 10, on envoie plusieurs
+    // albums à la suite.
+    for (let start = 0; start < list.length; start += 10) {
+      const chunk = list.slice(start, start + 10)
+      const form = new FormData()
+      form.append('chat_id', chatId)
+      const media = chunk.map((p, i) => {
+        const key = `photo${start + i}`
+        form.append(key, new Blob([p.bytes], { type: p.contentType }), p.filename)
+        return {
+          type: 'photo' as const,
+          media: `attach://${key}`,
+          ...(start === 0 && i === 0
+            ? { caption: caption.slice(0, 1024), parse_mode: 'Markdown' }
+            : {}),
+        }
       })
-      if (!res.ok) console.error('[SAV] Telegram sendMessage échec:', await res.text())
+      form.append('media', JSON.stringify(media))
+      const res = await fetch(`https://api.telegram.org/bot${token}/sendMediaGroup`, {
+        method: 'POST',
+        body: form,
+        signal: AbortSignal.timeout(30000),
+      })
+      if (!res.ok) console.error('[SAV] Telegram sendMediaGroup échec:', await res.text())
     }
   } catch (err) {
     console.error('[SAV] Telegram exception:', err)

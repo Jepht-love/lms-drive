@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useMemo, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
-import { HelpCircle, X, Camera, Loader2 } from 'lucide-react'
+import { HelpCircle, X, Camera, Loader2, Plus } from 'lucide-react'
 import { useToast } from '@/components/Toast'
 import { useSavContext } from '@/lib/sav/context'
 import { moduleFromPath, sectionFromPath } from '@/lib/sav/modules'
@@ -32,6 +32,8 @@ async function compressImage(file: File, maxDim = 1600, quality = 0.7): Promise<
   }
 }
 
+const MAX_PHOTOS = 10
+
 export default function SavButton() {
   const pathname = usePathname()
   const { section } = useSavContext()
@@ -40,9 +42,32 @@ export default function SavButton() {
   const [open, setOpen] = useState(false)
   const [description, setDescription] = useState('')
   const [contextLabel, setContextLabel] = useState('')
-  const [file, setFile] = useState<File | null>(null)
+  const [files, setFiles] = useState<File[]>([])
   const [submitting, setSubmitting] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+
+  // Aperçus (object URLs) recalculés à chaque changement de la liste ; les URLs
+  // précédentes sont révoquées au nettoyage pour éviter les fuites mémoire.
+  const previews = useMemo(
+    () => files.map(f => ({ name: f.name, url: URL.createObjectURL(f) })),
+    [files],
+  )
+  useEffect(() => () => previews.forEach(p => URL.revokeObjectURL(p.url)), [previews])
+
+  function addFiles(list: FileList | null) {
+    if (!list) return
+    const incoming = Array.from(list).filter(f => f.type.startsWith('image/'))
+    setFiles(prev => {
+      const next = [...prev, ...incoming]
+      if (next.length > MAX_PHOTOS) toast(`Maximum ${MAX_PHOTOS} photos`, 'error')
+      return next.slice(0, MAX_PHOTOS)
+    })
+    if (fileRef.current) fileRef.current.value = '' // permet de re-sélectionner le même fichier
+  }
+
+  function removeFile(idx: number) {
+    setFiles(prev => prev.filter((_, i) => i !== idx))
+  }
 
   const moduleName = moduleFromPath(pathname)
   // Sous-vue : celle déclarée par la page (useSavSection) sinon déduite de l'URL.
@@ -53,7 +78,7 @@ export default function SavButton() {
   function openForm() {
     setContextLabel(autoContext)
     setDescription('')
-    setFile(null)
+    setFiles([])
     setOpen(true)
   }
 
@@ -72,9 +97,10 @@ export default function SavButton() {
       form.append('section', section)
       form.append('page_path', pathname)
       form.append('user_agent', navigator.userAgent)
-      if (file) {
-        const compressed = await compressImage(file)
-        form.append('screenshot', compressed, 'capture.jpg')
+      // Chaque photo est compressée puis ajoutée sous la même clé `screenshot`.
+      for (let i = 0; i < files.length; i++) {
+        const compressed = await compressImage(files[i])
+        form.append('screenshot', compressed, files[i].name || `capture-${i + 1}.jpg`)
       }
 
       const res = await fetch('/api/sav', { method: 'POST', body: form })
@@ -115,7 +141,7 @@ export default function SavButton() {
             <div className="flex items-center justify-between px-5 pt-5 pb-3">
               <div>
                 <h2 className="text-lg font-black text-[#111111]">Signaler un problème</h2>
-                <p className="text-xs text-gray-400 mt-0.5">Décris le bug, joins une capture si possible</p>
+                <p className="text-xs text-gray-400 mt-0.5">Décris le bug, joins une ou plusieurs photos si possible</p>
               </div>
               <button onClick={() => !submitting && setOpen(false)} className="p-2 text-gray-400 hover:text-gray-700">
                 <X size={20} />
@@ -147,24 +173,57 @@ export default function SavButton() {
                 />
               </div>
 
-              {/* Capture d'écran */}
+              {/* Captures / photos (plusieurs possibles) */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wide text-gray-400 mb-1.5">Capture / photo (optionnel)</label>
+                <label className="block text-xs font-bold uppercase tracking-wide text-gray-400 mb-1.5">
+                  Photos (optionnel){files.length > 0 ? ` · ${files.length}/${MAX_PHOTOS}` : ''}
+                </label>
                 <input
                   ref={fileRef}
                   type="file"
                   accept="image/*"
+                  multiple
                   className="hidden"
-                  onChange={e => setFile(e.target.files?.[0] ?? null)}
+                  onChange={e => addFiles(e.target.files)}
                 />
-                <button
-                  type="button"
-                  onClick={() => fileRef.current?.click()}
-                  className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border border-dashed border-gray-300 text-sm text-gray-500 hover:border-[#C4A35A] hover:text-[#111111] transition-colors"
-                >
-                  <Camera size={18} />
-                  <span className="truncate">{file ? file.name : 'Joindre une capture d\'écran'}</span>
-                </button>
+
+                {files.length === 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => fileRef.current?.click()}
+                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border border-dashed border-gray-300 text-sm text-gray-500 hover:border-[#C4A35A] hover:text-[#111111] transition-colors"
+                  >
+                    <Camera size={18} />
+                    <span className="truncate">Joindre une ou plusieurs photos</span>
+                  </button>
+                ) : (
+                  <div className="grid grid-cols-4 gap-2">
+                    {previews.map((p, idx) => (
+                      <div key={p.url} className="relative aspect-square rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={p.url} alt={`Capture ${idx + 1}`} className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => removeFile(idx)}
+                          aria-label={`Retirer la photo ${idx + 1}`}
+                          className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white flex items-center justify-center active:scale-90"
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
+                    ))}
+                    {files.length < MAX_PHOTOS && (
+                      <button
+                        type="button"
+                        onClick={() => fileRef.current?.click()}
+                        aria-label="Ajouter des photos"
+                        className="aspect-square rounded-xl border border-dashed border-gray-300 flex items-center justify-center text-gray-400 hover:border-[#C4A35A] hover:text-[#111111] transition-colors"
+                      >
+                        <Plus size={20} />
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Envoyer */}
