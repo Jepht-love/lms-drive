@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { updateLateFee } from '@/lib/actions/reservations'
-import { Check, Loader2, Pencil, X } from 'lucide-react'
+import { Check, Loader2, Pencil, Plus, X } from 'lucide-react'
 
 interface Props {
   reservationId: string
@@ -56,8 +56,14 @@ export default function LateFeeEditor({ reservationId, lateFeeAmount, lateMinute
   }
 
   if (!editing) {
+    // Toute la ligne est tappable et l'action reste visible : sur mobile (tactile)
+    // il n'y a pas de survol, un bouton en opacity-0/hover serait invisible.
     return (
-      <div className="flex items-center justify-between group">
+      <button
+        type="button"
+        onClick={() => setEditing(true)}
+        className="w-full flex items-center justify-between text-left -mx-1 px-1 py-1 rounded-xl active:bg-gray-50 transition-colors"
+      >
         <div>
           <dt className="text-xs text-gray-400 uppercase tracking-wide">Retard client</dt>
           <dd className="text-sm font-medium mt-0.5">
@@ -70,14 +76,16 @@ export default function LateFeeEditor({ reservationId, lateFeeAmount, lateMinute
             )}
           </dd>
         </div>
-        <button
-          onClick={() => setEditing(true)}
-          className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-gray-100 transition-all ml-2 flex-shrink-0"
-          title={hasFee ? 'Modifier le retard' : 'Ajouter un retard'}
-        >
-          <Pencil className="w-3.5 h-3.5 text-gray-400" />
-        </button>
-      </div>
+        {hasFee ? (
+          <span className="p-1.5 rounded-lg bg-gray-100 text-gray-500 flex-shrink-0 ml-2">
+            <Pencil className="w-3.5 h-3.5" />
+          </span>
+        ) : (
+          <span className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-orange-50 text-orange-700 text-xs font-semibold flex-shrink-0 ml-2">
+            <Plus className="w-3.5 h-3.5" /> Ajouter
+          </span>
+        )}
+      </button>
     )
   }
 
