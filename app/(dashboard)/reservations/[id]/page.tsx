@@ -16,6 +16,7 @@ import EditDatesPanel from '../EditDatesPanel'
 import ProlongReservation from '../ProlongReservation'
 import WorkflowStepper from '../WorkflowStepper'
 import InvoiceCard from '../InvoiceCard'
+import LateFeeEditor from '../LateFeeEditor'
 import DeleteButton from '@/components/ui/DeleteButton'
 import { deleteReservation } from '@/lib/actions/delete'
 import PaymentCountdownMini from '../PaymentCountdownMini'
@@ -152,6 +153,9 @@ export default async function ReservationPage({
   const isLate    = reservation.status === 'en_retard'
   const hasExtraFees =
     (reservation.late_fee_amount > 0) || (reservation.extra_km_count > 0)
+  // Le frais de retard peut être saisi/ajusté à la main dès que le véhicule est
+  // sorti (en cours / en retard) ou déjà rendu (terminé).
+  const canEditLateFee = ['en_cours', 'en_retard', 'terminee'].includes(reservation.status)
 
   // Chrono acompte : 2 h à partir de la création de l'option, tant que l'acompte
   // n'est pas encaissé. Affichage seul, aucune annulation automatique.
@@ -345,11 +349,18 @@ export default async function ReservationPage({
       </div>
 
       {/* ─── Frais complémentaires (retard / km) ─── */}
-      {hasExtraFees && (
+      {(hasExtraFees || canEditLateFee) && (
         <div className="bg-orange-50 border border-orange-100 rounded-2xl p-4">
           <SectionLabel>Frais complémentaires</SectionLabel>
-          <div>
-            {reservation.late_fee_amount > 0 && (
+          <div className="space-y-3">
+            {/* Retard : éditable à la main quand le véhicule est sorti/rendu ; sinon lecture seule. */}
+            {canEditLateFee ? (
+              <LateFeeEditor
+                reservationId={id}
+                lateFeeAmount={reservation.late_fee_amount ?? null}
+                lateMinutes={reservation.late_minutes ?? null}
+              />
+            ) : reservation.late_fee_amount > 0 && (
               <InfoRow label={`Retard (${reservation.late_minutes} min)`}>
                 <span className="text-orange-700">{formatPrice(reservation.late_fee_amount)}</span>
               </InfoRow>
@@ -359,11 +370,13 @@ export default async function ReservationPage({
                 <span className="text-orange-700">{formatPrice(reservation.extra_km_amount)}</span>
               </InfoRow>
             )}
-            <InfoRow label="Total frais">
-              <span className="text-orange-700 text-base font-extrabold">
-                {formatPrice((reservation.late_fee_amount ?? 0) + (reservation.extra_km_amount ?? 0))}
-              </span>
-            </InfoRow>
+            {(reservation.late_fee_amount > 0 || reservation.extra_km_count > 0) && (
+              <InfoRow label="Total frais">
+                <span className="text-orange-700 text-base font-extrabold">
+                  {formatPrice((reservation.late_fee_amount ?? 0) + (reservation.extra_km_amount ?? 0))}
+                </span>
+              </InfoRow>
+            )}
           </div>
         </div>
       )}

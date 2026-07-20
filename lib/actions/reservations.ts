@@ -478,6 +478,75 @@ export async function markReservationDeparted(reservationId: string) {
   return { ok: true }
 }
 
+/**
+ * Saisie/ajustement MANUEL du frais de retard sur une réservation, sans passer
+ * par tout l'EDL retour. Le gérant décide du montant facturé (« je l'ai facturée
+ * combien ») ; la durée en minutes est optionnelle (info/libellé de facture).
+ *
+ * Écrit `late_fee_amount`, `late_minutes` et `late_fee_validated` (true dès qu'un
+ * montant > 0 est saisi : la saisie manuelle vaut validation). Ces champs sont
+ * relus tels quels par la facture complémentaire (generateInvoiceDraft) et par la
+ * comptabilité (postRentalRevenue). Si la réservation est déjà clôturée
+ * (`terminee`), on synchronise immédiatement la ligne compta `frais_retard`
+ * (création / mise à jour / suppression) pour refléter le montant saisi.
+ */
+export async function updateLateFee(
+  reservationId: string,
+  lateFeeAmount: number,
+  lateMinutes: number | null,
+) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié' }
+
+  const amount = Math.max(0, Math.round((lateFeeAmount || 0) * 100) / 100)
+  const minutes = lateMinutes != null && lateMinutes > 0 ? Math.round(lateMinutes) : 0
+  const validated = amount > 0
+
+  const { data: res, error } = await supabase
+    .from('reservations')
+    .update({ late_fee_amount: amount, late_minutes: minutes, late_fee_validated: validated })
+    .eq('id', reservationId)
+    .select('status, vehicle_id, reservation_number')
+    .single()
+
+  if (error) return { error: error.message }
+
+  // Synchronisation comptable uniquement si la location est déjà clôturée : sinon
+  // le frais sera posté normalement à la clôture (late_fee_validated est déjà à true).
+  if (res?.status === 'terminee') {
+    const admin = createAdminClient()
+    const { data: existingTx } = await admin
+      .from('financial_transactions')
+      .select('id')
+      .eq('reservation_id', reservationId)
+      .eq('category', 'frais_retard')
+      .maybeSingle()
+
+    if (validated && !existingTx) {
+      await admin.from('financial_transactions').insert({
+        date: new Date().toISOString().slice(0, 10),
+        type: 'recette',
+        category: 'frais_retard',
+        vehicle_id: res.vehicle_id,
+        reservation_id: reservationId,
+        reference: res.reservation_number,
+        amount,
+        notes: `Frais de retard ${res.reservation_number}`,
+        created_by: user.id,
+      })
+    } else if (validated && existingTx) {
+      await admin.from('financial_transactions').update({ amount }).eq('id', existingTx.id)
+    } else if (!validated && existingTx) {
+      // Retard retiré / remis à 0 → on supprime la recette correspondante.
+      await admin.from('financial_transactions').delete().eq('id', existingTx.id)
+    }
+  }
+
+  revalidatePath(`/reservations/${reservationId}`)
+  return { success: true }
+}
+
 export async function updateReservationStatus(id: string, status: ReservationStatus) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
