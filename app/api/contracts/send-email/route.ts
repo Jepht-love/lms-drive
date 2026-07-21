@@ -8,6 +8,7 @@ import { renderContractInvoiceAttachment, markRestitutionInvoiceSent } from '@/l
 import { createElement, type ReactElement } from 'react'
 import { logEmail } from '@/lib/email/log'
 import { RESEND_FROM, resendTo } from '@/lib/email/config'
+import { contractDepartEmail, contractRetourEmail } from '@/lib/email/templates'
 
 export async function POST(request: NextRequest) {
   try {
@@ -39,7 +40,6 @@ export async function POST(request: NextRequest) {
     const buffer = await renderToBuffer(element)
 
     const hasArrivee = (pdfData.inspections ?? []).some(i => i.type === 'arrivee')
-    const docLabel = hasArrivee ? 'contrat de restitution (avec les états des lieux de départ et de retour)' : 'contrat de location'
 
     // Facture de restitution jointe AU MÊME EMAIL que le contrat signé : le client
     // reçoit le contrat détaillant l'état des lieux ET la facture des éléments
@@ -54,31 +54,25 @@ export async function POST(request: NextRequest) {
     ]
     if (invoiceAttachment) attachments.push(invoiceAttachment)
 
+    // Modèle « agence » : confirmation au départ, restitution (+ estimation des
+    // frais) au retour. Corps HTML + objet centralisés dans lib/email/templates.
+    const parties = {
+      client: { firstName: c.first_name, lastName: c.last_name },
+      vehicle: { brand: v?.brand, model: v?.model, plate: v?.plate },
+      contractNumber: contract.contract_number,
+      startDatetime: r?.start_datetime,
+      endDatetime: r?.end_datetime,
+      agency: pdfData.agency,
+    }
+    const mail = hasArrivee
+      ? contractRetourEmail({ ...parties, hasInvoice: !!invoiceAttachment })
+      : contractDepartEmail({ ...parties, totalPrice: r?.total_price })
+
     await resend.emails.send({
       from: RESEND_FROM,
       to: resendTo(c.email),
-      subject: `Votre ${hasArrivee ? 'contrat de restitution' : 'contrat de location'} ${contract.contract_number}`,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #2563eb;">LMS Drive — ${hasArrivee ? 'Contrat de restitution' : 'Contrat de location'}</h2>
-          <p>Bonjour ${c.first_name} ${c.last_name},</p>
-          <p>Veuillez trouver ci-joint votre ${docLabel} <strong>${contract.contract_number}</strong> pour le véhicule <strong>${v?.brand} ${v?.model} — ${v?.plate}</strong>.</p>
-          <p>
-            <strong>Départ :</strong> ${r?.start_datetime ? new Date(r.start_datetime).toLocaleString('fr-FR') : '—'}<br>
-            <strong>Retour ${hasArrivee ? '' : 'prévu '}:</strong> ${r?.end_datetime ? new Date(r.end_datetime).toLocaleString('fr-FR') : '—'}<br>
-            <strong>Montant total :</strong> ${r?.total_price?.toFixed(2)} €
-          </p>
-          ${invoiceAttachment ? `<p>Une <strong>facture</strong> détaillant les éléments facturés lors de la restitution est également jointe à cet email.</p>` : ''}
-          <p>Conservez ce document : il détaille les conditions de location et l'état du véhicule au départ comme au retour.</p>
-          <p style="color: #64748b; font-size: 11px; border-top: 1px solid #e2e8f0; margin-top: 16px; padding-top: 12px;">
-            Vos données personnelles (nom, coordonnées, pièce d'identité, permis de conduire) sont traitées par LMS Drive
-            dans le cadre de l'exécution du contrat de location (Art. 6.1.b RGPD). Elles sont conservées 5 ans à compter
-            de la fin du contrat. Vous disposez d'un droit d'accès, de rectification, d'effacement et de portabilité.
-            Pour exercer ces droits, contactez-nous par email.
-          </p>
-          <p style="color: #64748b; font-size: 12px;">— LMS Drive</p>
-        </div>
-      `,
+      subject: mail.subject,
+      html: mail.html,
       attachments,
     })
 
@@ -99,7 +93,7 @@ export async function POST(request: NextRequest) {
     await logEmail({
       type: hasArrivee ? 'contrat_restitution' : 'contrat_location',
       recipient: c.email,
-      subject: `Votre ${hasArrivee ? 'contrat de restitution' : 'contrat de location'} ${contract.contract_number}`,
+      subject: mail.subject,
       status: 'envoye',
       referenceType: 'contract',
       referenceId: contractId,
