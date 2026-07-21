@@ -1098,6 +1098,27 @@ export default function InspectionFlow({
             damageFeeAmount: totalDamageFee,
           }
         }
+        // Photos jointes à l'EDL : les photos obligatoires (avec libellé) + les
+        // photos des dégâts intérieurs — les photos des zones carrosserie sont
+        // dérivées de `damages` dans RecapSignatures.
+        const photosJointes = [
+          ...MANDATORY_PHOTOS.filter(p => photos[p.type]).map(p => ({ label: p.label, url: photos[p.type] })),
+          ...Object.entries(interiorPhotos).flatMap(([id, pics]) =>
+            pics.map((url, i) => ({
+              label: `${INTERIOR_DAMAGE_ITEMS.find(x => x.id === id)?.label ?? id}${pics.length > 1 ? ` (${i + 1})` : ''}`,
+              url,
+            }))),
+        ]
+        // EDL retour : dommages du départ reconstruits pour la comparaison
+        // schéma côte à côte (même format que `damages`).
+        const previousDamagesMap: Record<string, DamageEntry[]> = {}
+        for (const z of previousDamagedZones) {
+          previousDamagesMap[z.id] = [{
+            severity: z.severity as DamageEntry['severity'],
+            comment: z.description ?? '',
+            photos: z.photos ?? [],
+          }]
+        }
         return (
           <RecapSignatures
             type={type}
@@ -1109,6 +1130,9 @@ export default function InspectionFlow({
               zonesAbimees: zonesAbimeesRecap,
             }}
             retour={retourRecap}
+            damages={damages}
+            photosJointes={photosJointes}
+            previousDamages={type === 'arrivee' ? previousDamagesMap : null}
             reconnu={reconnu}
             setReconnu={setReconnu}
             edlSig={clientSig}

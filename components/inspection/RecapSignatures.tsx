@@ -3,12 +3,17 @@
 // Étape finale de l'EDL « comme en agence de location » (ticket SAV gérant 21/07) :
 // UNE page qui se déroule — le contrat descend, les zones de signature sont
 // intégrées au fil du document, cliquables.
-//   Départ : en-tête contrat → état des lieux (case + signature) → clauses
-//            complètes → signature du contrat. 2 signatures, une page.
-//   Retour : en-tête → comparaison départ/retour + frais → case + signature EDL.
-//            Le contrat ne se re-signe pas (signé au départ).
-import { AlertTriangle, Car, ChevronLeft, ClipboardCheck, FileText, Fuel, Gauge } from 'lucide-react'
+//   Départ : en-tête contrat → état des lieux PRÉVISUALISÉ (schéma, zones
+//            relevées, photos jointes) + case + signature → clauses complètes
+//            → signature du contrat. 2 signatures, une page.
+//   Retour : comparaison EDL aller/retour (schémas côte à côte + photos des
+//            dommages) → contrat de restitution avec chiffrage → case +
+//            signature EDL. Le contrat ne se re-signe pas (signé au départ).
+import { AlertTriangle, Camera, Car, ChevronLeft, ClipboardCheck, FileText, Fuel, Gauge } from 'lucide-react'
 import ZoneSignature from '@/components/signature/ZoneSignature'
+import VehicleInspectionMap from '@/components/vehicle-schema/VehicleInspectionMap'
+import DamageComparison from '@/components/vehicle-schema/DamageComparison'
+import { VEHICLE_ZONES, graviteLabel, type DamageEntry } from '@/components/vehicle-schema/inspection-types'
 import { getFeesTable, getLegalArticles, VIDEO_CLAUSE } from '@/lib/contracts/legal-articles'
 
 export interface ContratInfo {
@@ -47,11 +52,19 @@ export interface RecapRetour {
   damageFeeAmount: number
 }
 
+export interface PhotoJointe {
+  label: string
+  url: string
+}
+
 interface Props {
   type: 'depart' | 'arrivee'
   contrat: ContratInfo | null // null = convention inter-agences (pas de contrat locataire)
   edl: RecapEdl
   retour?: RecapRetour | null
+  damages: Record<string, DamageEntry[]>
+  photosJointes: PhotoJointe[]
+  previousDamages?: Record<string, DamageEntry[]> | null
   reconnu: boolean
   setReconnu: (v: boolean) => void
   edlSig: string | null
@@ -75,9 +88,29 @@ function fmtDate(dt: string) {
 const fmtPrix = (n: number | null | undefined) =>
   n == null ? '—' : `${n.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €`
 
+function GaleriePhotos({ titre, photos }: { titre: string; photos: PhotoJointe[] }) {
+  if (photos.length === 0) return null
+  return (
+    <div className="space-y-2">
+      <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400 flex items-center gap-1.5">
+        <Camera className="w-3.5 h-3.5" /> {titre} ({photos.length})
+      </p>
+      <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+        {photos.map((p, i) => (
+          <figure key={i} className="space-y-1">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={p.url} alt={p.label} className="w-full aspect-square object-cover rounded-lg border border-gray-100" />
+            <figcaption className="text-[9px] text-gray-400 truncate text-center">{p.label}</figcaption>
+          </figure>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function RecapSignatures({
-  type, contrat, edl, retour, reconnu, setReconnu,
-  edlSig, setEdlSig, contratSig, setContratSig,
+  type, contrat, edl, retour, damages, photosJointes, previousDamages,
+  reconnu, setReconnu, edlSig, setEdlSig, contratSig, setContratSig,
   saving, error, onBack, onSubmit,
 }: Props) {
   const isDepart = type === 'depart'
@@ -97,71 +130,154 @@ export default function RecapSignatures({
   const needContratSig = isDepart && !!contrat
   const ready = reconnu && !!edlSig && (!needContratSig || !!contratSig)
 
+  // Détail des zones relevées sur cet EDL (gravité + commentaire) + leurs photos
+  const zonesRelevees = Object.entries(damages)
+    .filter(([, entries]) => entries.length > 0)
+    .map(([zoneId, entries]) => ({
+      zoneId,
+      label: VEHICLE_ZONES.find(z => z.id === zoneId)?.label ?? zoneId,
+      entries,
+    }))
+  const photosDommages: PhotoJointe[] = zonesRelevees.flatMap(z =>
+    z.entries.flatMap(e => e.photos.map(url => ({ label: z.label, url }))),
+  )
+
+  /* ── En-tête contrat (réutilisé : « location » au départ, « restitution » au retour) ── */
+  const enTeteContrat = contrat && (
+    <>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h3 className="font-bold text-gray-900 text-lg">
+            {isDepart ? 'Contrat de location' : 'Contrat de restitution'}
+          </h3>
+          <p className="text-xs text-gray-400 font-mono">{contrat.numero}</p>
+        </div>
+        <FileText className="w-5 h-5 text-gray-300 flex-shrink-0" />
+      </div>
+      <div className="grid grid-cols-2 gap-4 text-sm">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Loueur</p>
+          <p className="font-bold text-gray-900">LMS Drive</p>
+        </div>
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Locataire</p>
+          <p className="font-bold text-gray-900">{contrat.clientNom}</p>
+          {contrat.clientPhone && <p className="text-xs text-gray-500">{contrat.clientPhone}</p>}
+          {contrat.clientAddress && <p className="text-xs text-gray-400">{contrat.clientAddress}</p>}
+        </div>
+      </div>
+      <div className="rounded-xl bg-gray-50 p-3 flex items-center gap-3">
+        <Car className="w-5 h-5 text-gray-400 flex-shrink-0" />
+        <div>
+          <p className="font-bold text-gray-900">{contrat.vehiculeLabel}</p>
+          <p className="text-xs text-gray-400 font-mono">{contrat.plate}</p>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3 text-sm">
+        <div className="rounded-xl bg-blue-50 p-3">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-blue-500">Départ</p>
+          <p className="font-bold text-gray-900">{fmtDate(contrat.debut)}</p>
+        </div>
+        <div className="rounded-xl bg-purple-50 p-3">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-purple-500">Retour prévu</p>
+          <p className="font-bold text-gray-900">{fmtDate(contrat.fin)}</p>
+        </div>
+      </div>
+      <div className="grid grid-cols-3 gap-3 text-sm">
+        <div className="rounded-xl bg-gray-50 p-3">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Prix/jour</p>
+          <p className="font-bold text-gray-900">{fmtPrix(contrat.prixJour)}</p>
+        </div>
+        <div className="rounded-xl bg-gray-50 p-3">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">KM inclus</p>
+          <p className="font-bold text-gray-900">{contrat.kmInclus}</p>
+        </div>
+        <div className="rounded-xl bg-green-50 p-3">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-green-600">Total</p>
+          <p className="font-bold text-green-800">{fmtPrix(contrat.total)}</p>
+        </div>
+      </div>
+    </>
+  )
+
+  /* ── Chiffrage du retour (retard, km sup, dommages) ── */
+  const chiffrageRetour = !isDepart && retour && (
+    <div className="rounded-xl border border-amber-100 bg-amber-50/60 p-4 space-y-2">
+      <p className="text-xs font-black uppercase tracking-wide text-amber-700">
+        Chiffrage du retour
+      </p>
+      {retour.zonesPreexistantes.length > 0 && (
+        <p className="text-xs text-gray-500">
+          Déjà présents au départ (non facturés) : {retour.zonesPreexistantes.join(', ')}
+        </p>
+      )}
+      <div className="divide-y divide-amber-100 text-sm">
+        {retour.lateFeeAmount > 0 && (
+          <div className="flex justify-between py-1.5">
+            <span className="text-gray-600">Frais de retard ({Math.round(retour.lateMinutes)} min)</span>
+            <span className="font-bold text-red-600">+{fmtPrix(retour.lateFeeAmount)}</span>
+          </div>
+        )}
+        {retour.extraKmAmount > 0 && (
+          <div className="flex justify-between py-1.5">
+            <span className="text-gray-600">Km supplémentaires ({retour.extraKmCount})</span>
+            <span className="font-bold text-red-600">+{fmtPrix(retour.extraKmAmount)}</span>
+          </div>
+        )}
+        {retour.damageFeeAmount > 0 && (
+          <div className="flex justify-between py-1.5">
+            <span className="text-gray-600">Dommages constatés</span>
+            <span className="font-bold text-red-600">+{fmtPrix(retour.damageFeeAmount)}</span>
+          </div>
+        )}
+        <div className="flex justify-between py-1.5">
+          <span className="font-bold text-gray-900">Total frais supplémentaires</span>
+          <span className="font-black text-gray-900">{fmtPrix(totalFraisRetour)}</span>
+        </div>
+      </div>
+    </div>
+  )
+
+  /* ── Case de reconnaissance + signature EDL ── */
+  const caseEtSignatureEdl = (
+    <>
+      <label className="flex items-start gap-3 cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={reconnu}
+          onChange={e => setReconnu(e.target.checked)}
+          className="mt-0.5 w-5 h-5 rounded border-gray-300 accent-blue-600"
+        />
+        <span className="text-sm text-gray-700">
+          Le locataire reconnaît l&apos;état du véhicule constaté ci-dessus
+          {edl.photoCount > 0 ? ' (photos horodatées à l\'appui)' : ''}
+          {!isDepart && totalFraisRetour > 0 ? ' ainsi que les frais supplémentaires chiffrés' : ''}.
+        </span>
+      </label>
+      <ZoneSignature
+        label={`Signature de l'état des lieux ${isDepart ? 'départ' : 'retour'}`}
+        value={edlSig}
+        onChange={setEdlSig}
+      />
+    </>
+  )
+
   return (
     <div className="space-y-4">
 
-      {/* ══ 1. EN-TÊTE CONTRAT — loueur, locataire, véhicule, dates, prix ══ */}
-      {contrat && (
+      {/* ══ DÉPART · 1. EN-TÊTE CONTRAT — loueur, locataire, véhicule, dates, prix ══ */}
+      {isDepart && contrat && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h3 className="font-bold text-gray-900 text-lg">Contrat de location</h3>
-              <p className="text-xs text-gray-400 font-mono">{contrat.numero}</p>
-            </div>
-            <FileText className="w-5 h-5 text-gray-300 flex-shrink-0" />
-          </div>
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Loueur</p>
-              <p className="font-bold text-gray-900">LMS Drive</p>
-            </div>
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Locataire</p>
-              <p className="font-bold text-gray-900">{contrat.clientNom}</p>
-              {contrat.clientPhone && <p className="text-xs text-gray-500">{contrat.clientPhone}</p>}
-              {contrat.clientAddress && <p className="text-xs text-gray-400">{contrat.clientAddress}</p>}
-            </div>
-          </div>
-          <div className="rounded-xl bg-gray-50 p-3 flex items-center gap-3">
-            <Car className="w-5 h-5 text-gray-400 flex-shrink-0" />
-            <div>
-              <p className="font-bold text-gray-900">{contrat.vehiculeLabel}</p>
-              <p className="text-xs text-gray-400 font-mono">{contrat.plate}</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div className="rounded-xl bg-blue-50 p-3">
-              <p className="text-[10px] font-bold uppercase tracking-wide text-blue-500">Départ</p>
-              <p className="font-bold text-gray-900">{fmtDate(contrat.debut)}</p>
-            </div>
-            <div className="rounded-xl bg-purple-50 p-3">
-              <p className="text-[10px] font-bold uppercase tracking-wide text-purple-500">Retour prévu</p>
-              <p className="font-bold text-gray-900">{fmtDate(contrat.fin)}</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-3 gap-3 text-sm">
-            <div className="rounded-xl bg-gray-50 p-3">
-              <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Prix/jour</p>
-              <p className="font-bold text-gray-900">{fmtPrix(contrat.prixJour)}</p>
-            </div>
-            <div className="rounded-xl bg-gray-50 p-3">
-              <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">KM inclus</p>
-              <p className="font-bold text-gray-900">{contrat.kmInclus}</p>
-            </div>
-            <div className="rounded-xl bg-green-50 p-3">
-              <p className="text-[10px] font-bold uppercase tracking-wide text-green-600">Total</p>
-              <p className="font-bold text-green-800">{fmtPrix(contrat.total)}</p>
-            </div>
-          </div>
+          {enTeteContrat}
         </div>
       )}
 
-      {/* ══ 2. ÉTAT DES LIEUX — récap + comparaison retour + case + SIGNATURE ══ */}
+      {/* ══ ÉTAT DES LIEUX — relevé, schéma/comparaison, photos ══ */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
         <div className="flex items-center gap-2">
           <ClipboardCheck className="w-5 h-5 text-blue-500" />
           <h3 className="font-bold text-gray-900">
-            État des lieux de {isDepart ? 'départ' : 'retour'}
+            {isDepart ? 'État des lieux de départ' : 'Comparaison états des lieux départ / retour'}
           </h3>
         </div>
 
@@ -194,82 +310,65 @@ export default function RecapSignatures({
             ? 'aucune zone signalée'
             : `${edl.zonesAbimees.length} zone${edl.zonesAbimees.length > 1 ? 's' : ''} signalée${edl.zonesAbimees.length > 1 ? 's' : ''}`}
         </p>
-        {edl.zonesAbimees.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {edl.zonesAbimees.map((z, i) => (
-              <span key={i} className="text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-100 rounded-full px-2.5 py-1">
-                {z.label}
-              </span>
-            ))}
-          </div>
-        )}
 
-        {/* Comparaison + frais — EDL retour uniquement */}
-        {!isDepart && retour && (
-          <div className="rounded-xl border border-amber-100 bg-amber-50/60 p-4 space-y-2">
-            <p className="text-xs font-black uppercase tracking-wide text-amber-700">
-              Comparaison départ / retour
-            </p>
-            {retour.nouvellesZones.length > 0 ? (
-              <p className="text-sm text-gray-700">
-                <strong>{retour.nouvellesZones.length}</strong> nouveau{retour.nouvellesZones.length > 1 ? 'x' : ''} dommage{retour.nouvellesZones.length > 1 ? 's' : ''} : {retour.nouvellesZones.join(', ')}
-              </p>
-            ) : (
-              <p className="text-sm text-gray-700">Aucun nouveau dommage par rapport au départ.</p>
-            )}
-            {retour.zonesPreexistantes.length > 0 && (
-              <p className="text-xs text-gray-500">
-                Déjà présents au départ (non facturés) : {retour.zonesPreexistantes.join(', ')}
-              </p>
-            )}
-            <div className="divide-y divide-amber-100 text-sm">
-              {retour.lateFeeAmount > 0 && (
-                <div className="flex justify-between py-1.5">
-                  <span className="text-gray-600">Frais de retard ({Math.round(retour.lateMinutes)} min)</span>
-                  <span className="font-bold text-red-600">+{fmtPrix(retour.lateFeeAmount)}</span>
-                </div>
-              )}
-              {retour.extraKmAmount > 0 && (
-                <div className="flex justify-between py-1.5">
-                  <span className="text-gray-600">Km supplémentaires ({retour.extraKmCount})</span>
-                  <span className="font-bold text-red-600">+{fmtPrix(retour.extraKmAmount)}</span>
-                </div>
-              )}
-              {retour.damageFeeAmount > 0 && (
-                <div className="flex justify-between py-1.5">
-                  <span className="text-gray-600">Dommages constatés</span>
-                  <span className="font-bold text-red-600">+{fmtPrix(retour.damageFeeAmount)}</span>
-                </div>
-              )}
-              <div className="flex justify-between py-1.5">
-                <span className="font-bold text-gray-900">Total frais supplémentaires</span>
-                <span className="font-black text-gray-900">{fmtPrix(totalFraisRetour)}</span>
+        {/* DÉPART : schéma du véhicule + zones relevées + photos jointes */}
+        {isDepart && (
+          <>
+            <VehicleInspectionMap
+              damages={damages}
+              onDamageAdd={() => {}}
+              onDamageRemove={() => {}}
+              readonly
+              phase="departure"
+            />
+            {zonesRelevees.length > 0 && (
+              <div className="space-y-1.5">
+                <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Éléments relevés</p>
+                {zonesRelevees.map(z => (
+                  <div key={z.zoneId} className="flex items-start justify-between gap-3 rounded-xl bg-amber-50/70 border border-amber-100 px-3 py-2 text-sm">
+                    <div className="min-w-0">
+                      <p className="font-semibold text-gray-900">{z.label}</p>
+                      {z.entries[0]?.comment && (
+                        <p className="text-xs text-gray-500 truncate">{z.entries[0].comment}</p>
+                      )}
+                    </div>
+                    <span className="text-xs font-bold text-amber-700 flex-shrink-0">
+                      {graviteLabel(z.entries[0]?.severity)}
+                    </span>
+                  </div>
+                ))}
               </div>
-            </div>
-          </div>
+            )}
+            <GaleriePhotos titre="Photos jointes à l'état des lieux" photos={[...photosJointes, ...photosDommages]} />
+          </>
         )}
 
-        {/* Petite case de reconnaissance + signature EDL cliquable */}
-        <label className="flex items-start gap-3 cursor-pointer select-none">
-          <input
-            type="checkbox"
-            checked={reconnu}
-            onChange={e => setReconnu(e.target.checked)}
-            className="mt-0.5 w-5 h-5 rounded border-gray-300 accent-blue-600"
-          />
-          <span className="text-sm text-gray-700">
-            Le locataire reconnaît l&apos;état du véhicule constaté ci-dessus
-            {edl.photoCount > 0 ? ' (photos horodatées à l\'appui)' : ''}.
-          </span>
-        </label>
-        <ZoneSignature
-          label={`Signature de l'état des lieux ${isDepart ? 'départ' : 'retour'}`}
-          value={edlSig}
-          onChange={setEdlSig}
-        />
+        {/* RETOUR : schémas départ/retour côte à côte + photos des dommages */}
+        {!isDepart && (
+          <>
+            <DamageComparison
+              departureDamages={previousDamages ?? {}}
+              returnDamages={damages}
+            />
+            <GaleriePhotos titre="Photos des dommages constatés au retour" photos={photosDommages} />
+            <GaleriePhotos titre="Photos jointes à l'état des lieux retour" photos={photosJointes} />
+          </>
+        )}
+
+        {/* DÉPART : case + signature EDL directement sous l'état des lieux */}
+        {isDepart && caseEtSignatureEdl}
       </div>
 
-      {/* ══ 3. CLAUSES DU CONTRAT (le contrat « descend ») — départ seulement ══ */}
+      {/* ══ RETOUR · CONTRAT DE RESTITUTION — en-tête + chiffrage + case + signature ══ */}
+      {!isDepart && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
+          {enTeteContrat}
+          {chiffrageRetour}
+          {caseEtSignatureEdl}
+        </div>
+      )}
+
+      {/* ══ DÉPART · CLAUSES DU CONTRAT (le contrat « descend ») ══ */}
       {needContratSig && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
           <h3 className="font-bold text-gray-900">Conditions de location</h3>
@@ -286,7 +385,7 @@ export default function RecapSignatures({
             </div>
           </div>
 
-          {/* ══ 4. SIGNATURE DU CONTRAT — tout en bas, comme en agence ══ */}
+          {/* SIGNATURE DU CONTRAT — tout en bas, comme en agence */}
           <ZoneSignature
             label="Signature du contrat de location"
             value={contratSig}
