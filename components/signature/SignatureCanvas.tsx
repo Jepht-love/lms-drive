@@ -6,7 +6,6 @@ import { Trash2 } from 'lucide-react'
 interface SignatureCanvasProps {
   onSign: (dataUrl: string) => void
   onClear?: () => void
-  width?: number
   height?: number
   label?: string
   existingSig?: string | null
@@ -15,7 +14,6 @@ interface SignatureCanvasProps {
 export default function SignatureCanvas({
   onSign,
   onClear,
-  width = 500,
   height = 160,
   label = 'Signature',
   existingSig = null,
@@ -24,41 +22,68 @@ export default function SignatureCanvas({
   const isDrawing = useRef(false)
   const hasDrawn = useRef(false)
 
-  const getPoint = (e: PointerEvent | MouseEvent | TouchEvent, canvas: HTMLCanvasElement) => {
-    const rect = canvas.getBoundingClientRect()
-    const scaleX = canvas.width / rect.width
-    const scaleY = canvas.height / rect.height
-
-    if ('touches' in e) {
-      const touch = e.touches[0]
-      return {
-        x: (touch.clientX - rect.left) * scaleX,
-        y: (touch.clientY - rect.top) * scaleY,
-      }
-    }
-    return {
-      x: ((e as MouseEvent).clientX - rect.left) * scaleX,
-      y: ((e as MouseEvent).clientY - rect.top) * scaleY,
-    }
-  }
-
-  useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')!
-
+  const applyStyle = (ctx: CanvasRenderingContext2D) => {
     ctx.strokeStyle = '#1e293b'
     ctx.lineWidth = 2.5
     ctx.lineCap = 'round'
     ctx.lineJoin = 'round'
+  }
 
-    if (existingSig) {
+  // Le contexte est mis à l'échelle du devicePixelRatio (voir resize) : on
+  // dessine donc en pixels CSS, pas en pixels du buffer.
+  const getPoint = (e: PointerEvent | MouseEvent | TouchEvent, canvas: HTMLCanvasElement) => {
+    const rect = canvas.getBoundingClientRect()
+    if ('touches' in e) {
+      const t = e.touches[0]
+      return { x: t.clientX - rect.left, y: t.clientY - rect.top }
+    }
+    return {
+      x: (e as MouseEvent).clientX - rect.left,
+      y: (e as MouseEvent).clientY - rect.top,
+    }
+  }
+
+  // Cale le buffer du canevas sur sa taille AFFICHÉE × densité d'écran. Sans ça,
+  // un buffer étroit étiré sur grand écran (ordi, iPad paysage) déforme la
+  // signature en longs traits horizontaux « bavés » (net seulement sur écran
+  // étroit type iPhone). On préserve le tracé courant lors d'un redimensionnement
+  // (rotation de la tablette) en le redessinant à la nouvelle échelle.
+  const resize = useCallback(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const rect = canvas.getBoundingClientRect()
+    if (rect.width === 0) return
+    const dpr = window.devicePixelRatio || 1
+    const targetW = Math.round(rect.width * dpr)
+    const targetH = Math.round(rect.height * dpr)
+    if (canvas.width === targetW && canvas.height === targetH) return
+
+    // Contenu à restaurer après redimensionnement : tracé en cours, sinon
+    // signature existante fournie en prop.
+    const prev = hasDrawn.current ? canvas.toDataURL('image/png') : existingSig
+
+    canvas.width = targetW
+    canvas.height = targetH
+    const ctx = canvas.getContext('2d')!
+    ctx.scale(dpr, dpr)
+    applyStyle(ctx)
+
+    if (prev) {
       const img = new Image()
-      img.onload = () => ctx.drawImage(img, 0, 0)
-      img.src = existingSig
+      img.onload = () => ctx.drawImage(img, 0, 0, rect.width, rect.height)
+      img.src = prev
       hasDrawn.current = true
     }
   }, [existingSig])
+
+  useEffect(() => {
+    resize()
+    const canvas = canvasRef.current
+    if (!canvas || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(() => resize())
+    ro.observe(canvas)
+    return () => ro.disconnect()
+  }, [resize])
 
   const startDraw = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     e.preventDefault()
@@ -113,14 +138,12 @@ export default function SignatureCanvas({
       <div className="border-2 border-dashed border-gray-200 rounded-xl overflow-hidden bg-gray-50 relative">
         <canvas
           ref={canvasRef}
-          width={width}
-          height={height}
           onPointerDown={startDraw}
           onPointerMove={draw}
           onPointerUp={endDraw}
           onPointerLeave={endDraw}
           className="w-full touch-none cursor-crosshair"
-          style={{ display: 'block' }}
+          style={{ display: 'block', height }}
         />
         {!hasDrawn.current && !existingSig && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
