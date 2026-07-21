@@ -138,7 +138,8 @@ export default function InspectionFlow({
   const [exteriorCleanliness, setExteriorCleanliness] = useState(3)
   const [interiorCleanliness, setInteriorCleanliness] = useState(3)
   const [damages, setDamages] = useState<Record<string, DamageEntry[]>>({})
-  const [damagePrices, setDamagePrices] = useState<Record<string, number>>({})
+  // null = champ vidé par l'utilisateur (affiché vide, compté 0 €)
+  const [damagePrices, setDamagePrices] = useState<Record<string, number | null>>({})
   // Dégâts intérieurs facturés à l'EDL retour (poste → montant libre en €)
   const [interiorCharges, setInteriorCharges] = useState<Record<string, number>>({})
   // Photos des dégâts intérieurs : id du poste → liste de data URLs base64
@@ -230,7 +231,7 @@ export default function InspectionFlow({
   // présents au départ) — prix par défaut de la grille, ajustable par zone.
   function priceForZone(zoneId: string): number {
     const stored = damagePrices[zoneId]
-    if (stored != null) return stored
+    if (stored !== undefined) return stored ?? 0
     return defaultDamagePrice(damages[zoneId]?.[0]?.type)
   }
   const exteriorDamageFee = type === 'arrivee'
@@ -861,8 +862,11 @@ export default function InspectionFlow({
                               type="number"
                               min={0}
                               step="0.01"
-                              value={priceForZone(zoneId)}
-                              onChange={e => setDamagePrices(prev => ({ ...prev, [zoneId]: Number(e.target.value) }))}
+                              value={damagePrices[zoneId] === null ? '' : priceForZone(zoneId)}
+                              onChange={e => setDamagePrices(prev => ({
+                                ...prev,
+                                [zoneId]: e.target.value === '' ? null : Number(e.target.value),
+                              }))}
                               className="w-20 text-sm text-right bg-white border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-blue-400"
                             />
                             <span className="text-xs text-gray-400">€</span>
