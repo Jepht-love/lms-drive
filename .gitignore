@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# éditeur de zones EDL (dev-only) — fichier généré, se régénère via npm run edl:editor
+/edl-editor.local.html

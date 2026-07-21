@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EDL — Éditeur de zones (autonome)</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #111; background: #f3f4f6; }
+  #app { display: flex; flex-direction: column; height: 100vh; }
+  header { display: flex; align-items: center; gap: 12px; padding: 8px 14px; background: #fff; border-bottom: 1px solid #e5e7eb; flex-wrap: wrap; }
+  .pill { font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .1em; padding: 3px 7px; border-radius: 5px; background: #fef3c7; color: #92400e; }
+  h1 { font-size: 14px; font-weight: 800; margin: 0; }
+  .muted { color: #9ca3af; font-size: 12px; }
+  .spacer { flex: 1; }
+  button { font: inherit; cursor: pointer; }
+  .btn { padding: 6px 11px; border-radius: 8px; border: 1px solid #e5e7eb; background: #fff; font-size: 12px; }
+  .btn:hover { background: #f9fafb; }
+  .btn.dark { background: #111; color: #fff; border-color: #111; font-weight: 700; }
+  .btn.dark:disabled { opacity: .4; cursor: default; }
+  .btn.danger { color: #dc2626; }
+  .body { display: flex; flex: 1; min-height: 0; }
+  aside { width: 232px; flex-shrink: 0; background: #fff; border-right: 1px solid #e5e7eb; overflow-y: auto; }
+  .vgroup > .vhead { width: 100%; text-align: left; padding: 8px 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; background: #f9fafb; color: #6b7280; border: 0; border-bottom: 1px solid #f3f4f6; }
+  .vgroup > .vhead.active { background: #111; color: #fff; }
+  .zbtn { width: 100%; display: flex; align-items: center; gap: 8px; padding: 6px 12px; font-size: 12px; text-align: left; border: 0; background: none; color: #374151; }
+  .zbtn:hover { background: #f9fafb; }
+  .zbtn.sel { background: #eff6ff; color: #1e40af; font-weight: 600; }
+  .zbtn.ellipse { color: #cbd5e1; cursor: default; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .dot.prio { background: #f97316; }
+  .dot.dirty { background: #3b82f6; margin-left: auto; }
+  .lock { margin-left: auto; font-size: 10px; }
+  main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  #toolbar { display: flex; align-items: center; gap: 8px; padding: 7px 12px; background: #fff; border-bottom: 1px solid #e5e7eb; flex-wrap: wrap; font-size: 12px; }
+  .sep { width: 1px; height: 16px; background: #e5e7eb; }
+  #readout { color: #6b7280; }
+  #readout b { color: #111827; }
+  #canvasWrap { flex: 1; min-height: 0; background: #fafafa; overflow: hidden; }
+  svg { width: 100%; height: 100%; touch-action: none; user-select: none; cursor: grab; }
+  #help { padding: 6px 12px; background: #fff; border-top: 1px solid #e5e7eb; font-size: 11px; color: #9ca3af; }
+  #overlay { position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,.5); display: none; align-items: center; justify-content: center; padding: 16px; }
+  #overlay.show { display: flex; }
+  #modal { background: #fff; border-radius: 16px; width: 100%; max-width: 760px; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,.3); }
+  #modal .mhead { display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; border-bottom: 1px solid #f3f4f6; gap: 10px; }
+  #modal h2 { font-size: 14px; font-weight: 800; margin: 0; }
+  #modal textarea { flex: 1; margin: 14px; padding: 12px; border-radius: 12px; border: 1px solid #e5e7eb; font-family: ui-monospace, Menlo, monospace; font-size: 11px; color: #1f2937; resize: none; min-height: 320px; }
+  .mactions { display: flex; gap: 8px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <span class="pill">DEV · AUTONOME</span>
+    <h1>Éditeur de zones EDL</h1>
+    <span class="muted" id="repo">recalage des polygones · repère __IMG__×__IMG__</span>
+    <span class="spacer"></span>
+    <span class="muted"><b id="dirtyCount">0</b> zone(s) modifiée(s)</span>
+    <button class="btn dark" id="exportBtn" disabled>Exporter edl-zones.ts</button>
+  </header>
+  <div class="body">
+    <aside id="sidebar"></aside>
+    <main>
+      <div id="toolbar">
+        <button class="btn" id="tbOverview">Vue d’ensemble</button>
+        <button class="btn" id="tbZoomIn">Zoom +</button>
+        <button class="btn" id="tbZoomOut">Zoom −</button>
+        <span class="sep"></span>
+        <button class="btn" id="tbUndo">↶ Annuler</button>
+        <button class="btn" id="tbDelete" disabled>Supprimer le point</button>
+        <button class="btn danger" id="tbReset" style="display:none">Réinitialiser cette zone</button>
+        <span class="spacer"></span>
+        <span id="readout"></span>
+      </div>
+      <div id="canvasWrap">
+        <svg id="svg" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+      <div id="help">Glisser un point bleu = déplacer · Clic sur une pastille blanche d’arête = insérer · Sélectionner un point puis Suppr = retirer · Molette = zoom · Glisser le fond = déplacer · Ctrl/⌘+Z = annuler</div>
+    </main>
+  </div>
+</div>
+
+<div id="overlay">
+  <div id="modal">
+    <div class="mhead">
+      <div>
+        <h2>Export — edl-zones.ts</h2>
+        <div class="muted">Fichier complet (drop-in). Seules les zones modifiées ont changé — remplace le fichier du repo par celui-ci.</div>
+      </div>
+      <div class="mactions">
+        <button class="btn" id="mCopy">Copier</button>
+        <button class="btn dark" id="mDownload">Télécharger</button>
+        <button class="btn" id="mClose">Fermer</button>
+      </div>
+    </div>
+    <textarea id="mText" readonly spellcheck="false"></textarea>
+  </div>
+</div>
+
+<script>
+// ─── Données injectées à la génération ────────────────────────────────────────
+const IMG = __IMG__;
+const SRC = "__SRC_DATA_URI__";
+const ZONES0 = __ZONES_JSON__;
+const SRCTEXT = __SRCTEXT_JSON__;
+const PRIORITY = new Set(__PRIORITY_JSON__);
+const VIEWS = __VIEWS_JSON__;
+
+// ─── État ─────────────────────────────────────────────────────────────────────
+const clone = zs => zs.map(z => ({ ...z, points: z.points ? z.points.map(p => [p[0], p[1]]) : undefined }));
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+let zones = clone(ZONES0);
+const originals = clone(ZONES0);
+let dirty = new Set();
+let view = 'all', selId = null, selVert = null;
+let cam = { x: 0, y: 0, w: IMG, h: IMG };
+let drag = null;
+const history = [];
+
+const svg = document.getElementById('svg');
+const sidebar = document.getElementById('sidebar');
+
+// ─── Géométrie ────────────────────────────────────────────────────────────────
+function zoneBox(z) {
+  if (z.points && z.points.length) {
+    const xs = z.points.map(p => p[0]), ys = z.points.map(p => p[1]);
+    const x = Math.min(...xs), y = Math.min(...ys);
+    return { x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y };
+  }
+  return { x: z.x || 0, y: z.y || 0, w: z.w || 0, h: z.h || 0 };
+}
+function unionBox(ids) {
+  const list = ids ? zones.filter(z => ids.includes(z.id)) : zones;
+  if (!list.length) return { x: 0, y: 0, w: IMG, h: IMG };
+  let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity;
+  for (const z of list) { const bx = zoneBox(z); a = Math.min(a, bx.x); b = Math.min(b, bx.y); c = Math.max(c, bx.x + bx.w); d = Math.max(d, bx.y + bx.h); }
+  return { x: a, y: b, w: c - a, h: d - b };
+}
+const padBox = (bx, pad) => ({ x: bx.x - bx.w * pad, y: bx.y - bx.h * pad, w: bx.w * (1 + 2 * pad), h: bx.h * (1 + 2 * pad) });
+
+function clientToSvg(cx, cy) {
+  const ctm = svg.getScreenCTM();
+  if (!ctm) return { x: 0, y: 0 };
+  const p = new DOMPoint(cx, cy).matrixTransform(ctm.inverse());
+  return { x: p.x, y: p.y };
+}
+
+// ─── Édition ──────────────────────────────────────────────────────────────────
+const pushHistory = () => { history.push(clone(zones)); if (history.length > 80) history.shift(); };
+function updateVertex(id, idx, x, y) { const z = zones.find(z => z.id === id); if (!z || !z.points) return; z.points[idx] = [x, y]; dirty.add(id); renderSvg(); renderReadout(); }
+function insertVertex(id, after) { const z = zones.find(z => z.id === id); if (!z || !z.points) return; pushHistory(); const n = z.points.length, a = z.points[after], b = z.points[(after + 1) % n]; z.points.splice(after + 1, 0, [Math.round((a[0] + b[0]) / 2), Math.round((a[1] + b[1]) / 2)]); selVert = after + 1; dirty.add(id); render(); }
+function deleteVertex() { if (!selId || selVert == null) return; const z = zones.find(z => z.id === selId); if (!z || !z.points || z.points.length <= 3) return; pushHistory(); z.points.splice(selVert, 1); selVert = null; dirty.add(selId); render(); }
+function undo() { const prev = history.pop(); if (prev) { zones = prev; selVert = null; render(); } }
+function resetZone(id) { const o = originals.find(z => z.id === id); if (!o) return; pushHistory(); zones[zones.findIndex(z => z.id === id)] = clone([o])[0]; dirty.delete(id); selVert = null; render(); }
+function selectZone(id) { selId = id; selVert = null; const z = zones.find(z => z.id === id); if (z && z.points) cam = padBox(zoneBox(z), 0.4); render(); }
+function selectView(v) { view = v.key; cam = v.ids ? padBox(unionBox(v.ids), 0.08) : { x: 0, y: 0, w: IMG, h: IMG }; render(); }
+
+// ─── Rendu ────────────────────────────────────────────────────────────────────
+function renderSvg() {
+  svg.setAttribute('viewBox', `${cam.x} ${cam.y} ${cam.w} ${cam.h}`);
+  const hr = cam.w * 0.011, er = cam.w * 0.006, sw = cam.w * 0.0022;
+  let s = `<image href="${SRC}" x="0" y="0" width="${IMG}" height="${IMG}" style="pointer-events:none"/>`;
+  for (const z of zones) {
+    if (!z.points) { const b = zoneBox(z); s += `<ellipse cx="${b.x + b.w / 2}" cy="${b.y + b.h / 2}" rx="${b.w / 2}" ry="${b.h / 2}" fill="rgba(148,163,184,0.06)" stroke="#CBD5E1" stroke-width="${sw}" stroke-dasharray="${cam.w * 0.008},${cam.w * 0.006}" style="pointer-events:none"/>`; continue; }
+    if (z.id === selId) continue;
+    const prio = PRIORITY.has(z.id);
+    s += `<polygon data-role="zone" data-id="${z.id}" points="${z.points.map(p => p.join(',')).join(' ')}" fill="${prio ? 'rgba(249,115,22,0.10)' : 'rgba(59,130,246,0.05)'}" stroke="${prio ? '#F97316' : '#93C5FD'}" stroke-width="${sw}" ${prio ? `stroke-dasharray="${cam.w * 0.01},${cam.w * 0.006}"` : ''} style="cursor:pointer"/>`;
+  }
+  const sel = zones.find(z => z.id === selId);
+  if (sel && sel.points) {
+    s += `<polygon points="${sel.points.map(p => p.join(',')).join(' ')}" fill="rgba(59,130,246,0.14)" stroke="#2563EB" stroke-width="${sw * 1.4}" stroke-linejoin="round" style="pointer-events:none"/>`;
+    const n = sel.points.length;
+    for (let i = 0; i < n; i++) { const p = sel.points[i], q = sel.points[(i + 1) % n]; s += `<circle data-role="edge" data-idx="${i}" cx="${(p[0] + q[0]) / 2}" cy="${(p[1] + q[1]) / 2}" r="${er}" fill="white" stroke="#2563EB" stroke-width="${sw}" style="cursor:copy"/>`; }
+    for (let i = 0; i < n; i++) { const p = sel.points[i]; s += `<circle data-role="vertex" data-idx="${i}" cx="${p[0]}" cy="${p[1]}" r="${hr}" fill="${selVert === i ? '#EF4444' : '#2563EB'}" stroke="white" stroke-width="${sw}" style="cursor:grab"/>`; }
+  }
+  svg.innerHTML = s;
+}
+
+function renderSidebar() {
+  let h = '';
+  for (const v of VIEWS) {
+    if (!v.ids) continue;
+    h += `<div class="vgroup"><button class="vhead ${view === v.key ? 'active' : ''}" data-view="${v.key}">${v.label}</button><div>`;
+    for (const id of v.ids) {
+      const z = zones.find(z => z.id === id);
+      if (!z) continue;
+      const ell = !z.points;
+      h += `<button class="zbtn ${selId === id ? 'sel' : ''} ${ell ? 'ellipse' : ''}" data-zone="${id}" ${ell ? 'disabled' : ''}>`
+        + (PRIORITY.has(id) ? '<span class="dot prio" title="Zone à corriger"></span>' : '')
+        + `<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${z.label}</span>`
+        + (ell ? '<span class="lock">🔒 cercle</span>' : (dirty.has(id) ? '<span class="dot dirty" title="modifiée"></span>' : ''))
+        + `</button>`;
+    }
+    h += `</div></div>`;
+  }
+  sidebar.innerHTML = h;
+}
+
+function renderReadout() {
+  const sel = zones.find(z => z.id === selId);
+  const ro = document.getElementById('readout');
+  const rb = document.getElementById('tbReset');
+  const del = document.getElementById('tbDelete');
+  if (sel) {
+    let t = `<b>${sel.label}</b>`;
+    if (sel.points) { t += ` · ${sel.points.length} pts`; if (selVert != null && sel.points[selVert]) t += ` · point ${selVert + 1} (${sel.points[selVert][0]}, ${sel.points[selVert][1]})`; }
+    ro.innerHTML = t;
+    rb.style.display = sel.points ? '' : 'none';
+  } else { ro.innerHTML = ''; rb.style.display = 'none'; }
+  del.disabled = selVert == null;
+  document.getElementById('dirtyCount').textContent = dirty.size;
+  document.getElementById('exportBtn').disabled = dirty.size === 0;
+}
+
+function render() { renderSvg(); renderSidebar(); renderReadout(); }
+
+// ─── Interactions souris ──────────────────────────────────────────────────────
+svg.addEventListener('pointerdown', e => {
+  const role = e.target.dataset ? e.target.dataset.role : null;
+  if (role === 'vertex') { e.stopPropagation(); pushHistory(); selVert = +e.target.dataset.idx; drag = { mode: 'vertex', id: selId, idx: selVert }; svg.setPointerCapture(e.pointerId); renderReadout(); renderSvg(); return; }
+  if (role === 'edge') return;
+  if (role === 'zone') { selectZone(e.target.dataset.id); return; }
+  selVert = null; svg.style.cursor = 'grabbing'; drag = { mode: 'pan', sx: e.clientX, sy: e.clientY, cx: cam.x, cy: cam.y }; svg.setPointerCapture(e.pointerId); renderReadout();
+});
+svg.addEventListener('pointermove', e => {
+  if (!drag) return;
+  if (drag.mode === 'vertex') { const { x, y } = clientToSvg(e.clientX, e.clientY); updateVertex(drag.id, drag.idx, Math.round(x), Math.round(y)); }
+  else { const r = svg.getBoundingClientRect(); const upp = 1 / Math.min(r.width / cam.w, r.height / cam.h); cam.x = drag.cx - (e.clientX - drag.sx) * upp; cam.y = drag.cy - (e.clientY - drag.sy) * upp; svg.setAttribute('viewBox', `${cam.x} ${cam.y} ${cam.w} ${cam.h}`); }
+});
+svg.addEventListener('pointerup', e => { if (drag) { try { svg.releasePointerCapture(e.pointerId); } catch (_) {} } const wasPan = drag && drag.mode === 'pan'; drag = null; svg.style.cursor = 'grab'; if (wasPan) render(); });
+svg.addEventListener('click', e => { if (e.target.dataset && e.target.dataset.role === 'edge') insertVertex(selId, +e.target.dataset.idx); });
+svg.addEventListener('wheel', e => {
+  e.preventDefault();
+  const { x: mx, y: my } = clientToSvg(e.clientX, e.clientY);
+  const f = e.deltaY > 0 ? 1.12 : 1 / 1.12;
+  const nw = clamp(cam.w * f, 50, IMG * 1.3), nh = nw * (cam.h / cam.w);
+  cam = { x: mx - (mx - cam.x) / cam.w * nw, y: my - (my - cam.y) / cam.h * nh, w: nw, h: nh };
+  renderSvg();
+}, { passive: false });
+
+// Délégation sidebar
+sidebar.addEventListener('click', e => {
+  const vh = e.target.closest('[data-view]'); if (vh) { selectView(VIEWS.find(v => v.key === vh.dataset.view)); return; }
+  const zb = e.target.closest('[data-zone]'); if (zb && !zb.disabled) selectZone(zb.dataset.zone);
+});
+
+// Toolbar
+document.getElementById('tbOverview').onclick = () => selectView(VIEWS[0]);
+document.getElementById('tbZoomIn').onclick = () => { cam = { x: cam.x + cam.w * 0.1, y: cam.y + cam.h * 0.1, w: cam.w * 0.8, h: cam.h * 0.8 }; renderSvg(); };
+document.getElementById('tbZoomOut').onclick = () => { const nw = clamp(cam.w * 1.25, 50, IMG * 1.3); cam = { x: cam.x - cam.w * 0.125, y: cam.y - cam.h * 0.125, w: nw, h: clamp(cam.h * 1.25, 50, IMG * 1.3) }; renderSvg(); };
+document.getElementById('tbUndo').onclick = undo;
+document.getElementById('tbDelete').onclick = deleteVertex;
+document.getElementById('tbReset').onclick = () => { if (selId) resetZone(selId); };
+
+// Clavier
+window.addEventListener('keydown', e => {
+  if (document.getElementById('overlay').classList.contains('show')) return;
+  if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); deleteVertex(); }
+  else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); undo(); }
+});
+
+// ─── Export ───────────────────────────────────────────────────────────────────
+function replacePointsInSource(src, id, points) {
+  const esc = id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const m = new RegExp("id:\\s*['\"]" + esc + "['\"]").exec(src);
+  if (!m) return src;
+  const idEnd = m.index + m[0].length;
+  const pIdx = src.indexOf('points:', idEnd);
+  if (pIdx === -1) return src;
+  if (src.slice(idEnd, pIdx).includes('}')) return src;
+  const bOpen = src.indexOf('[', pIdx);
+  if (bOpen === -1) return src;
+  let depth = 0, i = bOpen;
+  for (; i < src.length; i++) { if (src[i] === '[') depth++; else if (src[i] === ']') { depth--; if (depth === 0) { i++; break; } } }
+  const ser = '[' + points.map(p => `[${Math.round(p[0])},${Math.round(p[1])}]`).join(', ') + ']';
+  return src.slice(0, pIdx) + 'points: ' + ser + src.slice(i);
+}
+function buildExport() { let out = SRCTEXT; for (const id of dirty) { const z = zones.find(z => z.id === id); if (z && z.points) out = replacePointsInSource(out, id, z.points); } return out; }
+
+const overlay = document.getElementById('overlay');
+document.getElementById('exportBtn').onclick = () => { document.getElementById('mText').value = buildExport(); overlay.classList.add('show'); };
+document.getElementById('mClose').onclick = () => overlay.classList.remove('show');
+overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('show'); });
+document.getElementById('mCopy').onclick = () => { const t = document.getElementById('mText'); t.select(); navigator.clipboard ? navigator.clipboard.writeText(t.value) : document.execCommand('copy'); };
+document.getElementById('mDownload').onclick = () => {
+  const blob = new Blob([document.getElementById('mText').value], { type: 'text/plain;charset=utf-8' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'edl-zones.ts'; a.click(); URL.revokeObjectURL(a.href);
+};
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+render();
+</script>
+</body>
+</html>
