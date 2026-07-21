@@ -359,11 +359,30 @@ export default function RecapSignatures({
         {isDepart && caseEtSignatureEdl}
       </div>
 
-      {/* ══ RETOUR · CONTRAT DE RESTITUTION — en-tête + chiffrage + case + signature ══ */}
+      {/* ══ RETOUR · CONTRAT DE RESTITUTION — en-tête + chiffrage + conditions + case + signature ══ */}
       {!isDepart && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
           {enTeteContrat}
           {chiffrageRetour}
+          {/* Le contrat « descend » aussi au retour : conditions signées au départ,
+              relues avant de signer la restitution (pas de re-signature contrat). */}
+          {contrat && (
+            <>
+              <h4 className="font-bold text-gray-900 text-sm">Conditions de location (signées au départ)</h4>
+              <div className="max-h-[300px] overflow-y-auto rounded-xl border border-gray-100 bg-gray-50/60 p-4 space-y-4">
+                {articles.map(a => (
+                  <div key={a.title}>
+                    <p className="text-xs font-black uppercase tracking-wide text-gray-700 mb-1">{a.title}</p>
+                    <p className="text-xs leading-relaxed text-gray-500 whitespace-pre-line">{a.body}</p>
+                  </div>
+                ))}
+                <div>
+                  <p className="text-xs font-black uppercase tracking-wide text-gray-700 mb-1">ÉTAT DES LIEUX PAR PHOTOS</p>
+                  <p className="text-xs leading-relaxed text-gray-500">{VIDEO_CLAUSE}</p>
+                </div>
+              </div>
+            </>
+          )}
           {caseEtSignatureEdl}
         </div>
       )}
