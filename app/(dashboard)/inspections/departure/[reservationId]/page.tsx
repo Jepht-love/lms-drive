@@ -14,7 +14,7 @@ export default async function DepartureInspectionPage({ params }: { params: Prom
 
   const { data: reservation } = await supabase
     .from('reservations')
-    .select('*, vehicle:vehicles(*), client:clients(first_name, last_name)')
+    .select('*, vehicle:vehicles(*), client:clients(first_name, last_name, phone, address)')
     .eq('id', reservationId)
     .single()
 
@@ -23,7 +23,7 @@ export default async function DepartureInspectionPage({ params }: { params: Prom
   // Chercher un contrat existant
   let { data: contract } = await supabase
     .from('contracts')
-    .select('id')
+    .select('id, contract_number, status')
     .eq('reservation_id', reservationId)
     .limit(1)
     .single()
@@ -38,7 +38,7 @@ export default async function DepartureInspectionPage({ params }: { params: Prom
         status: 'a_signer',
         created_by: user.id,
       })
-      .select('id')
+      .select('id, contract_number, status')
       .single()
     contract = newContract
   }
@@ -53,6 +53,29 @@ export default async function DepartureInspectionPage({ params }: { params: Prom
 
   const vehicle = reservation.vehicle as any
   const client = reservation.client as any
+
+  // Contrat prévisualisé + signé sur la page de l'EDL (ticket SAV 21/07).
+  // Déjà signé en amont → pas de re-signature : le flux ne demande que l'EDL.
+  const dejaSigne = contract.status === 'signe' || contract.status === 'cloture'
+  const contratInfo = dejaSigne ? null : {
+    numero: contract.contract_number ?? '',
+    clientNom: `${client?.first_name ?? ''} ${client?.last_name ?? ''}`.trim() || 'Client',
+    clientPhone: client?.phone ?? null,
+    clientAddress: client?.address ?? null,
+    vehiculeLabel: `${vehicle?.brand ?? ''} ${vehicle?.model ?? ''}`.trim(),
+    plate: vehicle?.plate ?? '',
+    debut: reservation.start_datetime,
+    fin: reservation.end_datetime,
+    prixJour: reservation.daily_price ?? null,
+    total: reservation.total_price ?? null,
+    kmInclus: reservation.km_included ?? 200,
+    caution: reservation.deposit_amount ?? 0,
+    categorie: vehicle?.category ?? 'citadine',
+    isSmartFortwo: Boolean(
+      vehicle?.model?.toLowerCase().includes('smart') ||
+      vehicle?.brand?.toLowerCase().includes('smart'),
+    ),
+  }
 
   return (
     <div className="space-y-6">
@@ -71,6 +94,7 @@ export default async function DepartureInspectionPage({ params }: { params: Prom
         vehicleId={vehicle?.id ?? ''}
         vehicleKm={vehicle?.current_km ?? 0}
         reservationId={reservationId}
+        contratInfo={contratInfo}
       />
     </div>
   )

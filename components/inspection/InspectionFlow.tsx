@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import VehicleInspectionMap from '@/components/vehicle-schema/VehicleInspectionMap'
-import SignatureCanvas from '@/components/signature/SignatureCanvas'
+import RecapSignatures, { type ContratInfo } from '@/components/inspection/RecapSignatures'
 import { MANDATORY_PHOTOS } from '@/components/vehicle-schema/zones'
 import { VEHICLE_ZONES as NEW_ZONES, INTERIOR_DAMAGE_ITEMS, graviteLabel, defaultDamagePrice, type DamageEntry } from '@/components/vehicle-schema/inspection-types'
 import { useSavSection } from '@/lib/sav/context'
@@ -34,6 +34,10 @@ interface Props {
   kmIncluded?: number
   extraKmPrice?: number
   previousDamagedZones?: { id: string; label: string; severity: string; description?: string; photos?: string[] }[]
+  // Contrat locataire à prévisualiser/signer dans le flux (ticket SAV 21/07) :
+  // au départ, le contrat descend sous l'EDL et se signe sur la même page.
+  // Absent (null) pour une convention inter-agences.
+  contratInfo?: ContratInfo | null
 }
 
 type Step = 'info' | 'schema' | 'photos' | 'signatures' | 'done'
@@ -91,6 +95,7 @@ export default function InspectionFlow({
   kmIncluded = 200,
   extraKmPrice = 2,
   previousDamagedZones = [],
+  contratInfo = null,
 }: Props) {
   const router = useRouter()
   const supabase = createClient()
@@ -99,7 +104,7 @@ export default function InspectionFlow({
 
   // Contexte SAV : précise l'EDL (départ/retour) et l'étape en cours dans le ticket.
   const STEP_LABELS: Record<Step, string> = {
-    info: 'infos', schema: 'schéma dégâts', photos: 'photos', signatures: 'signature', done: 'terminé',
+    info: 'infos', schema: 'schéma dégâts', photos: 'photos', signatures: 'contrat & signature', done: 'terminé',
   }
   useSavSection(`État des lieux ${type === 'depart' ? 'départ' : 'retour'} · ${STEP_LABELS[step]}`)
 
@@ -115,6 +120,10 @@ export default function InspectionFlow({
   const [interiorPhotos, setInteriorPhotos] = useState<Record<string, string[]>>({})
   const [photos, setPhotos] = useState<Record<string, string>>({})
   const [clientSig, setClientSig] = useState<string | null>(null)
+  // Parcours « comme en agence » : le contrat se signe SUR la page de l'EDL départ
+  // (2 signatures, une page) + petite case de reconnaissance de l'état constaté.
+  const [contratSig, setContratSig] = useState<string | null>(null)
+  const [reconnu, setReconnu] = useState(false)
   // Signature agent supprimée pour l'EDL — remplacée par le cachet entreprise
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -242,8 +251,14 @@ export default function InspectionFlow({
     e.target.value = ''
   }
 
+  // Le contrat se signe dans le flux uniquement au départ, avec un contrat
+  // locataire (les conventions inter-agences n'en ont pas) et s'il n'est pas
+  // déjà signé (résa dont le contrat a été signé en amont).
+  const needContratSig = type === 'depart' && !!reservationId && !!contratInfo
+
   async function handleSubmit() {
-    if (!clientSig) { setError('La signature du client est requise'); return }
+    if (!clientSig) { setError('La signature de l\'état des lieux est requise'); return }
+    if (needContratSig && !contratSig) { setError('La signature du contrat est requise'); return }
     setSaving(true)
     setError(null)
 
@@ -343,6 +358,28 @@ export default function InspectionFlow({
         // Bascule en_cours + sync calendrier + recalcul véhicule, uniquement
         // maintenant que l'EDL départ est validé (plus à l'ouverture de l'écran).
         if (reservationId) await markReservationDeparted(reservationId)
+
+        // Contrat signé sur la même page que l'EDL (ticket SAV 21/07) : on
+        // l'enregistre puis on archive le PDF (contrat + EDL départ) dans les
+        // Documents — plus besoin de repasser par la fiche réservation.
+        if (needContratSig && contratSig) {
+          const signRes = await fetch('/api/contracts/sign', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contractId, clientSignature: contratSig }),
+          })
+          const signData = await signRes.json().catch(() => ({}))
+          if (!signRes.ok || signData?.error) {
+            throw new Error(signData?.error ?? 'Échec de l\'enregistrement de la signature du contrat')
+          }
+          // Archivage PDF : ne bloque pas la fin du départ si la génération échoue
+          // (le PDF reste régénérable depuis l'écran final / la fiche contrat).
+          await fetch('/api/contracts/generate-pdf', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contractId }),
+          }).catch(() => {})
+        }
       } else {
         // Calcul frais retard
         const now = new Date()
@@ -434,15 +471,9 @@ export default function InspectionFlow({
         metadata: { km_reading: kmReading, damaged_zones_count: damageCount },
       })
 
-      // Enchaînement départ : l'EDL départ validé mène DIRECTEMENT à la
-      // prévisualisation + signature du contrat, sans repasser par la fiche
-      // réservation. La convention inter-agences (sans réservation) garde
-      // l'écran « terminé » classique (pas de contrat locataire à signer).
-      if (type === 'depart' && reservationId) {
-        router.replace(`/contracts/${contractId}/preview?chain=depart`)
-        return
-      }
-
+      // Plus d'enchaînement vers /contracts/[id]/preview : le contrat est
+      // désormais prévisualisé ET signé sur cette même page (étape « contrat &
+      // signature »). L'écran « terminé » propose le PDF (télécharger / email).
       setStep('done')
     } catch (e: any) {
       setError(e.message ?? 'Erreur lors de l\'enregistrement')
@@ -458,7 +489,9 @@ export default function InspectionFlow({
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-10 text-center">
           <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            État des lieux {type === 'depart' ? 'de départ' : 'de retour'} enregistré
+            {type === 'depart' && needContratSig
+              ? 'Départ validé — contrat signé'
+              : `État des lieux ${type === 'depart' ? 'de départ' : 'de retour'} enregistré`}
           </h2>
           <p className="text-gray-500">KM : {kmReading.toLocaleString('fr-FR')} · {damagedZoneCount} zone(s) signalée(s)</p>
           {type === 'arrivee' && previousDamagedZones.length > 0 && (
@@ -537,15 +570,19 @@ export default function InspectionFlow({
           </div>
         )}
 
-        {/* Contrat de restitution : contrat + EDL départ + EDL retour → envoi au locataire.
+        {/* Contrat (départ : contrat signé + EDL départ · retour : restitution
+            complète départ+retour) → téléchargement / envoi au locataire.
             Masqué en mode convention inter-agences (pas de locataire/réservation). */}
-        {type === 'arrivee' && reservationId && (
+        {reservationId && (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-3">
             <div>
-              <h3 className="font-semibold text-gray-900">Contrat de restitution</h3>
+              <h3 className="font-semibold text-gray-900">
+                {type === 'depart' ? 'Contrat de location' : 'Contrat de restitution'}
+              </h3>
               <p className="text-sm text-gray-500 mt-0.5">
-                Le contrat complet (conditions + états des lieux de départ et de retour, signés) est prêt et{' '}
-                <strong>enregistré dans les Documents</strong>. Téléchargez-le ou envoyez-le au locataire par email.
+                {type === 'depart'
+                  ? <>Le contrat signé (conditions + état des lieux de départ) est <strong>enregistré dans les Documents</strong>. Téléchargez-le ou envoyez-le au locataire par email.</>
+                  : <>Le contrat complet (conditions + états des lieux de départ et de retour, signés) est prêt et <strong>enregistré dans les Documents</strong>. Téléchargez-le ou envoyez-le au locataire par email.</>}
               </p>
             </div>
 
@@ -1003,59 +1040,58 @@ export default function InspectionFlow({
       )}
 
       {/* Étape : Signatures */}
-      {step === 'signatures' && (
-        <div className="space-y-4">
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-5">
-            <h3 className="font-semibold text-gray-800">Signatures</h3>
-            <SignatureCanvas
-              label="Signature du client *"
-              onSign={setClientSig}
-              onClear={() => setClientSig(null)}
-              height={160}
-            />
-            <div>
-              <p className="text-sm font-medium text-gray-700 mb-2">Pour l&apos;agence</p>
-              <div className="flex items-center justify-center h-[120px] rounded-xl border-2 border-dashed border-gray-200 bg-gray-50">
-                <div className="border-2 border-blue-600/40 rounded-lg px-5 py-2.5 text-center">
-                  <p className="text-sm font-black uppercase tracking-wide text-blue-600/80">Cachet de l&apos;entreprise</p>
-                  <p className="text-[10px] uppercase tracking-widest text-blue-600/50 mt-0.5">Apposé automatiquement</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {error && (
-            <div className="text-sm text-red-600 bg-red-50 rounded-xl px-4 py-3 flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 flex-shrink-0" /> {error}
-            </div>
-          )}
-
-          <div className="flex gap-3">
-            <button
-              onClick={() => setStep('photos')}
-              disabled={saving}
-              className="px-5 py-3 bg-white border border-gray-200 text-gray-600 rounded-xl font-semibold hover:bg-gray-50 transition-colors active:scale-[.97] transition-transform flex items-center justify-center gap-1.5 disabled:opacity-50"
-            >
-              <ChevronLeft className="w-4 h-4" /> Retour
-            </button>
-            <button
-              onClick={handleSubmit}
-              disabled={saving || !clientSig}
-              className="flex-1 py-3.5 bg-green-600 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-xl font-bold hover:bg-green-700 transition-colors active:scale-[.97] transition-transform"
-            >
-              {saving ? (
-                <span className="flex items-center justify-center gap-2">
-                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
-                  </svg>
-                  Enregistrement…
-                </span>
-              ) : 'Valider l\'état des lieux'}
-            </button>
-          </div>
-        </div>
-      )}
+      {step === 'signatures' && (() => {
+        // Récap EDL courant (zones carrosserie signalées, avec libellés lisibles)
+        const zonesAbimeesRecap = currentDamagedZoneIds.map(id => ({
+          label: NEW_ZONES.find(z => z.id === id)?.label ?? id,
+          severity: damages[id]?.[0]?.severity ?? 'dommage',
+        }))
+        // EDL retour : aperçu des frais AVANT validation (mêmes formules que le
+        // calcul définitif de handleSubmit) + comparaison départ/retour.
+        let retourRecap = null
+        if (type === 'arrivee') {
+          const lateMinutes = reservationEndDatetime
+            ? Math.max(0, Math.round((Date.now() - new Date(reservationEndDatetime).getTime()) / 60000))
+            : 0
+          const { extraKm, amount: extraKmAmount } = calculateExtraKm(
+            kmAtDeparture ?? vehicleKm, kmReading, kmIncluded, extraKmPrice,
+          )
+          retourRecap = {
+            kmDepart: kmAtDeparture ?? vehicleKm,
+            fuelDepart: fuelRangeAtDeparture ?? 0,
+            nouvellesZones: newDamageZoneIds.map(id => NEW_ZONES.find(z => z.id === id)?.label ?? id),
+            zonesPreexistantes: stillPresentZoneIds.map(id => NEW_ZONES.find(z => z.id === id)?.label ?? id),
+            lateMinutes,
+            lateFeeAmount: calculateLateFee(vehicleCategory, lateMinutes),
+            extraKmCount: extraKm,
+            extraKmAmount,
+            damageFeeAmount: totalDamageFee,
+          }
+        }
+        return (
+          <RecapSignatures
+            type={type}
+            contrat={contratInfo}
+            edl={{
+              km: kmReading,
+              fuelRangeKm,
+              photoCount,
+              zonesAbimees: zonesAbimeesRecap,
+            }}
+            retour={retourRecap}
+            reconnu={reconnu}
+            setReconnu={setReconnu}
+            edlSig={clientSig}
+            setEdlSig={setClientSig}
+            contratSig={contratSig}
+            setContratSig={setContratSig}
+            saving={saving}
+            error={error}
+            onBack={() => setStep('photos')}
+            onSubmit={handleSubmit}
+          />
+        )
+      })()}
 
     </div>
   )

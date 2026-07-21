@@ -14,6 +14,7 @@ export default async function ArrivalInspectionPage({ params }: { params: Promis
     .from('contracts')
     .select(`
       id,
+      contract_number,
       reservation_id,
       reservation:reservations(
         vehicle_id,
@@ -21,8 +22,11 @@ export default async function ArrivalInspectionPage({ params }: { params: Promis
         end_datetime,
         km_included,
         extra_km_price,
+        daily_price,
+        total_price,
+        deposit_amount,
         vehicle:vehicles(*),
-        client:clients(first_name, last_name)
+        client:clients(first_name, last_name, phone, address)
       )
     `)
     .eq('id', contractId)
@@ -76,6 +80,27 @@ export default async function ArrivalInspectionPage({ params }: { params: Promis
         previousDamagedZones={(departureInspection?.damaged_zones as { id: string; label: string; severity: string; description?: string; photos?: string[] }[] | null) ?? []}
         kmIncluded={kmIncludedTotal}
         extraKmPrice={reservation?.extra_km_price ?? 2}
+        contratInfo={{
+          // Au retour : en-tête du contrat en prévisualisation (pas de re-signature,
+          // le contrat a été signé au départ) — demande gérant, ticket SAV 21/07.
+          numero: contract.contract_number ?? '',
+          clientNom: `${client?.first_name ?? ''} ${client?.last_name ?? ''}`.trim() || 'Client',
+          clientPhone: client?.phone ?? null,
+          clientAddress: client?.address ?? null,
+          vehiculeLabel: `${vehicle?.brand ?? ''} ${vehicle?.model ?? ''}`.trim(),
+          plate: vehicle?.plate ?? '',
+          debut: reservation?.start_datetime ?? '',
+          fin: reservation?.end_datetime ?? '',
+          prixJour: reservation?.daily_price ?? null,
+          total: reservation?.total_price ?? null,
+          kmInclus: reservation?.km_included ?? 200,
+          caution: reservation?.deposit_amount ?? 0,
+          categorie: vehicle?.category ?? 'citadine',
+          isSmartFortwo: Boolean(
+            vehicle?.model?.toLowerCase().includes('smart') ||
+            vehicle?.brand?.toLowerCase().includes('smart'),
+          ),
+        }}
       />
     </div>
   )
