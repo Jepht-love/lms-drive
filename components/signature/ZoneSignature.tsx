@@ -21,10 +21,12 @@ export default function ZoneSignature({ label, value, onChange }: Props) {
   const [open, setOpen] = useState(false)
   // Brouillon local : le tracé n'est validé (remonté via onChange) qu'au clic
   // « Valider ». Fermer/Annuler jette le brouillon sans toucher à la valeur.
-  const [draft, setDraft] = useState<string | null>(value)
+  const [draft, setDraft] = useState<string | null>(null)
 
+  // Ouvre toujours sur un canevas VIERGE — « Refaire » repart de zéro, sans
+  // avoir à effacer l'ancienne signature d'abord.
   function openModal() {
-    setDraft(value)
+    setDraft(null)
     setOpen(true)
   }
 
