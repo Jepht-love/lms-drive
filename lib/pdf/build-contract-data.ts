@@ -81,6 +81,21 @@ export async function buildContractPdfData(
     .in('type', ['depart', 'arrivee'])
     .order('signed_at')
 
+  // Signature de la facture de restitution : requête séparée et tolérante à
+  // l'absence de colonne (migration 059 pas encore appliquée) — ne casse pas la
+  // génération de PDF si le champ n'existe pas.
+  const invoiceSigById = new Map<string, string>()
+  try {
+    const { data: sigs } = await supabase
+      .from('inspections')
+      .select('id, invoice_signature_svg')
+      .eq('contract_id', contractId)
+    for (const s of sigs ?? []) {
+      const v = (s as { invoice_signature_svg?: string | null }).invoice_signature_svg
+      if (v) invoiceSigById.set(s.id, v)
+    }
+  } catch { /* colonne absente : facture non signée dans le PDF */ }
+
   // Perf : les EDL (départ + retour) et leurs photos sont assemblés EN PARALLÈLE.
   // Avant, jusqu'à 2×8 = 16 photos étaient téléchargées une par une depuis le
   // storage (≈14 s pour générer le PDF). On lance tous les téléchargements de
@@ -111,6 +126,7 @@ export async function buildContractPdfData(
         damagedZones: (insp.damaged_zones as any[]) ?? [],
         clientSignature: insp.client_signature_svg ?? undefined,
         agentSignature: insp.agent_signature_svg ?? undefined,
+        invoiceSignature: invoiceSigById.get(insp.id) ?? undefined,
         signedAt: insp.signed_at ?? undefined,
         photos: photoUrls,
       }

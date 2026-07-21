@@ -26,6 +26,7 @@ export interface InspectionPDFData {
   damagedZones: DamagedZone[]
   clientSignature?: string
   agentSignature?: string
+  invoiceSignature?: string   // signature de la facture de restitution (EDL retour)
   signedAt?: string
   photos: { url: string; label: string }[]
 }
@@ -878,11 +879,17 @@ export function ContractPDF({ data }: { data: ContractData }) {
               </View>
             )}
             <View style={[s.row, { marginTop: 4, paddingTop: 4, borderTop: '1px solid #fed7aa' }]}>
-              <Text style={[s.label, { fontFamily: 'Helvetica-Bold' }]}>Total frais supplémentaires</Text>
+              <Text style={[s.label, { fontFamily: 'Helvetica-Bold' }]}>Total à facturer</Text>
               <Text style={[s.value, { fontFamily: 'Helvetica-Bold', color: '#9a3412' }]}>
                 {fmtMoney((data.lateFeeAmount ?? 0) + (data.extraKmAmount ?? 0) + (data.damageFeeAmount ?? 0))}
               </Text>
             </View>
+            {arrInsp?.invoiceSignature && (
+              <View style={{ marginTop: 8, alignItems: 'flex-end' }}>
+                <Text style={{ fontSize: 6, color: '#9a3412', marginBottom: 1 }}>Signature de la facture de restitution</Text>
+                <Image src={arrInsp.invoiceSignature} style={{ width: 120, height: 40, objectFit: 'contain' }} />
+              </View>
+            )}
           </View>
         )}
 

@@ -150,6 +150,8 @@ export default function InspectionFlow({
   // (2 signatures, une page) + petite case de reconnaissance de l'état constaté.
   const [contratSig, setContratSig] = useState<string | null>(null)
   const [reconnu, setReconnu] = useState(false)
+  // EDL retour : signature de la facture de restitution (exigée si frais > 0)
+  const [factureSig, setFactureSig] = useState<string | null>(null)
   // Signature agent supprimée pour l'EDL — remplacée par le cachet entreprise
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -282,9 +284,24 @@ export default function InspectionFlow({
   // déjà signé (résa dont le contrat a été signé en amont).
   const needContratSig = type === 'depart' && !!reservationId && !!contratInfo
 
+  // Frais estimés du retour (mêmes formules que le récap et le calcul définitif)
+  function fraisRetourEstimes(): number {
+    if (type !== 'arrivee') return 0
+    const lateMinutes = reservationEndDatetime
+      ? Math.max(0, Math.round((Date.now() - new Date(reservationEndDatetime).getTime()) / 60000))
+      : 0
+    const { amount: extraKmAmount } = calculateExtraKm(
+      kmAtDeparture ?? vehicleKm, kmReading, kmIncluded, extraKmPrice,
+    )
+    return calculateLateFee(vehicleCategory, lateMinutes) + extraKmAmount + totalDamageFee
+  }
+
   async function handleSubmit() {
     if (!clientSig) { setError('La signature de l\'état des lieux est requise'); return }
     if (needContratSig && !contratSig) { setError('La signature du contrat est requise'); return }
+    if (type === 'arrivee' && fraisRetourEstimes() > 0 && !factureSig) {
+      setError('La signature de la facture de restitution est requise'); return
+    }
     setSaving(true)
     setError(null)
 
@@ -345,6 +362,15 @@ export default function InspectionFlow({
         .single()
 
       if (inspErr || !inspection) throw new Error(inspErr?.message ?? 'Erreur création état des lieux')
+
+      // Signature de la facture de restitution (colonne ajoutée par la
+      // migration 059) — best-effort : ne bloque pas la validation de l'EDL
+      // si la migration n'est pas encore appliquée.
+      if (type === 'arrivee' && factureSig) {
+        await supabase.from('inspections')
+          .update({ invoice_signature_svg: factureSig })
+          .eq('id', inspection.id)
+      }
 
       // Perf (fluidité au moment de la signature) : les photos étaient
       // uploadées + enregistrées UNE PAR UNE → « Enregistrement… » lent quand il
@@ -1086,16 +1112,36 @@ export default function InspectionFlow({
           const { extraKm, amount: extraKmAmount } = calculateExtraKm(
             kmAtDeparture ?? vehicleKm, kmReading, kmIncluded, extraKmPrice,
           )
+          const lateFeeAmount = calculateLateFee(vehicleCategory, lateMinutes)
           retourRecap = {
             kmDepart: kmAtDeparture ?? vehicleKm,
             fuelDepart: fuelRangeAtDeparture ?? 0,
             nouvellesZones: newDamageZoneIds.map(id => NEW_ZONES.find(z => z.id === id)?.label ?? id),
             zonesPreexistantes: stillPresentZoneIds.map(id => NEW_ZONES.find(z => z.id === id)?.label ?? id),
             lateMinutes,
-            lateFeeAmount: calculateLateFee(vehicleCategory, lateMinutes),
+            lateFeeAmount,
             extraKmCount: extraKm,
             extraKmAmount,
             damageFeeAmount: totalDamageFee,
+            // Facture de restitution : chaque frais ligne par ligne
+            lignes: [
+              ...newDamageZoneIds.map(id => ({
+                label: `${NEW_ZONES.find(z => z.id === id)?.label ?? id} — ${graviteLabel(damages[id]?.[0]?.severity ?? 'dommage')}`,
+                montant: priceForZone(id),
+              })),
+              ...Object.entries(interiorCharges)
+                .filter(([, v]) => Number.isFinite(v) && v > 0)
+                .map(([id, v]) => ({
+                  label: `Intérieur : ${INTERIOR_DAMAGE_ITEMS.find(x => x.id === id)?.label ?? id}`,
+                  montant: v,
+                })),
+              ...(lateFeeAmount > 0
+                ? [{ label: `Frais de retard (${Math.round(lateMinutes)} min)`, montant: lateFeeAmount }]
+                : []),
+              ...(extraKmAmount > 0
+                ? [{ label: `Km supplémentaires (${extraKm} km × ${extraKmPrice.toLocaleString('fr-FR')} €)`, montant: extraKmAmount }]
+                : []),
+            ],
           }
         }
         // Photos jointes à l'EDL : les photos obligatoires (avec libellé) + les
@@ -1139,6 +1185,8 @@ export default function InspectionFlow({
             setEdlSig={setClientSig}
             contratSig={contratSig}
             setContratSig={setContratSig}
+            factureSig={factureSig}
+            setFactureSig={setFactureSig}
             saving={saving}
             error={error}
             onBack={() => window.history.back()}

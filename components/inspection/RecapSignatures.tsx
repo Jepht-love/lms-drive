@@ -50,6 +50,8 @@ export interface RecapRetour {
   extraKmCount: number
   extraKmAmount: number
   damageFeeAmount: number
+  // Facture de restitution : chaque frais ligne par ligne (dommages, retard, km sup)
+  lignes: { label: string; montant: number }[]
 }
 
 export interface PhotoJointe {
@@ -71,6 +73,8 @@ interface Props {
   setEdlSig: (s: string | null) => void
   contratSig: string | null
   setContratSig: (s: string | null) => void
+  factureSig: string | null
+  setFactureSig: (s: string | null) => void
   saving: boolean
   error: string | null
   onBack: () => void
@@ -111,12 +115,14 @@ function GaleriePhotos({ titre, photos }: { titre: string; photos: PhotoJointe[]
 export default function RecapSignatures({
   type, contrat, edl, retour, damages, photosJointes, previousDamages,
   reconnu, setReconnu, edlSig, setEdlSig, contratSig, setContratSig,
-  saving, error, onBack, onSubmit,
+  factureSig, setFactureSig, saving, error, onBack, onSubmit,
 }: Props) {
   const isDepart = type === 'depart'
   const totalFraisRetour = retour
     ? retour.lateFeeAmount + retour.extraKmAmount + retour.damageFeeAmount
     : 0
+  // Facture de restitution : signature exigée uniquement s'il y a des frais
+  const aDesFrais = !isDepart && totalFraisRetour > 0
 
   const articles = contrat
     ? getLegalArticles({
@@ -128,7 +134,9 @@ export default function RecapSignatures({
 
   // La signature contrat n'est exigée qu'au départ avec un contrat locataire
   const needContratSig = isDepart && !!contrat
-  const ready = reconnu && !!edlSig && (!needContratSig || !!contratSig)
+  const ready = reconnu && !!edlSig
+    && (!needContratSig || !!contratSig)
+    && (!aDesFrais || !!factureSig)
 
   // Détail des zones relevées sur cet EDL (gravité + commentaire) + leurs photos
   const zonesRelevees = Object.entries(damages)
@@ -200,44 +208,6 @@ export default function RecapSignatures({
     </>
   )
 
-  /* ── Chiffrage du retour (retard, km sup, dommages) ── */
-  const chiffrageRetour = !isDepart && retour && (
-    <div className="rounded-xl border border-amber-100 bg-amber-50/60 p-4 space-y-2">
-      <p className="text-xs font-black uppercase tracking-wide text-amber-700">
-        Chiffrage du retour
-      </p>
-      {retour.zonesPreexistantes.length > 0 && (
-        <p className="text-xs text-gray-500">
-          Déjà présents au départ (non facturés) : {retour.zonesPreexistantes.join(', ')}
-        </p>
-      )}
-      <div className="divide-y divide-amber-100 text-sm">
-        {retour.lateFeeAmount > 0 && (
-          <div className="flex justify-between py-1.5">
-            <span className="text-gray-600">Frais de retard ({Math.round(retour.lateMinutes)} min)</span>
-            <span className="font-bold text-red-600">+{fmtPrix(retour.lateFeeAmount)}</span>
-          </div>
-        )}
-        {retour.extraKmAmount > 0 && (
-          <div className="flex justify-between py-1.5">
-            <span className="text-gray-600">Km supplémentaires ({retour.extraKmCount})</span>
-            <span className="font-bold text-red-600">+{fmtPrix(retour.extraKmAmount)}</span>
-          </div>
-        )}
-        {retour.damageFeeAmount > 0 && (
-          <div className="flex justify-between py-1.5">
-            <span className="text-gray-600">Dommages constatés</span>
-            <span className="font-bold text-red-600">+{fmtPrix(retour.damageFeeAmount)}</span>
-          </div>
-        )}
-        <div className="flex justify-between py-1.5">
-          <span className="font-bold text-gray-900">Total frais supplémentaires</span>
-          <span className="font-black text-gray-900">{fmtPrix(totalFraisRetour)}</span>
-        </div>
-      </div>
-    </div>
-  )
-
   /* ── Case de reconnaissance + signature EDL ── */
   const caseEtSignatureEdl = (
     <>
@@ -250,8 +220,7 @@ export default function RecapSignatures({
         />
         <span className="text-sm text-gray-700">
           Le locataire reconnaît l&apos;état du véhicule constaté ci-dessus
-          {edl.photoCount > 0 ? ' (photos horodatées à l\'appui)' : ''}
-          {!isDepart && totalFraisRetour > 0 ? ' ainsi que les frais supplémentaires chiffrés' : ''}.
+          {edl.photoCount > 0 ? ' (photos horodatées à l\'appui)' : ''}.
         </span>
       </label>
       <ZoneSignature
@@ -359,11 +328,10 @@ export default function RecapSignatures({
         {isDepart && caseEtSignatureEdl}
       </div>
 
-      {/* ══ RETOUR · CONTRAT DE RESTITUTION — en-tête + chiffrage + conditions + case + signature ══ */}
+      {/* ══ RETOUR · CONTRAT DE RESTITUTION — en-tête + conditions + case + signature EDL ══ */}
       {!isDepart && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
           {enTeteContrat}
-          {chiffrageRetour}
           {/* Le contrat « descend » aussi au retour : conditions signées au départ,
               relues avant de signer la restitution (pas de re-signature contrat). */}
           {contrat && (
@@ -384,6 +352,54 @@ export default function RecapSignatures({
             </>
           )}
           {caseEtSignatureEdl}
+        </div>
+      )}
+
+      {/* ══ RETOUR · FACTURE DE RESTITUTION — lignes détaillées + total + signature ══ */}
+      {!isDepart && retour && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
+          <div className="flex items-center gap-2">
+            <FileText className="w-5 h-5 text-red-500" />
+            <h3 className="font-bold text-gray-900">Facture de restitution</h3>
+          </div>
+
+          {retour.zonesPreexistantes.length > 0 && (
+            <p className="text-xs text-gray-500">
+              Déjà présents au départ (non facturés) : {retour.zonesPreexistantes.join(', ')}
+            </p>
+          )}
+
+          {retour.lignes.length === 0 ? (
+            <div className="rounded-xl bg-green-50 border border-green-100 p-4 text-center">
+              <p className="text-sm font-bold text-green-700">Aucun frais — rien à facturer</p>
+              <p className="text-xs text-green-600 mt-0.5">Véhicule rendu conforme, dans les délais et le kilométrage inclus.</p>
+            </div>
+          ) : (
+            <>
+              <div className="rounded-xl border border-gray-100 overflow-hidden">
+                {retour.lignes.map((l, i) => (
+                  <div
+                    key={i}
+                    className={`flex items-center justify-between gap-3 px-4 py-2.5 text-sm ${i % 2 ? 'bg-gray-50/60' : 'bg-white'}`}
+                  >
+                    <span className="text-gray-700 min-w-0">{l.label}</span>
+                    <span className="font-bold text-red-600 flex-shrink-0">{fmtPrix(l.montant)}</span>
+                  </div>
+                ))}
+                <div className="flex items-center justify-between gap-3 px-4 py-3 bg-red-50 border-t border-red-100">
+                  <span className="font-black uppercase tracking-wide text-gray-900 text-sm">Total à facturer</span>
+                  <span className="font-black text-red-700 text-lg">{fmtPrix(totalFraisRetour)}</span>
+                </div>
+              </div>
+
+              {/* Signature de la facture de restitution */}
+              <ZoneSignature
+                label="Signature de la facture de restitution"
+                value={factureSig}
+                onChange={setFactureSig}
+              />
+            </>
+          )}
         </div>
       )}
 
