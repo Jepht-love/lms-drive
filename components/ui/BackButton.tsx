@@ -14,8 +14,12 @@ export default function BackButton({ fallbackHref, label = 'Retour', className, 
   const router = useRouter()
 
   function handleClick() {
-    if (fallbackHref) router.push(fallbackHref)
-    else router.back()
+    // Retour = revenir à la page où l'on était juste avant (comme le retour
+    // navigateur). Le fallbackHref ne sert QUE s'il n'y a pas d'historique
+    // (deep-link, page ouverte directement, rafraîchissement PWA).
+    if (window.history.length > 1) router.back()
+    else if (fallbackHref) router.push(fallbackHref)
+    else router.push('/')
   }
 
   return (
