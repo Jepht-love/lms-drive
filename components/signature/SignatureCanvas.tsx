@@ -88,6 +88,11 @@ export default function SignatureCanvas({
   const startDraw = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     e.preventDefault()
     const canvas = canvasRef.current!
+    // Capture du pointeur : tous les événements (move/up) sont routés vers le
+    // canevas et non la page. Sur ordinateur, sans ça, le glisser pour signer est
+    // interprété comme une sélection de texte et le navigateur fait défiler la
+    // page (monte/descend selon le sens du tracé). Empêche aussi le pan tactile.
+    try { canvas.setPointerCapture?.(e.pointerId) } catch { /* non supporté */ }
     const ctx = canvas.getContext('2d')!
     const point = getPoint(e.nativeEvent, canvas)
     ctx.beginPath()
@@ -141,9 +146,9 @@ export default function SignatureCanvas({
           onPointerDown={startDraw}
           onPointerMove={draw}
           onPointerUp={endDraw}
-          onPointerLeave={endDraw}
-          className="w-full touch-none cursor-crosshair"
-          style={{ display: 'block', height }}
+          onPointerCancel={endDraw}
+          className="w-full touch-none select-none overscroll-contain cursor-crosshair"
+          style={{ display: 'block', height, userSelect: 'none', WebkitUserSelect: 'none' }}
         />
         {!hasDrawn.current && !existingSig && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
