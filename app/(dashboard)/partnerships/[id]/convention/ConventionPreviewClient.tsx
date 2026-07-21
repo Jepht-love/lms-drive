@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 import { ArrowLeft, CheckCircle2, AlertCircle, Download } from 'lucide-react'
+import BackButton from '@/components/ui/BackButton'
 import SignatureCanvas from '@/components/signature/SignatureCanvas'
 
 interface Props {
@@ -110,9 +111,9 @@ export default function ConventionPreviewClient({ operationId, contract, operati
   return (
     <div className="min-h-screen bg-[#F2F2F7]">
       <div className="sticky top-0 z-10 bg-white/95 backdrop-blur border-b border-gray-100 px-4 py-3 flex items-center gap-3">
-        <Link href={`/partnerships/${operationId}`} className="p-2 rounded-xl hover:bg-gray-100 transition-colors">
+        <BackButton fallbackHref={`/partnerships/${operationId}`} className="p-2 rounded-xl hover:bg-gray-100 transition-colors">
           <ArrowLeft className="w-5 h-5 text-gray-600" />
-        </Link>
+        </BackButton>
         <div className="flex-1 min-w-0">
           <h1 className="font-bold text-gray-900 truncate">{contract.contract_number}</h1>
           <p className="text-xs text-gray-500">Convention de mise à disposition</p>
