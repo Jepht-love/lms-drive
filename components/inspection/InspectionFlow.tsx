@@ -404,6 +404,15 @@ export default function InspectionFlow({
         metadata: { km_reading: kmReading, damaged_zones_count: damageCount },
       })
 
+      // Enchaînement départ : l'EDL départ validé mène DIRECTEMENT à la
+      // prévisualisation + signature du contrat, sans repasser par la fiche
+      // réservation. La convention inter-agences (sans réservation) garde
+      // l'écran « terminé » classique (pas de contrat locataire à signer).
+      if (type === 'depart' && reservationId) {
+        router.replace(`/contracts/${contractId}/preview?chain=depart`)
+        return
+      }
+
       setStep('done')
     } catch (e: any) {
       setError(e.message ?? 'Erreur lors de l\'enregistrement')

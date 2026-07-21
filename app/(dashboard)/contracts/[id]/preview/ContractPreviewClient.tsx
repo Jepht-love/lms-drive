@@ -1,12 +1,27 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { ArrowLeft, CheckCircle2, FileDown, AlertCircle } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, FileDown, AlertCircle, Mail } from 'lucide-react'
 import Link from 'next/link'
 import SignatureCanvas from '@/components/signature/SignatureCanvas'
+import VehicleInspectionMap from '@/components/vehicle-schema/VehicleInspectionMap'
+import { graviteLabel, type DamageEntry, type DamageSeverity } from '@/components/vehicle-schema/inspection-types'
 import { getLegalArticles, getFeesTable, VIDEO_CLAUSE } from '@/lib/contracts/legal-articles'
+
+// État des lieux de départ assemblé côté serveur (page.tsx) pour être relu dans
+// la prévisualisation du contrat, juste avant la signature.
+export interface DepartInspection {
+  kmReading: number
+  fuelRangeKm: number
+  exteriorCleanliness: number
+  interiorCleanliness: number
+  damagedZones: any[]
+  clientSignature: string | null
+  signedAt: string | null
+  photos: { url: string; label: string }[]
+}
 
 interface Props {
   contract: any
@@ -14,6 +29,14 @@ interface Props {
   vehicle: any
   client: any
   agency: any
+  // Contexte d'enchaînement : 'depart' = on arrive directement de la validation
+  // de l'EDL départ (bannière + « Terminer » revient à la réservation).
+  chain?: string | null
+  departInspection?: DepartInspection | null
+}
+
+const CLEANLINESS_LABELS: Record<number, string> = {
+  1: 'Sale', 2: 'Moyen', 3: 'Normal', 4: 'Propre', 5: 'Très propre',
 }
 
 function formatDateTime(dt?: string) {
@@ -31,14 +54,36 @@ function formatPrice(n?: number) {
   return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(n)
 }
 
-export default function ContractPreviewClient({ contract, reservation, vehicle, client, agency }: Props) {
+export default function ContractPreviewClient({ contract, reservation, vehicle, client, agency, chain, departInspection }: Props) {
   const router = useRouter()
   const [clientSig, setClientSig] = useState<string | null>(contract.client_signature_svg ?? null)
   const [signing, setSigning] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState(false)
+  // Après signature : on conserve le PDF généré pour proposer le choix
+  // « télécharger » / « envoyer par email » (au lieu d'un téléchargement forcé).
+  const [pdfBlob, setPdfBlob] = useState<Blob | null>(null)
+  const [emailState, setEmailState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
+  const [emailMsg, setEmailMsg] = useState<string | null>(null)
 
   const isSigned = contract.status === 'signe' || contract.status === 'cloture'
+
+  // Schéma readonly de l'EDL départ : reconstruit le Record<zoneId, DamageEntry[]>
+  // à partir des zones stockées (les postes intérieurs n'ont pas de zone carrosserie).
+  const departDamages = useMemo<Record<string, DamageEntry[]>>(() => {
+    const map: Record<string, DamageEntry[]> = {}
+    for (const z of departInspection?.damagedZones ?? []) {
+      if (z?.kind === 'interieur' || z?.type === 'interieur' || !z?.id) continue
+      ;(map[z.id] ??= []).push({
+        severity: (z.severity ?? 'dommage') as DamageSeverity,
+        type: z.type ?? undefined,
+        comment: z.description ?? '',
+        photos: Array.isArray(z.photos) ? z.photos : [],
+      })
+    }
+    return map
+  }, [departInspection])
+  const departDamageCount = Object.keys(departDamages).length
 
   const isSport = vehicle?.category === 'sportif'
   const isSmartFortwo =
@@ -79,32 +124,94 @@ export default function ContractPreviewClient({ contract, reservation, vehicle, 
       return
     }
 
+    // Le PDF est conservé pour un choix explicite (télécharger / envoyer),
+    // et déjà archivé dans les Documents par la route generate-pdf.
+    const blob = await pdfRes.blob().catch(() => null)
+    setPdfBlob(blob)
     setDone(true)
     setSigning(false)
+  }
 
-    // Télécharger le PDF automatiquement
-    const blob = await pdfRes.clone().blob().catch(() => null)
-    if (blob) {
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `${contract.contract_number}.pdf`
-      a.click()
-      URL.revokeObjectURL(url)
+  function downloadPdf() {
+    if (!pdfBlob) return
+    const url = URL.createObjectURL(pdfBlob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${contract.contract_number}.pdf`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  async function sendEmail() {
+    setEmailState('sending')
+    setEmailMsg(null)
+    try {
+      const res = await fetch('/api/contracts/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contractId: contract.id }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || data?.error) throw new Error(data?.error ?? "Échec de l'envoi")
+      setEmailState('sent')
+    } catch (e: any) {
+      setEmailState('error')
+      setEmailMsg(e?.message ?? "Erreur lors de l'envoi")
     }
+  }
 
-    // Retour naturel à la liste des réservations (replace : « retour » ne rouvre
-    // pas le contrat qu'on vient de signer).
-    setTimeout(() => router.replace(reservation?.id ? `/reservations/${reservation.id}` : '/reservations'), 2000)
+  function finish() {
+    router.replace(reservation?.id ? `/reservations/${reservation.id}` : '/reservations')
   }
 
   if (done) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F2F2F7]">
-        <div className="bg-white rounded-2xl shadow-sm border border-green-200 p-10 text-center max-w-sm">
-          <CheckCircle2 className="w-14 h-14 text-green-500 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Contrat signé !</h2>
-          <p className="text-gray-500 text-sm">Le PDF a été généré et téléchargé. Redirection en cours…</p>
+      <div className="min-h-screen flex items-center justify-center bg-[#F2F2F7] px-4 py-10">
+        <div className="bg-white rounded-2xl shadow-sm border border-green-200 p-8 text-center max-w-md w-full space-y-5">
+          <CheckCircle2 className="w-14 h-14 text-green-500 mx-auto" />
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">Contrat signé</h2>
+            <p className="text-gray-500 text-sm mt-1">
+              Le contrat{departInspection ? " (avec l'état des lieux de départ)" : ''} a été généré et{' '}
+              <strong>enregistré dans les Documents</strong>. Vous pouvez le télécharger ou l&apos;envoyer au client.
+            </p>
+          </div>
+
+          <div className="space-y-2.5">
+            <button
+              onClick={downloadPdf}
+              disabled={!pdfBlob}
+              className="w-full py-3.5 bg-[#111111] hover:bg-gray-800 disabled:opacity-50 text-white rounded-xl font-semibold flex items-center justify-center gap-2 transition-colors"
+            >
+              <FileDown className="w-4 h-4" /> Télécharger le contrat (PDF)
+            </button>
+
+            {client?.email ? (
+              emailState === 'sent' ? (
+                <div className="w-full py-3 rounded-xl bg-green-50 text-green-700 text-sm font-medium flex items-center justify-center gap-2">
+                  <CheckCircle2 className="w-4 h-4" /> Envoyé à {client.email}
+                </div>
+              ) : (
+                <button
+                  onClick={sendEmail}
+                  disabled={emailState === 'sending'}
+                  className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white rounded-xl font-semibold flex items-center justify-center gap-2 transition-colors"
+                >
+                  <Mail className="w-4 h-4" />
+                  {emailState === 'sending' ? 'Envoi…' : 'Envoyer par email au client'}
+                </button>
+              )
+            ) : (
+              <p className="text-xs text-gray-400">Aucun email client renseigné — envoi par email indisponible.</p>
+            )}
+            {emailState === 'error' && (
+              <p className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{emailMsg}</p>
+            )}
+          </div>
+
+          <button onClick={finish} className="w-full py-3 text-gray-500 text-sm font-medium hover:text-gray-700 transition-colors">
+            Terminer
+          </button>
         </div>
       </div>
     )
@@ -129,6 +236,16 @@ export default function ContractPreviewClient({ contract, reservation, vehicle, 
       </div>
 
       <div className="max-w-3xl mx-auto px-4 py-6 space-y-4">
+
+        {/* Bannière d'enchaînement depuis l'EDL départ */}
+        {chain === 'depart' && !isSigned && (
+          <div className="bg-green-50 border border-green-200 rounded-2xl px-4 py-3 flex items-center gap-3">
+            <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+            <p className="text-sm text-green-800">
+              <strong>État des lieux de départ enregistré.</strong> Dernière étape : faites relire et signer le contrat au locataire ci-dessous.
+            </p>
+          </div>
+        )}
 
         {/* ── En-tête contrat ── */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
@@ -262,6 +379,97 @@ export default function ContractPreviewClient({ contract, reservation, vehicle, 
           </h2>
           <p className="text-xs text-blue-700 leading-relaxed">{VIDEO_CLAUSE}</p>
         </div>
+
+        {/* ── État des lieux de départ (relu avant signature) ── */}
+        {departInspection && (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide">
+                État des lieux de départ
+              </h2>
+              {departInspection.signedAt && (
+                <span className="text-xs text-gray-400">le {formatDateTime(departInspection.signedAt)}</span>
+              )}
+            </div>
+
+            {/* Relevés */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+              <div className="bg-gray-50 rounded-xl p-2">
+                <p className="text-xs text-gray-500">Kilométrage</p>
+                <p className="font-bold text-gray-900">{departInspection.kmReading.toLocaleString('fr-FR')} km</p>
+              </div>
+              <div className="bg-gray-50 rounded-xl p-2">
+                <p className="text-xs text-gray-500">Autonomie</p>
+                <p className="font-bold text-gray-900">{departInspection.fuelRangeKm.toLocaleString('fr-FR')} km</p>
+              </div>
+              <div className="bg-gray-50 rounded-xl p-2">
+                <p className="text-xs text-gray-500">Propreté ext.</p>
+                <p className="font-bold text-gray-900">{CLEANLINESS_LABELS[departInspection.exteriorCleanliness] ?? '—'}</p>
+              </div>
+              <div className="bg-gray-50 rounded-xl p-2">
+                <p className="text-xs text-gray-500">Propreté int.</p>
+                <p className="font-bold text-gray-900">{CLEANLINESS_LABELS[departInspection.interiorCleanliness] ?? '—'}</p>
+              </div>
+            </div>
+
+            {/* Schéma des dommages constatés au départ (lecture seule) */}
+            {departDamageCount > 0 ? (
+              <>
+                <VehicleInspectionMap
+                  damages={departDamages}
+                  onDamageAdd={() => {}}
+                  onDamageRemove={() => {}}
+                  readonly
+                  phase="departure"
+                  previousZones={[]}
+                />
+                <div className="space-y-1.5">
+                  {departInspection.damagedZones.map((z: any, i: number) => (
+                    <div key={i} className="flex items-center gap-2 text-sm">
+                      <span className="text-[11px] px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 font-semibold flex-shrink-0">
+                        {graviteLabel((z.severity ?? 'dommage') as DamageSeverity)}
+                      </span>
+                      <span className="text-gray-800 truncate">{z.label ?? z.id}</span>
+                      {z.description && <span className="text-gray-400 text-xs truncate">— {z.description}</span>}
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="bg-green-50 border border-green-100 rounded-xl px-4 py-3 text-sm text-green-700 font-medium">
+                Aucun dommage constaté au départ.
+              </div>
+            )}
+
+            {/* Photos de l'état des lieux */}
+            {departInspection.photos.length > 0 && (
+              <div className="flex gap-2 flex-wrap">
+                {departInspection.photos.map((p, i) => (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    key={i}
+                    src={p.url}
+                    alt={p.label}
+                    className="w-20 h-20 object-cover rounded-lg border border-gray-200"
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Signature apposée à l'état des lieux */}
+            {departInspection.clientSignature && (
+              <div>
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1.5">Signature à l&apos;état des lieux</p>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={departInspection.clientSignature}
+                  alt="Signature EDL départ"
+                  className="h-14 border border-gray-200 rounded-lg object-contain bg-white px-3"
+                />
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ── Signature client ── */}
         {!isSigned ? (
