@@ -13,7 +13,7 @@ import { calculateLateFee, calculateExtraKm } from '@/lib/calculations/fees'
 import { reportVehicleIssues } from '@/lib/actions/vehicle-issues'
 import { markReservationDeparted } from '@/lib/actions/reservations'
 import { buildDamageFlag } from '@/lib/maintenance-health'
-import { Camera, CheckCircle2, AlertTriangle, X, ChevronRight, ChevronLeft, Clock, Gauge, Fuel } from 'lucide-react'
+import { Camera, CheckCircle2, AlertTriangle, X, ChevronRight, ChevronLeft, Clock, Gauge, Fuel, FileDown, Mail } from 'lucide-react'
 
 interface Props {
   type: 'depart' | 'arrivee'
@@ -123,6 +123,36 @@ export default function InspectionFlow({
   const [currentPhotoType, setCurrentPhotoType] = useState<string | null>(null)
   const [emailState, setEmailState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
   const [emailMsg, setEmailMsg] = useState<string | null>(null)
+  // Téléchargement du contrat de restitution (parité avec l'envoi email)
+  const [restitState, setRestitState] = useState<'idle' | 'downloading' | 'error'>('idle')
+  const [restitMsg, setRestitMsg] = useState<string | null>(null)
+
+  // EDL retour terminé : régénère le contrat complet (départ + retour) et le
+  // télécharge. La route generate-pdf l'archive aussi dans les Documents.
+  async function downloadRestitution() {
+    setRestitState('downloading'); setRestitMsg(null)
+    try {
+      const res = await fetch('/api/contracts/generate-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contractId }),
+      })
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        throw new Error(d?.error ?? 'Échec de la génération du contrat')
+      }
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'contrat-restitution.pdf'
+      a.click()
+      URL.revokeObjectURL(url)
+      setRestitState('idle')
+    } catch (e: any) {
+      setRestitState('error'); setRestitMsg(e?.message ?? 'Erreur lors de la génération')
+    }
+  }
 
   // EDL retour terminé : régénère le contrat complet (départ + retour) et l'envoie au client
   async function finalizeAndEmail() {
@@ -514,26 +544,39 @@ export default function InspectionFlow({
             <div>
               <h3 className="font-semibold text-gray-900">Contrat de restitution</h3>
               <p className="text-sm text-gray-500 mt-0.5">
-                Le contrat complet (conditions + état des lieux de départ et de retour, signés) est prêt.
-                Faites-le relire et signer au locataire, puis envoyez-lui une copie par email.
+                Le contrat complet (conditions + états des lieux de départ et de retour, signés) est prêt et{' '}
+                <strong>enregistré dans les Documents</strong>. Téléchargez-le ou envoyez-le au locataire par email.
               </p>
             </div>
-            {emailState === 'sent' ? (
-              <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 rounded-xl px-3 py-3">
-                <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
-                Contrat de restitution envoyé au locataire par email.
-              </div>
-            ) : (
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <button
-                onClick={finalizeAndEmail}
-                disabled={emailState === 'sending'}
-                className="w-full py-3 bg-[#111111] text-white rounded-xl font-medium hover:bg-gray-800 transition-colors disabled:opacity-60"
+                onClick={downloadRestitution}
+                disabled={restitState === 'downloading'}
+                className="py-3 bg-[#111111] text-white rounded-xl font-medium hover:bg-gray-800 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
               >
-                {emailState === 'sending' ? 'Envoi du contrat…' : 'Envoyer le contrat de restitution au client'}
+                <FileDown className="w-4 h-4" />
+                {restitState === 'downloading' ? 'Préparation…' : 'Télécharger le contrat'}
               </button>
-            )}
-            {emailState === 'error' && (
-              <p className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{emailMsg}</p>
+
+              {emailState === 'sent' ? (
+                <div className="py-3 rounded-xl bg-green-50 text-green-700 text-sm font-medium flex items-center justify-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 flex-shrink-0" /> Envoyé au client
+                </div>
+              ) : (
+                <button
+                  onClick={finalizeAndEmail}
+                  disabled={emailState === 'sending'}
+                  className="py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+                >
+                  <Mail className="w-4 h-4" />
+                  {emailState === 'sending' ? 'Envoi…' : 'Envoyer par email'}
+                </button>
+              )}
+            </div>
+
+            {(emailState === 'error' || restitState === 'error') && (
+              <p className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{emailMsg ?? restitMsg}</p>
             )}
           </div>
         )}
