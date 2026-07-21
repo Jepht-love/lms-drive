@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import VehicleInspectionMap from '@/components/vehicle-schema/VehicleInspectionMap'
 import RecapSignatures, { type ContratInfo } from '@/components/inspection/RecapSignatures'
@@ -101,6 +101,31 @@ export default function InspectionFlow({
   const supabase = createClient()
 
   const [step, setStep] = useState<Step>('info')
+
+  // Chaque étape du parcours compte comme une « page » dans l'historique du
+  // navigateur (ticket SAV 21/07) : la flèche retour de l'en-tête ou le geste
+  // retour tablette redescend d'une étape (ex. contrat & signature → photos)
+  // au lieu de sortir de l'EDL ; depuis la 1re étape, on quitte normalement
+  // vers la page d'où l'on venait.
+  const stepRef = useRef(step)
+  stepRef.current = step
+  useEffect(() => {
+    window.history.replaceState({ ...window.history.state, edlStep: 'info' }, '')
+    const onPop = (e: PopStateEvent) => {
+      const target = (e.state?.edlStep ?? null) as Step | null
+      if (!target) return
+      // EDL déjà validé : ne pas ressusciter le formulaire, continuer à remonter
+      if (stepRef.current === 'done') { window.history.back(); return }
+      setStep(target)
+    }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
+
+  function goToStep(next: Step) {
+    window.history.pushState({ ...window.history.state, edlStep: next }, '')
+    setStep(next)
+  }
 
   // Contexte SAV : précise l'EDL (départ/retour) et l'étape en cours dans le ticket.
   const STEP_LABELS: Record<Step, string> = {
@@ -474,6 +499,7 @@ export default function InspectionFlow({
       // Plus d'enchaînement vers /contracts/[id]/preview : le contrat est
       // désormais prévisualisé ET signé sur cette même page (étape « contrat &
       // signature »). L'écran « terminé » propose le PDF (télécharger / email).
+      window.history.replaceState({ ...window.history.state, edlStep: 'done' }, '')
       setStep('done')
     } catch (e: any) {
       setError(e.message ?? 'Erreur lors de l\'enregistrement')
@@ -760,7 +786,7 @@ export default function InspectionFlow({
           </div>
 
           <button
-            onClick={() => setStep('schema')}
+            onClick={() => goToStep('schema')}
             className="w-full py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors active:scale-[.97] transition-transform flex items-center justify-center gap-2"
           >
             Suivant : État des zones <ChevronRight className="w-4 h-4" />
@@ -959,13 +985,13 @@ export default function InspectionFlow({
 
           <div className="flex gap-3">
             <button
-              onClick={() => setStep('info')}
+              onClick={() => window.history.back()}
               className="px-5 py-3 bg-white border border-gray-200 text-gray-600 rounded-xl font-semibold hover:bg-gray-50 transition-colors active:scale-[.97] transition-transform flex items-center justify-center gap-1.5"
             >
               <ChevronLeft className="w-4 h-4" /> Retour
             </button>
             <button
-              onClick={() => setStep('photos')}
+              onClick={() => goToStep('photos')}
               className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors active:scale-[.97] transition-transform flex items-center justify-center gap-2"
             >
               Suivant : Photos ({photoCount} prise{photoCount > 1 ? 's' : ''}) <ChevronRight className="w-4 h-4" />
@@ -1023,13 +1049,13 @@ export default function InspectionFlow({
 
           <div className="flex gap-3">
             <button
-              onClick={() => setStep('schema')}
+              onClick={() => window.history.back()}
               className="px-5 py-3 bg-white border border-gray-200 text-gray-600 rounded-xl font-semibold hover:bg-gray-50 transition-colors active:scale-[.97] transition-transform flex items-center justify-center gap-1.5"
             >
               <ChevronLeft className="w-4 h-4" /> Retour
             </button>
             <button
-              onClick={() => setStep('signatures')}
+              onClick={() => goToStep('signatures')}
               disabled={!mandatoryCompleted}
               className="flex-1 py-3 bg-blue-600 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors active:scale-[.97] transition-transform flex items-center justify-center gap-2"
             >
@@ -1087,7 +1113,7 @@ export default function InspectionFlow({
             setContratSig={setContratSig}
             saving={saving}
             error={error}
-            onBack={() => setStep('photos')}
+            onBack={() => window.history.back()}
             onSubmit={handleSubmit}
           />
         )
