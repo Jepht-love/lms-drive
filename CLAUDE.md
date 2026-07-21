@@ -1,3 +1,6 @@
+# Language Preference
+Toutes les réponses doivent être fournies en français, sauf indication contraire explicite de l'utilisateur.
+
 @AGENTS.md
 
 ## graphify

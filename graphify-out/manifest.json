@@ -170,8 +170,8 @@
     "semantic_hash": ""
   },
   "app/(dashboard)/contracts/[id]/preview/ContractPreviewClient.tsx": {
-    "mtime": 1784608416.4114535,
-    "ast_hash": "340ad63f726606e7192cea066bf148e0",
+    "mtime": 1784622348.6872683,
+    "ast_hash": "5f598abe9173348b46198bff69846278",
     "semantic_hash": ""
   },
   "app/(dashboard)/contracts/[id]/preview/page.tsx": {
@@ -485,8 +485,8 @@
     "semantic_hash": "cc9b283a269c3ce77d1640b3e0e622d6"
   },
   "app/(dashboard)/settings/page.tsx": {
-    "mtime": 1784218862.249049,
-    "ast_hash": "465293e4a7b364b4651f4648e6213573",
+    "mtime": 1784622351.8530452,
+    "ast_hash": "f7444000354a004c92372c3d69dd5188",
     "semantic_hash": ""
   },
   "app/(dashboard)/vehicles/VehicleForm.tsx": {
@@ -620,8 +620,8 @@
     "semantic_hash": "546b3ca2f3aa5cee1fe33f7d41c9034c"
   },
   "components/inspection/InspectionFlow.tsx": {
-    "mtime": 1784621116.6596754,
-    "ast_hash": "6f0464d0a7c08200841306d533d1de7d",
+    "mtime": 1784627799.091701,
+    "ast_hash": "5964d05d1d4f1675b12598457dd9b194",
     "semantic_hash": ""
   },
   "components/layout/BottomNav.tsx": {
@@ -660,9 +660,9 @@
     "semantic_hash": "8d7d9fcdcbdaf13ca9e56a9a9174b8b7"
   },
   "components/signature/SignatureCanvas.tsx": {
-    "mtime": 1783075880.1410956,
-    "ast_hash": "8854903dd2be914b4db8bc02ab435a24",
-    "semantic_hash": "8854903dd2be914b4db8bc02ab435a24"
+    "mtime": 1784631178.2701786,
+    "ast_hash": "6c0c040828e7da6a965ab0b0c8e8b2b3",
+    "semantic_hash": ""
   },
   "components/ui/DeleteButton.tsx": {
     "mtime": 1783102965.8294735,
@@ -910,13 +910,13 @@
     "semantic_hash": "f8b3f5ed87174d6e51a971d0c679e480"
   },
   "lib/pdf/build-contract-data.ts": {
-    "mtime": 1784257865.7220068,
-    "ast_hash": "aaa52e8b5bc23d70de93458a5b262225",
+    "mtime": 1784628043.959321,
+    "ast_hash": "02a3887191240ecb57e3731731c3e6cf",
     "semantic_hash": ""
   },
   "lib/pdf/contract-template.tsx": {
-    "mtime": 1784186481.734962,
-    "ast_hash": "e6ed8c6cae2846e3204db96cd67f5db9",
+    "mtime": 1784627950.2837083,
+    "ast_hash": "4e7293016a37133cb8a963dfbff95204",
     "semantic_hash": ""
   },
   "lib/seed/vehicles.ts": {
@@ -985,8 +985,8 @@
     "semantic_hash": "ace49c057ae3e1669b959b63b56753f1"
   },
   "public/sw.js": {
-    "mtime": 1784615215.065651,
-    "ast_hash": "678db9849ed76535b97d9fa748264633",
+    "mtime": 1784632339.713316,
+    "ast_hash": "2b5bb184e8884778b2aebba1739e3e34",
     "semantic_hash": ""
   },
   "scripts/seed-vehicles.ts": {
@@ -1225,9 +1225,9 @@
     "semantic_hash": ""
   },
   "components/ui/BackButton.tsx": {
-    "mtime": 1783139648.3687084,
-    "ast_hash": "b45cb581d124109c5a07be5821fb671a",
-    "semantic_hash": "b45cb581d124109c5a07be5821fb671a"
+    "mtime": 1784622252.0392537,
+    "ast_hash": "0772c1ef59063d0acb7d1538b20fb660",
+    "semantic_hash": ""
   },
   "supabase/migrations/021_inspections_fuel_range.sql": {
     "mtime": 1781950482.7769332,
@@ -1525,8 +1525,8 @@
     "semantic_hash": "5b51b833f40887d46b3f05101b70528c"
   },
   "app/(dashboard)/partnerships/[id]/convention/ConventionPreviewClient.tsx": {
-    "mtime": 1784400362.5376027,
-    "ast_hash": "933325093f5db2bbd5f827545e7259cd",
+    "mtime": 1784622350.2997084,
+    "ast_hash": "7031c0b1fb7381583f10182bff6285b7",
     "semantic_hash": ""
   },
   "app/(dashboard)/partnerships/[id]/convention/page.tsx": {
@@ -2490,13 +2490,18 @@
     "semantic_hash": ""
   },
   "components/inspection/RecapSignatures.tsx": {
-    "mtime": 1784621018.7902098,
-    "ast_hash": "e8de07f56d6d1a02161ca5a46563d710",
+    "mtime": 1784627893.2859406,
+    "ast_hash": "8d8085c34aa5fa818fa5f7291371b90c",
     "semantic_hash": ""
   },
   "components/signature/ZoneSignature.tsx": {
-    "mtime": 1784620961.736002,
-    "ast_hash": "36b33dfc084ed8b1afaf0be0a1dd6836",
+    "mtime": 1784632316.4019809,
+    "ast_hash": "a4f95eb74276d368325a079ff4372bf5",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/059_inspection_invoice_signature.sql": {
+    "mtime": 1784627560.7717955,
+    "ast_hash": "469fcfd0b719d43172ed8e2c7d0a6ce5",
     "semantic_hash": ""
   }
 }
