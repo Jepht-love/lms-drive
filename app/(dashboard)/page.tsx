@@ -242,6 +242,17 @@ export default async function DashboardPage() {
   // reste une action à réaliser : on la remonte tout en haut des tâches, comme
   // pour un retour en retard. Le départ "du jour même" reste, lui, dans
   // departsAujourdhui (badge DÉPART / À PRÉPARER).
+  // Ticket SAV 21/07 : sans cette liste, un départ passé des jours précédents
+  // (client pas venu, contrat pas signé) disparaissait des « Tâches du jour »
+  // alors que les alertes le signalaient — le gérant voyait « Aucune mission ».
+  const hoursLateOf = (r: { start_datetime: string }) =>
+    Math.max(1, Math.floor((now.getTime() - new Date(r.start_datetime).getTime()) / 36e5))
+  const recuperationsEnRetard = (reservations ?? [])
+    .filter(r =>
+      isDepart(r.status) &&
+      new Date(r.start_datetime) < businessDayStart
+    )
+    .sort((a, b) => a.start_datetime.localeCompare(b.start_datetime)) // plus ancien en premier
   // Même véhicule avec un départ ET un retour aujourd'hui (rotation rapide) —
   // à signaler clairement : peu de marge pour laver/préparer entre les deux.
   const departVehicleIds = new Set(departsAujourdhui.map(r => getVehicle(r)?.id).filter(Boolean))
@@ -822,12 +833,18 @@ export default async function DashboardPage() {
               </Link>
             </div>
           </div>
-          {(retoursEnRetard.length > 0 || aPreparerAujourdhui.length > 0) && (
+          {(retoursEnRetard.length > 0 || recuperationsEnRetard.length > 0 || aPreparerAujourdhui.length > 0) && (
             <div className="flex items-center gap-2 mt-2 flex-wrap">
               {retoursEnRetard.length > 0 && (
                 <span className="inline-flex items-center gap-1 text-[10px] font-black text-white bg-red-600 px-2.5 py-1 rounded-full animate-pulse whitespace-nowrap">
                   <AlertTriangle className="w-3 h-3" />
                   {retoursEnRetard.length} retour{retoursEnRetard.length > 1 ? 's' : ''} en retard
+                </span>
+              )}
+              {recuperationsEnRetard.length > 0 && (
+                <span className="inline-flex items-center gap-1 text-[10px] font-black text-white bg-orange-600 px-2.5 py-1 rounded-full whitespace-nowrap">
+                  <AlertTriangle className="w-3 h-3" />
+                  {recuperationsEnRetard.length} récupération{recuperationsEnRetard.length > 1 ? 's' : ''} en retard
                 </span>
               )}
               {aPreparerAujourdhui.length > 0 && (
@@ -839,7 +856,7 @@ export default async function DashboardPage() {
           )}
         </div>
 
-        {retoursEnRetard.length === 0 && departsAujourdhui.length === 0 && retoursAujourdhui.length === 0 && (todayTasks?.length ?? 0) === 0 && todayCalendarTasks.length === 0 ? (
+        {retoursEnRetard.length === 0 && recuperationsEnRetard.length === 0 && departsAujourdhui.length === 0 && retoursAujourdhui.length === 0 && (todayTasks?.length ?? 0) === 0 && todayCalendarTasks.length === 0 ? (
           <div className="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm text-center">
             <CheckCircle2 className="w-10 h-10 text-gray-200 mx-auto mb-3" />
             <p className="text-sm text-gray-400 font-medium">Aucune mission aujourd'hui</p>
@@ -889,6 +906,48 @@ export default async function DashboardPage() {
                       <AssigneeLine name={retourAssigneeByRes.get(r.id) ?? null} />
                     </div>
                     <ChevronRight className="w-4 h-4 text-red-300 flex-shrink-0" />
+                  </div>
+                </Link>
+              )
+            })}
+
+            {/* 🚗 RÉCUPÉRATIONS EN RETARD — départ passé un jour précédent, client pas venu */}
+            {recuperationsEnRetard.map(r => {
+              const v = getVehicle(r); const c = getClient(r)
+              const hLate = hoursLateOf(r)
+              const lateLabel = hLate >= 48 ? `${Math.floor(hLate / 24)} j` : `${hLate} h`
+              return (
+                <Link key={`recup-${r.id}`} href={`/reservations/${r.id}?from=accueil`}>
+                  <div className="flex items-center gap-4 px-4 py-4 bg-orange-50 hover:bg-orange-100 border-l-4 border-orange-600 transition-colors">
+                    <span className="w-12 flex flex-col items-center flex-shrink-0 leading-tight">
+                      <span className="text-[10px] font-bold text-orange-500 capitalize">
+                        {format(new Date(r.start_datetime), 'd MMM', { locale: fr })}
+                      </span>
+                      <span className="text-sm font-black text-orange-700 font-mono">
+                        {format(new Date(r.start_datetime), 'HH:mm')}
+                      </span>
+                    </span>
+                    <span className="inline-flex items-center justify-center gap-1 min-w-[92px] text-[10px] font-black uppercase px-2.5 py-1.5 rounded-full flex-shrink-0 bg-orange-600 text-white">
+                      <AlertTriangle className="w-3 h-3" /> {lateLabel}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[11px] font-black uppercase tracking-wide text-orange-600">
+                        Récupération en retard de {lateLabel}
+                      </p>
+                      <p className="text-sm font-bold text-gray-900 truncate">
+                        {c?.first_name} {c?.last_name}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        {v?.brand} {v?.model} <span className="text-gray-400 font-mono">· {v?.plate}</span>
+                      </p>
+                      {isToPrepare(r.id) && (
+                        <p className="text-[10px] font-bold text-amber-600 mt-1">
+                          Contrat à signer au départ
+                        </p>
+                      )}
+                      <AssigneeLine name={departAssigneeByRes.get(r.id) ?? null} />
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-orange-300 flex-shrink-0" />
                   </div>
                 </Link>
               )
