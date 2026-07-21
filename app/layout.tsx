@@ -27,6 +27,11 @@ export const viewport: Viewport = {
   userScalable: false,
   viewportFit: 'cover',
   themeColor: '#111111',
+  // BUG 6 — clavier mobile : `resizes-content` fait rétrécir le viewport de mise
+  // en page à l'ouverture du clavier virtuel (au lieu de le laisser recouvrir le
+  // contenu). Le champ focalisé reste ancré au-dessus du clavier et le contenu ne
+  // « remonte » plus. Correctif global (toutes les pages/formulaires).
+  interactiveWidget: 'resizes-content',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
