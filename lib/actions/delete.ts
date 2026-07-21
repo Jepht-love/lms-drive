@@ -118,6 +118,10 @@ export async function deleteContract(id: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non authentifié' }
+  // La cascade ci-dessous passe par le client admin (bypass RLS) : sans ce garde,
+  // n'importe quel employé authentifié pourrait supprimer un contrat.
+  const denied = await assertManager(supabase, user.id)
+  if (denied) return denied
 
   // Récupérer reservation_id pour revalider la page réservation après suppression
   const { data: contract } = await supabase
@@ -127,22 +131,30 @@ export async function deleteContract(id: string) {
     .maybeSingle()
   const reservationId = contract?.reservation_id ?? null
 
+  // Client admin : la RLS bloquait la suppression des inspections en silence,
+  // et le contrat cassait ensuite sur inspections_contract_id_fkey (ticket SAV 21/07).
+  const admin = createAdminClient()
+
   // Récupérer les inspections liées
-  const { data: inspections } = await supabase
+  const { data: inspections } = await admin
     .from('inspections')
     .select('id')
     .eq('contract_id', id)
 
   const inspectionIds = (inspections ?? []).map(i => i.id)
 
-  // Supprimer les photos d'inspection
+  // Supprimer les photos d'inspection puis les inspections — en vérifiant chaque étape
   if (inspectionIds.length > 0) {
-    await supabase.from('inspection_photos').delete().in('inspection_id', inspectionIds)
-    await supabase.from('inspections').delete().in('id', inspectionIds)
+    const { error: photosError } = await admin
+      .from('inspection_photos').delete().in('inspection_id', inspectionIds)
+    if (photosError) return { error: photosError.message }
+    const { error: inspectionsError } = await admin
+      .from('inspections').delete().in('id', inspectionIds)
+    if (inspectionsError) return { error: inspectionsError.message }
   }
 
   // Supprimer le contrat
-  const { error } = await supabase.from('contracts').delete().eq('id', id)
+  const { error } = await admin.from('contracts').delete().eq('id', id)
   if (error) return { error: error.message }
 
   await supabase.from('audit_logs').insert({
