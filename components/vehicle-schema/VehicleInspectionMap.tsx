@@ -9,6 +9,7 @@ export interface VehicleInspectionMapProps {
   onDamageRemove: (zoneId: string, index: number) => void
   readonly?: boolean
   previousZones?: PreviousZone[]
+  phase?: 'departure' | 'return'
 }
 
 export default function VehicleInspectionMap({
@@ -17,6 +18,7 @@ export default function VehicleInspectionMap({
   onDamageRemove,
   readonly,
   previousZones,
+  phase,
 }: VehicleInspectionMapProps) {
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
@@ -29,6 +31,7 @@ export default function VehicleInspectionMap({
         onDamageRemove={onDamageRemove}
         readonly={readonly}
         previousZones={previousZones}
+        phase={phase}
       />
     </div>
   )

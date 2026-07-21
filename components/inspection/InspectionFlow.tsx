@@ -705,6 +705,7 @@ export default function InspectionFlow({
             onDamageAdd={handleDamageAdd}
             onDamageRemove={handleDamageRemove}
             previousZones={type === 'arrivee' ? previousDamagedZones : []}
+            phase={type === 'depart' ? 'departure' : 'return'}
           />
 
           {damagedZoneCount > 0 && (

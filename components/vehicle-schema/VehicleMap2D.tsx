@@ -71,9 +71,13 @@ interface Props {
   onDamageRemove: (zoneId: string, index: number) => void
   readonly?: boolean
   previousZones?: PreviousZone[]
+  // Phase de l'EDL. Au DÉPART, une zone saisie est un « dommage au départ »
+  // (orange « D ») et non un « nouveau dommage au retour » (rouge « R »). Défaut
+  // 'return' → comportement historique inchangé pour l'EDL retour.
+  phase?: 'departure' | 'return'
 }
 
-export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, readonly, previousZones = [] }: Props) {
+export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, readonly, previousZones = [], phase = 'return' }: Props) {
   const prevById = new Map(previousZones.map(z => [z.id, z]))
   const [selected, setSelected] = useState<string | null>(null)
   const [hovered, setHovered] = useState<string | null>(null)
@@ -167,9 +171,12 @@ export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, rea
   const existing = selId ? (damages[selId] ?? []) : []
   const prevSel = selId ? prevById.get(selId) : undefined
 
-  // Légende : n'apparaît que s'il existe au moins un dommage (départ ou retour).
-  const anyDep = previousZones.length > 0
-  const anyRet = Object.values(damages).some(a => a.length > 0)
+  // Légende : n'apparaît que s'il existe au moins un dommage. Au DÉPART, les zones
+  // saisies comptent comme « dommage au départ » (orange) ; au RETOUR, `damages`
+  // = nouveaux dommages (rouge) et `previousZones` = référence du départ (orange).
+  const filledAny = Object.values(damages).some(a => a.length > 0)
+  const anyDep = phase === 'departure' ? filledAny : previousZones.length > 0
+  const anyRet = phase === 'departure' ? false : filledAny
 
   return (
     <div className="w-full max-w-[520px] mx-auto bg-white rounded-xl overflow-hidden">
@@ -207,8 +214,12 @@ export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, rea
           <image href={SRC} x={0} y={0} width={IMG} height={IMG} />
 
           {ZONES.map((z, zi) => {
-            const hasRet = (damages[z.id]?.length ?? 0) > 0
-            const hasDep = prevById.has(z.id)
+            const filled = (damages[z.id]?.length ?? 0) > 0
+            // Au DÉPART, une zone saisie est un dommage « départ » (orange « D ») ;
+            // au RETOUR, c'est un nouveau dommage (rouge « R ») et `prevById` porte
+            // la référence du départ.
+            const hasRet = phase === 'departure' ? false : filled
+            const hasDep = phase === 'departure' ? filled : prevById.has(z.id)
             const isSel = selected === `${z.id}#${zi}`
             const isHov = hovered === z.id
             const box = zoneBox(z)
@@ -225,7 +236,7 @@ export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, rea
                 onClick={() => selectZone(z, zi)}
                 onMouseEnter={() => setHovered(z.id)}
                 onMouseLeave={() => setHovered(h => (h === z.id ? null : h))}
-                style={{ cursor: readonly && !hasRet ? 'default' : 'pointer' }}
+                style={{ cursor: readonly && !filled ? 'default' : 'pointer' }}
               >
                 {z.points ? (
                   <polygon points={z.points.map(p => p.join(',')).join(' ')} fill={style.fill} stroke={style.stroke} strokeWidth={style.strokeWidth} strokeDasharray={style.dash} strokeLinejoin="round" style={{ transition: 'fill 0.15s ease, stroke 0.15s ease' }} />

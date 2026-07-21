@@ -368,11 +368,9 @@ export default async function DashboardPage() {
   // la liste Semaine, sans changer le modèle de données.
   const departAssigneeByRes = new Map<string, string>()
   const retourAssigneeByRes = new Map<string, string>()
-  // Id de l'événement calendrier départ/retour par réservation — pour ouvrir
-  // directement son tiroir d'assignation (/calendrier?event=<id>) quand la carte
-  // affiche « À assigner ». Renseigné même sans assigné (c'est justement le cas
-  // où on veut assigner).
-  const departEventByRes = new Map<string, string>()
+  // Id de l'événement calendrier RETOUR par réservation — pour ouvrir directement
+  // son tiroir d'assignation (/calendrier?event=<id>) quand la carte retour affiche
+  // « À assigner ». (Les départs mènent désormais à la fiche réservation.)
   const retourEventByRes = new Map<string, string>()
   if (weekResIds.length) {
     const { data: resEvents } = await supabase
@@ -382,8 +380,7 @@ export default async function DashboardPage() {
       .in('event_type', ['depart_vehicule', 'retour_vehicule'])
     for (const ev of resEvents ?? []) {
       if (!ev.reservation_id) continue
-      if (ev.event_type === 'depart_vehicule') departEventByRes.set(ev.reservation_id, ev.id)
-      else if (ev.event_type === 'retour_vehicule') retourEventByRes.set(ev.reservation_id, ev.id)
+      if (ev.event_type === 'retour_vehicule') retourEventByRes.set(ev.reservation_id, ev.id)
       const assignee = Array.isArray(ev.assignee) ? ev.assignee[0] : ev.assignee
       const team     = Array.isArray(ev.team) ? ev.team[0] : ev.team
       const label    = assignee?.full_name ?? team?.name ?? null
@@ -901,16 +898,11 @@ export default async function DashboardPage() {
             {departsAujourdhui.map(r => {
               const v = getVehicle(r); const c = getClient(r)
               const isQuickTurnaround = v?.id && quickTurnaroundVehicleIds.has(v.id)
-              // « À assigner » → ouvre le tiroir dans le calendrier pour affecter :
-              // l'événement départ s'il existe, sinon une tâche de préparation
-              // pré-remplie à créer. Assigné → fiche réservation.
-              const departAssignee = departAssigneeByRes.get(r.id) ?? null
-              const departEventId  = departEventByRes.get(r.id)
-              const departHref = departAssignee
-                ? `/reservations/${r.id}?from=accueil`
-                : departEventId
-                  ? `/calendrier?event=${departEventId}`
-                  : assignCreateHref(`Préparer départ — ${v ? `${v.brand} ${v.model}` : ''}`.trim(), r.start_datetime, v?.id, c?.id)
+              // Le clic mène TOUJOURS à la fiche réservation : c'est là qu'on lance
+              // le départ + l'état des lieux (demande gérant). Auparavant, une résa
+              // « à assigner » ouvrait le calendrier → on n'arrivait jamais au départ.
+              // L'assignation reste possible depuis la fiche et depuis le calendrier.
+              const departHref = `/reservations/${r.id}?from=accueil`
               return (
                 <Link key={r.id} href={departHref}>
                   <div className={`flex items-center gap-4 px-4 py-4 transition-colors ${
