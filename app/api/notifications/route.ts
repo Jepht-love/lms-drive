@@ -254,25 +254,56 @@ export async function GET(request: NextRequest) {
       .gte('created_at', todayStart.toISOString())
       .limit(1)
     if (!digestSent || digestSent.length === 0) {
-      const [departsCount, retoursCount, tachesCount] = await Promise.all([
-        supabase.from('reservations').select('id', { count: 'exact', head: true })
+      // Programme du jour DÉTAILLÉ, listé par type (départs / retours / tâches),
+      // chaque ligne avec l'heure prévue, trié chronologiquement dans sa section.
+      const [depRows, retRows, taskRows, eventRows] = await Promise.all([
+        supabase.from('reservations')
+          .select('start_datetime, vehicle:vehicles(brand, model), client:clients(first_name, last_name)')
           .eq('status', 'confirmee')
-          .gte('start_datetime', todayStart.toISOString()).lte('start_datetime', todayEnd.toISOString()),
-        supabase.from('reservations').select('id', { count: 'exact', head: true })
+          .gte('start_datetime', todayStart.toISOString()).lte('start_datetime', todayEnd.toISOString())
+          .order('start_datetime'),
+        supabase.from('reservations')
+          .select('end_datetime, vehicle:vehicles(brand, model), client:clients(first_name, last_name)')
           .in('status', ['en_cours', 'en_retard'])
-          .gte('end_datetime', todayStart.toISOString()).lte('end_datetime', todayEnd.toISOString()),
-        supabase.from('tasks').select('id', { count: 'exact', head: true })
+          .gte('end_datetime', todayStart.toISOString()).lte('end_datetime', todayEnd.toISOString())
+          .order('end_datetime'),
+        supabase.from('tasks')
+          .select('title, due_datetime, vehicle:vehicles(brand, model, plate)')
           .not('status', 'in', '("termine","annule")')
-          .gte('due_datetime', todayStart.toISOString()).lte('due_datetime', todayEnd.toISOString()),
+          .gte('due_datetime', todayStart.toISOString()).lte('due_datetime', todayEnd.toISOString())
+          .order('due_datetime'),
+        supabase.from('calendar_events')
+          .select('title, start_at')
+          .in('event_type', ['tache', 'rdv_client', 'rdv_garage', 'rdv_autre', 'livraison', 'recuperation'])
+          .in('status', ['a_faire', 'en_cours'])
+          .gte('start_at', todayStart.toISOString()).lte('start_at', todayEnd.toISOString())
+          .order('start_at'),
       ])
-      const nbDep = departsCount.count ?? 0
-      const nbRet = retoursCount.count ?? 0
-      const nbTac = tachesCount.count ?? 0
-      const parts: string[] = []
-      if (nbDep) parts.push(`${nbDep} départ${nbDep > 1 ? 's' : ''}`)
-      if (nbRet) parts.push(`${nbRet} retour${nbRet > 1 ? 's' : ''}`)
-      if (nbTac) parts.push(`${nbTac} tâche${nbTac > 1 ? 's' : ''}`)
-      const digestBody = parts.length ? parts.join(' · ') : 'Rien de programmé aujourd\'hui'
+
+      const fmtH = (x: string) => new Date(x).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+      const one = <T,>(v: T | T[] | null): T | null => (Array.isArray(v) ? v[0] ?? null : v)
+      const vehCli = (vRaw: any, cRaw: any) => {
+        const v = one<{ brand: string; model: string }>(vRaw)
+        const c = one<{ first_name: string; last_name: string }>(cRaw)
+        return `${v ? `${v.brand} ${v.model}` : 'Véhicule'}${c ? ` (${c.last_name})` : ''}`
+      }
+
+      const depLines = (depRows.data ?? []).map((r: any) => `· ${fmtH(r.start_datetime)} — ${vehCli(r.vehicle, r.client)}`)
+      const retLines = (retRows.data ?? []).map((r: any) => `· ${fmtH(r.end_datetime)} — ${vehCli(r.vehicle, r.client)}`)
+      const taskLines = [
+        ...(taskRows.data ?? []).map((t: any) => {
+          const v = one<{ brand: string; model: string; plate: string }>(t.vehicle)
+          return { t: new Date(t.due_datetime).getTime(), line: `· ${fmtH(t.due_datetime)} — ${t.title}${v?.plate ? ` (${v.plate})` : ''}` }
+        }),
+        ...(eventRows.data ?? []).map((ev: any) => ({ t: new Date(ev.start_at).getTime(), line: `· ${fmtH(ev.start_at)} — ${ev.title}` })),
+      ].sort((a, b) => a.t - b.t).map(x => x.line)
+
+      const sections: string[] = []
+      if (depLines.length)  sections.push(`DÉPARTS\n${depLines.join('\n')}`)
+      if (retLines.length)  sections.push(`RETOURS\n${retLines.join('\n')}`)
+      if (taskLines.length) sections.push(`TÂCHES\n${taskLines.join('\n')}`)
+      const digestBody = sections.length ? sections.join('\n\n') : 'Rien de programmé aujourd\'hui'
+
       await supabase.from('notifications').insert({
         user_id: null, type: 'daily_digest',
         title: 'Programme du jour', body: digestBody,
