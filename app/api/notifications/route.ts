@@ -363,12 +363,18 @@ export async function GET(request: NextRequest) {
       created.push(r.id)
     }
 
-    // Retours en retard sur les tâches calendrier (calendar_events)
-    const thirtyMinAgo = subMinutes(now, thresholdMin).toISOString()
+    // Tâches / RDV calendrier en retard : UNE seule alerte par événement (dédup
+    // permanente — fini la répétition toutes les 30 min qui noyait l'écran). Cap
+    // d'âge : on n'alerte que les événements devenus en retard dans les dernières
+    // 24 h, pour que les vieux événements jamais clôturés ne repartent pas en masse.
+    // Titre corrigé : « Tâche / RDV en retard » (et non « Retour en retard »).
+    const lateEventFrom = addHours(now, -24).toISOString()
+    const lateEventTo   = subMinutes(now, thresholdMin).toISOString()
     const { data: lateEvents } = await supabase
       .from('calendar_events')
       .select('id, title')
-      .lt('end_at', thirtyMinAgo)
+      .gte('end_at', lateEventFrom)
+      .lt('end_at', lateEventTo)
       .not('status', 'in', '("termine","annule")')
 
     for (const ev of lateEvents ?? []) {
@@ -377,19 +383,17 @@ export async function GET(request: NextRequest) {
         .select('id')
         .eq('type', 'event_return_late')
         .eq('entity_id', ev.id)
-        .gte('created_at', repeatThreshold)
         .limit(1)
+      if (existing && existing.length) continue
 
-      if (!existing || existing.length === 0) {
-        const body = `"${ev.title}" aurait dû être terminé`
-        await supabase.from('notifications').insert({
-          user_id: null, type: 'event_return_late',
-          title: 'Retour en retard', body,
-          entity_type: 'calendar_events', entity_id: ev.id,
-        })
-        await broadcastPushToManagers({ title: 'Retour en retard', body, url: '/calendrier' }, 'task_late_alert')
-        created.push(ev.id)
-      }
+      const body = `« ${ev.title} » aurait dû être terminé`
+      await supabase.from('notifications').insert({
+        user_id: null, type: 'event_return_late',
+        title: 'Tâche / RDV en retard', body,
+        entity_type: 'calendar_events', entity_id: ev.id,
+      })
+      await broadcastPushToManagers({ title: 'Tâche / RDV en retard', body, url: '/calendrier' }, 'task_late_alert')
+      created.push(ev.id)
     }
 
     // Reflète les alertes urgentes/importantes (CT, assurance, lavage, infractions...)

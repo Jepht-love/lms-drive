@@ -197,8 +197,10 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
     return documents.filter(doc => {
       // Versions archivées masquées de la liste (visibles via l'historique).
       if (doc.is_current === false) return false
-      // Contrats & factures de restitution auto-archivés : uniquement dans l'onglet dédié.
-      if (isReservationAutoDoc(doc)) return false
+      // Contrats, factures de restitution & conventions auto-archivés : masqués des
+      // onglets catégorie (ils ont leur onglet « Contrats et factures »), mais bien
+      // présents dans « Tous » qui reste une vue exhaustive de tous les documents.
+      if (category !== 'all' && isReservationAutoDoc(doc)) return false
       if (!canSeeSensitive && SENSITIVE_SUBCATEGORIES.includes(doc.subcategory)) return false
       if (category !== 'all' && category !== 'reservations' && doc.category !== category) return false
       if (!q) return true
@@ -246,12 +248,13 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
   }, [reservationDocs, searchQuery])
 
   function getCategoryLabel(cat: string) {
-    const current = documents.filter(d => d.is_current !== false && !isReservationAutoDoc(d))
-    if (cat === 'all') return `Tous (${current.filter(d => canSeeSensitive || !SENSITIVE_SUBCATEGORIES.includes(d.subcategory)).length})`
+    const visible = documents.filter(d => d.is_current !== false && (canSeeSensitive || !SENSITIVE_SUBCATEGORIES.includes(d.subcategory)))
+    // « Tous » = vue exhaustive (auto inclus) ; les onglets catégorie excluent les auto.
+    if (cat === 'all') return `Tous (${visible.length})`
     if (cat === 'reservations') return `Contrats et factures (${reservationDocs.length})`
     const found = DOCUMENT_CATEGORIES.find(c => c.id === cat)
     if (!found) return cat
-    const count = current.filter(d => d.category === cat && (canSeeSensitive || !SENSITIVE_SUBCATEGORIES.includes(d.subcategory))).length
+    const count = visible.filter(d => d.category === cat && !isReservationAutoDoc(d)).length
     return `${found.label} (${count})`
   }
 
@@ -278,7 +281,9 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
   // les pièces enregistrées avant le nommage automatique (nom stocké figé), sans
   // écriture en base ni re-téléversement. Repli : le nom stocké.
   function displayDocName(doc: Document): string {
-    if (doc.category === 'client' && doc.entity_id) {
+    // Pièces d'identité client uniquement — pas les docs auto (contrat, facture,
+    // convention) qui gardent leur nom d'archivage y compris dans « Tous ».
+    if (doc.category === 'client' && doc.entity_id && !isReservationAutoDoc(doc)) {
       const auto = buildClientDocName(doc.subcategory, doc.entity_id)
       if (auto) return auto
     }
