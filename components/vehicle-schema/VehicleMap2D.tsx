@@ -1,7 +1,7 @@
 'use client'
 
 import { useReducer, useRef, useState, useEffect } from 'react'
-import { ArrowLeft, Camera, X, Plus } from 'lucide-react'
+import { ArrowLeft, Camera, X, Plus, Check, Pencil } from 'lucide-react'
 import { compressImageToBase64 } from '@/lib/utils'
 import { PhotoLightbox } from '@/components/inspection/PhotoLightbox'
 import {
@@ -69,6 +69,8 @@ interface Props {
   damages: Record<string, DamageEntry[]>
   onDamageAdd: (zoneId: string, entry: DamageEntry) => void
   onDamageRemove: (zoneId: string, index: number) => void
+  // Modification d'un dommage déjà saisi (retour sur les options sélectionnées).
+  onDamageUpdate?: (zoneId: string, index: number, entry: DamageEntry) => void
   readonly?: boolean
   previousZones?: PreviousZone[]
   // Phase de l'EDL. Au DÉPART, une zone saisie est un « dommage au départ »
@@ -84,7 +86,7 @@ interface Props {
   previousZonePhotos?: Record<string, string[]>
 }
 
-export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, readonly, previousZones = [], phase = 'return', zonePhotos = {}, onZonePhotoAdd, onZonePhotoRemove, previousZonePhotos = {} }: Props) {
+export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, onDamageUpdate, readonly, previousZones = [], phase = 'return', zonePhotos = {}, onZonePhotoAdd, onZonePhotoRemove, previousZonePhotos = {} }: Props) {
   const prevById = new Map(previousZones.map(z => [z.id, z]))
   const [selected, setSelected] = useState<string | null>(null)
   const [hovered, setHovered] = useState<string | null>(null)
@@ -94,6 +96,8 @@ export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, rea
   const [gravite, setGravite] = useState<DamageSeverity>('rayure')
   const [comment, setComment] = useState('')
   const [pending, setPending] = useState<string[]>([])
+  // Index du dommage en cours de modification (null = saisie d'un nouveau dommage).
+  const [editIndex, setEditIndex] = useState<number | null>(null)
   // Photo de départ ouverte en plein écran (null = lightbox fermée)
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -142,6 +146,7 @@ export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, rea
     setGravite('rayure')
     setComment('')
     setPending([])
+    setEditIndex(null)
   }
 
   function selectZone(z: Zone2D, zi: number) {
@@ -175,10 +180,35 @@ export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, rea
     e.target.value = ''
   }
 
-  function addDamage() {
+  // Recharge un dommage déjà saisi dans le formulaire pour le corriger (par ex.
+  // gravité choisie trop vite). Le bouton devient « Enregistrer les modifications ».
+  function startEdit(i: number) {
+    const e = existing[i]
+    if (!e) return
+    setDtype(e.type ?? DAMAGE_TYPES[0].id)
+    setGravite(e.severity)
+    setComment(e.comment ?? '')
+    setPending(e.photos ?? [])
+    setEditIndex(i)
+  }
+
+  function saveDamage() {
     if (!selId) return
-    onDamageAdd(selId, { severity: gravite, type: dtype, comment: comment.trim(), photos: pending })
+    const entry: DamageEntry = { severity: gravite, type: dtype, comment: comment.trim(), photos: pending }
+    if (editIndex !== null && onDamageUpdate) {
+      onDamageUpdate(selId, editIndex, entry)
+    } else {
+      onDamageAdd(selId, entry)
+    }
     resetForm()
+  }
+
+  // Suppression d'un dommage existant : annule la modification en cours si besoin
+  // (les index changent après un retrait → on repart proprement sur une saisie).
+  function removeExisting(i: number) {
+    if (!selId) return
+    onDamageRemove(selId, i)
+    if (editIndex !== null) resetForm()
   }
 
   // `selected` = clé d'instance `${id}#${index}` → on retrouve le polygone exact.
@@ -474,17 +504,25 @@ export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, rea
             </div>
           )}
 
-          {/* Dommages existants */}
+          {/* Dommages existants — appuyer sur un dommage recharge ses options dans
+              le formulaire pour le corriger (retour en arrière sur la gravité, etc.). */}
           {existing.length > 0 && (
             <div className="space-y-2">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                Dommages saisis — appuyez pour modifier
+              </p>
               {existing.map((e, i) => {
                 const g = GRAVITES.find(g => g.id === e.severity)
+                const isEditing = editIndex === i
                 return (
-                  <div key={i} className="flex items-start gap-2 p-2.5 rounded-xl bg-gray-50">
-                    <div className="flex-1 min-w-0">
+                  <div key={i} className={`flex items-start gap-2 p-2.5 rounded-xl border ${isEditing ? 'bg-blue-50 border-blue-300' : 'bg-gray-50 border-transparent'}`}>
+                    <button type="button" onClick={() => startEdit(i)} className="flex-1 min-w-0 text-left">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         {e.type && <span className="text-[11px] font-semibold text-gray-800">{damageTypeLabel(e.type)}</span>}
                         <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold border ${g?.chip ?? ''}`}>{graviteLabel(e.severity)}</span>
+                        <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-blue-500">
+                          <Pencil className="w-3 h-3" /> {isEditing ? 'en cours' : 'Modifier'}
+                        </span>
                       </div>
                       {e.comment && <p className="text-[11px] text-gray-500 mt-0.5 leading-snug">{e.comment}</p>}
                       {e.photos.length > 0 && (
@@ -495,8 +533,8 @@ export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, rea
                           ))}
                         </div>
                       )}
-                    </div>
-                    <button onClick={() => onDamageRemove(selId!, i)} className="p-1.5 hover:bg-red-50 rounded-lg flex-shrink-0">
+                    </button>
+                    <button onClick={() => removeExisting(i)} className="p-1.5 hover:bg-red-50 rounded-lg flex-shrink-0">
                       <X className="w-4 h-4 text-gray-400 hover:text-red-500" />
                     </button>
                   </div>
@@ -505,8 +543,14 @@ export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, rea
             </div>
           )}
 
-          {/* Formulaire nouveau dommage */}
+          {/* Formulaire : nouveau dommage, ou modification d'un dommage existant */}
           <div className="space-y-3">
+            {editIndex !== null && (
+              <div className="flex items-center justify-between rounded-xl bg-blue-50 border border-blue-200 px-3 py-2">
+                <span className="text-[11px] font-semibold text-blue-700">Modification du dommage sélectionné</span>
+                <button type="button" onClick={resetForm} className="text-[11px] font-semibold text-blue-500 underline">Annuler</button>
+              </div>
+            )}
             <div>
               <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Type de dommage</p>
               <div className="flex flex-wrap gap-1.5">
@@ -582,10 +626,12 @@ export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, rea
             </div>
 
             <button
-              onClick={addDamage}
+              onClick={saveDamage}
               className="w-full py-3 bg-[#111111] text-white rounded-2xl text-sm font-bold flex items-center justify-center gap-2 active:scale-[.99]"
             >
-              <Plus className="w-4 h-4" /> Ajouter le dommage
+              {editIndex !== null
+                ? <><Check className="w-4 h-4" /> Enregistrer les modifications</>
+                : <><Plus className="w-4 h-4" /> Ajouter le dommage</>}
             </button>
           </div>
         </div>

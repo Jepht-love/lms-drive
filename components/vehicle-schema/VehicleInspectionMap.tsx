@@ -7,6 +7,7 @@ export interface VehicleInspectionMapProps {
   damages: Record<string, DamageEntry[]>
   onDamageAdd: (zoneId: string, entry: DamageEntry) => void
   onDamageRemove: (zoneId: string, index: number) => void
+  onDamageUpdate?: (zoneId: string, index: number, entry: DamageEntry) => void
   readonly?: boolean
   previousZones?: PreviousZone[]
   phase?: 'departure' | 'return'
@@ -22,6 +23,7 @@ export default function VehicleInspectionMap({
   damages,
   onDamageAdd,
   onDamageRemove,
+  onDamageUpdate,
   readonly,
   previousZones,
   phase,
@@ -39,6 +41,7 @@ export default function VehicleInspectionMap({
         damages={damages}
         onDamageAdd={onDamageAdd}
         onDamageRemove={onDamageRemove}
+        onDamageUpdate={onDamageUpdate}
         readonly={readonly}
         previousZones={previousZones}
         phase={phase}

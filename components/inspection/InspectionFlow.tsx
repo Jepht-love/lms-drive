@@ -276,6 +276,14 @@ export default function InspectionFlow({
     }))
   }
 
+  // Modification d'un dommage déjà saisi (retour sur gravité/type/commentaire/photos).
+  function handleDamageUpdate(zoneId: string, index: number, entry: DamageEntry) {
+    setDamages(prev => ({
+      ...prev,
+      [zoneId]: (prev[zoneId] ?? []).map((e, i) => (i === index ? entry : e)),
+    }))
+  }
+
   function handleZonePhotoAdd(zoneId: string, dataUrl: string) {
     setZonePhotos(prev => ({ ...prev, [zoneId]: [...(prev[zoneId] ?? []), dataUrl] }))
   }
@@ -887,6 +895,7 @@ export default function InspectionFlow({
             damages={damages}
             onDamageAdd={handleDamageAdd}
             onDamageRemove={handleDamageRemove}
+            onDamageUpdate={handleDamageUpdate}
             previousZones={type === 'arrivee' ? previousDamages : []}
             phase={type === 'depart' ? 'departure' : 'return'}
             zonePhotos={zonePhotos}

@@ -84,7 +84,8 @@ export interface ContractData {
 const s = StyleSheet.create({
   page: { fontFamily: 'Helvetica', fontSize: 10, padding: 36, color: '#1e293b', backgroundColor: '#ffffff' },
 
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20, paddingBottom: 14, borderBottom: '2px solid #2563eb' },
+  docTitle: { fontSize: 18, fontFamily: 'Helvetica-Bold', color: '#0f172a', textAlign: 'center', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, paddingBottom: 14, borderBottom: '2px solid #2563eb' },
   company: { fontSize: 16, fontFamily: 'Helvetica-Bold', color: '#2563eb' },
   subtitle: { fontSize: 9, color: '#64748b', marginTop: 2 },
   contractRef: { textAlign: 'right', fontSize: 9, color: '#64748b' },
@@ -514,7 +515,7 @@ function EDLCompareColumn({ insp, edlImage }: { insp: InspectionPDFData; edlImag
       </View>
 
       <View style={{ alignItems: 'center', marginBottom: 4 }}>
-        <VehicleSchemaImage damages={insp.damagedZones} bgImage={edlImage} size={175} />
+        <VehicleSchemaImage damages={insp.damagedZones} bgImage={edlImage} size={150} />
         <SchemaLegend />
       </View>
 
@@ -547,7 +548,9 @@ function EDLComparePage({ dep, arr, contractNumber, clientName, vehiclePlate, ve
   )
 
   return (
-    <Page size="A4" orientation="landscape" style={s.edlPage}>
+    // A4 portrait (comme le reste du document) — on conserve le principe départ/
+    // retour côte à côte, avec des schémas réduits pour tenir sur la largeur A4.
+    <Page size="A4" style={s.edlPage}>
       <View style={[s.edlHeader, { borderBottomColor: '#0f172a' }]}>
         <View>
           <Text style={[s.edlTitle, { color: '#0f172a' }]}>Comparatif état des lieux — Départ / Retour</Text>
@@ -656,7 +659,8 @@ function EDLPhotosComparePage({ dep, arr, contractNumber, clientName, vehiclePla
   vehicleModel: string
 }) {
   return (
-    <Page size="A4" orientation="landscape" style={s.edlPage}>
+    // A4 portrait — photos départ / retour côte à côte (tailles réduites pour A4).
+    <Page size="A4" style={s.edlPage}>
       <View style={[s.edlHeader, { borderBottomColor: '#0f172a' }]}>
         <View>
           <Text style={[s.edlTitle, { color: '#0f172a' }]}>Photos — Départ / Retour</Text>
@@ -702,17 +706,18 @@ export function ContractPDF({ data }: { data: ContractData }) {
 
       {/* ── Page 1 : Contrat principal ── */}
       <Page size="A4" style={s.page}>
-        {/* Header */}
+        {/* Titre central du document, tout en haut */}
+        <Text style={s.docTitle}>Contrat de location</Text>
+        {/* Header épuré : logo seul à gauche, référence contrat à droite
+            (SIRET / adresse / sous-titre retirés — ils restent dans l'encart Loueur). */}
         <View style={s.header}>
           <View>
             {logoUrl ? (
-              <Image src={logoUrl} style={{ height: 36, maxWidth: 160, objectFit: 'contain', marginBottom: 4 }} />
+              // eslint-disable-next-line jsx-a11y/alt-text
+              <Image src={logoUrl} style={{ height: 36, maxWidth: 160, objectFit: 'contain' }} />
             ) : (
               <Text style={s.company}>{companyName}</Text>
             )}
-            {data.agency?.siret && <Text style={s.subtitle}>SIRET : {data.agency.siret}</Text>}
-            {data.agency?.address && <Text style={s.subtitle}>{data.agency.address}</Text>}
-            <Text style={s.subtitle}>Contrat de location de véhicule</Text>
           </View>
           <View style={s.contractRef}>
             <Text style={s.contractNumber}>{data.contractNumber}</Text>

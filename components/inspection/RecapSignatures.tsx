@@ -462,7 +462,7 @@ export default function RecapSignatures({
               </svg>
               Enregistrement…
             </span>
-          ) : needContratSig ? 'Valider départ + contrat' : 'Valider l\'état des lieux'}
+          ) : needContratSig ? 'Valider départ + contrat' : 'Valider'}
         </button>
       </div>
     </div>
