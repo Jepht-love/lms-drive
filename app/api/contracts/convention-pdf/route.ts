@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { renderToBuffer, type DocumentProps } from '@react-pdf/renderer'
 import { createClient } from '@/lib/supabase/server'
 import { getAgencySettings } from '@/lib/contracts/agency'
+import { formatDate } from '@/lib/utils'
 import { loadLogoDataUrl } from '@/lib/pdf/build-contract-data'
 import { ConventionPDF, type ConventionData } from '@/lib/pdf/convention-template'
 import { createElement, type ReactElement } from 'react'
@@ -87,10 +88,18 @@ export async function POST(request: NextRequest) {
         .eq('subcategory', 'convention_ia')
         .eq('is_auto_generated', true)
         .contains('tags', [operationId])
+      // Nom lisible : « Convention - <partenaire> - <véhicule> du <début> au <fin> »
+      // (cohérent avec l'affichage de l'onglet « Contrats et factures »).
+      const conventionVehicle = vehicle
+        ? `${vehicle.brand} ${vehicle.model}`
+        : (op.external_vehicle_description ?? 'Véhicule externe')
+      const conventionPeriod = op.start_date
+        ? ` du ${formatDate(op.start_date)}${op.end_date_expected ? ` au ${formatDate(op.end_date_expected)}` : ''}`
+        : ''
       await supabase.from('documents').insert({
         category: 'partenaire',
         subcategory: 'convention_ia',
-        name: `Convention ${contract.contract_number} — ${partner?.name ?? 'Partenaire'}`,
+        name: `Convention - ${partner?.name ?? 'Partenaire'} - ${conventionVehicle}${conventionPeriod}`,
         file_url: publicUrl,
         file_type: 'application/pdf',
         entity_id: op.partner_agency_id ?? null,

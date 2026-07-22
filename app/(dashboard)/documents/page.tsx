@@ -34,6 +34,7 @@ export default async function DocumentsPage() {
     { data: reservations },
     { data: allContracts },
     { data: allInvoices },
+    { data: interAgencyOps },
   ] = await Promise.all([
     supabase
       // select('*') : tolérant aux colonnes de la migration 050 (status, version,
@@ -61,10 +62,15 @@ export default async function DocumentsPage() {
       .order('start_datetime', { ascending: false }),
     supabase
       .from('contracts')
-      .select('id, contract_number, reservation_id, status, pdf_storage_path'),
+      .select('id, contract_number, reservation_id, inter_agency_rental_id, status, pdf_storage_path'),
     supabase
       .from('invoices')
       .select('id, invoice_number, reservation_id, pdf_storage_path'),
+    // Conventions de mise à disposition inter-agences → onglet « Contrats et factures ».
+    supabase
+      .from('inter_agency_rentals')
+      .select('id, direction, external_vehicle_description, start_date, end_date_expected, status, partner_agencies(name), vehicles(brand, model, plate)')
+      .order('start_date', { ascending: false }),
   ])
 
   // Signed URLs pour les PDFs (managers uniquement, bucket privé)
@@ -105,6 +111,39 @@ export default async function DocumentsPage() {
         invoice_pdf_url:  invoice?.pdf_storage_path ? (iMap.get(invoice.pdf_storage_path) ?? null) : null,
       }
     })
+
+    // Conventions inter-agences : le PDF vit dans le même bucket contracts-pdf, il
+    // est donc déjà signé dans cMap. On mappe chaque opération ayant une convention
+    // (contrat lié) vers une entrée « convention » de l'onglet Contrats et factures.
+    const conventionDocs: ReservationDoc[] = (interAgencyOps ?? [])
+      .map((op): ReservationDoc | null => {
+        const contract = (allContracts ?? []).find(ct => ct.inter_agency_rental_id === op.id) ?? null
+        if (!contract) return null
+        const partnerData = op.partner_agencies as unknown as { name: string } | null
+        const vehicleData = op.vehicles as unknown as { brand: string; model: string; plate: string } | null
+        const vehicleLabel = vehicleData
+          ? `${vehicleData.brand} ${vehicleData.model} · ${vehicleData.plate}`
+          : ((op.external_vehicle_description as string | null) ?? 'Véhicule externe')
+        return {
+          id: `conv-${op.id}`,
+          kind: 'convention',
+          reservation_number: contract.contract_number ?? '—',
+          status: op.status === 'en_cours' ? 'en_cours' : 'terminee',
+          start_datetime: op.start_date as string,
+          end_datetime: (op.end_date_expected as string) ?? (op.start_date as string),
+          client_name: partnerData?.name ?? 'Partenaire',
+          vehicle_label: vehicleLabel,
+          contract_number: contract.contract_number ?? null,
+          contract_pdf_url: contract.pdf_storage_path ? (cMap.get(contract.pdf_storage_path) ?? null) : null,
+          contract_status: contract.status ?? null,
+          invoice_number: null,
+          invoice_pdf_url: null,
+        }
+      })
+      .filter((x): x is ReservationDoc => x !== null)
+
+    reservationDocs = [...reservationDocs, ...conventionDocs]
+      .sort((a, b) => (b.start_datetime ?? '').localeCompare(a.start_datetime ?? ''))
   }
 
   const visibleDocuments = (documents ?? []).filter(d => visibleCategories.includes(d.category))

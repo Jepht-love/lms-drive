@@ -41,6 +41,8 @@ type Partner  = { id: string; name: string }
 
 export type ReservationDoc = {
   id: string
+  // 'convention' = mise à disposition inter-agences (partenaire) ; sinon location client.
+  kind?: 'reservation' | 'convention'
   reservation_number: string
   status: string
   start_datetime: string
@@ -97,10 +99,11 @@ const CLIENT_DOC_SHORT: Record<string, string> = {
   autres:         'Document',
 }
 
-// Contrat de location & facture de restitution auto-archivés : déjà présents dans
-// l'onglet « Contrats et factures » (tables contracts / invoices). On les masque
-// des onglets catégorie pour ne plus les mélanger aux pièces d'identité Client.
-const RESERVATION_AUTO_SUBCATS = new Set(['contrat_location', 'facture_restitution'])
+// Contrat de location, facture de restitution & convention de mise à disposition
+// auto-archivés : déjà présents dans l'onglet « Contrats et factures » (tables
+// contracts / invoices / inter_agency_rentals). On les masque des onglets
+// catégorie pour ne pas les mélanger aux pièces client / partenaire.
+const RESERVATION_AUTO_SUBCATS = new Set(['contrat_location', 'facture_restitution', 'convention_ia'])
 function isReservationAutoDoc(doc: { is_auto_generated: boolean; subcategory: string }) {
   return doc.is_auto_generated && RESERVATION_AUTO_SUBCATS.has(doc.subcategory)
 }
@@ -236,6 +239,7 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
         r.vehicle_label.toLowerCase().includes(q) ||
         (r.contract_number?.toLowerCase().includes(q) ?? false) ||
         (r.invoice_number?.toLowerCase().includes(q) ?? false) ||
+        (r.kind === 'convention' && 'convention'.includes(q)) ||
         dates.includes(q)
       )
     })
@@ -460,11 +464,13 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-xl text-[11px] font-semibold text-gray-700 transition-colors"
                     >
                       <Download className="w-3.5 h-3.5" />
-                      Contrat {r.contract_number}
+                      {r.kind === 'convention' ? 'Convention' : 'Contrat'} {r.contract_number}
                     </a>
                   ) : (
                     <span className="text-[11px] text-gray-300 italic">
-                      {r.contract_number ? `${r.contract_number} — PDF non généré` : 'Aucun contrat'}
+                      {r.contract_number
+                        ? `${r.contract_number} — PDF non généré`
+                        : (r.kind === 'convention' ? 'Aucune convention' : 'Aucun contrat')}
                     </span>
                   )}
                   {r.invoice_pdf_url && (
