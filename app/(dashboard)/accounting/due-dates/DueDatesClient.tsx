@@ -53,7 +53,10 @@ export default function DueDatesClient({ dueDates, deletedDueDates = [], vehicle
       const res = recurring ? await createRecurringDueDates(fd) : await createDueDate(fd)
       if (res?.error) { setError(res.error); return }
       setShowForm(false)
-      if (recurring && 'count' in res) setSuccessMsg(`${res.count} mensualités ajoutées`)
+      if (recurring && 'count' in res) {
+        const paid = 'paid' in res && typeof res.paid === 'number' ? res.paid : 0
+        setSuccessMsg(`${res.count} mensualités ajoutées${paid > 0 ? ` (dont ${paid} déjà réglées)` : ''}`)
+      }
       router.refresh()
     })
   }
@@ -87,7 +90,10 @@ export default function DueDatesClient({ dueDates, deletedDueDates = [], vehicle
     })
   }
 
-  const input = 'w-full text-sm border border-gray-200 rounded-xl px-3 py-2.5 text-gray-900 focus:outline-none focus:border-gray-400 transition-colors'
+  // min-w-0 : sans ça, l'<input type="date"> natif (iOS surtout) impose sa
+  // largeur mini intrinsèque et déborde de sa colonne de grille → chevauchement
+  // visuel avec le champ voisin (« Véhicule »). min-w-0 laisse w-full l'emporter.
+  const input = 'w-full min-w-0 text-sm border border-gray-200 rounded-xl px-3 py-2.5 text-gray-900 focus:outline-none focus:border-gray-400 transition-colors'
   const label = 'block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5'
 
   function Row({ d }: { d: DueDate }) {
@@ -155,7 +161,7 @@ export default function DueDatesClient({ dueDates, deletedDueDates = [], vehicle
             <label className={label} htmlFor="description">Description</label>
             <input id="description" name="description" type="text" required placeholder="Loyer local, assurance flotte..." className={input} />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3 [&>div]:min-w-0">
             <div>
               <label className={label} htmlFor="category">Catégorie</label>
               <select id="category" name="category" required className={input} defaultValue="">
@@ -178,21 +184,26 @@ export default function DueDatesClient({ dueDates, deletedDueDates = [], vehicle
               <input id="due_date" name="due_date" type="date" required defaultValue={today} className={input} />
             </div>
             {recurring ? (
-              <div>
-                <label className={label} htmlFor="installments">Nombre de mensualités</label>
-                <input id="installments" name="installments" type="number" min="1" max="120" step="1" required placeholder="36" className={input} inputMode="numeric" />
-              </div>
+              <>
+                <div>
+                  <label className={label} htmlFor="installments">Nombre de mensualités</label>
+                  <input id="installments" name="installments" type="number" min="1" max="120" step="1" required placeholder="36" className={input} inputMode="numeric" />
+                </div>
+                <div>
+                  <label className={label} htmlFor="paid_upfront">Déjà réglées</label>
+                  <input id="paid_upfront" name="paid_upfront" type="number" min="0" max="120" step="1" defaultValue="0" className={input} inputMode="numeric" />
+                  <p className="text-[11px] text-gray-400 mt-1 leading-snug">Mois déjà payés avant l’appli : les 1ères mensualités sont marquées réglées, sans compter comme dues.</p>
+                </div>
+                <div>
+                  <label className={label} htmlFor="vehicle_id">Véhicule (optionnel)</label>
+                  <select id="vehicle_id" name="vehicle_id" className={input}>
+                    <option value="">Aucun</option>
+                    {vehicles.map(v => <option key={v.id} value={v.id}>{v.brand} {v.model} · {v.plate}</option>)}
+                  </select>
+                </div>
+              </>
             ) : (
               <div>
-                <label className={label} htmlFor="vehicle_id">Véhicule (optionnel)</label>
-                <select id="vehicle_id" name="vehicle_id" className={input}>
-                  <option value="">Aucun</option>
-                  {vehicles.map(v => <option key={v.id} value={v.id}>{v.brand} {v.model} · {v.plate}</option>)}
-                </select>
-              </div>
-            )}
-            {recurring && (
-              <div className="col-span-2">
                 <label className={label} htmlFor="vehicle_id">Véhicule (optionnel)</label>
                 <select id="vehicle_id" name="vehicle_id" className={input}>
                   <option value="">Aucun</option>

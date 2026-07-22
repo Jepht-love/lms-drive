@@ -61,9 +61,18 @@ export async function createRecurringDueDates(formData: FormData) {
   const vehicleId = (formData.get('vehicle_id') as string)?.trim() || null
   const notes = (formData.get('notes') as string)?.trim() || null
 
+  // Mensualités déjà réglées AVANT la saisie dans l'appli (ex. véhicule dont on a
+  // déjà payé les 5 premiers mois). Les N premières échéances sont créées
+  // marquées « réglée » pour ne pas apparaître comme dues, MAIS sans créer de
+  // financial_transaction : ces paiements ont eu lieu hors de l'appli, on ne veut
+  // pas fausser les bilans comptables avec des mouvements rétroactifs.
+  const paidUpfrontRaw = parseInt((formData.get('paid_upfront') as string)?.trim() || '0', 10)
+  const paidUpfront = Math.max(0, Math.min(Number.isFinite(paidUpfrontRaw) ? paidUpfrontRaw : 0, count))
+
   const rows = Array.from({ length: count }, (_, i) => {
     const d = new Date(firstDate)
     d.setMonth(d.getMonth() + i)
+    const alreadyPaid = i < paidUpfront
     return {
       description: `${description} (${i + 1}/${count})`,
       type,
@@ -73,6 +82,7 @@ export async function createRecurringDueDates(formData: FormData) {
       vehicle_id: vehicleId,
       notes,
       created_by: user.id,
+      ...(alreadyPaid ? { is_paid: true, paid_at: d.toISOString() } : {}),
     }
   })
 
@@ -80,7 +90,8 @@ export async function createRecurringDueDates(formData: FormData) {
   if (error) return { error: error.message }
 
   revalidatePath('/accounting/due-dates')
-  return { success: true, count }
+  revalidatePath('/accounting')
+  return { success: true, count, paid: paidUpfront }
 }
 
 /**
