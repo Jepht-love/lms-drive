@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Check, Loader2, ShieldCheck, FolderArchive, LayoutDashboard } from 'lucide-react'
-import { APP_TABS, ALL_TAB_KEYS } from '@/lib/navigation/tabs'
+import { APP_TABS, ALL_TAB_KEYS, normalizeTabKeys } from '@/lib/navigation/tabs'
 import { DOCUMENT_CATEGORIES } from '@/lib/documents/categories'
 import Toggle from '@/components/ui/Toggle'
 
@@ -21,7 +21,9 @@ export default function MemberTabsEditor({
   memberId, role, initialTabs, initialDocCategories, initialCanViewFleet,
 }: Props) {
   const router = useRouter()
-  const [tabs, setTabs] = useState<string[]>(initialTabs ?? ALL_TAB_KEYS)
+  // Normalise les clés historiques (maintenance/incidents → suivi) pour que la
+  // case « Suivi véhicule » d'un membre déjà autorisé s'affiche bien cochée.
+  const [tabs, setTabs] = useState<string[]>(initialTabs ? Array.from(new Set(normalizeTabKeys(initialTabs))) : ALL_TAB_KEYS)
   const [docCats, setDocCats] = useState<string[]>(initialDocCategories ?? ALL_DOC_KEYS)
   const [canViewFleet, setCanViewFleet] = useState<boolean>(initialCanViewFleet)
   const [saving, setSaving] = useState(false)

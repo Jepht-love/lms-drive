@@ -34,7 +34,7 @@ export default function InfractionActions({
     startTransition(async () => {
       const res = await deleteInfraction(id)
       if (res?.error) setError(res.error)
-      else { show('Infraction supprimée', 'success'); router.push('/incidents/infractions') }
+      else { show('Infraction supprimée', 'success'); router.push('/suivi?tab=infractions') }
     })
   }
 

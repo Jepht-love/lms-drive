@@ -68,7 +68,7 @@ export default function NewSinistrePage() {
 
   return (
     <div className="space-y-4 pb-4">
-      <BackButton fallbackHref="/incidents/sinistres" className="inline-flex items-center gap-1.5 text-sm text-gray-400 font-medium hover:text-gray-700">
+      <BackButton fallbackHref="/suivi?tab=sinistres" className="inline-flex items-center gap-1.5 text-sm text-gray-400 font-medium hover:text-gray-700">
         <ArrowLeft className="w-4 h-4" /> Retour
       </BackButton>
       <h1 className="text-xl font-black text-gray-900">Déclarer un sinistre</h1>

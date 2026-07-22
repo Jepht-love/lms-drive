@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import {
   BarChart3, CalendarDays, ClipboardList, Users, Car,
-  FileText, AlertTriangle, Navigation, Settings,
+  FileText, Navigation, Settings,
   ChevronRight, LogOut, UsersRound, Wrench, Repeat, Wallet, Megaphone, FolderArchive, Mail,
 } from 'lucide-react'
 import { logout } from '@/lib/actions/auth'
@@ -18,9 +18,8 @@ const modules = [
   { href: '/reservations',   label: 'Réservations',      icon: ClipboardList, desc: 'Gérer les locations' },
   { href: '/clients',        label: 'Clients',            icon: Users,         desc: 'Base clients & dossiers' },
   { href: '/vehicles',       label: 'Véhicules',          icon: Car,           desc: 'Parc automobile' },
-  { href: '/maintenance',    label: 'Entretien',          icon: Wrench,        desc: 'Interventions & suivi' },
+  { href: '/suivi',          label: 'Suivi véhicule',     icon: Wrench,        desc: 'Entretien, sinistres & infractions' },
   { href: '/contracts',      label: 'Contrats',           icon: FileText,      desc: 'Signatures & PDFs' },
-  { href: '/incidents',      label: 'Incidents',          icon: AlertTriangle, desc: 'Sinistres & dommages' },
   { href: '/internal-trips', label: 'Déplacements',       icon: Navigation,    desc: 'Trajets internes' },
   { href: '/partnerships',   label: 'Partenariats',       icon: Repeat,        desc: 'Échanges inter-agences' },
 ]

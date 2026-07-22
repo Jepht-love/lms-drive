@@ -6,6 +6,7 @@ const MODULE_MAP: { prefix: string; label: string }[] = [
   { prefix: '/calendrier',     label: 'Calendrier' },
   { prefix: '/clients',        label: 'Clients' },
   { prefix: '/vehicles',       label: 'Véhicules' },
+  { prefix: '/suivi',          label: 'Suivi véhicule' },
   { prefix: '/maintenance',    label: 'Entretien' },
   { prefix: '/contracts',      label: 'Contrats' },
   { prefix: '/incidents',      label: 'Incidents' },

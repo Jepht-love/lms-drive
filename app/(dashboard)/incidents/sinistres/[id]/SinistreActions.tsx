@@ -77,7 +77,7 @@ export default function SinistreActions({ id, status }: { id: string; status: st
             Annuler
           </button>
           <button
-            onClick={() => { setError(null); startTransition(async () => { const r = await deleteAccident(id); if (r?.error) setError(r.error); else { show('Sinistre supprimé', 'success'); router.push('/incidents/sinistres') } }) }}
+            onClick={() => { setError(null); startTransition(async () => { const r = await deleteAccident(id); if (r?.error) setError(r.error); else { show('Sinistre supprimé', 'success'); router.push('/suivi?tab=sinistres') } }) }}
             disabled={pending}
             className="flex-1 py-2.5 rounded-xl bg-red-600 text-white text-[13px] font-semibold disabled:opacity-40">
             {pending ? 'Suppression...' : 'Confirmer la suppression'}

@@ -30,7 +30,7 @@ function entityLink(n: Notification): string {
     reservations: `/reservations/${n.entity_id}`,
     contracts: `/contracts/${n.entity_id}`,
     vehicles: `/vehicles/${n.entity_id}`,
-    incidents: `/incidents`,
+    incidents: `/suivi?tab=sinistres`,
   }
   return map[n.entity_type] ?? '#'
 }

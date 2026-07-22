@@ -52,7 +52,7 @@ export default async function SinistreDetailPage({
 
   return (
     <div className="space-y-4">
-      <BackButton fallbackHref="/incidents/sinistres" className="inline-flex items-center gap-1.5 text-sm text-gray-400 font-medium hover:text-gray-700 transition-colors">
+      <BackButton fallbackHref="/suivi?tab=sinistres" className="inline-flex items-center gap-1.5 text-sm text-gray-400 font-medium hover:text-gray-700 transition-colors">
         <ArrowLeft className="w-4 h-4" /> Sinistres
       </BackButton>
 

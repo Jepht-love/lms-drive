@@ -6,11 +6,12 @@ import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import {
   Car, Users, Calendar, FileText, ClipboardList,
-  AlertTriangle, Navigation, BarChart3, Settings,
+  Wrench, Navigation, BarChart3, Settings,
   LogOut, Bell, Menu, X,
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { normalizeTabKeys } from '@/lib/navigation/tabs'
 import { roleLabel } from '@/lib/roles'
 import { logout } from '@/lib/actions/auth'
 import type { Profile } from '@/types/database'
@@ -22,7 +23,7 @@ const navItems = [
   { key: 'clients',        href: '/clients',        label: 'Clients',      icon: Users },
   { key: 'vehicles',       href: '/vehicles',       label: 'Véhicules',    icon: Car },
   { key: 'contracts',      href: '/contracts',      label: 'Contrats',     icon: FileText },
-  { key: 'incidents',      href: '/incidents',      label: 'Incidents',    icon: AlertTriangle },
+  { key: 'suivi',          href: '/suivi',          label: 'Suivi',        icon: Wrench },
   { key: 'internal-trips', href: '/internal-trips', label: 'Déplacements', icon: Navigation },
 ]
 
@@ -40,9 +41,10 @@ export default function Sidebar({ profile, unreadCount = 0 }: SidebarProps) {
   // Permissions par onglet : un employé ne voit que ses onglets autorisés.
   // allowed_tabs null/vide → accès complet (rétro-compatible avec l'existant).
   const allowed = profile.allowed_tabs
-  const visibleNav = (isManager || !allowed || allowed.length === 0)
+  const normalizedAllowed = allowed ? normalizeTabKeys(allowed) : allowed
+  const visibleNav = (isManager || !normalizedAllowed || normalizedAllowed.length === 0)
     ? navItems
-    : navItems.filter(item => allowed.includes(item.key))
+    : navItems.filter(item => normalizedAllowed.includes(item.key))
 
   const NavLink = ({ href, label, icon: Icon }: { href: string; label: string; icon: LucideIcon }) => {
     const active = pathname === href || (href !== '/' && pathname.startsWith(href))
