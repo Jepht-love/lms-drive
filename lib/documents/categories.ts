@@ -15,6 +15,7 @@ export const DOCUMENT_SUBCATEGORIES: Record<DocumentCategory, { id: string; labe
     { id: 'rib',                  label: 'RIB' },
     { id: 'documents_comptables', label: 'Documents comptables' },
     { id: 'contrats_fournisseurs',label: 'Contrats fournisseurs' },
+    { id: 'facture_achat_marchandise', label: "Facture d'achat de marchandise" },
     { id: 'autres',               label: 'Autres' },
   ],
   vehicule: [
