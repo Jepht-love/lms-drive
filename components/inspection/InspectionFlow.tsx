@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import VehicleInspectionMap from '@/components/vehicle-schema/VehicleInspectionMap'
 import RecapSignatures, { type ContratInfo } from '@/components/inspection/RecapSignatures'
 import { MANDATORY_PHOTOS } from '@/components/vehicle-schema/zones'
-import { VEHICLE_ZONES as NEW_ZONES, INTERIOR_DAMAGE_ITEMS, graviteLabel, defaultDamagePrice, type DamageEntry } from '@/components/vehicle-schema/inspection-types'
+import { VEHICLE_ZONES as NEW_ZONES, INTERIOR_DAMAGE_ITEMS, GRAVITES, graviteLabel, defaultDamagePrice, type DamageEntry } from '@/components/vehicle-schema/inspection-types'
 import { useSavSection } from '@/lib/sav/context'
 import { createClient } from '@/lib/supabase/client'
 import { compressImageToBase64 } from '@/lib/utils'
@@ -244,15 +244,40 @@ export default function InspectionFlow({
   const newDamageZoneIds = currentDamagedZoneIds.filter(id => !previousZoneIds.has(id))
   const stillPresentZoneIds = currentDamagedZoneIds.filter(id => previousZoneIds.has(id))
 
-  // Montant à facturer : uniquement les nouveaux dommages (pas ceux déjà
-  // présents au départ) — prix par défaut de la grille, ajustable par zone.
+  // Rang de gravité (ordre de GRAVITES : Léger < Moyen < Important) pour comparer
+  // l'état d'une même zone au départ et au retour.
+  const severityRank = (sev?: string) => {
+    const i = GRAVITES.findIndex(g => g.id === sev)
+    return i < 0 ? 0 : i + 1
+  }
+  const severityLabelOfRank = (rank: number) => GRAVITES[rank - 1]?.label ?? '—'
+  // Gravité maximale constatée au départ, par zone.
+  const previousMaxSeverity: Record<string, number> = {}
+  for (const z of previousDamages) {
+    previousMaxSeverity[z.id] = Math.max(previousMaxSeverity[z.id] ?? 0, severityRank(z.severity))
+  }
+  const currentMaxSeverity = (zoneId: string) =>
+    (damages[zoneId] ?? []).reduce((m, e) => Math.max(m, severityRank(e.severity)), 0)
+  // Zones déjà signalées au départ mais AGGRAVÉES au retour (gravité supérieure) :
+  // le sur-dommage devient facturable, même si la zone était déjà touchée à l'aller
+  // (on ne facture pas l'état préexistant, mais l'aggravation constatée au retour).
+  const aggravatedZoneIds = stillPresentZoneIds.filter(
+    id => currentMaxSeverity(id) > (previousMaxSeverity[id] ?? 0),
+  )
+  const aggravatedZoneIdSet = new Set(aggravatedZoneIds)
+  // Zones facturables au retour = nouveaux dommages + aggravations d'un dommage existant.
+  const billableZoneIds = [...newDamageZoneIds, ...aggravatedZoneIds]
+  const billableZoneIdSet = new Set(billableZoneIds)
+
+  // Montant à facturer : nouveaux dommages + aggravations (jamais les zones restées
+  // au même état qu'au départ) — prix par défaut de la grille, ajustable par zone.
   function priceForZone(zoneId: string): number {
     const stored = damagePrices[zoneId]
     if (stored !== undefined) return stored ?? 0
     return defaultDamagePrice(damages[zoneId]?.[0]?.type)
   }
   const exteriorDamageFee = type === 'arrivee'
-    ? newDamageZoneIds.reduce((sum, id) => sum + priceForZone(id), 0)
+    ? billableZoneIds.reduce((sum, id) => sum + priceForZone(id), 0)
     : 0
   // Dégâts intérieurs : somme des montants (positifs) saisis librement.
   const interiorDamageFee = type === 'arrivee'
@@ -343,9 +368,10 @@ export default function InspectionFlow({
             type: entry.type ?? null,
             description: entry.comment,
             photos: entry.photos,
-            // Prix retenu uniquement pour les nouveaux dommages à l'EDL retour
-            // (pas ceux déjà présents au départ, jamais facturables au client).
-            price: type === 'arrivee' && !previousZoneIds.has(zoneId) ? priceForZone(zoneId) : 0,
+            // Prix retenu pour les dommages facturables à l'EDL retour : nouveaux
+            // dommages ET aggravations d'un dommage déjà présent au départ (une zone
+            // restée au même état qu'au départ n'est jamais facturée au client).
+            price: type === 'arrivee' && billableZoneIdSet.has(zoneId) ? priceForZone(zoneId) : 0,
           }))),
         // Dégâts intérieurs (EDL retour) : postes prédéfinis + montant libre.
         ...(type === 'arrivee'
@@ -905,6 +931,8 @@ export default function InspectionFlow({
                   .map(([zoneId, entries]) => {
                     const zone = NEW_ZONES.find(z => z.id === zoneId)
                     const isNew = type === 'arrivee' && !previousZoneIds.has(zoneId)
+                    const isAggravated = type === 'arrivee' && aggravatedZoneIdSet.has(zoneId)
+                    const isBillable = isNew || isAggravated
                     return (
                       <div key={zoneId} className="flex items-center justify-between p-2.5 rounded-xl bg-gray-50 gap-2">
                         <div className="flex-1 min-w-0">
@@ -919,13 +947,15 @@ export default function InspectionFlow({
                           {type === 'arrivee' && (
                             isNew
                               ? <span className="ml-2 text-[10px] font-bold uppercase text-red-500">nouveau</span>
-                              : <span className="ml-2 text-[10px] font-bold uppercase text-blue-500">déjà signalé au départ</span>
+                              : isAggravated
+                                ? <span className="ml-2 text-[10px] font-bold uppercase text-orange-500">aggravé · {severityLabelOfRank(previousMaxSeverity[zoneId] ?? 0)} → {severityLabelOfRank(currentMaxSeverity(zoneId))}</span>
+                                : <span className="ml-2 text-[10px] font-bold uppercase text-blue-500">déjà signalé au départ</span>
                           )}
                           {entries[0].comment && (
                             <p className="text-xs text-gray-400 mt-0.5 truncate">{entries[0].comment}</p>
                           )}
                         </div>
-                        {isNew && (
+                        {isBillable && (
                           <div className="flex items-center gap-1 flex-shrink-0">
                             <input
                               type="number"
@@ -1166,10 +1196,12 @@ export default function InspectionFlow({
             extraKmCount: extraKm,
             extraKmAmount,
             damageFeeAmount: totalDamageFee,
-            // Facture de restitution : chaque frais ligne par ligne
+            // Facture de restitution : chaque frais ligne par ligne. On facture les
+            // nouveaux dommages ET les aggravations d'un dommage déjà présent au
+            // départ (ligne annotée « aggravé ») — cohérent avec damageFeeAmount.
             lignes: [
-              ...newDamageZoneIds.map(id => ({
-                label: `${NEW_ZONES.find(z => z.id === id)?.label ?? id} — ${graviteLabel(damages[id]?.[0]?.severity ?? 'dommage')}`,
+              ...billableZoneIds.map(id => ({
+                label: `${NEW_ZONES.find(z => z.id === id)?.label ?? id} — ${graviteLabel(damages[id]?.[0]?.severity ?? 'dommage')}${aggravatedZoneIdSet.has(id) ? ' (aggravé)' : ''}`,
                 montant: priceForZone(id),
               })),
               ...Object.entries(interiorCharges)

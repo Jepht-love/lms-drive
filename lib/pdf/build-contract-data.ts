@@ -191,6 +191,7 @@ export async function buildContractPdfData(
 
   const agency = await getAgencySettings(supabase)
   const logoDataUrl = loadLogoDataUrl()
+  const cachetDataUrl = loadCachetDataUrl()
 
   const pdfData: ContractData = {
     contractNumber: contract.contract_number,
@@ -238,6 +239,7 @@ export async function buildContractPdfData(
       phone: agency.phone,
       email: agency.email,
       logoUrl: logoDataUrl,
+      cachetUrl: cachetDataUrl,
     },
   }
 

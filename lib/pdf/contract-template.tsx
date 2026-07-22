@@ -74,7 +74,8 @@ export interface ContractData {
     address?: string | null
     phone?: string | null
     email?: string | null
-    logoUrl?: string | null   // data URL du vrai logo
+    logoUrl?: string | null   // data URL du vrai logo (en-tête)
+    cachetUrl?: string | null // data URL du cachet/tampon (encart « Cachet & Visa » + EDL)
   }
 }
 
@@ -168,11 +169,17 @@ function stars(n: number, max = 5) {
 
 // ─── Agency stamp ─────────────────────────────────────────────────────────────
 
-function AgencyStamp({ logoUrl, companyName }: { logoUrl?: string | null; companyName: string }) {
-  if (logoUrl) {
+// Cachet & Visa agence — encart des pages EDL et du contrat à signer. On y appose
+// en priorité le cachet/tampon officiel (coordonnées + SIRET) ; à défaut on retombe
+// sur le logo, puis sur un cadre stylisé. Le logo d'EN-TÊTE des contrats, lui, reste
+// toujours le logo de l'entreprise (géré séparément dans le header).
+function AgencyStamp({ logoUrl, cachetUrl, companyName }: { logoUrl?: string | null; cachetUrl?: string | null; companyName: string }) {
+  const stampUrl = cachetUrl || logoUrl
+  if (stampUrl) {
     return (
       <View style={{ height: 55, alignItems: 'center', justifyContent: 'center' }}>
-        <Image src={logoUrl} style={{ maxHeight: 50, maxWidth: 140, objectFit: 'contain' }} />
+        {/* eslint-disable-next-line jsx-a11y/alt-text */}
+        <Image src={stampUrl} style={{ maxHeight: 55, maxWidth: 150, objectFit: 'contain' }} />
       </View>
     )
   }
@@ -362,7 +369,7 @@ function DamagePhotos({ zones }: { zones: DamagedZone[] }) {
 
 // ─── EDL Page ─────────────────────────────────────────────────────────────────
 
-function InspectionPage({ insp, contractNumber, clientName, vehiclePlate, vehicleModel, companyName, logoUrl, edlImage }: {
+function InspectionPage({ insp, contractNumber, clientName, vehiclePlate, vehicleModel, companyName, logoUrl, cachetUrl, edlImage }: {
   insp: InspectionPDFData
   contractNumber: string
   clientName: string
@@ -370,6 +377,7 @@ function InspectionPage({ insp, contractNumber, clientName, vehiclePlate, vehicl
   vehicleModel: string
   companyName: string
   logoUrl?: string | null
+  cachetUrl?: string | null
   edlImage?: string
 }) {
   const isDepart = insp.type === 'depart'
@@ -461,7 +469,7 @@ function InspectionPage({ insp, contractNumber, clientName, vehiclePlate, vehicl
         </View>
         <View style={s.edlSigBox}>
           <Text style={s.sigLabel}>Pour l'agence</Text>
-          <AgencyStamp logoUrl={logoUrl} companyName={companyName} />
+          <AgencyStamp logoUrl={logoUrl} cachetUrl={cachetUrl} companyName={companyName} />
         </View>
       </View>
 
@@ -687,6 +695,7 @@ export function ContractPDF({ data }: { data: ContractData }) {
 
   const companyName = data.agency?.companyName ?? 'LMS Drive'
   const logoUrl = data.agency?.logoUrl
+  const cachetUrl = data.agency?.cachetUrl
 
   return (
     <Document title={`Contrat ${data.contractNumber}`}>
@@ -994,7 +1003,7 @@ export function ContractPDF({ data }: { data: ContractData }) {
           )}
           <View style={[s.sigBox, hasReturnSig ? { width: '31%' } : {}]}>
             <Text style={s.sigLabel}>Cachet & Visa agence</Text>
-            <AgencyStamp logoUrl={logoUrl} companyName={companyName} />
+            <AgencyStamp logoUrl={logoUrl} cachetUrl={cachetUrl} companyName={companyName} />
             {data.signedAt && <Text style={s.sigDate}>Le {fmtDT(data.signedAt)}</Text>}
           </View>
         </View>
@@ -1043,6 +1052,7 @@ export function ContractPDF({ data }: { data: ContractData }) {
           vehicleModel={`${data.vehicleBrand} ${data.vehicleModel}`}
           companyName={companyName}
           logoUrl={logoUrl}
+          cachetUrl={cachetUrl}
           edlImage={data.edlSchemaImage}
         />
       )}
@@ -1055,6 +1065,7 @@ export function ContractPDF({ data }: { data: ContractData }) {
           vehicleModel={`${data.vehicleBrand} ${data.vehicleModel}`}
           companyName={companyName}
           logoUrl={logoUrl}
+          cachetUrl={cachetUrl}
           edlImage={data.edlSchemaImage}
         />
       )}
