@@ -80,6 +80,76 @@ export async function deleteAgency(id: string) {
   return { success: true }
 }
 
+/**
+ * Supprime une opération de mise à disposition (sortante ou entrante) et TOUT ce
+ * qui lui est rattaché : contrat(s) de convention + états des lieux + PDF, document
+ * archivé (« convention_ia »), écritures comptables. Un véhicule sortant est remis
+ * disponible. Une opération entrante DÉJÀ démarrée en location réelle (réservation
+ * + EDL) est bloquée : on supprime d'abord la réservation liée pour ne pas casser
+ * cette chaîne.
+ */
+export async function deleteOperation(id: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié' }
+
+  const { data: op } = await supabase
+    .from('inter_agency_rentals')
+    .select('id, direction, vehicle_id, client_reservation_id')
+    .eq('id', id).single()
+  if (!op) return { error: 'Opération introuvable' }
+
+  if (op.client_reservation_id) {
+    return { error: 'Cette opération entrante a été démarrée en location. Supprimez d\'abord la réservation liée, puis l\'opération.' }
+  }
+
+  // 1) Contrats de convention liés → EDL puis PDF puis contrat
+  const { data: convContracts } = await supabase
+    .from('contracts')
+    .select('id, pdf_storage_path')
+    .eq('inter_agency_rental_id', id)
+  for (const c of convContracts ?? []) {
+    await supabase.from('inspections').delete().eq('contract_id', c.id)
+    if (c.pdf_storage_path) await supabase.storage.from('contracts-pdf').remove([c.pdf_storage_path])
+  }
+  if (convContracts?.length) {
+    await supabase.from('contracts').delete().eq('inter_agency_rental_id', id)
+  }
+
+  // 2) Document archivé de la convention (subcategory convention_ia, tag = opId)
+  await supabase.from('documents').delete().eq('subcategory', 'convention_ia').contains('tags', [id])
+
+  // 3) Reste éventuel du dossier PDF conventions/<id>/
+  const { data: convFiles } = await supabase.storage.from('contracts-pdf').list(`conventions/${id}`)
+  if (convFiles?.length) {
+    await supabase.storage.from('contracts-pdf').remove(convFiles.map(f => `conventions/${id}/${f.name}`))
+  }
+
+  // 4) Écritures comptables liées (recette sortante / dépense + recette client)
+  await supabase.from('financial_transactions').delete().in('reference', [id, `${id}:client`])
+
+  // 5) Véhicule sortant remis disponible (puis recalcul du vrai statut)
+  if (op.direction === 'out' && op.vehicle_id) {
+    await supabase.from('vehicles').update({ status: 'disponible', availability_note: null }).eq('id', op.vehicle_id)
+    await recomputeVehicleStatus(supabase, op.vehicle_id)
+  }
+
+  // 6) L'opération elle-même
+  const { error } = await supabase.from('inter_agency_rentals').delete().eq('id', id)
+  if (error) return { error: error.message }
+
+  await supabase.from('audit_logs').insert({
+    user_id: user.id, action: 'inter_agency_rental_deleted',
+    entity_type: 'inter_agency_rentals', entity_id: id, metadata: { direction: op.direction },
+  })
+
+  revalidatePath('/partnerships')
+  revalidatePath('/accounting')
+  revalidatePath('/documents')
+  if (op.vehicle_id) { revalidatePath('/vehicles'); revalidatePath(`/vehicles/${op.vehicle_id}`) }
+  return { success: true }
+}
+
 export async function createOperation(formData: FormData) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

@@ -9,6 +9,7 @@ import { differenceInCalendarDays } from 'date-fns'
 import OperationActions from './OperationActions'
 import EntrantRentalLauncher from './EntrantRentalLauncher'
 import SortantConventionFlow from './SortantConventionFlow'
+import DeleteOperationButton from './DeleteOperationButton'
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -137,15 +138,18 @@ export default async function OperationDetailPage({
       )}
 
       {sortantFlow ? (
-        <SortantConventionFlow
-          operationId={op.id}
-          contractId={sortantFlow.contractId}
-          contractStatus={sortantFlow.contractStatus}
-          conventionSigned={sortantFlow.conventionSigned}
-          depSigned={sortantFlow.depSigned}
-          arrSigned={sortantFlow.arrSigned}
-          closed={op.status === 'cloture'}
-        />
+        <>
+          <SortantConventionFlow
+            operationId={op.id}
+            contractId={sortantFlow.contractId}
+            contractStatus={sortantFlow.contractStatus}
+            conventionSigned={sortantFlow.conventionSigned}
+            depSigned={sortantFlow.depSigned}
+            arrSigned={sortantFlow.arrSigned}
+            closed={op.status === 'cloture'}
+          />
+          <DeleteOperationButton id={op.id} />
+        </>
       ) : (
         <OperationActions id={op.id} status={op.status} />
       )}
