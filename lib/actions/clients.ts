@@ -33,8 +33,8 @@ async function collectPhotoPaths(
   supabase: Awaited<ReturnType<typeof createClient>>,
   formData: FormData,
   clientId: string,
-): Promise<Record<string, string>> {
-  const validPaths: Record<string, string> = {}
+): Promise<Record<string, string | null>> {
+  const validPaths: Record<string, string | null> = {}
   for (const slot of CLIENT_PHOTO_SLOTS) {
     const pathKey = `${slot}_path`
     const sentPath = formData.get(pathKey)
@@ -46,6 +46,14 @@ async function collectPhotoPaths(
     if (file && file.size > 0) {
       const uploaded = await uploadClientDoc(supabase, file, clientId, slot)
       if (uploaded) validPaths[pathKey] = uploaded
+      continue
+    }
+    // Suppression explicite (bouton « Supprimer » sur une photo existante) :
+    // le formulaire envoie `<slot>_clear=1` → on remet la colonne à NULL. Sans
+    // ce signal, un slot absent reste inchangé (ticket SAV 22/07 : la pièce
+    // « supprimée » réapparaissait car la colonne n'était jamais effacée).
+    if (formData.get(`${slot}_clear`) === '1') {
+      validPaths[pathKey] = null
     }
   }
   return validPaths

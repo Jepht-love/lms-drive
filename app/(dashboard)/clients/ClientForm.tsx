@@ -60,11 +60,17 @@ function DiscountField({ defaultValue }: { defaultValue?: number | null }) {
 
 function PhotoUpload({ label, name, existingUrl }: { label: string; name: string; existingUrl?: string | null }) {
   const [preview, setPreview] = useState<string | null>(existingUrl ?? null)
+  // Suppression d'une photo DÉJÀ enregistrée : le simple vidage de l'aperçu ne
+  // suffit pas — un slot absent est ignoré côté serveur (une MAJ sans photo
+  // n'efface jamais). On envoie donc un signal explicite `<name>_clear` pour que
+  // l'action serveur remette la colonne `<name>_path` à NULL. (Ticket SAV 22/07.)
+  const [cleared, setCleared] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
+    setCleared(false) // une nouvelle photo annule une suppression précédente
     const reader = new FileReader()
     reader.onload = ev => setPreview(ev.target?.result as string)
     reader.readAsDataURL(file)
@@ -78,6 +84,7 @@ function PhotoUpload({ label, name, existingUrl }: { label: string; name: string
       {/* Pas de `capture` : laisse iOS proposer Photothèque / Prendre une photo /
           Choisir un fichier (sinon la caméra s'ouvre de force, import fichier impossible). */}
       <input ref={inputRef} type="file" name={name} accept="image/*,application/pdf" className="hidden" onChange={handleChange} />
+      {cleared && existingUrl && <input type="hidden" name={`${name}_clear`} value="1" readOnly />}
       <button
         type="button"
         onClick={() => inputRef.current?.click()}
@@ -102,6 +109,7 @@ function PhotoUpload({ label, name, existingUrl }: { label: string; name: string
       {preview && (
         <button type="button" onClick={() => {
           setPreview(null);
+          setCleared(true);
           if (inputRef.current) inputRef.current.value = ''
         }}
           className="mt-1 text-xs text-red-400 hover:text-red-600 flex items-center gap-1">
