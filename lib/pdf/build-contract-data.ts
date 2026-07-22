@@ -117,18 +117,27 @@ export async function buildContractPdfData(
         )
       ).filter(Boolean) as { url: string; label: string }[]
 
+      // Sépare les vrais dommages des « photos d'élément » (kind:'zone_photo') :
+      // ces dernières ne doivent pas gonfler le compteur/table de dommages ni le
+      // schéma, mais apparaissent dans la galerie photo du contrat.
+      const allZones = (insp.damaged_zones as any[]) ?? []
+      const realDamages = allZones.filter(z => z?.kind !== 'zone_photo')
+      const zonePhotoUrls = allZones
+        .filter(z => z?.kind === 'zone_photo')
+        .flatMap((z: any) => ((z.photos as string[]) ?? []).map(url => ({ url, label: z.label ?? 'Élément' })))
+
       return {
         type: insp.type as 'depart' | 'arrivee',
         kmReading: insp.km_reading ?? 0,
         fuelRangeKm: insp.fuel_range_km ?? 0,
         exteriorCleanliness: insp.exterior_cleanliness ?? 3,
         interiorCleanliness: insp.interior_cleanliness ?? 3,
-        damagedZones: (insp.damaged_zones as any[]) ?? [],
+        damagedZones: realDamages,
         clientSignature: insp.client_signature_svg ?? undefined,
         agentSignature: insp.agent_signature_svg ?? undefined,
         invoiceSignature: invoiceSigById.get(insp.id) ?? undefined,
         signedAt: insp.signed_at ?? undefined,
-        photos: photoUrls,
+        photos: [...photoUrls, ...zonePhotoUrls],
       }
     }),
   )

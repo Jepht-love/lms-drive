@@ -75,9 +75,16 @@ interface Props {
   // (orange « D ») et non un « nouveau dommage au retour » (rouge « R »). Défaut
   // 'return' → comportement historique inchangé pour l'EDL retour.
   phase?: 'departure' | 'return'
+  // Photos de constat d'état PAR ÉLÉMENT (indépendantes d'un dommage déclaré).
+  // Au retour, `previousZonePhotos` porte les clichés du départ pour la
+  // comparaison côte à côte.
+  zonePhotos?: Record<string, string[]>
+  onZonePhotoAdd?: (zoneId: string, dataUrl: string) => void
+  onZonePhotoRemove?: (zoneId: string, index: number) => void
+  previousZonePhotos?: Record<string, string[]>
 }
 
-export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, readonly, previousZones = [], phase = 'return' }: Props) {
+export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, readonly, previousZones = [], phase = 'return', zonePhotos = {}, onZonePhotoAdd, onZonePhotoRemove, previousZonePhotos = {} }: Props) {
   const prevById = new Map(previousZones.map(z => [z.id, z]))
   const [selected, setSelected] = useState<string | null>(null)
   const [hovered, setHovered] = useState<string | null>(null)
@@ -90,6 +97,7 @@ export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, rea
   // Photo de départ ouverte en plein écran (null = lightbox fermée)
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const zoneFileRef = useRef<HTMLInputElement>(null)
 
   // viewBox animé
   const vb = useRef({ x: 0, y: 0, w: IMG, h: IMG })
@@ -158,6 +166,15 @@ export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, rea
     e.target.value = ''
   }
 
+  // Photo de constat d'état de l'élément sélectionné (indépendante d'un dommage).
+  async function onZonePhotoInput(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0]
+    if (!f || !selId) return
+    const b64 = await compressImageToBase64(f)
+    onZonePhotoAdd?.(selId, b64)
+    e.target.value = ''
+  }
+
   function addDamage() {
     if (!selId) return
     onDamageAdd(selId, { severity: gravite, type: dtype, comment: comment.trim(), photos: pending })
@@ -170,6 +187,9 @@ export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, rea
   const selId = zone?.id ?? null
   const existing = selId ? (damages[selId] ?? []) : []
   const prevSel = selId ? prevById.get(selId) : undefined
+  // Photos de l'élément sélectionné : celles prises maintenant + celles du départ.
+  const curPhotos = selId ? (zonePhotos[selId] ?? []) : []
+  const prevPhotos = selId ? (previousZonePhotos[selId] ?? []) : []
 
   // Légende : n'apparaît que s'il existe au moins un dommage. Au DÉPART, les zones
   // saisies comptent comme « dommage au départ » (orange) ; au RETOUR, `damages`
@@ -179,7 +199,7 @@ export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, rea
   const anyRet = phase === 'departure' ? false : filledAny
 
   return (
-    <div className="w-full max-w-[520px] mx-auto bg-white rounded-xl overflow-hidden">
+    <div className="w-full max-w-[520px] lg:max-w-4xl mx-auto bg-white rounded-xl overflow-hidden">
       {/* Schéma */}
       <div className="relative">
         {/* Barre haute */}
@@ -202,6 +222,17 @@ export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, rea
               }`}
             >
               Zones
+            </button>
+          )}
+          {/* Caméra « à côté de l'élément » : photographie la pièce zoomée en un
+              tap, sans avoir à déclarer un dommage. */}
+          {!readonly && selected && onZonePhotoAdd && (
+            <button
+              type="button"
+              onClick={() => zoneFileRef.current?.click()}
+              className="pointer-events-auto flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide px-2.5 py-1.5 rounded-lg bg-blue-600 text-white shadow"
+            >
+              <Camera className="w-3.5 h-3.5" /> Photo
             </button>
           )}
         </div>
@@ -322,6 +353,107 @@ export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, rea
             )}
           </div>
 
+          {/* Photos de l'élément — constat d'état indépendant d'un dommage. Au
+              RETOUR : comparaison Départ | Retour côte à côte, en grand sur
+              iPad/ordinateur. */}
+          <div className="rounded-xl border border-gray-100 bg-gray-50/70 p-3">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Photos de l&apos;élément</p>
+            {phase === 'return' ? (
+              <div className="grid grid-cols-2 gap-3">
+                {/* Départ */}
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-orange-600 mb-1.5">Départ</p>
+                  {prevPhotos.length > 0 ? (
+                    <div className="flex flex-col gap-2">
+                      {prevPhotos.map((p, i) => (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          key={i}
+                          src={p}
+                          alt="État de l'élément au départ"
+                          onClick={() => setLightboxSrc(p)}
+                          className="w-full aspect-[4/3] object-cover rounded-lg border-2 border-orange-200 cursor-zoom-in"
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="w-full aspect-[4/3] rounded-lg border-2 border-dashed border-gray-200 flex items-center justify-center text-[11px] text-gray-400 text-center px-2">
+                      Aucune photo prise au départ
+                    </div>
+                  )}
+                </div>
+                {/* Retour */}
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-red-600 mb-1.5">Retour</p>
+                  <div className="flex flex-col gap-2">
+                    {curPhotos.map((p, i) => (
+                      <div key={i} className="relative">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={p}
+                          alt="État de l'élément au retour"
+                          onClick={() => setLightboxSrc(p)}
+                          className="w-full aspect-[4/3] object-cover rounded-lg border-2 border-red-200 cursor-zoom-in"
+                        />
+                        {onZonePhotoRemove && (
+                          <button
+                            type="button"
+                            onClick={() => onZonePhotoRemove(selId!, i)}
+                            className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-gray-900/80 text-white flex items-center justify-center"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    {onZonePhotoAdd && (
+                      <button
+                        type="button"
+                        onClick={() => zoneFileRef.current?.click()}
+                        className="w-full aspect-[4/3] rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center gap-1 text-gray-500 hover:border-gray-400"
+                      >
+                        <Camera className="w-6 h-6" />
+                        <span className="text-[11px] font-semibold">Prendre la photo</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {curPhotos.map((p, i) => (
+                  <div key={i} className="relative">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={p}
+                      alt="État de l'élément"
+                      onClick={() => setLightboxSrc(p)}
+                      className="w-20 h-20 object-cover rounded-lg border border-gray-200 cursor-zoom-in"
+                    />
+                    {onZonePhotoRemove && (
+                      <button
+                        type="button"
+                        onClick={() => onZonePhotoRemove(selId!, i)}
+                        className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-gray-900 text-white flex items-center justify-center"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+                {onZonePhotoAdd && (
+                  <button
+                    type="button"
+                    onClick={() => zoneFileRef.current?.click()}
+                    className="w-20 h-20 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 hover:border-gray-400"
+                  >
+                    <Camera className="w-5 h-5" />
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* Référence : ce qui avait été constaté au départ (photo comparative) */}
           {prevSel && (
             <div className="rounded-xl border border-blue-100 bg-blue-50 p-3">
@@ -332,43 +464,7 @@ export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, rea
                 </span>
                 {prevSel.description && <span className="text-[11px] text-blue-800/80">{prevSel.description}</span>}
               </div>
-              {prevSel.photos && prevSel.photos.length > 0 && (
-                <div className="flex gap-2 mt-2 flex-wrap">
-                  {prevSel.photos.map((p, pi) => (
-                    <div key={pi} style={{ position: 'relative', cursor: 'zoom-in' }} onClick={() => setLightboxSrc(p)}>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={p}
-                        alt="Dommage constaté au départ"
-                        style={{
-                          width: '96px',
-                          height: '96px',
-                          objectFit: 'cover',
-                          borderRadius: '8px',
-                          border: '2px solid #FED7AA',
-                        }}
-                      />
-                      <div
-                        style={{
-                          position: 'absolute',
-                          bottom: '4px',
-                          right: '4px',
-                          background: 'rgba(0,0,0,0.6)',
-                          borderRadius: '4px',
-                          padding: '2px 4px',
-                        }}
-                      >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
-                          <circle cx="11" cy="11" r="8" />
-                          <path d="m21 21-4.35-4.35" />
-                          <path d="M11 8v6M8 11h6" />
-                        </svg>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <p className="text-[10px] text-blue-600/70 mt-1.5">Comparez avec l&apos;état actuel avant de constater un nouveau dommage.</p>
+              <p className="text-[10px] text-blue-600/70 mt-1.5">Comparez avec l&apos;état actuel (photos ci-dessus) avant de constater un nouveau dommage.</p>
             </div>
           )}
 
@@ -488,6 +584,10 @@ export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, rea
           </div>
         </div>
       )}
+
+      {/* Input photo de l'élément — monté en permanence pour être accessible
+          depuis le bouton de la barre (vue zoomée) comme du panneau. */}
+      <input ref={zoneFileRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={onZonePhotoInput} />
 
       {/* Lightbox plein écran — photo de départ agrandie */}
       <PhotoLightbox

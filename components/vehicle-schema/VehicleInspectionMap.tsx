@@ -10,6 +10,12 @@ export interface VehicleInspectionMapProps {
   readonly?: boolean
   previousZones?: PreviousZone[]
   phase?: 'departure' | 'return'
+  // Photos de constat d'état par élément (indépendantes d'un dommage).
+  zonePhotos?: Record<string, string[]>
+  onZonePhotoAdd?: (zoneId: string, dataUrl: string) => void
+  onZonePhotoRemove?: (zoneId: string, index: number) => void
+  // Photos du DÉPART par zone (EDL retour) → comparaison côte à côte.
+  previousZonePhotos?: Record<string, string[]>
 }
 
 export default function VehicleInspectionMap({
@@ -19,6 +25,10 @@ export default function VehicleInspectionMap({
   readonly,
   previousZones,
   phase,
+  zonePhotos,
+  onZonePhotoAdd,
+  onZonePhotoRemove,
+  previousZonePhotos,
 }: VehicleInspectionMapProps) {
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
@@ -32,6 +42,10 @@ export default function VehicleInspectionMap({
         readonly={readonly}
         previousZones={previousZones}
         phase={phase}
+        zonePhotos={zonePhotos}
+        onZonePhotoAdd={onZonePhotoAdd}
+        onZonePhotoRemove={onZonePhotoRemove}
+        previousZonePhotos={previousZonePhotos}
       />
     </div>
   )

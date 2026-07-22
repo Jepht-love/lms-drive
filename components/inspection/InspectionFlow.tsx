@@ -33,7 +33,7 @@ interface Props {
   fuelRangeAtDeparture?: number
   kmIncluded?: number
   extraKmPrice?: number
-  previousDamagedZones?: { id: string; label: string; severity: string; description?: string; photos?: string[] }[]
+  previousDamagedZones?: { id: string; label: string; severity: string; description?: string; photos?: string[]; kind?: string }[]
   // Contrat locataire à prévisualiser/signer dans le flux (ticket SAV 21/07) :
   // au départ, le contrat descend sous l'EDL et se signe sur la même page.
   // Absent (null) pour une convention inter-agences.
@@ -144,6 +144,10 @@ export default function InspectionFlow({
   const [interiorCharges, setInteriorCharges] = useState<Record<string, number>>({})
   // Photos des dégâts intérieurs : id du poste → liste de data URLs base64
   const [interiorPhotos, setInteriorPhotos] = useState<Record<string, string[]>>({})
+  // Photos de constat d'état PAR ÉLÉMENT (zone), indépendantes d'un dommage
+  // déclaré : permettent de photographier chaque pièce au départ puis de comparer
+  // départ/retour côte à côte. id de zone → liste de data URLs base64.
+  const [zonePhotos, setZonePhotos] = useState<Record<string, string[]>>({})
   const [photos, setPhotos] = useState<Record<string, string>>({})
   const [clientSig, setClientSig] = useState<string | null>(null)
   // Parcours « comme en agence » : le contrat se signe SUR la page de l'EDL départ
@@ -224,7 +228,18 @@ export default function InspectionFlow({
   // Comparaison auto départ/retour : une zone déjà signalée au départ et
   // retrouvée au retour n'est pas une nouvelle dégradation — distinction
   // utile pour ne pas facturer un dommage préexistant ni rater un nouveau.
-  const previousZoneIds = new Set(previousDamagedZones.map(z => z.id))
+  // Les lignes « photo d'élément » (kind:'zone_photo') sont des constats d'état
+  // SANS dommage déclaré : on les écarte partout où la sémantique est « un
+  // dommage » (pricing, recap, comparaison schéma), mais on agrège leurs photos
+  // (et celles des vrais dommages) par zone pour la comparaison départ/retour.
+  const previousDamages = previousDamagedZones.filter(z => z.kind !== 'zone_photo')
+  const previousZonePhotos: Record<string, string[]> = {}
+  for (const z of previousDamagedZones) {
+    if (z.photos && z.photos.length > 0) {
+      previousZonePhotos[z.id] = [...(previousZonePhotos[z.id] ?? []), ...z.photos]
+    }
+  }
+  const previousZoneIds = new Set(previousDamages.map(z => z.id))
   const currentDamagedZoneIds = Object.entries(damages).filter(([, e]) => e.length > 0).map(([id]) => id)
   const newDamageZoneIds = currentDamagedZoneIds.filter(id => !previousZoneIds.has(id))
   const stillPresentZoneIds = currentDamagedZoneIds.filter(id => previousZoneIds.has(id))
@@ -257,6 +272,14 @@ export default function InspectionFlow({
       ...prev,
       [zoneId]: (prev[zoneId] ?? []).filter((_, i) => i !== index),
     }))
+  }
+
+  function handleZonePhotoAdd(zoneId: string, dataUrl: string) {
+    setZonePhotos(prev => ({ ...prev, [zoneId]: [...(prev[zoneId] ?? []), dataUrl] }))
+  }
+
+  function handleZonePhotoRemove(zoneId: string, index: number) {
+    setZonePhotos(prev => ({ ...prev, [zoneId]: (prev[zoneId] ?? []).filter((_, i) => i !== index) }))
   }
 
   function triggerPhoto(photoType: string) {
@@ -339,6 +362,22 @@ export default function InspectionFlow({
                 price: interiorCharges[it.id],
               }))
           : []),
+        // Photos de constat d'état par élément (sans dommage déclaré) : stockées
+        // comme lignes kind:'zone_photo', écartées des dommages à la lecture
+        // (pricing, recap, compteur/table du PDF), gardées pour la galerie photo
+        // et la comparaison départ/retour côte à côte.
+        ...Object.entries(zonePhotos)
+          .filter(([, pics]) => pics.length > 0)
+          .map(([zoneId, pics]) => ({
+            id: zoneId,
+            label: NEW_ZONES.find(z => z.id === zoneId)?.label ?? zoneId,
+            severity: 'rayure' as DamageEntry['severity'],
+            type: null,
+            kind: 'zone_photo',
+            description: '',
+            photos: pics,
+            price: 0,
+          })),
       ]
 
       const { data: inspection, error: inspErr } = await supabase
@@ -547,7 +586,7 @@ export default function InspectionFlow({
               : `État des lieux ${type === 'depart' ? 'de départ' : 'de retour'} enregistré`}
           </h2>
           <p className="text-gray-500">KM : {kmReading.toLocaleString('fr-FR')} · {damagedZoneCount} zone(s) signalée(s)</p>
-          {type === 'arrivee' && previousDamagedZones.length > 0 && (
+          {type === 'arrivee' && previousDamages.length > 0 && (
             <p className="text-sm text-gray-400 mt-1">
               dont {stillPresentZoneIds.length} déjà signalée(s) au départ
               {newDamageZoneIds.length > 0 && <span className="text-red-500 font-semibold"> · {newDamageZoneIds.length} nouvelle(s)</span>}
@@ -826,14 +865,14 @@ export default function InspectionFlow({
         <div className="space-y-4">
           <p className="text-sm text-gray-500 text-center">Appuyez sur une zone pour signaler un dommage</p>
 
-          {type === 'arrivee' && previousDamagedZones.length > 0 && (
+          {type === 'arrivee' && previousDamages.length > 0 && (
             <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4">
               <h4 className="font-medium text-blue-800 mb-2 flex items-center gap-2 text-sm">
                 <AlertTriangle className="w-4 h-4 text-blue-500" />
                 Déjà signalé à l&apos;état des lieux de départ
               </h4>
               <div className="flex flex-wrap gap-1.5">
-                {previousDamagedZones.map(z => (
+                {previousDamages.map(z => (
                   <span key={z.id} className="text-xs px-2.5 py-1 rounded-full bg-white border border-blue-200 text-blue-700 font-medium">
                     {z.label} · {graviteLabel(z.severity as DamageEntry['severity'])}
                   </span>
@@ -846,8 +885,12 @@ export default function InspectionFlow({
             damages={damages}
             onDamageAdd={handleDamageAdd}
             onDamageRemove={handleDamageRemove}
-            previousZones={type === 'arrivee' ? previousDamagedZones : []}
+            previousZones={type === 'arrivee' ? previousDamages : []}
             phase={type === 'depart' ? 'departure' : 'return'}
+            zonePhotos={zonePhotos}
+            onZonePhotoAdd={handleZonePhotoAdd}
+            onZonePhotoRemove={handleZonePhotoRemove}
+            previousZonePhotos={type === 'arrivee' ? previousZonePhotos : {}}
           />
 
           {damagedZoneCount > 0 && (
@@ -1158,7 +1201,7 @@ export default function InspectionFlow({
         // EDL retour : dommages du départ reconstruits pour la comparaison
         // schéma côte à côte (même format que `damages`).
         const previousDamagesMap: Record<string, DamageEntry[]> = {}
-        for (const z of previousDamagedZones) {
+        for (const z of previousDamages) {
           previousDamagesMap[z.id] = [{
             severity: z.severity as DamageEntry['severity'],
             comment: z.description ?? '',
