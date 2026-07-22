@@ -224,19 +224,10 @@ export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, rea
               Zones
             </button>
           )}
-          {/* Caméra « à côté de l'élément » : photographie la pièce zoomée en un
-              tap, sans avoir à déclarer un dommage. */}
-          {!readonly && selected && onZonePhotoAdd && (
-            <button
-              type="button"
-              onClick={() => zoneFileRef.current?.click()}
-              className="pointer-events-auto flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide px-2.5 py-1.5 rounded-lg bg-blue-600 text-white shadow"
-            >
-              <Camera className="w-3.5 h-3.5" /> Photo
-            </button>
-          )}
         </div>
 
+        {/* Le croquis + le logo caméra flottant « juste à côté » de l'élément zoomé */}
+        <div className="relative">
         <svg
           viewBox={`${vb.current.x} ${vb.current.y} ${vb.current.w} ${vb.current.h}`}
           className="w-full"
@@ -303,6 +294,21 @@ export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, rea
             )
           })}
         </svg>
+          {/* Logo caméra collé au croquis : photographie l'élément zoomé en un
+              tap, sans avoir à déclarer de dommage. Placé au coin de l'élément
+              (la vue est zoomée dessus), pas dans la barre du haut. */}
+          {!readonly && selected && onZonePhotoAdd && (
+            <button
+              type="button"
+              onClick={() => zoneFileRef.current?.click()}
+              aria-label="Photographier l'élément"
+              className="absolute bottom-3 right-3 z-10 flex items-center gap-1.5 px-3.5 py-2.5 rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 active:scale-95 transition-transform"
+            >
+              <Camera className="w-5 h-5" />
+              <span className="text-xs font-bold uppercase tracking-wide">Photo</span>
+            </button>
+          )}
+        </div>
 
         {/* Légende couleurs — visible dès qu'un dommage départ ou retour existe */}
         {(anyDep || anyRet) && (
