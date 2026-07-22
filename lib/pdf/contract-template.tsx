@@ -155,6 +155,13 @@ const s = StyleSheet.create({
 function fmtMoney(n?: number) {
   return n != null ? `${n.toFixed(2)} €` : '—'
 }
+// Formate un entier avec séparateur de milliers = espace ASCII normale.
+// (toLocaleString('fr-FR') insère U+202F, une espace fine insécable que la
+//  police Helvetica du PDF ne sait pas rendre → glyphe parasite « 23/980 ».)
+function fmtKm(n?: number | null) {
+  if (n == null) return '—'
+  return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
+}
 function fmtDT(dt: string) {
   try { return format(new Date(dt), 'dd/MM/yyyy HH:mm', { locale: fr }) }
   catch { return dt }
@@ -407,7 +414,7 @@ function InspectionPage({ insp, contractNumber, clientName, vehiclePlate, vehicl
 
       <View style={s.metricsRow}>
         <View style={s.metricBox}>
-          <Text style={s.metricValue}>{insp.kmReading.toLocaleString('fr-FR')}</Text>
+          <Text style={s.metricValue}>{fmtKm(insp.kmReading)}</Text>
           <Text style={s.metricLabel}>Kilométrage</Text>
         </View>
         <View style={s.metricBox}>
@@ -499,7 +506,7 @@ function EDLCompareColumn({ insp, edlImage }: { insp: InspectionPDFData; edlImag
 
       <View style={{ flexDirection: 'row', gap: 4, marginBottom: 8 }}>
         <View style={s.metricBox}>
-          <Text style={s.metricValue}>{insp.kmReading.toLocaleString('fr-FR')}</Text>
+          <Text style={s.metricValue}>{fmtKm(insp.kmReading)}</Text>
           <Text style={s.metricLabel}>Kilométrage</Text>
         </View>
         <View style={s.metricBox}>
@@ -561,7 +568,7 @@ function EDLComparePage({ dep, arr, contractNumber, clientName, vehiclePlate, ve
 
       {/* Bandeau des différences départ → retour */}
       <View style={{ flexDirection: 'row', gap: 8, marginBottom: 10 }}>
-        <Delta label="Kilomètres parcourus" value={`${kmDriven.toLocaleString('fr-FR')} km`} />
+        <Delta label="Kilomètres parcourus" value={`${fmtKm(kmDriven)} km`} />
         <Delta label="Nouveaux dommages au retour" value={`${newDamages}`} warn={newDamages > 0} />
         <Delta label="Dommages au départ" value={`${dep.damagedZones.length}`} />
         <Delta label="Dommages au retour" value={`${arr.damagedZones.length}`} warn={arr.damagedZones.length > dep.damagedZones.length} />
@@ -915,7 +922,7 @@ export function ContractPDF({ data }: { data: ContractData }) {
               {depInsp && (
                 <View style={{ flex: 1, backgroundColor: '#eff6ff', borderRadius: 3, padding: 6 }}>
                   <Text style={{ fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#2563eb', marginBottom: 3 }}>ÉTAT DES LIEUX DÉPART</Text>
-                  <Text style={{ fontSize: 8 }}>KM : {depInsp.kmReading.toLocaleString('fr-FR')}</Text>
+                  <Text style={{ fontSize: 8 }}>KM : {fmtKm(depInsp.kmReading)}</Text>
                   <Text style={{ fontSize: 8 }}>Carburant : {depInsp.fuelRangeKm} km</Text>
                   <Text style={{ fontSize: 8, color: depInsp.damagedZones.length > 0 ? '#ea580c' : '#16a34a' }}>
                     {depInsp.damagedZones.length > 0 ? `${depInsp.damagedZones.length} dommage(s) constaté(s)` : '✓ Aucun dommage'}
@@ -925,7 +932,7 @@ export function ContractPDF({ data }: { data: ContractData }) {
               {arrInsp && (
                 <View style={{ flex: 1, backgroundColor: '#f5f3ff', borderRadius: 3, padding: 6 }}>
                   <Text style={{ fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#7c3aed', marginBottom: 3 }}>ÉTAT DES LIEUX RETOUR</Text>
-                  <Text style={{ fontSize: 8 }}>KM : {arrInsp.kmReading.toLocaleString('fr-FR')}</Text>
+                  <Text style={{ fontSize: 8 }}>KM : {fmtKm(arrInsp.kmReading)}</Text>
                   <Text style={{ fontSize: 8 }}>Carburant : {arrInsp.fuelRangeKm} km</Text>
                   <Text style={{ fontSize: 8, color: arrInsp.damagedZones.length > 0 ? '#ea580c' : '#16a34a' }}>
                     {arrInsp.damagedZones.length > 0 ? `${arrInsp.damagedZones.length} dommage(s) constaté(s)` : '✓ Aucun dommage'}

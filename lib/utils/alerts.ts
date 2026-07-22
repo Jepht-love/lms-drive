@@ -430,6 +430,43 @@ export async function fetchAllAlerts(
     })
   })
 
+  // ── 13. Contrats non clôturés (signés, période terminée, jamais validés) ─────
+  // Un contrat reste « signe » tant qu'on n'a pas fait le « Valider » final (EDL
+  // retour + facture de restitution) qui le passe en « cloture ». La clôture pose
+  // aussi le CA en comptabilité : un contrat resté signé alors que la location est
+  // terminée = clôture (et intégration du CA) oubliée. On exclut les réservations
+  // déjà « en_retard » : elles remontent déjà en RETOUR EN RETARD (urgent), inutile
+  // de doublonner. Restent les cas réellement « oubliés » (retour traité mais
+  // contrat pas validé, ou réservation encore « en_cours » jamais basculée).
+  const { data: openContracts } = await supabase
+    .from('contracts')
+    .select(`id, reservation_id,
+      reservations(id, status, end_datetime, vehicle_id, vehicles(plate, brand, model), clients(first_name, last_name))`)
+    .eq('status', 'signe')
+
+  openContracts?.forEach(c => {
+    const r = c.reservations as any
+    if (!r?.end_datetime) return
+    if (r.status === 'en_retard') return // déjà couvert par RETOUR EN RETARD
+    const end = new Date(r.end_datetime)
+    if (end.getTime() >= now.getTime()) return // location encore en cours → normal
+    const v  = Array.isArray(r.vehicles) ? r.vehicles[0] : r.vehicles
+    const cl = Array.isArray(r.clients)  ? r.clients[0]  : r.clients
+    const daysLate = Math.max(1, differenceInDays(now, end))
+    alerts.push({
+      id: `contract-open-${c.id}`,
+      category: daysLate >= 3 ? 'urgent' : 'important',
+      urgent: daysLate >= 3,
+      type: 'contrat_non_cloture',
+      label: 'CONTRAT NON CLÔTURÉ',
+      sublabel: `${vLabel(v)} · ${cl?.first_name ?? ''} ${cl?.last_name ?? ''} · location terminée depuis ${daysLate}j`.replace(/\s+·\s+·/g, ' ·').trim(),
+      href: `/reservations/${r.id}?from=alerts`,
+      date: r.end_datetime,
+      vehicleId: r.vehicle_id ?? undefined,
+      reservationId: r.id ?? undefined,
+    })
+  })
+
   return alerts.sort((a, b) => {
     const order = { urgent: 0, important: 1, info: 2 }
     return order[a.category] - order[b.category]
