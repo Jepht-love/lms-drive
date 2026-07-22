@@ -19,7 +19,7 @@ export interface AgencySettings {
 export const AGENCY_DEFAULTS: AgencySettings = {
   company_name: 'LMS Agency',
   siret: '99160973600012',
-  address: null,
+  address: '2 rue Jean Zay 94380 Bonneuil-Sur-Marne',
   phone: null,
   email: null,
   extra_km_rate: 0.3,

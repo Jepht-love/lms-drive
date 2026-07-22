@@ -16,6 +16,16 @@ export function loadLogoDataUrl(): string | null {
   }
 }
 
+/** Cachet/tampon officiel (coordonnées + SIRET) apposé dans l'encart « Cachet & Visa ». */
+export function loadCachetDataUrl(): string | null {
+  try {
+    const buf = readFileSync(join(process.cwd(), 'public', 'cachet-lms.png'))
+    return `data:image/png;base64,${buf.toString('base64')}`
+  } catch {
+    return null
+  }
+}
+
 /** Fond du schéma EDL (le même détourage que l'app) pour les pages EDL du PDF. */
 export function loadEdlSchemaDataUrl(): string | null {
   try {

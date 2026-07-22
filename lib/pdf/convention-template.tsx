@@ -12,6 +12,7 @@ export interface ConventionData {
   ownerPhone?: string | null
   ownerEmail?: string | null
   ownerLogoUrl?: string | null
+  ownerCachetUrl?: string | null
   partnerName: string
   partnerContact?: string | null
   partnerPhone?: string | null
@@ -59,8 +60,8 @@ function conventionClauses(partnerName: string, depositAmount: number) {
 const s = StyleSheet.create({
   page: { fontFamily: 'Helvetica', fontSize: 10, padding: 36, color: '#1e293b', backgroundColor: '#ffffff' },
 
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20, paddingBottom: 14, borderBottom: '2px solid #2563eb' },
-  logo: { height: 40, objectFit: 'contain', marginBottom: 4 },
+  header: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  logo: { height: 26, objectFit: 'contain' },
   company: { fontSize: 16, fontFamily: 'Helvetica-Bold', color: '#2563eb' },
   meta: { fontSize: 8, color: '#94a3b8', marginTop: 1 },
   ref: { textAlign: 'right' },
@@ -111,24 +112,16 @@ export function ConventionPDF({ data }: { data: ConventionData }) {
   return (
     <Document>
       <Page size="A4" style={s.page}>
-        {/* En-tête */}
+        {/* En-tête minimal : seulement le logo (plus petit), pour que le contenu
+            démarre plus haut. Le n° de convention, le titre et le SIRET sont retirés
+            d'ici ; le SIRET figure désormais dans l'encart « Propriétaire ». */}
         <View style={s.header}>
-          <View>
-            {data.ownerLogoUrl ? (
-              // eslint-disable-next-line jsx-a11y/alt-text
-              <Image src={data.ownerLogoUrl} style={s.logo} />
-            ) : (
-              <Text style={s.company}>{data.ownerName}</Text>
-            )}
-            {data.ownerSiret ? <Text style={s.meta}>SIRET : {data.ownerSiret}</Text> : null}
-            {data.ownerAddress ? <Text style={s.meta}>{data.ownerAddress}</Text> : null}
-            {data.ownerPhone ? <Text style={s.meta}>{data.ownerPhone}</Text> : null}
-          </View>
-          <View style={s.ref}>
-            <Text style={s.refNumber}>{data.contractNumber}</Text>
-            <Text style={s.refSub}>Convention de mise à disposition</Text>
-            <Text style={s.refSub}>inter-agences</Text>
-          </View>
+          {data.ownerLogoUrl ? (
+            // eslint-disable-next-line jsx-a11y/alt-text
+            <Image src={data.ownerLogoUrl} style={s.logo} />
+          ) : (
+            <Text style={s.company}>{data.ownerName}</Text>
+          )}
         </View>
 
         {/* Parties */}
@@ -137,6 +130,7 @@ export function ConventionPDF({ data }: { data: ConventionData }) {
             <Text style={s.partyLabel}>Propriétaire</Text>
             <Text style={s.partyName}>{data.ownerName}</Text>
             {data.ownerAddress ? <Text style={s.partyLine}>{data.ownerAddress}</Text> : null}
+            {data.ownerSiret ? <Text style={s.partyLine}>SIRET : {data.ownerSiret}</Text> : null}
             {data.ownerPhone ? <Text style={s.partyLine}>{data.ownerPhone}</Text> : null}
           </View>
           <View style={s.partyBox}>
@@ -204,9 +198,9 @@ export function ConventionPDF({ data }: { data: ConventionData }) {
           </View>
           <View style={s.sigBox}>
             <Text style={s.sigLabel}>Cachet & Visa propriétaire</Text>
-            {data.ownerLogoUrl ? (
+            {data.ownerCachetUrl || data.ownerLogoUrl ? (
               // eslint-disable-next-line jsx-a11y/alt-text
-              <Image src={data.ownerLogoUrl} style={s.sigImage} />
+              <Image src={(data.ownerCachetUrl || data.ownerLogoUrl) as string} style={s.sigImage} />
             ) : (
               <View style={s.sigPlaceholder} />
             )}

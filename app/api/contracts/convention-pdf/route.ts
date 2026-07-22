@@ -3,7 +3,7 @@ import { renderToBuffer, type DocumentProps } from '@react-pdf/renderer'
 import { createClient } from '@/lib/supabase/server'
 import { getAgencySettings } from '@/lib/contracts/agency'
 import { formatDate } from '@/lib/utils'
-import { loadLogoDataUrl } from '@/lib/pdf/build-contract-data'
+import { loadLogoDataUrl, loadCachetDataUrl } from '@/lib/pdf/build-contract-data'
 import { ConventionPDF, type ConventionData } from '@/lib/pdf/convention-template'
 import { createElement, type ReactElement } from 'react'
 
@@ -48,6 +48,7 @@ export async function POST(request: NextRequest) {
       ownerPhone: agency.phone ?? null,
       ownerEmail: agency.email ?? null,
       ownerLogoUrl: loadLogoDataUrl(),
+      ownerCachetUrl: loadCachetDataUrl(),
       partnerName: partner?.name ?? 'Agence partenaire',
       partnerContact: partner?.contact_name ?? null,
       partnerPhone: partner?.phone ?? null,
