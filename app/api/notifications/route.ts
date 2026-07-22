@@ -48,7 +48,10 @@ export async function GET(request: NextRequest) {
     // entre dans la fenêtre des 2 h.
     const REMINDER_LEAD_HOURS = 2
 
-    // Départs à préparer dans les 2 h (réservations confirmées = acompte versé)
+    // Départs à préparer : DEUX rappels par réservation confirmée — un ~2 h avant
+    // puis un ~1 h avant. Paliers distincts avec chacun son marqueur de dédup :
+    // au-delà de 60 min restants → palier « 2 h » ; en deçà → palier « 1 h ». Une
+    // résa créée à moins d'1 h du départ ne reçoit que le rappel « dans 1 h ».
     const { data: upcomingDepartures } = await supabase
       .from('reservations')
       .select('id, reservation_number, start_datetime, vehicle:vehicles(plate, brand, model, color), client:clients(first_name, last_name)')
@@ -57,28 +60,33 @@ export async function GET(request: NextRequest) {
       .lte('start_datetime', addHours(now, REMINDER_LEAD_HOURS).toISOString())
 
     for (const r of upcomingDepartures ?? []) {
+      const minutesUntil = (new Date(r.start_datetime).getTime() - now.getTime()) / 60000
+      const stage = minutesUntil > 60
+        ? { type: 'departure_soon',    lead: '2 h' }
+        : { type: 'departure_soon_1h', lead: '1 h' }
+
       const { data: existing } = await supabase
         .from('notifications')
         .select('id')
-        .eq('type', 'departure_soon')
+        .eq('type', stage.type)
         .eq('entity_id', r.id)
         .limit(1)
+      if (existing && existing.length) continue
 
-      if (!existing || existing.length === 0) {
-        const clt = r.client as any
-        const veh = r.vehicle as any
-        const clientLabel = clt ? `${clt.first_name} ${clt.last_name}` : r.reservation_number
-        const vehLabel = veh ? `${veh.brand} ${veh.model}${veh.color ? ' ' + veh.color : ''} (${veh.plate})` : ''
-        const departFmt = new Date(r.start_datetime).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
-        const body = `${clientLabel}${vehLabel ? ' — ' + vehLabel : ''} · départ le ${departFmt}`
-        await supabase.from('notifications').insert({
-          user_id: null, type: 'departure_soon',
-          title: 'Départ à préparer', body,
-          entity_type: 'reservations', entity_id: r.id,
-        })
-        await broadcastPushToManagers({ title: 'Départ à préparer', body, url: '/reservations' }, 'departure_alert')
-        created.push(r.id)
-      }
+      const clt = r.client as any
+      const veh = r.vehicle as any
+      const clientLabel = clt ? `${clt.first_name} ${clt.last_name}` : r.reservation_number
+      const vehLabel = veh ? `${veh.brand} ${veh.model}${veh.color ? ' ' + veh.color : ''} (${veh.plate})` : ''
+      const departFmt = new Date(r.start_datetime).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+      const title = `Départ dans ${stage.lead}`
+      const body = `${clientLabel}${vehLabel ? ' — ' + vehLabel : ''} · départ le ${departFmt}`
+      await supabase.from('notifications').insert({
+        user_id: null, type: stage.type,
+        title, body,
+        entity_type: 'reservations', entity_id: r.id,
+      })
+      await broadcastPushToManagers({ title, body, url: '/reservations' }, 'departure_alert')
+      created.push(r.id)
     }
 
     // ── Tâches imminentes : rappel ~2h avant une tâche / RDV programmé ─────────
@@ -94,17 +102,20 @@ export async function GET(request: NextRequest) {
       .gte('due_datetime', now.toISOString())
       .lte('due_datetime', inLead)
     for (const t of soonTasks ?? []) {
+      const minutesUntil = (new Date(t.due_datetime).getTime() - now.getTime()) / 60000
+      const stage = minutesUntil > 60 ? { type: 'task_soon', lead: '2 h' } : { type: 'task_soon_1h', lead: '1 h' }
       const { data: exists } = await supabase.from('notifications')
-        .select('id').eq('type', 'task_soon').eq('entity_id', t.id).limit(1)
+        .select('id').eq('type', stage.type).eq('entity_id', t.id).limit(1)
       if (exists && exists.length) continue
       const veh = t.vehicle as any
       const heure = new Date(t.due_datetime).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+      const title = `Tâche dans ${stage.lead}`
       const body = `${t.title}${veh?.plate ? ` — ${veh.brand} ${veh.model} (${veh.plate})` : ''} · prévu à ${heure}`
       await supabase.from('notifications').insert({
-        user_id: null, type: 'task_soon', title: 'Tâche imminente', body,
+        user_id: null, type: stage.type, title, body,
         entity_type: 'tasks', entity_id: t.id,
       })
-      await broadcastPushToManagers({ title: 'Tâche imminente', body, url: '/calendar/tasks' }, 'new_task_alert')
+      await broadcastPushToManagers({ title, body, url: '/calendar/tasks' }, 'new_task_alert')
       created.push(t.id)
     }
 
@@ -116,57 +127,58 @@ export async function GET(request: NextRequest) {
       .gte('start_at', now.toISOString())
       .lte('start_at', inLead)
     for (const ev of soonEvents ?? []) {
+      const minutesUntil = (new Date(ev.start_at).getTime() - now.getTime()) / 60000
+      const stage = minutesUntil > 60 ? { type: 'task_soon', lead: '2 h' } : { type: 'task_soon_1h', lead: '1 h' }
       const { data: exists } = await supabase.from('notifications')
-        .select('id').eq('type', 'task_soon').eq('entity_id', ev.id).limit(1)
+        .select('id').eq('type', stage.type).eq('entity_id', ev.id).limit(1)
       if (exists && exists.length) continue
       const heure = new Date(ev.start_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+      const title = `Rappel dans ${stage.lead}`
       const body = `${ev.title} · prévu à ${heure}`
       await supabase.from('notifications').insert({
-        user_id: null, type: 'task_soon', title: 'Tâche imminente', body,
+        user_id: null, type: stage.type, title, body,
         entity_type: 'calendar_events', entity_id: ev.id,
       })
-      await broadcastPushToManagers({ title: 'Tâche imminente', body, url: '/calendrier' }, 'new_task_alert')
+      await broadcastPushToManagers({ title, body, url: '/calendrier' }, 'new_task_alert')
       created.push(ev.id)
     }
 
-    // Retours du jour : toutes les réservations en_cours revenant aujourd'hui
-    // Notif envoyée une fois par heure (rappel toutes les heures + digest 8h)
     const todayStart = new Date(now); todayStart.setHours(0, 0, 0, 0)
     const todayEnd   = new Date(now); todayEnd.setHours(23, 59, 59, 999)
-    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000).toISOString()
 
-    const { data: returnsToday } = await supabase
+    // Retour à préparer : UN seul rappel ~1 h avant l'heure de restitution prévue.
+    // Plus de rappel horaire toute la journée — le récap de 7 h liste déjà les
+    // retours du jour ; ce rappel « 1 h avant » complète juste à l'approche.
+    const { data: returnsSoon } = await supabase
       .from('reservations')
       .select('id, reservation_number, end_datetime, vehicle:vehicles(plate, brand, model, color), client:clients(first_name, last_name)')
       .eq('status', 'en_cours')
-      .gte('end_datetime', todayStart.toISOString())
-      .lte('end_datetime', todayEnd.toISOString())
+      .gte('end_datetime', now.toISOString())
+      .lte('end_datetime', addHours(now, 1).toISOString())
 
-    for (const r of returnsToday ?? []) {
-      // Déduplication : ne pas renvoyer si une notif identique existe dans la dernière heure
+    for (const r of returnsSoon ?? []) {
       const { data: existing } = await supabase
         .from('notifications')
         .select('id')
-        .eq('type', 'return_today_soon')
+        .eq('type', 'return_soon_1h')
         .eq('entity_id', r.id)
-        .gte('created_at', oneHourAgo)
         .limit(1)
+      if (existing && existing.length) continue
 
-      if (!existing || existing.length === 0) {
-        const clt = r.client as any
-        const veh = r.vehicle as any
-        const clientLabel = clt ? `${clt.first_name} ${clt.last_name}` : r.reservation_number
-        const vehLabel = veh ? `${veh.brand} ${veh.model} (${veh.plate})` : ''
-        const heureFmt = new Date(r.end_datetime).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
-        const body = `${clientLabel}${vehLabel ? ' — ' + vehLabel : ''} · retour prévu à ${heureFmt}`
-        await supabase.from('notifications').insert({
-          user_id: null, type: 'return_today_soon',
-          title: 'Retour du jour', body,
-          entity_type: 'reservations', entity_id: r.id,
-        })
-        await broadcastPushToManagers({ title: 'Retour du jour', body, url: '/reservations' }, 'return_alert')
-        created.push(r.id)
-      }
+      const clt = r.client as any
+      const veh = r.vehicle as any
+      const clientLabel = clt ? `${clt.first_name} ${clt.last_name}` : r.reservation_number
+      const vehLabel = veh ? `${veh.brand} ${veh.model} (${veh.plate})` : ''
+      const heureFmt = new Date(r.end_datetime).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+      const title = 'Retour dans 1 h'
+      const body = `${clientLabel}${vehLabel ? ' — ' + vehLabel : ''} · retour prévu à ${heureFmt}`
+      await supabase.from('notifications').insert({
+        user_id: null, type: 'return_soon_1h',
+        title, body,
+        entity_type: 'reservations', entity_id: r.id,
+      })
+      await broadcastPushToManagers({ title, body, url: '/reservations' }, 'return_alert')
+      created.push(r.id)
     }
 
     // 1. Bascule en_retard les réservations en_cours dépassées
