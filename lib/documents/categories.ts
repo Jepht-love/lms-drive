@@ -28,8 +28,9 @@ export const DOCUMENT_SUBCATEGORIES: Record<DocumentCategory, { id: string; labe
     { id: 'mise_a_disposition',   label: 'Document de mise à disposition' },
   ],
   client: [
-    { id: 'contrat_location',     label: 'Contrat de location' },
-    { id: 'etat_des_lieux',       label: 'État des lieux' },
+    // « Contrat de location » et « État des lieux » retirés : les contrats (état
+    // des lieux inclus) vivent dans l'onglet « Contrats et factures » généré
+    // automatiquement par réservation, plus dans les pièces client.
     { id: 'cni',                  label: "Carte nationale d'identité (CNI)" },
     { id: 'passeport',            label: 'Passeport' },
     { id: 'titre_sejour',         label: 'Titre de séjour' },

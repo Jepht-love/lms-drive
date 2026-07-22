@@ -85,6 +85,26 @@ const RESA_STATUS_COLOR: Record<string, string> = {
 
 type ActiveTab = 'all' | DocumentCategory | 'reservations'
 
+// Libellés courts pour le nommage automatique des pièces client
+// (ex. « CNI Jean Dupont », « Justif. domicile Jean Dupont »).
+const CLIENT_DOC_SHORT: Record<string, string> = {
+  cni:            'CNI',
+  passeport:      'Passeport',
+  titre_sejour:   'Titre de séjour',
+  justif_domicile:'Justif. domicile',
+  permis:         'Permis',
+  procuration:    'Procuration',
+  autres:         'Document',
+}
+
+// Contrat de location & facture de restitution auto-archivés : déjà présents dans
+// l'onglet « Contrats et factures » (tables contracts / invoices). On les masque
+// des onglets catégorie pour ne plus les mélanger aux pièces d'identité Client.
+const RESERVATION_AUTO_SUBCATS = new Set(['contrat_location', 'facture_restitution'])
+function isReservationAutoDoc(doc: { is_auto_generated: boolean; subcategory: string }) {
+  return doc.is_auto_generated && RESERVATION_AUTO_SUBCATS.has(doc.subcategory)
+}
+
 function fileExt(doc: Document) {
   return doc.file_type?.split('/')[1]?.substring(0, 3).toUpperCase() ?? 'DOC'
 }
@@ -174,6 +194,8 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
     return documents.filter(doc => {
       // Versions archivées masquées de la liste (visibles via l'historique).
       if (doc.is_current === false) return false
+      // Contrats & factures de restitution auto-archivés : uniquement dans l'onglet dédié.
+      if (isReservationAutoDoc(doc)) return false
       if (!canSeeSensitive && SENSITIVE_SUBCATEGORIES.includes(doc.subcategory)) return false
       if (category !== 'all' && category !== 'reservations' && doc.category !== category) return false
       if (!q) return true
@@ -196,18 +218,32 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
 
   const filteredReservations = useMemo(() => {
     if (!searchQuery) return reservationDocs
-    const q = searchQuery.toLowerCase()
-    return reservationDocs.filter(r =>
-      r.reservation_number.toLowerCase().includes(q) ||
-      r.client_name.toLowerCase().includes(q) ||
-      r.vehicle_label.toLowerCase().includes(q)
-    )
+    const q = searchQuery.toLowerCase().trim()
+    return reservationDocs.filter(r => {
+      // Recherche par date : taper « 21/07 » retrouve la résa/le contrat de cette
+      // date (formats jj/mm/aa et jj/mm/aaaa, début comme fin de location).
+      const dates = [r.start_datetime, r.end_datetime].flatMap(d => {
+        const dt = new Date(d)
+        return [
+          dt.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' }),
+          dt.toLocaleDateString('fr-FR'),
+        ]
+      }).join(' ')
+      return (
+        r.reservation_number.toLowerCase().includes(q) ||
+        r.client_name.toLowerCase().includes(q) ||
+        r.vehicle_label.toLowerCase().includes(q) ||
+        (r.contract_number?.toLowerCase().includes(q) ?? false) ||
+        (r.invoice_number?.toLowerCase().includes(q) ?? false) ||
+        dates.includes(q)
+      )
+    })
   }, [reservationDocs, searchQuery])
 
   function getCategoryLabel(cat: string) {
-    const current = documents.filter(d => d.is_current !== false)
+    const current = documents.filter(d => d.is_current !== false && !isReservationAutoDoc(d))
     if (cat === 'all') return `Tous (${current.filter(d => canSeeSensitive || !SENSITIVE_SUBCATEGORIES.includes(d.subcategory)).length})`
-    if (cat === 'reservations') return `Réservations (${reservationDocs.length})`
+    if (cat === 'reservations') return `Contrats et factures (${reservationDocs.length})`
     const found = DOCUMENT_CATEGORIES.find(c => c.id === cat)
     if (!found) return cat
     const count = current.filter(d => d.category === cat && (canSeeSensitive || !SENSITIVE_SUBCATEGORIES.includes(d.subcategory))).length
@@ -220,6 +256,15 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
       if (found) return found.label
     }
     return sub
+  }
+
+  // Nom auto d'une pièce client : « <libellé court> <Prénom Nom> » (ex. « CNI
+  // Jean Dupont »). Renvoie '' si le client ou la sous-catégorie manque.
+  function buildClientDocName(sub: string, clientId: string): string {
+    const cl = clients.find(c => c.id === clientId)
+    if (!cl || !sub) return ''
+    const short = CLIENT_DOC_SHORT[sub] ?? getSubLabel(sub)
+    return `${short} ${cl.first_name} ${cl.last_name}`.trim()
   }
 
   function resetUpload() {
@@ -379,12 +424,14 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
               <div key={r.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <div className="min-w-0 flex-1">
-                    <p className="text-[13px] font-bold text-[#111111]">{r.reservation_number}</p>
-                    <p className="text-[11px] text-gray-500 truncate">{r.client_name}</p>
-                    <p className="text-[11px] text-gray-400 truncate">{r.vehicle_label}</p>
-                    <p className="text-[11px] text-gray-400">
-                      {fmtDate(r.start_datetime)} → {fmtDate(r.end_datetime)}
+                    {/* Titre = véhicule + période, pour retrouver un contrat en
+                        tapant le nom du véhicule ou une date et voir aussitôt
+                        qui a réservé, de quand à quand. */}
+                    <p className="text-[13px] font-bold text-[#111111] truncate">{r.vehicle_label}</p>
+                    <p className="text-[12px] font-semibold text-gray-600">
+                      du {fmtDate(r.start_datetime)} au {fmtDate(r.end_datetime)}
                     </p>
+                    <p className="text-[11px] text-gray-400 truncate">{r.client_name} · {r.reservation_number}</p>
                   </div>
                   <span className={`flex-shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full ${RESA_STATUS_COLOR[r.status] ?? 'bg-gray-100 text-gray-500'}`}>
                     {RESA_STATUS_LABEL[r.status] ?? r.status}
@@ -539,7 +586,12 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
           </select>
 
           {uploadCat && (
-            <select value={uploadSub} onChange={e => setUploadSub(e.target.value)}
+            <select value={uploadSub} onChange={e => {
+                const sub = e.target.value
+                setUploadSub(sub)
+                // Pièce client + client déjà choisi → nom généré automatiquement.
+                if (uploadCat === 'client' && entityId) setDocName(buildClientDocName(sub, entityId))
+              }}
               className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px] mb-3">
               <option value="">Sous-catégorie...</option>
               {DOCUMENT_SUBCATEGORIES[uploadCat].map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
@@ -553,7 +605,12 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
             </select>
           )}
           {uploadCat === 'client' && (
-            <select value={entityId} onChange={e => setEntityId(e.target.value)} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px] mb-3">
+            <select value={entityId} onChange={e => {
+                const cid = e.target.value
+                setEntityId(cid)
+                // Client choisi + sous-catégorie déjà sélectionnée → nom auto.
+                if (cid && uploadSub) setDocName(buildClientDocName(uploadSub, cid))
+              }} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px] mb-3">
               <option value="">Client concerné (optionnel)...</option>
               {clients.map(c => <option key={c.id} value={c.id}>{c.first_name} {c.last_name}</option>)}
             </select>

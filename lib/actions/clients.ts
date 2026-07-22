@@ -21,6 +21,36 @@ async function uploadClientDoc(
   return error ? null : path
 }
 
+const CLIENT_PHOTO_SLOTS = ['id_doc_front', 'id_doc_back', 'license_front', 'license_back', 'proof_of_address'] as const
+
+/**
+ * Récupère les chemins Storage des pièces client à écrire dans `clients.*_path`.
+ * Source principale : les champs `<slot>_path` (chaînes) que ClientForm produit
+ * après un téléversement direct côté navigateur. Repli : un `File` brut encore
+ * transmis est téléversé ici. Les slots absents sont omis (jamais écrasés).
+ */
+async function collectPhotoPaths(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  formData: FormData,
+  clientId: string,
+): Promise<Record<string, string>> {
+  const validPaths: Record<string, string> = {}
+  for (const slot of CLIENT_PHOTO_SLOTS) {
+    const pathKey = `${slot}_path`
+    const sentPath = formData.get(pathKey)
+    if (typeof sentPath === 'string' && sentPath.trim()) {
+      validPaths[pathKey] = sentPath.trim()
+      continue
+    }
+    const file = formData.get(slot) as File | null
+    if (file && file.size > 0) {
+      const uploaded = await uploadClientDoc(supabase, file, clientId, slot)
+      if (uploaded) validPaths[pathKey] = uploaded
+    }
+  }
+  return validPaths
+}
+
 // Remise % (0–100). Renvoie null si champ vide/invalide → pas de mise à jour.
 function parseDiscount(raw: FormDataEntryValue | null): number | null {
   const v = (raw as string)?.trim()
@@ -88,16 +118,10 @@ export async function createClientAction(formData: FormData) {
   const { data, error } = await supabase.from('clients').insert(payload).select('id').single()
   if (error) return { error: error.message }
 
-  // Upload photos documents
-  const photoSlots = ['id_doc_front', 'id_doc_back', 'license_front', 'license_back', 'proof_of_address'] as const
-  const paths: Record<string, string | null> = {}
-  for (const slot of photoSlots) {
-    const file = formData.get(slot) as File | null
-    if (file && file.size > 0) {
-      paths[`${slot}_path`] = await uploadClientDoc(supabase, file, data.id, slot)
-    }
-  }
-  const photoPaths = Object.fromEntries(Object.entries(paths).filter(([, v]) => v !== null))
+  // Photos : ClientForm téléverse directement vers Storage (contournement de la
+  // limite de taille des requêtes Vercel) et transmet les CHEMINS via des champs
+  // `<slot>_path`. Repli défensif : si un File brut arrive, on le téléverse ici.
+  const photoPaths = await collectPhotoPaths(supabase, formData, data.id)
   if (Object.keys(photoPaths).length > 0) {
     await supabase.from('clients').update(photoPaths).eq('id', data.id)
   }
@@ -124,18 +148,10 @@ export async function updateClientAction(id: string, formData: FormData) {
 
   const payload = buildBasePayload(formData)
 
-  // Upload photos documents si fournies
-  const photoSlots = ['id_doc_front', 'id_doc_back', 'license_front', 'license_back', 'proof_of_address'] as const
-  const paths: Record<string, string | null> = {}
-  for (const slot of photoSlots) {
-    const file = formData.get(slot) as File | null
-    if (file && file.size > 0) {
-      paths[`${slot}_path`] = await uploadClientDoc(supabase, file, id, slot)
-    }
-  }
-
-  // Exclure les chemins null (upload échoué) pour ne pas effacer les photos existantes
-  const validPaths = Object.fromEntries(Object.entries(paths).filter(([, v]) => v !== null))
+  // Photos : chemins pré-téléversés par ClientForm (champs `<slot>_path`), avec
+  // repli File. Les chemins absents ne sont pas écrits → les photos existantes
+  // ne sont jamais effacées par une mise à jour sans nouvelle photo.
+  const validPaths = await collectPhotoPaths(supabase, formData, id)
   const { error } = await supabase.from('clients').update({ ...payload, ...validPaths }).eq('id', id)
   if (error) return { error: error.message }
 
