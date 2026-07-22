@@ -201,6 +201,7 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
       if (!q) return true
       return (
         doc.name.toLowerCase().includes(q) ||
+        displayDocName(doc).toLowerCase().includes(q) ||
         doc.subcategory.toLowerCase().includes(q) ||
         doc.tags?.some(t => t.toLowerCase().includes(q))
       )
@@ -267,6 +268,19 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
     return `${short} ${cl.first_name} ${cl.last_name}`.trim()
   }
 
+  // Titre affiché d'un document. Pour une pièce client rattachée à un client
+  // connu, on dérive toujours le nom canonique « <libellé> <Prénom Nom> » (ex.
+  // « Titre de séjour Jean Dupont »). Ça uniformise l'affichage y compris pour
+  // les pièces enregistrées avant le nommage automatique (nom stocké figé), sans
+  // écriture en base ni re-téléversement. Repli : le nom stocké.
+  function displayDocName(doc: Document): string {
+    if (doc.category === 'client' && doc.entity_id) {
+      const auto = buildClientDocName(doc.subcategory, doc.entity_id)
+      if (auto) return auto
+    }
+    return doc.name
+  }
+
   function resetUpload() {
     setUploadCat(''); setUploadSub(''); setEntityId('')
     setDocName(''); setExpiryDate(''); setFile(null); setUploadError('')
@@ -296,7 +310,7 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
   }
 
   async function handleDelete(doc: Document) {
-    if (!confirm(`Supprimer « ${doc.name} » ?`)) return
+    if (!confirm(`Supprimer « ${displayDocName(doc)} » ?`)) return
     startTransition(async () => {
       try { await deleteDocument(doc.id) }
       catch (e: any) { alert(e.message) }
@@ -322,19 +336,19 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
           const res  = await fetch(url)
           const blob = await res.blob()
           const ext  = (doc.file_type?.split('/')[1] ?? 'pdf').split('+')[0]
-          const safeName = doc.name.replace(/[^\w.\- ]+/g, '').trim() || 'document'
+          const safeName = displayDocName(doc).replace(/[^\w.\- ]+/g, '').trim() || 'document'
           const fileObj = new File([blob], `${safeName}.${ext}`, {
             type: blob.type || doc.file_type || 'application/octet-stream',
           })
           if (nav.canShare({ files: [fileObj] })) {
-            await nav.share({ files: [fileObj], title: doc.name })
+            await nav.share({ files: [fileObj], title: displayDocName(doc) })
             return
           }
         } catch { /* repli sur le partage d'URL ci-dessous */ }
       }
       // 2) Partage de l'URL (signée) à défaut du fichier
       if (typeof navigator.share === 'function') {
-        await navigator.share({ title: doc.name, url })
+        await navigator.share({ title: displayDocName(doc), url })
         return
       }
       // 3) Repli desktop : nouvel onglet
@@ -498,7 +512,7 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-[13px] font-medium text-[#111111] truncate">
-                              {doc.name}
+                              {displayDocName(doc)}
                               {(doc.version ?? 1) > 1 && (
                                 <span className="ml-1.5 text-[10px] font-bold text-gray-400">v{doc.version}</span>
                               )}
@@ -692,7 +706,7 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setViewDoc(null)} />
           <div className="relative w-full sm:max-w-2xl h-[85vh] sm:h-[80vh] bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden">
             <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-gray-100 flex-shrink-0">
-              <span className="text-[13px] font-bold text-[#111111] truncate">{viewDoc.name}</span>
+              <span className="text-[13px] font-bold text-[#111111] truncate">{displayDocName(viewDoc)}</span>
               <div className="flex items-center gap-1 flex-shrink-0">
                 <button onClick={() => handleShare(viewDoc)} disabled={sharingId === viewDoc.id}
                   className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 disabled:opacity-40 text-gray-500" title="Partager">

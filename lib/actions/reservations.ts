@@ -157,7 +157,7 @@ export async function updatePaymentInfo(
 }
 import { logAudit } from '@/lib/audit/log'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { generateReservationNumber, generateContractNumber, calculateRentalDays, calculateRentalPrice } from '@/lib/utils'
+import { generateReservationNumber, calculateRentalDays, calculateRentalPrice } from '@/lib/utils'
 import { syncReservationToCalendar } from '@/lib/calendar/syncRental'
 import { recomputeVehicleStatus } from '@/lib/vehicles/vehicleStatus'
 import { broadcastPushToManagers } from '@/lib/push/broadcastPush'
@@ -560,6 +560,16 @@ export async function updateReservationStatus(id: string, status: ReservationSta
 
   if (!reservation) return { error: 'Réservation introuvable' }
 
+  // BUG 1 — garde-fou serveur : « en_cours » (véhicule sorti / « en location »)
+  // ne peut venir QUE de la validation de l'EDL départ (markReservationDeparted).
+  // Une confirmation, même avec acompte, n'est PAS une sortie de véhicule. On
+  // bloque donc tout passage manuel en_cours par cette action, pour empêcher
+  // qu'un véhicule paraisse « loué » avant le départ réel (cf. STRATEGIE_BUGS
+  // BUG 1). Le contrat, lui, est créé par la page EDL départ.
+  if (status === 'en_cours') {
+    return { error: "Démarrez la location via l'état des lieux de départ." }
+  }
+
   const { error: updateError } = await supabase.from('reservations').update({ status }).eq('id', id)
   if (updateError) return { error: updateError.message }
 
@@ -590,24 +600,6 @@ export async function updateReservationStatus(id: string, status: ReservationSta
   const pushMsg = PUSH_LABELS[status]
   if (pushMsg) {
     await broadcastPushToManagers({ ...pushMsg, url: `/reservations/${id}` }, PUSH_TYPES[status])
-  }
-
-  // If starting, create contract
-  if (status === 'en_cours') {
-    const { data: existing } = await supabase
-      .from('contracts')
-      .select('id')
-      .eq('reservation_id', id)
-      .limit(1)
-
-    if (!existing || existing.length === 0) {
-      await supabase.from('contracts').insert({
-        contract_number: generateContractNumber(),
-        reservation_id: id,
-        status: 'a_signer',
-        created_by: user.id,
-      })
-    }
   }
 
   // Location terminée → CA intégré automatiquement en comptabilité
