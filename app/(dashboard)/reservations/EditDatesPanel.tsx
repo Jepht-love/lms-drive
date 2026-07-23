@@ -107,9 +107,10 @@ export default function EditDatesPanel({
         <p className="text-sm font-semibold text-amber-800">Modifier les dates &amp; tarif</p>
       </div>
 
-      {/* Dates */}
+      {/* Dates — min-w-0 (cellule + input) : un datetime-local a une largeur
+          intrinsèque (~320px WebKit) et déborde de sa colonne sans cela. */}
       <div className="grid grid-cols-2 gap-3">
-        <div>
+        <div className="min-w-0">
           <label className="block text-xs text-amber-700 font-medium uppercase tracking-wide mb-1">
             Départ
           </label>
@@ -117,10 +118,10 @@ export default function EditDatesPanel({
             type="datetime-local"
             value={start}
             onChange={e => setStart(e.target.value)}
-            className="w-full px-3 py-2 rounded-xl border border-amber-200 bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-400"
+            className="w-full min-w-0 px-2.5 py-2 rounded-xl border border-amber-200 bg-white text-[13px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-400"
           />
         </div>
-        <div>
+        <div className="min-w-0">
           <label className="block text-xs text-amber-700 font-medium uppercase tracking-wide mb-1">
             Retour
           </label>
@@ -129,7 +130,7 @@ export default function EditDatesPanel({
             value={end}
             onChange={e => setEnd(e.target.value)}
             min={start}
-            className="w-full px-3 py-2 rounded-xl border border-amber-200 bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-400"
+            className="w-full min-w-0 px-2.5 py-2 rounded-xl border border-amber-200 bg-white text-[13px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-400"
           />
         </div>
       </div>

@@ -31,14 +31,17 @@ export default function ProlongReservation({
   reservationStatus,
 }: Props) {
   const [open, setOpen] = useState(false)
-  const [days, setDays] = useState(1)
-  const [price, setPrice] = useState(dailyPrice)
+  // Chaînes (et non nombres) : vider un champ ne force plus un chiffre fantôme.
+  const [daysStr, setDaysStr] = useState('1')
+  const [priceStr, setPriceStr] = useState(String(dailyPrice))
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
   const [resending, setResending] = useState(false)
   const [resent, setResent] = useState(false)
 
+  const days = daysStr === '' ? 0 : Math.max(0, Math.floor(Number(daysStr)))
+  const price = priceStr === '' ? 0 : Number(priceStr)
   const endMs = new Date(endDatetime).getTime()
   const newEnd = new Date(endMs + days * 24 * 3600 * 1000).toISOString()
   const totalDays = days > 0 ? calculateRentalDays(startDatetime, newEnd) : 0
@@ -115,9 +118,9 @@ export default function ProlongReservation({
                 Jours en plus
               </label>
               <input
-                type="number" min="1" step="1" value={days}
-                onChange={e => setDays(Math.max(1, Math.floor(Number(e.target.value))))}
-                className="w-full px-3 py-2 rounded-xl border border-blue-200 bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                type="number" min="1" step="1" inputMode="numeric" placeholder="1" value={daysStr}
+                onChange={e => setDaysStr(e.target.value)}
+                className="w-full min-w-0 px-3 py-2 rounded-xl border border-blue-200 bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-400"
               />
             </div>
             <div>
@@ -125,9 +128,9 @@ export default function ProlongReservation({
                 Prix / jour (€)
               </label>
               <input
-                type="number" min="0" step="0.01" value={price}
-                onChange={e => setPrice(Number(e.target.value))}
-                className="w-full px-3 py-2 rounded-xl border border-blue-200 bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                type="number" min="0" step="0.01" inputMode="decimal" placeholder="0" value={priceStr}
+                onChange={e => setPriceStr(e.target.value)}
+                className="w-full min-w-0 px-3 py-2 rounded-xl border border-blue-200 bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-400"
               />
             </div>
           </div>

@@ -340,26 +340,28 @@ export default function EventDrawer({ open, event, slotContext, resources, prese
             })}
           </div>
 
-          {/* Début / Fin côte à côte sur mobile pour gagner de la place */}
+          {/* Début / Fin côte à côte sur mobile pour gagner de la place.
+              min-w-0 (cellule + input) : un datetime-local a une largeur
+              intrinsèque et déborderait de sa colonne dans le drawer étroit. */}
           <div className="grid grid-cols-2 gap-2 mb-3">
-            <div>
+            <div className="min-w-0">
               <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1">Début</label>
               <input
                 type="datetime-local"
                 value={startAt}
                 onChange={e => setStartAt(e.target.value)}
                 disabled={locked}
-                className="w-full border border-gray-200 rounded-lg px-2 h-9 text-[12px] disabled:bg-gray-50 disabled:text-gray-400"
+                className="w-full min-w-0 border border-gray-200 rounded-lg px-2 h-9 text-[12px] disabled:bg-gray-50 disabled:text-gray-400"
               />
             </div>
-            <div>
+            <div className="min-w-0">
               <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1">Fin</label>
               <input
                 type="datetime-local"
                 value={endAt}
                 onChange={e => setEndAt(e.target.value)}
                 disabled={locked}
-                className="w-full border border-gray-200 rounded-lg px-2 h-9 text-[12px] disabled:bg-gray-50 disabled:text-gray-400"
+                className="w-full min-w-0 border border-gray-200 rounded-lg px-2 h-9 text-[12px] disabled:bg-gray-50 disabled:text-gray-400"
               />
             </div>
           </div>

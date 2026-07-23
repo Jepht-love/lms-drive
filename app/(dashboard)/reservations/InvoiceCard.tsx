@@ -154,14 +154,15 @@ export default function InvoiceCard({ invoice }: { invoice: Invoice }) {
               placeholder="Description"
               className={`${input} flex-1 min-w-0`}
             />
+            {/* `x || ''` : vider le champ le laisse vide (pas de 0 fantôme). */}
             <input
-              type="number" min="0" step="1" value={l.quantity}
+              type="number" min="0" step="1" value={l.quantity || ''} placeholder="0"
               onChange={e => update(i, { quantity: Number(e.target.value) })}
               className={`${input} w-14 text-center`}
               title="Quantité"
             />
             <input
-              type="number" min="0" step="0.01" value={l.unit_price}
+              type="number" min="0" step="0.01" value={l.unit_price || ''} placeholder="0"
               onChange={e => update(i, { unit_price: Number(e.target.value) })}
               className={`${input} w-20 text-center ${l.unit_price <= 0 ? 'border-amber-400 bg-amber-50' : ''}`}
               title="Prix unitaire (€)"
@@ -184,7 +185,7 @@ export default function InvoiceCard({ invoice }: { invoice: Invoice }) {
         <span className="text-xs text-gray-500">Délai de règlement accordé au client</span>
         <div className="flex items-center gap-1.5">
           <input
-            type="number" min="1" step="1" value={termDays}
+            type="number" min="1" step="1" value={termDays || ''} placeholder="7"
             onChange={e => { setTermDays(Number(e.target.value)); setDirty(true) }}
             className={`${input} w-16 text-center`}
           />

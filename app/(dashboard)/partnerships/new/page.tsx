@@ -52,7 +52,8 @@ export default function NewOperationPage() {
     })
   }
 
-  const input = 'w-full text-sm border border-gray-200 rounded-xl px-3 py-2.5 text-gray-900 focus:outline-none focus:border-gray-400 transition-colors'
+  // min-w-0 : un datetime-local a une largeur intrinsèque et déborderait de sa colonne sans cela.
+  const input = 'w-full min-w-0 text-sm border border-gray-200 rounded-xl px-3 py-2.5 text-gray-900 focus:outline-none focus:border-gray-400 transition-colors'
   const label = 'block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5'
 
   return (

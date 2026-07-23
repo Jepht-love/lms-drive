@@ -63,7 +63,8 @@ export default async function NewTaskPage({
     defaultDatetime = `${date}T${h}:${m}`
   }
 
-  const input = 'w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/10'
+  // min-w-0 : un datetime-local a une largeur intrinsèque et déborderait de sa colonne sans cela.
+  const input = 'w-full min-w-0 border border-gray-200 rounded-xl px-4 py-3 text-[13px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/10'
   const label = 'block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5'
 
   return (

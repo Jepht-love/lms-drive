@@ -104,3 +104,16 @@ button, a, [role="button"] { min-height: 44px; }
 
 /* Orientation libre : l'app suit la rotation de l'appareil (portrait + paysage).
    L'ancien forçage paysage sur iPad a été retiré. Le manifest est en "orientation": "any". */
+
+/* Anti-débordement (audit 23/07/2026) : les inputs date/heure ont une largeur
+   intrinsèque sous WebKit (~320px pour datetime-local) et refusent de rétrécir
+   dans une colonne de grid/flex (min-width:auto), débordant de leur panneau —
+   vu sur « Modifier les dates & tarif ». min-width:0 les autorise à suivre la
+   largeur de leur cellule, partout dans l'app, y compris les futurs écrans. */
+input[type='date'],
+input[type='time'],
+input[type='datetime-local'],
+input[type='month'],
+input[type='week'] {
+  min-width: 0;
+}

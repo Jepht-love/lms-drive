@@ -236,7 +236,7 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
               value={startDatetime}
               onChange={e => setStartDatetime(e.target.value)}
               required
-              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm"
+              className="w-full min-w-0 px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm"
             />
           </div>
           <div>
@@ -248,7 +248,7 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
               onChange={e => setEndDatetime(e.target.value)}
               required
               min={startDatetime}
-              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm"
+              className="w-full min-w-0 px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm"
             />
           </div>
           <div>
