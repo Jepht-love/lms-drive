@@ -31,6 +31,8 @@ export default async function ConventionPage({ params }: { params: Promise<{ id:
     .limit(1)
     .maybeSingle()
 
+  // Création simultanée (double chargement) → l'index unique (migration 061)
+  // rejette le second insert : on reprend la convention existante.
   if (!contract && user) {
     const { data: newContract } = await supabase
       .from('contracts')
@@ -45,6 +47,16 @@ export default async function ConventionPage({ params }: { params: Promise<{ id:
       .select('*')
       .single()
     contract = newContract
+    if (!contract) {
+      const { data: existing } = await supabase
+        .from('contracts')
+        .select('*')
+        .eq('inter_agency_rental_id', id)
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle()
+      contract = existing
+    }
   }
 
   if (!contract) notFound()

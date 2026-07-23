@@ -91,7 +91,7 @@ export default function ContractSigningPanel({ contract, reservation, vehicle, c
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Cachet agence</p>
             <div className="flex items-center justify-center h-16">
               <Image
-                src="/logo.png"
+                src="/cachet-lms.png"
                 alt="Cachet agence"
                 width={160}
                 height={60}

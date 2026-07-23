@@ -20,15 +20,20 @@ export default async function DepartureInspectionPage({ params }: { params: Prom
 
   if (!reservation) notFound()
 
-  // Chercher un contrat existant
+  // Chercher un contrat existant (le plus ancien si doublon historique)
   let { data: contract } = await supabase
     .from('contracts')
     .select('id, contract_number, status')
     .eq('reservation_id', reservationId)
+    .order('created_at', { ascending: true })
     .limit(1)
-    .single()
+    .maybeSingle()
 
-  // Si pas de contrat → le créer maintenant (avant l'EDL départ)
+  // Si pas de contrat → le créer maintenant (avant l'EDL départ). Deux
+  // chargements simultanés de la page (préchargement + clic, double-tap)
+  // inséraient chacun un contrat → doublon fantôme « à signer ». L'index
+  // unique (migration 061) fait échouer le second insert : on reprend alors
+  // le contrat créé par l'autre passage.
   if (!contract && user) {
     const { data: newContract } = await supabase
       .from('contracts')
@@ -41,6 +46,16 @@ export default async function DepartureInspectionPage({ params }: { params: Prom
       .select('id, contract_number, status')
       .single()
     contract = newContract
+    if (!contract) {
+      const { data: existing } = await supabase
+        .from('contracts')
+        .select('id, contract_number, status')
+        .eq('reservation_id', reservationId)
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle()
+      contract = existing
+    }
   }
 
   // La réservation ne passe PAS « en cours » ici : ouvrir l'écran d'EDL ne doit

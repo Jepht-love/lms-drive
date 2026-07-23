@@ -334,9 +334,11 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
   // fermer) au lieu de le charger « en plein écran » sans retour possible.
   const [viewDoc, setViewDoc] = useState<Document | null>(null)
   const [sharingId, setSharingId] = useState<string | null>(null)
-  async function handleShare(doc: Document) {
-    const url = urlFor(doc)
-    setSharingId(doc.id)
+
+  // Cœur du partage, réutilisé par les documents ET les contrats/factures de
+  // l'onglet « Contrats et factures » (leurs anciens liens target=_blank
+  // rouvraient le piège du PDF plein écran sans retour sur iOS).
+  async function shareFile(url: string, name: string, fileType?: string | null) {
     try {
       const nav = navigator as Navigator & { canShare?: (d?: any) => boolean }
       // 1) Partage du fichier lui-même (l'utilisateur peut l'enregistrer dans Fichiers)
@@ -344,20 +346,20 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
         try {
           const res  = await fetch(url)
           const blob = await res.blob()
-          const ext  = (doc.file_type?.split('/')[1] ?? 'pdf').split('+')[0]
-          const safeName = displayDocName(doc).replace(/[^\w.\- ]+/g, '').trim() || 'document'
+          const ext  = ((fileType ?? blob.type)?.split('/')[1] ?? 'pdf').split('+')[0] || 'pdf'
+          const safeName = name.replace(/[^\w.\- ]+/g, '').trim() || 'document'
           const fileObj = new File([blob], `${safeName}.${ext}`, {
-            type: blob.type || doc.file_type || 'application/octet-stream',
+            type: blob.type || fileType || 'application/octet-stream',
           })
           if (nav.canShare({ files: [fileObj] })) {
-            await nav.share({ files: [fileObj], title: displayDocName(doc) })
+            await nav.share({ files: [fileObj], title: name })
             return
           }
         } catch { /* repli sur le partage d'URL ci-dessous */ }
       }
       // 2) Partage de l'URL (signée) à défaut du fichier
       if (typeof navigator.share === 'function') {
-        await navigator.share({ title: displayDocName(doc), url })
+        await navigator.share({ title: name, url })
         return
       }
       // 3) Repli desktop : nouvel onglet
@@ -365,9 +367,20 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
     } catch (e: any) {
       // L'utilisateur a annulé la feuille de partage → ne rien faire.
       if (e?.name !== 'AbortError') window.open(url, '_blank', 'noopener,noreferrer')
-    } finally {
-      setSharingId(null)
     }
+  }
+
+  async function handleShare(doc: Document) {
+    setSharingId(doc.id)
+    try { await shareFile(urlFor(doc), displayDocName(doc), doc.file_type) }
+    finally { setSharingId(null) }
+  }
+
+  // Contrats / factures de réservation : même feuille de partage native.
+  async function shareResaDoc(id: string, url: string, name: string) {
+    setSharingId(id)
+    try { await shareFile(url, name, 'application/pdf') }
+    finally { setSharingId(null) }
   }
 
   function resetReplace() {
@@ -462,15 +475,16 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {r.contract_pdf_url ? (
-                    <a
-                      href={r.contract_pdf_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-xl text-[11px] font-semibold text-gray-700 transition-colors"
+                    <button
+                      type="button"
+                      onClick={() => shareResaDoc(r.id, r.contract_pdf_url!,
+                        `${r.kind === 'convention' ? 'Convention' : 'Contrat'} ${r.contract_number ?? ''}`.trim())}
+                      disabled={sharingId === r.id}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-xl text-[11px] font-semibold text-gray-700 transition-colors disabled:opacity-50"
                     >
                       <Download className="w-3.5 h-3.5" />
                       {r.kind === 'convention' ? 'Convention' : 'Contrat'} {r.contract_number}
-                    </a>
+                    </button>
                   ) : (
                     <span className="text-[11px] text-gray-300 italic">
                       {r.contract_number
@@ -479,15 +493,16 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
                     </span>
                   )}
                   {r.invoice_pdf_url && (
-                    <a
-                      href={r.invoice_pdf_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 rounded-xl text-[11px] font-semibold text-blue-700 transition-colors"
+                    <button
+                      type="button"
+                      onClick={() => shareResaDoc(`${r.id}-facture`, r.invoice_pdf_url!,
+                        `Facture ${r.invoice_number ?? ''}`.trim())}
+                      disabled={sharingId === `${r.id}-facture`}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 rounded-xl text-[11px] font-semibold text-blue-700 transition-colors disabled:opacity-50"
                     >
                       <Download className="w-3.5 h-3.5" />
                       Facture {r.invoice_number}
-                    </a>
+                    </button>
                   )}
                 </div>
               </div>

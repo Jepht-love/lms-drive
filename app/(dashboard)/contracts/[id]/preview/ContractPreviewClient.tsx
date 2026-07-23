@@ -504,7 +504,7 @@ export default function ContractPreviewClient({ contract, reservation, vehicle, 
                 <div className="text-center">
                   <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-2">Cachet & Visa agence</p>
                   <div className="h-16 flex items-center justify-center border border-gray-200 rounded-lg bg-gray-50">
-                    <Image src="/logo.png" alt="Cachet agence" width={120} height={48} className="object-contain max-h-full" />
+                    <Image src="/cachet-lms.png" alt="Cachet agence" width={120} height={48} className="object-contain max-h-full" />
                   </div>
                 </div>
               </div>
