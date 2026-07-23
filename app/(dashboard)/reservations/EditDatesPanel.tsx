@@ -33,8 +33,15 @@ export default function EditDatesPanel({
   variant = 'inline',
 }: Props) {
   const [editing, setEditing] = useState(false)
-  const [start, setStart]     = useState(toInputValue(startDatetime))
-  const [end, setEnd]         = useState(toInputValue(endDatetime))
+  // Date et heure SÉPARÉES : sur Safari, un datetime-local a une largeur
+  // incompressible qui déborde de sa colonne (constaté en prod le 23/07).
+  // Deux champs compacts (date + time) tiennent partout, sur tous les moteurs.
+  const [startDate, setStartDate] = useState(toInputValue(startDatetime).slice(0, 10))
+  const [startTime, setStartTime] = useState(toInputValue(startDatetime).slice(11, 16))
+  const [endDate, setEndDate]     = useState(toInputValue(endDatetime).slice(0, 10))
+  const [endTime, setEndTime]     = useState(toInputValue(endDatetime).slice(11, 16))
+  const start = startDate && startTime ? `${startDate}T${startTime}` : ''
+  const end   = endDate && endTime ? `${endDate}T${endTime}` : ''
   // Deux façons de fixer le tarif (ticket SAV 23/07) : par taux journalier OU
   // directement par prix total (prix négocié → la réduction est mentionnée).
   const [mode, setMode]       = useState<'daily' | 'total'>('daily')
@@ -79,8 +86,10 @@ export default function EditDatesPanel({
   }
 
   function handleCancel() {
-    setStart(toInputValue(startDatetime))
-    setEnd(toInputValue(endDatetime))
+    setStartDate(toInputValue(startDatetime).slice(0, 10))
+    setStartTime(toInputValue(startDatetime).slice(11, 16))
+    setEndDate(toInputValue(endDatetime).slice(0, 10))
+    setEndTime(toInputValue(endDatetime).slice(11, 16))
     setPrice(String(dailyPrice))
     setTotal(String(currentTotal))
     setMode('daily')
@@ -115,9 +124,7 @@ export default function EditDatesPanel({
 
   const baseCls  = 'w-full min-w-0 h-10 rounded-lg border border-amber-200 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-400/60 focus:border-amber-400'
   const fieldCls = `${baseCls} px-3 text-[13px]`
-  // px-2 + 12px : à 390px de large, « 29/07/2026 13:00 » + icône ne tient pas
-  // avec le padding standard (minutes tronquées, vérifié visuellement).
-  const dateCls  = `${baseCls} px-2 text-[12px]`
+  const dateCls  = `${baseCls} px-2.5 text-[13px]`
   const labelCls = 'block text-[11px] text-amber-700/80 font-bold uppercase tracking-wide mb-1.5'
 
   return (
@@ -134,27 +141,44 @@ export default function EditDatesPanel({
         </button>
       </div>
 
-      {/* Dates — min-w-0 (cellule + input) : un datetime-local a une largeur
-          intrinsèque (~320px WebKit) et déborde de sa colonne sans cela. */}
-      <div className="grid grid-cols-2 gap-2.5">
-        <div className="min-w-0">
+      {/* Dates — champs date + heure séparés : contrairement à datetime-local
+          (largeur incompressible qui déborde sur Safari), ces deux contrôles
+          compacts tiennent sur une ligne quel que soit le moteur. */}
+      <div className="space-y-3">
+        <div>
           <label className={labelCls}>Départ</label>
-          <input
-            type="datetime-local"
-            value={start}
-            onChange={e => setStart(e.target.value)}
-            className={dateCls}
-          />
+          <div className="flex gap-2">
+            <input
+              type="date"
+              value={startDate}
+              onChange={e => setStartDate(e.target.value)}
+              className={`${dateCls} flex-1`}
+            />
+            <input
+              type="time"
+              value={startTime}
+              onChange={e => setStartTime(e.target.value)}
+              className={`${dateCls} w-[104px] flex-none`}
+            />
+          </div>
         </div>
-        <div className="min-w-0">
+        <div>
           <label className={labelCls}>Retour</label>
-          <input
-            type="datetime-local"
-            value={end}
-            onChange={e => setEnd(e.target.value)}
-            min={start}
-            className={dateCls}
-          />
+          <div className="flex gap-2">
+            <input
+              type="date"
+              value={endDate}
+              onChange={e => setEndDate(e.target.value)}
+              min={startDate}
+              className={`${dateCls} flex-1`}
+            />
+            <input
+              type="time"
+              value={endTime}
+              onChange={e => setEndTime(e.target.value)}
+              className={`${dateCls} w-[104px] flex-none`}
+            />
+          </div>
         </div>
       </div>
 
