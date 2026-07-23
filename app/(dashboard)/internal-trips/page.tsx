@@ -26,10 +26,13 @@ export default async function InternalTripsPage() {
       .select('*, vehicle:vehicles(plate, brand, model), user:profiles(full_name)')
       .order('start_datetime', { ascending: false })
       .limit(80),
+    // Compte administrateur (concepteur) = profil technique : exclu des
+    // conducteurs possibles de trajets internes.
     supabase
       .from('profiles')
       .select('id, full_name, role')
       .eq('is_active', true)
+      .eq('is_admin', false)
       .order('full_name'),
   ])
 

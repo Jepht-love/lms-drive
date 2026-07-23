@@ -51,7 +51,8 @@ export default async function NewTaskPage({
 
   const [{ data: vehicles }, { data: profiles }] = await Promise.all([
     supabase.from('vehicles').select('id, plate, brand, model').eq('is_active', true).order('brand'),
-    supabase.from('profiles').select('id, full_name').order('full_name'),
+    // Compte administrateur (concepteur) = profil technique : jamais assignable.
+    supabase.from('profiles').select('id, full_name').eq('is_admin', false).order('full_name'),
   ])
 
   // Pré-remplissage date/heure depuis le calendrier

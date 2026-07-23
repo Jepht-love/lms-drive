@@ -15,11 +15,14 @@ export default async function AvailabilityPage() {
   // is_active = true : un collaborateur désactivé (ex. « jefe ») ne doit plus
   // apparaître dans le planning des disponibilités — aligné avec l'API du
   // calendrier (/api/calendar/resources) qui filtre déjà les profils inactifs.
+  // is_admin = false : le compte administrateur (concepteur) est un profil
+  // technique, jamais visible dans les plannings.
   const { data: profiles } = await supabase
     .from('profiles')
     .select('id, full_name, role')
     .in('role', ['gerant', 'associe', 'employe', 'prestataire'])
     .eq('is_active', true)
+    .eq('is_admin', false)
     .order('full_name')
 
   return (

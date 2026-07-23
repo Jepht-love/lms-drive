@@ -32,10 +32,13 @@ export async function GET() {
   let profiles: { id: string; full_name: string; role: string }[] = []
   if (isManager) {
     const admin = createAdminClient()
+    // Le compte administrateur (concepteur) est un profil technique :
+    // jamais listé dans les ressources du calendrier.
     const { data } = await admin
       .from('profiles')
       .select('id, full_name, role')
       .eq('is_active', true)
+      .eq('is_admin', false)
       .order('full_name')
     profiles = data ?? []
   } else if (caller) {
