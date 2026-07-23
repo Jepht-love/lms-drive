@@ -143,6 +143,7 @@ export default function TeamList({ active, inactive, taskCount, isManager, curre
       <div className="space-y-2">
         {active.map(m => (
           <MemberCard key={m.id} member={m} tasks={taskCount[m.id] ?? 0}
+            isSelf={m.id === currentUserId}
             selecting={selecting} selectable={deletable(m)}
             selected={selected.has(m.id)} onToggle={() => toggle(m.id)} />
         ))}
@@ -155,6 +156,7 @@ export default function TeamList({ active, inactive, taskCount, isManager, curre
           <div className={`space-y-2 ${selecting ? '' : 'opacity-50'}`}>
             {inactive.map(m => (
               <MemberCard key={m.id} member={m} tasks={0}
+                isSelf={m.id === currentUserId}
                 selecting={selecting} selectable={deletable(m)}
                 selected={selected.has(m.id)} onToggle={() => toggle(m.id)} />
             ))}
@@ -224,9 +226,10 @@ export default function TeamList({ active, inactive, taskCount, isManager, curre
   )
 }
 
-function MemberCard({ member, tasks, selecting, selectable, selected, onToggle }: {
+function MemberCard({ member, tasks, isSelf, selecting, selectable, selected, onToggle }: {
   member: TeamMember
   tasks: number
+  isSelf: boolean
   selecting: boolean
   selectable: boolean
   selected: boolean
@@ -259,7 +262,10 @@ function MemberCard({ member, tasks, selecting, selectable, selected, onToggle }
       </div>
 
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-bold text-gray-900">{member.full_name}</p>
+        <p className="text-sm font-bold text-gray-900">
+          {member.full_name}
+          {isSelf && <span className="ml-1.5 text-[10px] font-medium text-gray-400">(vous)</span>}
+        </p>
         <div className="flex items-center gap-2 mt-1 flex-wrap">
           <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${role.bg} ${role.text}`}>
             {role.label}

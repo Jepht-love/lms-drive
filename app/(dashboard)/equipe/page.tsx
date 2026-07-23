@@ -30,8 +30,13 @@ export default async function EquipePage() {
     if (t.assigned_to) taskCount[t.assigned_to] = (taskCount[t.assigned_to] ?? 0) + 1
   })
 
-  const active   = (members?.filter(m => m.is_active) ?? []) as TeamMember[]
-  const inactive = (members?.filter(m => !m.is_active) ?? []) as TeamMember[]
+  // Chaque membre se voit en premier dans la liste ; les autres restent
+  // en ordre alphabétique (tri stable).
+  const ordered = [...(members ?? [])].sort((a, b) =>
+    (b.id === user.id ? 1 : 0) - (a.id === user.id ? 1 : 0))
+
+  const active   = ordered.filter(m => m.is_active) as TeamMember[]
+  const inactive = ordered.filter(m => !m.is_active) as TeamMember[]
 
   return (
     <TeamList
