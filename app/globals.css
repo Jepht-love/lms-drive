@@ -65,16 +65,15 @@ input, textarea, [contenteditable="true"] {
   --font-sans: var(--font-inter);
 }
 
-/* Rayons quasi carrés (choix Jepht 23/07/2026, option C du comparatif) :
-   fini les formes arrondies « bulle ». On remappe l'échelle rounded-* de
-   Tailwind — chaque carte, champ et bouton de l'app passe à des coins
-   quasi carrés (4px max), sans modifier les composants un par un.
-   (rounded-full, les pastilles de statut, n'est volontairement pas touché.) */
+/* Rayons resserrés (Jepht 23/07/2026) : fini les grosses formes « bulle »,
+   mais un poil plus arrondi que le quasi-carré initial. On remappe l'échelle
+   rounded-* de Tailwind — chaque carte, champ et bouton passe à ~6px, sans
+   modifier les composants un par un. (rounded-full non touché.) */
 @theme {
-  --radius-lg: 0.125rem;    /* 8px → 2px */
-  --radius-xl: 0.1875rem;   /* 12px → 3px */
-  --radius-2xl: 0.25rem;    /* 16px → 4px */
-  --radius-3xl: 0.3125rem;  /* 24px → 5px */
+  --radius-lg: 0.25rem;     /* 8px → 4px */
+  --radius-xl: 0.3125rem;   /* 12px → 5px */
+  --radius-2xl: 0.375rem;   /* 16px → 6px */
+  --radius-3xl: 0.5rem;     /* 24px → 8px */
 }
 
 * { box-sizing: border-box; }

@@ -93,15 +93,15 @@ export default function EditDatesPanel({
   }
 
   if (!editing) {
-    // Mode hero : lien dans l'encadré noir, à côté de « Prolonger la
-    // location » (même style) — ticket SAV 23/07.
+    // Mode hero : bouton bien visible dans l'encadré foncé, à côté de
+    // « Prolonger la location » (même style pilule) — ticket SAV 23/07.
     if (variant === 'hero') {
       return (
         <button
           onClick={() => setEditing(true)}
-          className="flex items-center gap-1.5 text-xs text-amber-300 hover:text-amber-200 font-semibold transition-colors"
+          className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-white/10 hover:bg-white/20 border border-white/15 text-xs text-white font-semibold transition-colors"
         >
-          <Pencil className="w-3.5 h-3.5" />
+          <Pencil className="w-3.5 h-3.5 text-amber-300" />
           Modifier les dates &amp; tarif
         </button>
       )

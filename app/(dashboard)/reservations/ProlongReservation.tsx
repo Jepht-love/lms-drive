@@ -87,9 +87,9 @@ export default function ProlongReservation({
     return (
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-1.5 text-xs text-blue-300 hover:text-blue-200 font-semibold transition-colors"
+        className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-white/10 hover:bg-white/20 border border-white/15 text-xs text-white font-semibold transition-colors"
       >
-        <CalendarPlus className="w-3.5 h-3.5" />
+        <CalendarPlus className="w-3.5 h-3.5 text-blue-300" />
         Prolonger la location
       </button>
     )
