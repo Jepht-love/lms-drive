@@ -3,9 +3,9 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import {
   ArrowLeft, Edit, Phone, Mail, Star, AlertTriangle,
-  ChevronRight, CalendarDays, Car, CreditCard, FileText, Plus, RotateCcw,
+  ChevronRight, CalendarDays, Car, CreditCard, FileText, Plus, RotateCcw, BadgePercent,
 } from 'lucide-react'
-import { formatDate, formatPrice } from '@/lib/utils'
+import { formatDate, formatPrice, reservationDiscount } from '@/lib/utils'
 import { infractionTypeLabel, INFRACTION_STATUS, SINISTRE_STATUS } from '@/lib/incidents'
 import DeleteButton from '@/components/ui/DeleteButton'
 import { deleteClient } from '@/lib/actions/delete'
@@ -80,7 +80,7 @@ export default async function ClientPage({
   const { data: reservations } = await supabase
     .from('reservations')
     .select(
-      'id, reservation_number, status, start_datetime, end_datetime, total_price, daily_price, payment_status, deposit_amount, deposit_status, deposit_deducted, late_minutes, vehicle:vehicles(plate, brand, model)'
+      'id, reservation_number, status, start_datetime, end_datetime, total_price, daily_price, payment_status, deposit_amount, deposit_status, deposit_deducted, late_minutes, vehicle:vehicles(plate, brand, model, weekly_price)'
     )
     .eq('client_id', id)
     .order('start_datetime', { ascending: false })
@@ -126,6 +126,13 @@ export default async function ClientPage({
   // Annulations : signal de fiabilité commerciale (désistements, no-shows). Non
   // comptées dans l'historique facturé mais suivies à part.
   const annulations = reservations?.filter(r => r.status === 'annulee').length ?? 0
+  // Remises accordées à ce client (réservations non annulées, prix négocié sous
+  // le barème) — demande Jepht 24/07 : voir les remises consenties par client.
+  const withDiscount = (reservations ?? [])
+    .filter(r => r.status !== 'annulee')
+    .map(r => ({ r, d: reservationDiscount(r as any).discount }))
+    .filter(x => x.d > 0)
+  const totalRemises = withDiscount.reduce((s, x) => s + x.d, 0)
   // Impayés : réservations terminées non soldées
   const impayes    = completed.filter(r => r.payment_status && r.payment_status !== 'paye')
   const impayesCA  = impayes.reduce((s, r) => s + (r.total_price ?? 0), 0)
@@ -324,6 +331,19 @@ export default async function ClientPage({
             </span>
           </div>
           <span className="text-sm font-black text-blue-700">{formatPrice(remboursementTotal)}</span>
+        </div>
+      )}
+
+      {/* Remises accordées à ce client (prix négociés sous le barème) */}
+      {withDiscount.length > 0 && (
+        <div className="bg-emerald-50 border border-emerald-100 rounded-2xl px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <BadgePercent className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+            <span className="text-sm font-bold text-emerald-700">
+              Remises accordées · {withDiscount.length} location{withDiscount.length > 1 ? 's' : ''}
+            </span>
+          </div>
+          <span className="text-sm font-black text-emerald-700">−{formatPrice(totalRemises)}</span>
         </div>
       )}
 
@@ -551,6 +571,7 @@ export default async function ClientPage({
               const endDate    = new Date(r.end_datetime)
               const hasIssue   = ['saisie_partielle', 'saisie_totale', 'litigieuse'].includes((r as any).deposit_status)
               const isUnpaid   = r.payment_status && r.payment_status !== 'paye' && r.status === 'terminee'
+              const remise     = reservationDiscount(r as any).discount
               return (
                 <Link
                   key={r.id}
@@ -596,6 +617,9 @@ export default async function ClientPage({
                     <span className={`text-xs font-bold ${isUnpaid ? 'text-orange-600' : 'text-gray-700'}`}>
                       {formatPrice(r.total_price)}
                     </span>
+                    {remise > 0 && (
+                      <span className="text-[10px] font-bold text-emerald-600">remise −{formatPrice(remise)}</span>
+                    )}
                   </div>
                 </Link>
               )

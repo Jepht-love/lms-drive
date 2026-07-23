@@ -6,7 +6,7 @@ import {
   CreditCard, Shield, AlertTriangle, ChevronRight, Phone, BadgePercent,
 } from 'lucide-react'
 import BackButton from '@/components/ui/BackButton'
-import { formatDateTime, formatPrice, calculateRentalDays, calculateRentalPrice } from '@/lib/utils'
+import { formatDateTime, formatPrice, reservationDiscount } from '@/lib/utils'
 import ReservationStatusButtons from '../ReservationStatusButtons'
 import DepositStatusEditor from '../DepositStatusEditor'
 import DepositInfoEditor from '../DepositInfoEditor'
@@ -160,12 +160,7 @@ export default async function ReservationPage({
   // Réduction : écart entre le tarif au barème (jour/semaine) et le prix total
   // réellement appliqué (prix négocié via « Modifier les dates & tarif »).
   // Mentionnée dans l'encadré noir + la carte Tarif (ticket SAV 23/07).
-  const standardTotal = calculateRentalPrice(
-    reservation.daily_price,
-    (reservation.vehicle as any)?.weekly_price ?? null,
-    calculateRentalDays(reservation.start_datetime, reservation.end_datetime),
-  )
-  const discount    = Math.round((standardTotal - reservation.total_price) * 100) / 100
+  const { standard: standardTotal, discount, percent: discountPercent } = reservationDiscount(reservation as any)
   const hasDiscount = discount > 0
 
   // Chrono acompte : 2 h à partir de la création de l'option, tant que l'acompte
@@ -372,7 +367,7 @@ export default async function ReservationPage({
               <InfoRow label="Tarif standard"><s className="text-gray-400">{formatPrice(standardTotal)}</s></InfoRow>
               <InfoRow label="Réduction">
                 <span className="font-bold text-emerald-600">
-                  −{formatPrice(discount)}{standardTotal > 0 ? ` (−${Math.round((discount / standardTotal) * 100)} %)` : ''}
+                  −{formatPrice(discount)}{discountPercent > 0 ? ` (−${discountPercent} %)` : ''}
                 </span>
               </InfoRow>
             </>

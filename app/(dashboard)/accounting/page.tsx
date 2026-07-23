@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { Plus, CalendarCheck, BarChart3, FileSpreadsheet, AlertTriangle, TrendingUp } from 'lucide-react'
+import { Plus, CalendarCheck, BarChart3, FileSpreadsheet, AlertTriangle, TrendingUp, BadgePercent } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 import { getCategoryLabel } from '@/lib/accounting/categories'
 import { periodRange } from '@/lib/accounting/categories'
@@ -129,6 +129,9 @@ export default async function AccountingPage({
         </Link>
         <Link href="/accounting/kpi" className="flex items-center justify-center gap-2 py-2.5 bg-white border border-gray-100 shadow-sm rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50">
           <BarChart3 className="w-4 h-4" /> KPI véhicules
+        </Link>
+        <Link href="/accounting/remises" className="col-span-2 flex items-center justify-center gap-2 py-2.5 bg-white border border-gray-100 shadow-sm rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50">
+          <BadgePercent className="w-4 h-4" /> Remises accordées
         </Link>
         <Link href="/accounting/due-dates" className="relative col-span-2 flex items-center justify-center gap-2 py-2.5 bg-white border border-gray-100 shadow-sm rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50">
           <AlertTriangle className="w-4 h-4" /> Échéances

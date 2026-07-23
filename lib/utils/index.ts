@@ -84,6 +84,30 @@ export function calculateRentalPrice(
   return days * dailyPrice
 }
 
+/**
+ * Remise accordée sur une réservation, DÉRIVÉE (aucune colonne dédiée) :
+ * écart entre le tarif au barème (prix/jour figé de la résa, tarif semaine
+ * appliqué) et le prix total réellement facturé. Positif = remise consentie
+ * (prix total négocié à la baisse via « Modifier les dates & tarif »).
+ * Zéro si le total colle au barème ou le dépasse (majoration, pas une remise).
+ * Fiable car en mode « prix total » daily_price reste le barème d'origine.
+ */
+export function reservationDiscount(r: {
+  start_datetime: string
+  end_datetime: string
+  daily_price: number | null
+  total_price: number | null
+  vehicle?: { weekly_price?: number | null } | { weekly_price?: number | null }[] | null
+}): { standard: number; discount: number; percent: number } {
+  const v = Array.isArray(r.vehicle) ? r.vehicle[0] : r.vehicle
+  const days = calculateRentalDays(r.start_datetime, r.end_datetime)
+  const standard = calculateRentalPrice(r.daily_price ?? 0, v?.weekly_price ?? null, days)
+  const raw = standard - (r.total_price ?? 0)
+  const discount = raw > 0 ? Math.round(raw * 100) / 100 : 0
+  const percent = standard > 0 ? Math.round((discount / standard) * 100) : 0
+  return { standard, discount, percent }
+}
+
 export function isReturnLate(endDatetime: string): boolean {
   return isBefore(new Date(endDatetime), new Date())
 }

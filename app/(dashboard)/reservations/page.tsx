@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { Plus, ClipboardList } from 'lucide-react'
 import SmartSearch from '@/components/ui/SmartSearch'
-import { formatPrice } from '@/lib/utils'
+import { formatPrice, reservationDiscount } from '@/lib/utils'
 import DeleteReservationButton from './DeleteReservationButton'
 import PaymentCountdownMini from './PaymentCountdownMini'
 import { format } from 'date-fns'
@@ -48,7 +48,7 @@ export default async function ReservationsPage({
   let query = supabase
     .from('reservations')
     .select(
-      '*, vehicle:vehicles(plate, brand, model, color), client:clients(first_name, last_name, phone)'
+      '*, vehicle:vehicles(plate, brand, model, color, weekly_price), client:clients(first_name, last_name, phone)'
     )
     .order('start_datetime', { ascending: false })
 
@@ -160,6 +160,7 @@ export default async function ReservationsPage({
             const c   = r.client as any
             const startDate = new Date(r.start_datetime)
             const endDate   = new Date(r.end_datetime)
+            const { discount } = reservationDiscount(r as any)
 
             // Chrono acompte : 2 h depuis la création tant que l'option attend son acompte.
             const acompteDeadline = r.status === 'option' && r.payment_status === 'en_attente' && (r as any).created_at
@@ -209,11 +210,16 @@ export default async function ReservationsPage({
                     </div>
                   </div>
 
-                  {/* Prix */}
+                  {/* Prix (+ remise éventuelle) */}
                   <div className="text-right flex-shrink-0">
                     <span className="text-base font-extrabold text-gray-900">
                       {formatPrice(r.total_price)}
                     </span>
+                    {discount > 0 && (
+                      <span className="block text-[10px] font-bold text-emerald-600 leading-tight">
+                        remise −{formatPrice(discount)}
+                      </span>
+                    )}
                   </div>
                 </Link>
 
