@@ -74,10 +74,32 @@ export async function DELETE(
     return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
   }
 
+  if (id === user.id) {
+    return NextResponse.json({ error: 'Vous ne pouvez pas supprimer votre propre profil.' }, { status: 400 })
+  }
+
   const admin = createAdminClient()
-  // Désactiver plutôt que supprimer (préserve l'historique)
-  await admin.from('profiles').update({ is_active: false }).eq('id', id)
-  await admin.auth.admin.updateUserById(id, { ban_duration: 'none' })
+
+  const { data: target } = await admin
+    .from('profiles').select('role, full_name').eq('id', id).single()
+  if (!target) return NextResponse.json({ error: 'Profil introuvable.' }, { status: 404 })
+  if (target.role === 'gerant') {
+    return NextResponse.json({ error: 'Impossible de supprimer un gérant. Changez d\'abord son rôle.' }, { status: 400 })
+  }
+
+  // Suppression définitive : le compte auth est supprimé, le profil suit par
+  // ON DELETE CASCADE. Si le membre est référencé ailleurs (tâches, contrats,
+  // pleins… sans CASCADE), Postgres refuse → on propose la désactivation, qui
+  // préserve l'historique.
+  const { error } = await admin.auth.admin.deleteUser(id)
+  if (error) {
+    const fkBlocked = /foreign key|violates|database error/i.test(error.message)
+    return NextResponse.json({
+      error: fkBlocked
+        ? `${target.full_name} a un historique dans l'application (tâches, contrats…) et ne peut pas être supprimé. Désactivez-le depuis sa fiche pour lui retirer l'accès.`
+        : error.message,
+    }, { status: fkBlocked ? 409 : 400 })
+  }
 
   return NextResponse.json({ success: true })
 }
