@@ -202,6 +202,16 @@ export default async function ReservationPage({
                 reservationStatus={reservation.status}
               />
             )}
+            <EditDatesPanel
+              reservationId={id}
+              startDatetime={reservation.start_datetime}
+              endDatetime={reservation.end_datetime}
+              dailyPrice={reservation.daily_price}
+              weeklyPrice={(reservation.vehicle as any)?.weekly_price ?? null}
+              currentTotal={reservation.total_price}
+              reservationStatus={reservation.status}
+              variant="hero"
+            />
           </div>
           <div className="flex items-center gap-2">
             {isLate && (
@@ -334,17 +344,6 @@ export default async function ReservationPage({
             <InfoRow label="Supplément KM">{reservation.extra_km_price}€ / km</InfoRow>
           )}
           <InfoRow label="Total"><span className="text-base font-extrabold">{formatPrice(reservation.total_price)}</span></InfoRow>
-        </div>
-        <div className="mt-3 pt-3 border-t border-gray-50">
-          <EditDatesPanel
-            reservationId={id}
-            startDatetime={reservation.start_datetime}
-            endDatetime={reservation.end_datetime}
-            dailyPrice={reservation.daily_price}
-            weeklyPrice={(reservation.vehicle as any)?.weekly_price ?? null}
-            currentTotal={reservation.total_price}
-            reservationStatus={reservation.status}
-          />
         </div>
       </div>
 

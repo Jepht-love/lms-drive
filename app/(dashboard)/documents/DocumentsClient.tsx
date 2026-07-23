@@ -10,6 +10,7 @@ import {
   type DocumentCategory,
 } from '@/lib/documents/categories'
 import Drawer from '@/components/Drawer'
+import PdfPages from '@/components/pdf/PdfPages'
 import { AnimatedList, AnimatedListItem } from '@/components/AnimatedList'
 import { uploadDocument, deleteDocument, replaceDocument } from '@/lib/actions/documents'
 import { formatDate } from '@/lib/utils'
@@ -747,6 +748,10 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
             <div className="flex-1 bg-gray-50 overflow-hidden">
               {viewDoc.file_type?.startsWith('image/') ? (
                 <img src={urlFor(viewDoc)} alt={viewDoc.name} className="w-full h-full object-contain" />
+              ) : viewDoc.file_type?.includes('pdf') || urlFor(viewDoc).toLowerCase().includes('.pdf') ? (
+                // pdf.js : toutes les pages (EDL, schéma, photos) — l'iframe
+                // n'affichait que la page 1 sur iOS/WebKit.
+                <PdfPages url={urlFor(viewDoc)} />
               ) : (
                 <iframe src={urlFor(viewDoc)} title={viewDoc.name} className="w-full h-full border-0" />
               )}

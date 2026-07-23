@@ -13,6 +13,8 @@ interface Props {
   weeklyPrice: number | null
   currentTotal: number
   reservationStatus: string
+  /** 'hero' : bouton intégré à l'encadré noir en haut de la fiche résa. */
+  variant?: 'inline' | 'hero'
 }
 
 function toInputValue(iso: string) {
@@ -28,24 +30,27 @@ export default function EditDatesPanel({
   weeklyPrice,
   currentTotal,
   reservationStatus,
+  variant = 'inline',
 }: Props) {
   const [editing, setEditing] = useState(false)
   const [start, setStart]     = useState(toInputValue(startDatetime))
   const [end, setEnd]         = useState(toInputValue(endDatetime))
-  const [price, setPrice]     = useState(dailyPrice)
+  // Chaîne (et non nombre) : vider le champ ne force plus un « 0 » fantôme.
+  const [price, setPrice]     = useState(String(dailyPrice))
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState<string | null>(null)
   const [saved, setSaved]     = useState(false)
 
+  const priceNum = price === '' ? 0 : Number(price)
   const days     = start && end ? calculateRentalDays(start, end) : 0
-  const newTotal = days > 0 ? calculateRentalPrice(price, weeklyPrice, days) : 0
+  const newTotal = days > 0 ? calculateRentalPrice(priceNum, weeklyPrice, days) : 0
   const delta    = newTotal - currentTotal
   const isLocked = reservationStatus === 'terminee' || reservationStatus === 'annulee'
 
   async function handleSave() {
     setError(null)
     setLoading(true)
-    const result = await updateReservationDates(reservationId, start, end, price)
+    const result = await updateReservationDates(reservationId, start, end, priceNum)
     setLoading(false)
     if (result?.error) {
       setError(result.error)
@@ -61,12 +66,25 @@ export default function EditDatesPanel({
   function handleCancel() {
     setStart(toInputValue(startDatetime))
     setEnd(toInputValue(endDatetime))
-    setPrice(dailyPrice)
+    setPrice(String(dailyPrice))
     setError(null)
     setEditing(false)
   }
 
   if (!editing) {
+    // Mode hero : lien dans l'encadré noir, à côté de « Prolonger la
+    // location » (même style) — ticket SAV 23/07.
+    if (variant === 'hero') {
+      return (
+        <button
+          onClick={() => setEditing(true)}
+          className="flex items-center gap-1.5 text-xs text-amber-300 hover:text-amber-200 font-semibold transition-colors"
+        >
+          <Pencil className="w-3.5 h-3.5" />
+          Modifier les dates &amp; tarif
+        </button>
+      )
+    }
     return (
       <button
         onClick={() => setEditing(true)}
@@ -79,7 +97,11 @@ export default function EditDatesPanel({
   }
 
   return (
-    <div className="mt-3 p-4 bg-amber-50 border border-amber-200 rounded-xl space-y-3">
+    // En mode hero, w-full fait passer le panneau sous la ligne des badges
+    // (flex-wrap) ; max-w-2xl évite des champs démesurés sur grand écran.
+    <div className={`mt-3 p-4 bg-amber-50 border border-amber-200 rounded-xl space-y-3 ${
+      variant === 'hero' ? 'w-full max-w-2xl' : ''
+    }`}>
       <div className="flex items-center gap-2">
         <CalendarClock className="w-4 h-4 text-amber-600 flex-shrink-0" />
         <p className="text-sm font-semibold text-amber-800">Modifier les dates &amp; tarif</p>
@@ -117,13 +139,15 @@ export default function EditDatesPanel({
         <label className="block text-xs text-amber-700 font-medium uppercase tracking-wide mb-1">
           Prix par jour (€)
         </label>
-        <div className="relative">
+        <div className="relative max-w-[220px]">
           <input
             type="number"
             min="0"
             step="0.01"
+            inputMode="decimal"
+            placeholder="0"
             value={price}
-            onChange={e => setPrice(Number(e.target.value))}
+            onChange={e => setPrice(e.target.value)}
             className="w-full px-3 py-2 rounded-xl border border-amber-200 bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-400 pr-8"
           />
           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">€</span>
@@ -139,7 +163,7 @@ export default function EditDatesPanel({
       {days > 0 && (
         <div className="bg-white border border-amber-200 rounded-xl px-3 py-2.5 space-y-1.5">
           <div className="flex items-center justify-between text-xs text-gray-500">
-            <span>{days} jour{days > 1 ? 's' : ''} × {formatPrice(price)}</span>
+            <span>{days} jour{days > 1 ? 's' : ''} × {formatPrice(priceNum)}</span>
             <span className="font-bold text-gray-800 text-sm">{formatPrice(newTotal)}</span>
           </div>
           {newTotal !== currentTotal && (
@@ -177,7 +201,7 @@ export default function EditDatesPanel({
       <div className="flex gap-2">
         <button
           onClick={handleSave}
-          disabled={loading || days <= 0 || price <= 0}
+          disabled={loading || days <= 0 || priceNum <= 0}
           className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all disabled:opacity-50 ${
             saved
               ? 'bg-green-100 text-green-700'
