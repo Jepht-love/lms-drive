@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Pencil, Check, X, Loader2, CalendarClock, AlertTriangle, TrendingUp, TrendingDown, BadgePercent } from 'lucide-react'
 import { updateReservationDates } from '@/lib/actions/reservations'
 import { formatPrice, calculateRentalDays, calculateRentalPrice } from '@/lib/utils'
+import DateTimeField from '@/components/ui/DateTimeField'
 
 interface Props {
   reservationId: string
@@ -33,15 +34,11 @@ export default function EditDatesPanel({
   variant = 'inline',
 }: Props) {
   const [editing, setEditing] = useState(false)
-  // Date et heure SÉPARÉES : sur Safari, un datetime-local a une largeur
-  // incompressible qui déborde de sa colonne (constaté en prod le 23/07).
-  // Deux champs compacts (date + time) tiennent partout, sur tous les moteurs.
-  const [startDate, setStartDate] = useState(toInputValue(startDatetime).slice(0, 10))
-  const [startTime, setStartTime] = useState(toInputValue(startDatetime).slice(11, 16))
-  const [endDate, setEndDate]     = useState(toInputValue(endDatetime).slice(0, 10))
-  const [endTime, setEndTime]     = useState(toInputValue(endDatetime).slice(11, 16))
-  const start = startDate && startTime ? `${startDate}T${startTime}` : ''
-  const end   = endDate && endTime ? `${endDate}T${endTime}` : ''
+  // DateTimeField (date + heure séparés) : jamais de datetime-local — largeur
+  // incompressible sur Safari. Le composant isole les largeurs dans ses propres
+  // conteneurs, aucun conflit de classes possible.
+  const [start, setStart] = useState(toInputValue(startDatetime))
+  const [end, setEnd]     = useState(toInputValue(endDatetime))
   // Deux façons de fixer le tarif (ticket SAV 23/07) : par taux journalier OU
   // directement par prix total (prix négocié → la réduction est mentionnée).
   const [mode, setMode]       = useState<'daily' | 'total'>('daily')
@@ -86,10 +83,8 @@ export default function EditDatesPanel({
   }
 
   function handleCancel() {
-    setStartDate(toInputValue(startDatetime).slice(0, 10))
-    setStartTime(toInputValue(startDatetime).slice(11, 16))
-    setEndDate(toInputValue(endDatetime).slice(0, 10))
-    setEndTime(toInputValue(endDatetime).slice(11, 16))
+    setStart(toInputValue(startDatetime))
+    setEnd(toInputValue(endDatetime))
     setPrice(String(dailyPrice))
     setTotal(String(currentTotal))
     setMode('daily')
@@ -122,8 +117,11 @@ export default function EditDatesPanel({
     )
   }
 
-  const baseCls  = 'w-full min-w-0 h-10 rounded-lg border border-amber-200 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-400/60 focus:border-amber-400'
-  const fieldCls = `${baseCls} px-3 text-[13px]`
+  // dateCls SANS classe de largeur : DateTimeField ajoute w-full min-w-0 et
+  // gère les largeurs via ses conteneurs — un w-full ici entrerait en conflit
+  // avec le w-[104px] du champ heure (cause du débordement Safari du 23/07).
+  const baseCls  = 'h-10 rounded-lg border border-amber-200 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-400/60 focus:border-amber-400'
+  const fieldCls = `${baseCls} w-full min-w-0 px-3 text-[13px]`
   const dateCls  = `${baseCls} px-2.5 text-[13px]`
   const labelCls = 'block text-[11px] text-amber-700/80 font-bold uppercase tracking-wide mb-1.5'
 
@@ -141,44 +139,15 @@ export default function EditDatesPanel({
         </button>
       </div>
 
-      {/* Dates — champs date + heure séparés : contrairement à datetime-local
-          (largeur incompressible qui déborde sur Safari), ces deux contrôles
-          compacts tiennent sur une ligne quel que soit le moteur. */}
+      {/* Dates — DateTimeField (date + heure séparés), jamais de datetime-local. */}
       <div className="space-y-3">
         <div>
           <label className={labelCls}>Départ</label>
-          <div className="flex gap-2">
-            <input
-              type="date"
-              value={startDate}
-              onChange={e => setStartDate(e.target.value)}
-              className={`${dateCls} flex-1`}
-            />
-            <input
-              type="time"
-              value={startTime}
-              onChange={e => setStartTime(e.target.value)}
-              className={`${dateCls} w-[104px] flex-none`}
-            />
-          </div>
+          <DateTimeField value={start} onChange={setStart} className={dateCls} />
         </div>
         <div>
           <label className={labelCls}>Retour</label>
-          <div className="flex gap-2">
-            <input
-              type="date"
-              value={endDate}
-              onChange={e => setEndDate(e.target.value)}
-              min={startDate}
-              className={`${dateCls} flex-1`}
-            />
-            <input
-              type="time"
-              value={endTime}
-              onChange={e => setEndTime(e.target.value)}
-              className={`${dateCls} w-[104px] flex-none`}
-            />
-          </div>
+          <DateTimeField value={end} onChange={setEnd} min={start} className={dateCls} />
         </div>
       </div>
 
