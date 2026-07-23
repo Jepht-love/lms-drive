@@ -630,6 +630,10 @@ export async function updateReservationDates(
   startDatetime: string,
   endDatetime: string,
   newDailyPrice?: number,
+  // Prix total négocié : remplace le calcul au barème. Le taux journalier reste
+  // la référence — l'écart (barème − prix négocié) est la réduction, affichée
+  // sur la fiche résa (ticket SAV 23/07 : « modifier par prix » + mention réduction).
+  customTotal?: number,
 ) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -667,11 +671,14 @@ export async function updateReservationDates(
     : reservation.daily_price
 
   const vehicle = Array.isArray(reservation.vehicle) ? reservation.vehicle[0] : reservation.vehicle as any
-  const totalPrice = calculateRentalPrice(
+  const standardPrice = calculateRentalPrice(
     effectiveDailyPrice,
     vehicle?.weekly_price ?? null,
     days,
   )
+  // Prix négocié fourni → il prime sur le barème ; sinon calcul standard.
+  const totalPrice = (customTotal != null && customTotal > 0) ? customTotal : standardPrice
+  const discount   = Math.round((standardPrice - totalPrice) * 100) / 100
 
   const { error } = await supabase.from('reservations').update({
     start_datetime: startDatetime,
@@ -692,6 +699,8 @@ export async function updateReservationDates(
       end_datetime: endDatetime,
       daily_price: effectiveDailyPrice,
       total_price: totalPrice,
+      standard_price: standardPrice,
+      ...(discount > 0 ? { discount } : {}),
       days,
     },
   })
@@ -790,10 +799,17 @@ export async function prolongReservation(
 
   const vehicle = Array.isArray(reservation.vehicle) ? reservation.vehicle[0] : reservation.vehicle as any
   const effectiveDailyPrice = (newDailyPrice != null && newDailyPrice > 0) ? newDailyPrice : reservation.daily_price
-  const totalDays = calculateRentalDays(reservation.start_datetime, newEnd)
-  const newTotalPrice = calculateRentalPrice(effectiveDailyPrice, vehicle?.weekly_price ?? null, totalDays)
+  const totalDays    = calculateRentalDays(reservation.start_datetime, newEnd)
+  const previousDays = calculateRentalDays(reservation.start_datetime, reservation.end_datetime)
+  // On facture UNIQUEMENT les jours ajoutés (différence de barème avant/après) et
+  // on les additionne au total existant : un prix négocié (réduction) sur la
+  // période initiale est ainsi préservé au lieu d'être écrasé par un recalcul.
+  const addedAmount = Math.round((
+    calculateRentalPrice(effectiveDailyPrice, vehicle?.weekly_price ?? null, totalDays)
+    - calculateRentalPrice(effectiveDailyPrice, vehicle?.weekly_price ?? null, previousDays)
+  ) * 100) / 100
   const previousTotal = reservation.total_price ?? 0
-  const addedAmount   = Math.round((newTotalPrice - previousTotal) * 100) / 100
+  const newTotalPrice = Math.round((previousTotal + addedAmount) * 100) / 100
 
   const { error } = await supabase.from('reservations').update({
     end_datetime: newEnd,

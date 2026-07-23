@@ -3,10 +3,10 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import {
   ArrowLeft, FileText, Car, User, CalendarDays, Clock,
-  CreditCard, Shield, AlertTriangle, ChevronRight, Phone,
+  CreditCard, Shield, AlertTriangle, ChevronRight, Phone, BadgePercent,
 } from 'lucide-react'
 import BackButton from '@/components/ui/BackButton'
-import { formatDateTime, formatPrice } from '@/lib/utils'
+import { formatDateTime, formatPrice, calculateRentalDays, calculateRentalPrice } from '@/lib/utils'
 import ReservationStatusButtons from '../ReservationStatusButtons'
 import DepositStatusEditor from '../DepositStatusEditor'
 import DepositInfoEditor from '../DepositInfoEditor'
@@ -157,6 +157,17 @@ export default async function ReservationPage({
   // sorti (en cours / en retard) ou déjà rendu (terminé).
   const canEditLateFee = ['en_cours', 'en_retard', 'terminee'].includes(reservation.status)
 
+  // Réduction : écart entre le tarif au barème (jour/semaine) et le prix total
+  // réellement appliqué (prix négocié via « Modifier les dates & tarif »).
+  // Mentionnée dans l'encadré noir + la carte Tarif (ticket SAV 23/07).
+  const standardTotal = calculateRentalPrice(
+    reservation.daily_price,
+    (reservation.vehicle as any)?.weekly_price ?? null,
+    calculateRentalDays(reservation.start_datetime, reservation.end_datetime),
+  )
+  const discount    = Math.round((standardTotal - reservation.total_price) * 100) / 100
+  const hasDiscount = discount > 0
+
   // Chrono acompte : 2 h à partir de la création de l'option, tant que l'acompte
   // n'est pas encaissé. Affichage seul, aucune annulation automatique.
   const acompteDeadline = reservation.status === 'option' && reservation.payment_status === 'en_attente' && (reservation as any).created_at
@@ -274,9 +285,22 @@ export default async function ReservationPage({
         </div>
 
         {/* Prix total */}
-        <div className="mt-3 flex items-center justify-between bg-white/10 rounded-xl px-4 py-3">
-          <span className="text-white/60 text-sm font-semibold">Total location</span>
-          <span className="text-white text-2xl font-extrabold">{formatPrice(reservation.total_price)}</span>
+        <div className="mt-3 bg-white/10 rounded-xl px-4 py-3">
+          <div className="flex items-center justify-between">
+            <span className="text-white/60 text-sm font-semibold">Total location</span>
+            <span className="text-white text-2xl font-extrabold">{formatPrice(reservation.total_price)}</span>
+          </div>
+          {hasDiscount && (
+            <div className="mt-1.5 pt-1.5 border-t border-white/10 flex items-center justify-between text-xs">
+              <span className="flex items-center gap-1.5 text-emerald-300 font-semibold">
+                <BadgePercent className="w-3.5 h-3.5" /> Réduction appliquée
+              </span>
+              <span className="text-white/50">
+                <s>{formatPrice(standardTotal)}</s>{' '}
+                <span className="text-emerald-300 font-bold no-underline">−{formatPrice(discount)}</span>
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -342,6 +366,16 @@ export default async function ReservationPage({
           )}
           {reservation.extra_km_price && (
             <InfoRow label="Supplément KM">{reservation.extra_km_price}€ / km</InfoRow>
+          )}
+          {hasDiscount && (
+            <>
+              <InfoRow label="Tarif standard"><s className="text-gray-400">{formatPrice(standardTotal)}</s></InfoRow>
+              <InfoRow label="Réduction">
+                <span className="font-bold text-emerald-600">
+                  −{formatPrice(discount)}{standardTotal > 0 ? ` (−${Math.round((discount / standardTotal) * 100)} %)` : ''}
+                </span>
+              </InfoRow>
+            </>
           )}
           <InfoRow label="Total"><span className="text-base font-extrabold">{formatPrice(reservation.total_price)}</span></InfoRow>
         </div>
