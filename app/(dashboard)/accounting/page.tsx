@@ -37,7 +37,7 @@ export default async function AccountingPage({
   const [{ data: txs }, { data: dueRows }] = await Promise.all([
     supabase
       .from('financial_transactions')
-      .select('*, vehicles(plate)')
+      .select('*, vehicles(plate, brand, model)')
       .gte('date', from).lte('date', to)
       .order('date', { ascending: false })
       .order('created_at', { ascending: false }),

@@ -32,11 +32,15 @@ export async function POST(req: Request) {
   // Profil de l'auteur (nom + rôle) pour l'affichage.
   const { data: profile } = await supabase
     .from('profiles')
-    .select('full_name, role')
+    .select('full_name, role, is_admin')
     .eq('id', user.id)
     .single()
   const reporterName = profile?.full_name ?? user.email ?? null
-  const reporterRole = profile?.role ? roleLabel(profile.role) : null
+  // Un compte admin (concepteur) est fonctionnellement gérant mais doit être
+  // désigné « Admin » dans le SAV, jamais « Gérant » (demande Jepht 24/07).
+  const reporterRole = profile?.is_admin
+    ? 'Admin'
+    : profile?.role ? roleLabel(profile.role) : null
 
   // Captures (optionnelles). Elles ne sont PAS stockées dans Supabase : elles sont
   // uniquement transmises à Telegram (visualisables là-bas). On garde juste un

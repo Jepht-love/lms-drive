@@ -56,6 +56,9 @@ export default function EditDatesPanel({
   const standard  = days > 0 ? calculateRentalPrice(mode === 'daily' ? priceNum : dailyPrice, weeklyPrice, days) : 0
   const newTotal  = mode === 'daily' ? standard : totalNum
   const discount  = mode === 'total' ? Math.round((standard - totalNum) * 100) / 100 : 0
+  // Prix de revient à la journée quand on négocie un prix total (ticket 24/07) :
+  // le gérant voit à combien revient réellement la journée après remise.
+  const effectiveDaily = mode === 'total' && days > 0 ? Math.round((totalNum / days) * 100) / 100 : 0
   const delta     = newTotal - currentTotal
   const isLocked  = reservationStatus === 'terminee' || reservationStatus === 'annulee'
   const canSave   = days > 0 && (mode === 'daily' ? priceNum > 0 : totalNum > 0)
@@ -246,18 +249,28 @@ export default function EditDatesPanel({
                   −{formatPrice(discount)}{standard > 0 ? ` (−${Math.round((discount / standard) * 100)} %)` : ''}
                 </span>
               </div>
-              <div className="flex items-center justify-between text-xs pt-1.5 border-t border-gray-100">
-                <span className="text-gray-500">Prix appliqué</span>
+              <div className="flex items-center justify-between text-xs pt-1.5 border-t border-amber-200/60">
+                <span className="text-amber-800/70">Prix appliqué</span>
                 <span className="font-bold text-gray-900 text-sm">{formatPrice(totalNum)}</span>
+              </div>
+              <div className="flex items-center justify-between text-[11px] text-amber-700/70">
+                <span>Soit à la journée</span>
+                <span className="font-semibold">{formatPrice(effectiveDaily)} / jour</span>
               </div>
             </>
           )}
 
           {mode === 'total' && discount < 0 && (
-            <div className="flex items-center justify-between text-xs pt-1.5 border-t border-gray-100">
-              <span className="text-gray-500">Prix appliqué (majoré)</span>
-              <span className="font-bold text-gray-900 text-sm">{formatPrice(totalNum)}</span>
-            </div>
+            <>
+              <div className="flex items-center justify-between text-xs pt-1.5 border-t border-amber-200/60">
+                <span className="text-amber-800/70">Prix appliqué (majoré)</span>
+                <span className="font-bold text-gray-900 text-sm">{formatPrice(totalNum)}</span>
+              </div>
+              <div className="flex items-center justify-between text-[11px] text-amber-700/70">
+                <span>Soit à la journée</span>
+                <span className="font-semibold">{formatPrice(effectiveDaily)} / jour</span>
+              </div>
+            </>
           )}
 
           {newTotal !== currentTotal && (

@@ -22,7 +22,16 @@ interface Tx {
   notes: string | null
   is_transparent: boolean
   reservation_id: string | null
-  vehicles?: { plate: string } | { plate: string }[] | null
+  vehicles?: VehicleRef | VehicleRef[] | null
+}
+
+interface VehicleRef { plate: string; brand?: string | null; model?: string | null }
+
+// Libellé véhicule : « Marque Modèle » (le nom, demande Jepht 24/07) ; la plaque
+// n'est plus le libellé principal mais un complément discret à côté.
+function vehicleName(v: VehicleRef | null | undefined): string {
+  if (!v) return ''
+  return [v.brand, v.model].filter(Boolean).join(' ').trim() || v.plate
 }
 
 // Recherche insensible à la casse ET aux accents (« dépense » == « depense »).
@@ -39,6 +48,7 @@ function matchesQuery(t: Tx, q: string): boolean {
     getCategoryLabel(t.category),
     t.supplier_beneficiary ?? '',
     t.notes ?? '',
+    vehicleName(v),
     v?.plate ?? '',
     String(t.amount ?? ''),
     t.type === 'recette' ? 'recette' : 'depense',
@@ -157,7 +167,14 @@ export default function AccountingTransactions({ transactions }: { transactions:
                         {isRev ? '+' : '−'}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-medium text-gray-900 truncate">{getCategoryLabel(t.category)}{v?.plate ? <span className="text-gray-400 font-normal"> · {v.plate}</span> : null}</p>
+                        <p className="text-[13px] font-medium text-gray-900 truncate">
+                          {getCategoryLabel(t.category)}
+                          {v && (
+                            <span className="text-gray-400 font-normal"> · {vehicleName(v)}
+                              {v.plate ? <span className="text-gray-300"> ({v.plate})</span> : null}
+                            </span>
+                          )}
+                        </p>
                         <InlineEditField
                           value={t.notes ?? ''}
                           onSave={async (val) => { const r = await updateTransactionNotes(t.id, val); if (r?.error) return { error: r.error }; router.refresh() }}
