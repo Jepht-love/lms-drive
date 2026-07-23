@@ -321,3 +321,78 @@ export function inviteEmail(p: {
     html,
   }
 }
+
+/**
+ * (Ré)initialisation du mot de passe d'un membre de l'équipe. Même charte
+ * noir & blanc que l'invitation ; le lien mène à /auth/confirm (type recovery)
+ * puis à la page « Bienvenue » pour définir le nouveau mot de passe.
+ */
+export function passwordResetEmail(p: {
+  /** Nom complet du destinataire. */
+  name: string
+  /** Lien de récupération vers /auth/confirm. */
+  actionLink: string
+}): { subject: string; html: string } {
+  const prenom = esc(p.name.split(' ')[0])
+  const lien = esc(p.actionLink)
+
+  const html = `
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">Définissez votre nouveau mot de passe LMS Drive</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F3F4F6;padding:24px 0;">
+  <tr><td align="center">
+    <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:100%;background:#FFFFFF;border-radius:14px;overflow:hidden;font-family:Arial,Helvetica,sans-serif;">
+
+      <tr><td style="background:${NOIR};padding:26px 32px;text-align:center;">
+        <img src="${LOGO_BLANC}" alt="LMS DRIVE" width="150"
+             style="display:inline-block;width:150px;max-width:60%;height:auto;border:0;" />
+        <div style="font-size:11px;letter-spacing:2px;color:#9CA3AF;text-transform:uppercase;margin-top:8px;">Plateforme de gestion</div>
+      </td></tr>
+
+      <tr><td style="background:#F5F5F5;border-bottom:1px solid ${BORDER};padding:16px 32px;">
+        <div style="font-size:12px;color:${MUTE};text-transform:uppercase;letter-spacing:1px;">Accès à votre espace</div>
+        <div style="font-size:18px;font-weight:700;color:${INK};margin-top:2px;">Nouveau mot de passe</div>
+      </td></tr>
+
+      <tr><td style="padding:28px 32px;color:${INK};font-size:15px;line-height:1.65;">
+        <p style="margin:0 0 16px;">Bonjour ${prenom},</p>
+        <p style="margin:0 0 24px;">
+          Votre accès à <strong>LMS Drive</strong> a été mis à jour. Cliquez ci-dessous pour
+          définir votre nouveau mot de passe et retrouver votre espace.
+        </p>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
+          <tr><td align="center">
+            <a href="${lien}"
+               style="display:inline-block;background:${NOIR};color:#FFFFFF;font-size:15px;font-weight:700;letter-spacing:1px;text-decoration:none;padding:15px 36px;border-radius:10px;">
+              DÉFINIR MON MOT DE PASSE
+            </a>
+          </td></tr>
+        </table>
+        <p style="margin:0 0 16px;color:${MUTE};font-size:13px;">
+          Ce lien est personnel et valable 24&nbsp;heures.
+        </p>
+        <p style="margin:0 0 16px;color:${MUTE};font-size:12px;word-break:break-all;">
+          Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur&nbsp;:<br>
+          <a href="${lien}" style="color:${MUTE};">${lien}</a>
+        </p>
+        <p style="margin:0;color:${MUTE};">À très vite,<br><strong style="color:${INK};">L'équipe LMS Drive</strong></p>
+      </td></tr>
+
+      <tr><td style="background:${NOIR};padding:20px 32px;text-align:center;">
+        <img src="${LOGO_BLANC}" alt="LMS DRIVE" width="90"
+             style="display:inline-block;width:90px;height:auto;border:0;" />
+      </td></tr>
+
+      <tr><td style="padding:16px 32px 24px;">
+        <p style="color:#9CA3AF;font-size:11px;line-height:1.5;margin:0;">
+          Vous recevez cet email car un accès collaborateur existe à votre adresse sur LMS Drive.
+          Si vous n'êtes pas à l'origine de cette demande, ignorez ce message.
+          Message automatique, merci de ne pas y répondre.
+        </p>
+      </td></tr>
+
+    </table>
+  </td></tr>
+</table>`
+
+  return { subject: 'LMS Drive — Définissez votre nouveau mot de passe', html }
+}

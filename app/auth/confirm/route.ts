@@ -19,9 +19,9 @@ export async function GET(request: Request) {
     const { error } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash })
 
     if (!error) {
-      // Invité : pas encore de mot de passe → page de bienvenue pour le créer.
-      // Autres types (recovery…) : directement dans l'app.
-      const dest = type === 'invite' ? '/auth/bienvenue' : '/'
+      // Invitation ou récupération : l'utilisateur doit (re)définir son mot de
+      // passe → page de bienvenue. Autres types : directement dans l'app.
+      const dest = type === 'invite' || type === 'recovery' ? '/auth/bienvenue' : '/'
       return NextResponse.redirect(new URL(dest, origin))
     }
   }

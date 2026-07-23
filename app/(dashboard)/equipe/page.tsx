@@ -16,7 +16,7 @@ export default async function EquipePage() {
 
   const { data: members } = await supabase
     .from('profiles')
-    .select('id, full_name, role, phone, color, is_active, hire_date')
+    .select('id, full_name, role, phone, color, is_active, hire_date, is_admin')
     .order('full_name')
 
   const { data: taskRows } = await supabase

@@ -19,6 +19,7 @@ export interface TeamMember {
   phone: string | null
   color: string | null
   is_active: boolean
+  is_admin?: boolean
 }
 
 interface Props {
@@ -37,8 +38,8 @@ export default function TeamList({ active, inactive, taskCount, isManager, curre
   const [deleting, setDeleting] = useState(false)
   const [errors, setErrors] = useState<string[]>([])
 
-  // Soi-même et les gérants ne sont pas supprimables (mêmes règles que l'API).
-  const deletable = (m: TeamMember) => m.id !== currentUserId && m.role !== 'gerant'
+  // Soi-même, les gérants et les admins ne sont pas supprimables (mêmes règles que l'API).
+  const deletable = (m: TeamMember) => m.id !== currentUserId && m.role !== 'gerant' && !m.is_admin
 
   function toggle(id: string) {
     setSelected(prev => {
@@ -233,7 +234,10 @@ function MemberCard({ member, tasks, selecting, selectable, selected, onToggle }
 }) {
   const initials = member.full_name
     ?.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) ?? '?'
-  const role = ROLE_CONFIG[member.role] ?? { label: member.role, bg: 'bg-gray-100', text: 'text-gray-600' }
+  // Super-utilisateur : badge « Admin » doré, prioritaire sur le rôle.
+  const role = member.is_admin
+    ? { label: 'Admin', bg: 'bg-amber-100', text: 'text-amber-800' }
+    : ROLE_CONFIG[member.role] ?? { label: member.role, bg: 'bg-gray-100', text: 'text-gray-600' }
 
   const body = (
     <div className={`bg-white rounded-2xl p-4 border shadow-sm flex items-center gap-4 transition-all ${

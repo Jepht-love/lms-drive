@@ -87,6 +87,15 @@ export async function DELETE(
     return NextResponse.json({ error: 'Impossible de supprimer un gérant. Changez d\'abord son rôle.' }, { status: 400 })
   }
 
+  // Super-utilisateur intouchable — best-effort tant que la migration 060
+  // (colonne is_admin) n'est pas exécutée.
+  try {
+    const { data: adm } = await admin.from('profiles').select('is_admin').eq('id', id).single()
+    if (adm?.is_admin) {
+      return NextResponse.json({ error: 'Impossible de supprimer un administrateur.' }, { status: 400 })
+    }
+  } catch { /* colonne absente — ignoré */ }
+
   // Suppression définitive : le compte auth est supprimé, le profil suit par
   // ON DELETE CASCADE. Si le membre est référencé ailleurs (tâches, contrats,
   // pleins… sans CASCADE), Postgres refuse → on propose la désactivation, qui
