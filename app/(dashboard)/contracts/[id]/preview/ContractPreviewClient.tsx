@@ -1,12 +1,10 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import { useRouter } from 'next/navigation'
+import { useMemo } from 'react'
 import Image from 'next/image'
-import { ArrowLeft, CheckCircle2, FileDown, AlertCircle, Mail } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, FileDown } from 'lucide-react'
 import Link from 'next/link'
 import BackButton from '@/components/ui/BackButton'
-import SignatureCanvas from '@/components/signature/SignatureCanvas'
 import VehicleInspectionMap from '@/components/vehicle-schema/VehicleInspectionMap'
 import { graviteLabel, type DamageEntry, type DamageSeverity } from '@/components/vehicle-schema/inspection-types'
 import { getLegalArticles, getFeesTable, VIDEO_CLAUSE } from '@/lib/contracts/legal-articles'
@@ -56,17 +54,6 @@ function formatPrice(n?: number) {
 }
 
 export default function ContractPreviewClient({ contract, reservation, vehicle, client, agency, chain, departInspection }: Props) {
-  const router = useRouter()
-  const [clientSig, setClientSig] = useState<string | null>(contract.client_signature_svg ?? null)
-  const [signing, setSigning] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [done, setDone] = useState(false)
-  // Après signature : on conserve le PDF généré pour proposer le choix
-  // « télécharger » / « envoyer par email » (au lieu d'un téléchargement forcé).
-  const [pdfBlob, setPdfBlob] = useState<Blob | null>(null)
-  const [emailState, setEmailState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
-  const [emailMsg, setEmailMsg] = useState<string | null>(null)
-
   const isSigned = contract.status === 'signe' || contract.status === 'cloture'
 
   // Schéma readonly de l'EDL départ : reconstruit le Record<zoneId, DamageEntry[]>
@@ -98,125 +85,9 @@ export default function ContractPreviewClient({ contract, reservation, vehicle, 
     caution: reservation?.deposit_amount ?? 0,
   })
 
-  async function sign() {
-    if (!clientSig) { setError('Veuillez apposer votre signature avant de valider.'); return }
-    setSigning(true)
-    setError(null)
-
-    // 1. Enregistrer la signature
-    const signRes = await fetch('/api/contracts/sign', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contractId: contract.id, clientSignature: clientSig }),
-    })
-    const signData = await signRes.json()
-    if (signData.error) { setError(signData.error); setSigning(false); return }
-
-    // 2. Générer le PDF définitif
-    const pdfRes = await fetch('/api/contracts/generate-pdf', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contractId: contract.id }),
-    })
-    if (!pdfRes.ok) {
-      const d = await pdfRes.json()
-      setError(d.error ?? 'Erreur génération PDF')
-      setSigning(false)
-      return
-    }
-
-    // Le PDF est conservé pour un choix explicite (télécharger / envoyer),
-    // et déjà archivé dans les Documents par la route generate-pdf.
-    const blob = await pdfRes.blob().catch(() => null)
-    setPdfBlob(blob)
-    setDone(true)
-    setSigning(false)
-  }
-
-  function downloadPdf() {
-    if (!pdfBlob) return
-    const url = URL.createObjectURL(pdfBlob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${contract.contract_number}.pdf`
-    a.click()
-    URL.revokeObjectURL(url)
-  }
-
-  async function sendEmail() {
-    setEmailState('sending')
-    setEmailMsg(null)
-    try {
-      const res = await fetch('/api/contracts/send-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contractId: contract.id }),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok || data?.error) throw new Error(data?.error ?? "Échec de l'envoi")
-      setEmailState('sent')
-    } catch (e: any) {
-      setEmailState('error')
-      setEmailMsg(e?.message ?? "Erreur lors de l'envoi")
-    }
-  }
-
-  function finish() {
-    router.replace(reservation?.id ? `/reservations/${reservation.id}` : '/reservations')
-  }
-
-  if (done) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F2F2F7] px-4 py-10">
-        <div className="bg-white rounded-2xl shadow-sm border border-green-200 p-8 text-center max-w-md w-full space-y-5">
-          <CheckCircle2 className="w-14 h-14 text-green-500 mx-auto" />
-          <div>
-            <h2 className="text-xl font-bold text-gray-900">Contrat signé</h2>
-            <p className="text-gray-500 text-sm mt-1">
-              Le contrat{departInspection ? " (avec l'état des lieux de départ)" : ''} a été généré et{' '}
-              <strong>enregistré dans les Documents</strong>. Vous pouvez le télécharger ou l&apos;envoyer au client.
-            </p>
-          </div>
-
-          <div className="space-y-2.5">
-            <button
-              onClick={downloadPdf}
-              disabled={!pdfBlob}
-              className="w-full py-3.5 bg-[#111111] hover:bg-gray-800 disabled:opacity-50 text-white rounded-xl font-semibold flex items-center justify-center gap-2 transition-colors"
-            >
-              <FileDown className="w-4 h-4" /> Télécharger le contrat (PDF)
-            </button>
-
-            {client?.email ? (
-              emailState === 'sent' ? (
-                <div className="w-full py-3 rounded-xl bg-green-50 text-green-700 text-sm font-medium flex items-center justify-center gap-2">
-                  <CheckCircle2 className="w-4 h-4" /> Envoyé à {client.email}
-                </div>
-              ) : (
-                <button
-                  onClick={sendEmail}
-                  disabled={emailState === 'sending'}
-                  className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white rounded-xl font-semibold flex items-center justify-center gap-2 transition-colors"
-                >
-                  <Mail className="w-4 h-4" />
-                  {emailState === 'sending' ? 'Envoi…' : 'Envoyer par email au client'}
-                </button>
-              )
-            ) : (
-              <p className="text-xs text-gray-400">Aucun email client renseigné — envoi par email indisponible.</p>
-            )}
-            {emailState === 'error' && (
-              <p className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{emailMsg}</p>
-            )}
-          </div>
-
-          <button onClick={finish} className="w-full py-3 text-gray-500 text-sm font-medium hover:text-gray-700 transition-colors">
-            Terminer
-          </button>
-        </div>
-      </div>
-    )
-  }
+  // La signature (et la génération/l'envoi du PDF) se fait désormais PENDANT
+  // l'état des lieux de départ (InspectionFlow) — cette page est une pure
+  // prévisualisation : le client y relit le contrat, rien ne s'y signe.
 
   return (
     <div className="min-h-screen bg-[#F2F2F7]">
@@ -472,71 +343,31 @@ export default function ContractPreviewClient({ contract, reservation, vehicle, 
           </div>
         )}
 
-        {/* ── Signature client ── */}
+        {/* ── Signature ── désormais pendant l'EDL départ, plus ici */}
         {!isSigned ? (
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-            <h2 className="font-semibold text-gray-800 mb-1">Signature du locataire</h2>
-            <p className="text-xs text-gray-500 mb-4">
-              En signant, vous reconnaissez avoir lu et accepté l'intégralité des conditions générales ci-dessus.
+          <div className="bg-white rounded-2xl border border-amber-200 shadow-sm p-6 text-center">
+            <h2 className="font-semibold text-gray-800 mb-1">Signature pendant l'état des lieux</h2>
+            <p className="text-sm text-gray-500">
+              Ce contrat se signe directement sur la page de l'état des lieux de départ :
+              le client relit les conditions puis signe le contrat et l'EDL en une seule fois.
             </p>
 
-            <SignatureCanvas
-              label="Votre signature *"
-              onSign={setClientSig}
-              onClear={() => setClientSig(null)}
-              existingSig={clientSig}
-              height={160}
-            />
-
-            {/* Cachet agence en regard */}
-            <div className="mt-6 pt-5 border-t border-gray-100">
-              <div className="grid grid-cols-2 gap-6">
-                <div className="text-center">
-                  <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-2">Signature du locataire</p>
-                  {clientSig ? (
-                    <img src={clientSig} alt="Signature" className="h-16 w-full object-contain border border-gray-200 rounded-lg bg-white" />
-                  ) : (
-                    <div className="h-16 border-2 border-dashed border-gray-200 rounded-lg flex items-center justify-center">
-                      <span className="text-xs text-gray-300">En attente</span>
-                    </div>
-                  )}
-                </div>
-                <div className="text-center">
-                  <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-2">Cachet & Visa agence</p>
-                  <div className="h-16 flex items-center justify-center border border-gray-200 rounded-lg bg-gray-50">
-                    <Image src="/cachet-lms.png" alt="Cachet agence" width={120} height={48} className="object-contain max-h-full" />
-                  </div>
-                </div>
+            {/* Cachet agence, pour information */}
+            <div className="mt-5 pt-4 border-t border-gray-100 flex flex-col items-center">
+              <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-2">Cachet & Visa agence</p>
+              <div className="h-16 w-40 flex items-center justify-center border border-gray-200 rounded-lg bg-gray-50">
+                <Image src="/cachet-lms.png" alt="Cachet agence" width={120} height={48} className="object-contain max-h-full" />
               </div>
             </div>
 
-            {error && (
-              <div className="mt-4 flex items-start gap-2 text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">
-                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                {error}
-              </div>
+            {reservation?.id && (
+              <Link
+                href={`/inspections/departure/${reservation.id}`}
+                className="mt-5 inline-flex items-center justify-center gap-2 px-5 py-3.5 bg-[#111111] hover:bg-gray-800 text-white font-semibold rounded-xl transition-colors text-sm"
+              >
+                Faire l'état des lieux de départ
+              </Link>
             )}
-
-            <button
-              onClick={sign}
-              disabled={signing || !clientSig}
-              className="mt-5 w-full py-4 bg-green-600 hover:bg-green-700 disabled:bg-gray-200 disabled:text-gray-400 text-white font-bold rounded-xl transition-colors text-sm flex items-center justify-center gap-2"
-            >
-              {signing ? (
-                <>
-                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Signature en cours…
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 className="w-4 h-4" />
-                  Signer et valider le contrat
-                </>
-              )}
-            </button>
-            <p className="text-[10px] text-gray-400 text-center mt-2">
-              La signature génère automatiquement le contrat PDF définitif.
-            </p>
           </div>
         ) : (
           <div className="bg-green-50 border border-green-200 rounded-2xl p-5 text-center">

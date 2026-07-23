@@ -78,12 +78,14 @@ export default function ContractSigningPanel({ contract, reservation, vehicle, c
   return (
     <div className="space-y-4">
 
-      {/* Statut signature */}
+      {/* Statut signature — le contrat se signe PENDANT l'EDL départ (nouveau
+          format) : plus de parcours de signature séparé depuis cette fiche. */}
       {!isSigned ? (
         <div className="bg-white rounded-2xl border border-amber-200 shadow-sm p-5">
-          <h3 className="font-semibold text-gray-800 mb-1">Signature du contrat</h3>
+          <h3 className="font-semibold text-gray-800 mb-1">Signature pendant l'état des lieux</h3>
           <p className="text-sm text-gray-500 mb-4">
-            Présentez la prévisualisation au client pour qu'il lise les conditions et signe en bas de page.
+            Le contrat se signe directement sur la page de l'état des lieux de départ,
+            en même temps que l'EDL — le client ne signe qu'une seule fois.
           </p>
 
           {/* Cachet agence */}
@@ -101,12 +103,20 @@ export default function ContractSigningPanel({ contract, reservation, vehicle, c
             <p className="text-[10px] text-gray-400 text-center mt-2">Apposé automatiquement sur le contrat PDF</p>
           </div>
 
+          {reservation?.id && (
+            <Link
+              href={`/inspections/departure/${reservation.id}`}
+              className="flex items-center justify-center gap-2 w-full py-3 bg-[#111111] hover:bg-gray-800 text-white font-semibold rounded-xl transition-colors text-sm"
+            >
+              Faire l'état des lieux de départ
+            </Link>
+          )}
           <Link
             href={`/contracts/${contract.id}/preview`}
-            className="flex items-center justify-center gap-2 w-full py-3 bg-[#111111] hover:bg-gray-800 text-white font-semibold rounded-xl transition-colors text-sm"
+            className="mt-2 flex items-center justify-center gap-2 w-full py-3 border border-gray-200 text-gray-700 hover:bg-gray-50 font-medium rounded-xl transition-colors text-sm"
           >
             <Eye className="w-4 h-4" />
-            Prévisualiser & Faire signer
+            Prévisualiser le contrat
           </Link>
         </div>
       ) : (
