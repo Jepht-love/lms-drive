@@ -117,13 +117,15 @@ export default function EditDatesPanel({
     )
   }
 
-  // dateCls SANS classe de largeur : DateTimeField ajoute w-full min-w-0 et
-  // gère les largeurs via ses conteneurs — un w-full ici entrerait en conflit
-  // avec le w-[104px] du champ heure (cause du débordement Safari du 23/07).
-  const baseCls  = 'h-10 rounded-lg border border-amber-200 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-400/60 focus:border-amber-400'
-  const fieldCls = `${baseCls} w-full min-w-0 px-3 text-[13px]`
-  const dateCls  = `${baseCls} px-2.5 text-[13px]`
-  const labelCls = 'block text-[11px] text-amber-700/80 font-bold uppercase tracking-wide mb-1.5'
+  // Champs TRANSPARENTS (choix Jepht 23/07 : « supprime les carrés blancs ») :
+  // aucun fond blanc — le champ prend le fond ambre du panneau, avec un simple
+  // soulignement fin. dateCls SANS classe de largeur : DateTimeField ajoute
+  // w-full min-w-0 et gère les largeurs via ses conteneurs (jamais deux
+  // utilités de largeur sur un même élément — cause du débordement Safari).
+  const baseCls  = 'h-9 bg-transparent border-0 border-b border-amber-300/70 rounded-none text-[15px] text-gray-900 focus:outline-none focus:border-amber-500 transition-colors'
+  const fieldCls = `${baseCls} w-full min-w-0 pl-0 pr-16`
+  const dateCls  = `${baseCls} px-0`
+  const labelCls = 'block text-[11px] text-amber-700/80 font-bold uppercase tracking-wide mb-1'
 
   return (
     // En mode hero, w-full fait passer le panneau sous la ligne des badges
@@ -151,15 +153,15 @@ export default function EditDatesPanel({
         </div>
       </div>
 
-      {/* Tarif : par jour OU prix total (négocié) */}
+      {/* Tarif : par jour OU prix total (négocié) — onglets soulignés,
+          aucune boîte blanche. */}
       <div>
-        <label className={labelCls}>Tarif</label>
-        <div className="grid grid-cols-2 gap-1 p-1 bg-amber-100/70 rounded-xl mb-2">
+        <div className="flex gap-5 border-b border-amber-200/70 mb-3">
           <button
             type="button"
             onClick={() => setMode('daily')}
-            className={`h-8 rounded-lg text-xs font-bold transition-colors ${
-              mode === 'daily' ? 'bg-white text-amber-900 shadow-sm' : 'text-amber-700/70 hover:text-amber-900'
+            className={`min-h-[auto] h-8 -mb-px border-b-2 text-xs font-bold transition-colors ${
+              mode === 'daily' ? 'border-amber-600 text-amber-900' : 'border-transparent text-amber-700/60 hover:text-amber-900'
             }`}
           >
             Prix / jour
@@ -167,8 +169,8 @@ export default function EditDatesPanel({
           <button
             type="button"
             onClick={() => setMode('total')}
-            className={`h-8 rounded-lg text-xs font-bold transition-colors ${
-              mode === 'total' ? 'bg-white text-amber-900 shadow-sm' : 'text-amber-700/70 hover:text-amber-900'
+            className={`min-h-[auto] h-8 -mb-px border-b-2 text-xs font-bold transition-colors ${
+              mode === 'total' ? 'border-amber-600 text-amber-900' : 'border-transparent text-amber-700/60 hover:text-amber-900'
             }`}
           >
             Prix total
@@ -186,9 +188,9 @@ export default function EditDatesPanel({
                 placeholder="0"
                 value={price}
                 onChange={e => setPrice(e.target.value)}
-                className={`${fieldCls} pr-14`}
+                className={`${fieldCls} pr-14 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
               />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-gray-400 pointer-events-none">€ / jour</span>
+              <span className="absolute right-0 top-1/2 -translate-y-1/2 text-xs font-semibold text-amber-700/60 pointer-events-none">€ / jour</span>
             </div>
             {weeklyPrice != null && weeklyPrice > 0 && (
               <p className="text-[11px] text-amber-600 mt-1.5">
@@ -207,9 +209,9 @@ export default function EditDatesPanel({
                 placeholder="0"
                 value={total}
                 onChange={e => setTotal(e.target.value)}
-                className={`${fieldCls} pr-24`}
+                className={`${fieldCls} pr-24 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
               />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-gray-400 pointer-events-none">€ au total</span>
+              <span className="absolute right-0 top-1/2 -translate-y-1/2 text-xs font-semibold text-amber-700/60 pointer-events-none">€ au total</span>
             </div>
             <p className="text-[11px] text-amber-600 mt-1.5">
               Prix négocié pour toute la période — le taux journalier reste la référence.
@@ -218,10 +220,11 @@ export default function EditDatesPanel({
         )}
       </div>
 
-      {/* Récapitulatif */}
+      {/* Récapitulatif — transparent (aucune boîte blanche), séparé par un
+          simple filet ambre du bloc tarif. */}
       {days > 0 && (
-        <div className="bg-white border border-amber-200 rounded-xl px-3.5 py-3 space-y-2">
-          <div className="flex items-center justify-between text-xs text-gray-500">
+        <div className="border-t border-amber-200/70 pt-3 space-y-2">
+          <div className="flex items-center justify-between text-xs text-amber-800/80">
             <span>
               {mode === 'daily'
                 ? `${days} jour${days > 1 ? 's' : ''} × ${formatPrice(priceNum)}`
