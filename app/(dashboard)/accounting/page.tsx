@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { Plus, CalendarCheck, BarChart3, FileSpreadsheet, AlertTriangle, TrendingUp, BadgePercent } from 'lucide-react'
+import { Plus, CalendarCheck, BarChart3, FileSpreadsheet, AlertTriangle, TrendingUp, BadgePercent, HandCoins } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 import { getCategoryLabel } from '@/lib/accounting/categories'
 import { periodRange } from '@/lib/accounting/categories'
@@ -46,7 +46,11 @@ export default async function AccountingPage({
 
   // Compte les échéances à venir hors corbeille (select('*') + filtre en mémoire
   // = tolérant si la colonne deleted_at n'existe pas encore).
-  const dueCount = (dueRows ?? []).filter((d: any) => !d.deleted_at).length
+  const activeDue = (dueRows ?? []).filter((d: any) => !d.deleted_at)
+  const dueCount = activeDue.length
+  // Créances client = échéances recette liées à une réservation (migration 062).
+  // Tolérant : si reservation_id n'existe pas encore, le compte reste 0.
+  const creanceCount = activeDue.filter((d: any) => d.type === 'recette' && d.reservation_id).length
 
   const all = txs ?? []
   const totalRevenue = all.filter(t => t.type === 'recette').reduce((s, t) => s + (t.amount ?? 0), 0)
@@ -130,8 +134,16 @@ export default async function AccountingPage({
         <Link href="/accounting/kpi" className="flex items-center justify-center gap-2 py-2.5 bg-white border border-gray-100 shadow-sm rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50">
           <BarChart3 className="w-4 h-4" /> KPI véhicules
         </Link>
-        <Link href="/accounting/remises" className="col-span-2 flex items-center justify-center gap-2 py-2.5 bg-white border border-gray-100 shadow-sm rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50">
-          <BadgePercent className="w-4 h-4" /> Remises accordées
+        <Link href="/accounting/creances" className="relative flex items-center justify-center gap-2 py-2.5 bg-white border border-gray-100 shadow-sm rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50">
+          <HandCoins className="w-4 h-4" /> Créances
+          {creanceCount > 0 && (
+            <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-blue-500 rounded-full text-white text-[10px] font-black flex items-center justify-center px-1">
+              {creanceCount}
+            </span>
+          )}
+        </Link>
+        <Link href="/accounting/remises" className="flex items-center justify-center gap-2 py-2.5 bg-white border border-gray-100 shadow-sm rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50">
+          <BadgePercent className="w-4 h-4" /> Remises
         </Link>
         <Link href="/accounting/due-dates" className="relative col-span-2 flex items-center justify-center gap-2 py-2.5 bg-white border border-gray-100 shadow-sm rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50">
           <AlertTriangle className="w-4 h-4" /> Échéances

@@ -35,6 +35,70 @@ export async function createDueDate(formData: FormData) {
 }
 
 /**
+ * Créance client = paiement de réservation à recevoir. Enregistre une échéance
+ * 'recette' liée à la réservation + au client. Le service est rattaché à la
+ * date de la réservation (service_date) ; l'échéance (due_date) est la date de
+ * paiement attendue. Soldée via markDuePaid → crée la recette réelle datée du
+ * jour de l'encaissement (l'app reste en comptabilité de trésorerie).
+ */
+export async function createReceivable(formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié' }
+
+  const reservationId = (formData.get('reservation_id') as string)?.trim()
+  const amountRaw = (formData.get('amount') as string)?.trim()
+  const amount = amountRaw ? parseFloat(amountRaw.replace(',', '.')) : 0
+  const dueDate = (formData.get('due_date') as string)?.trim()
+  if (!reservationId || !(amount > 0) || !dueDate) {
+    return { error: 'Réservation, montant (> 0) et date d’échéance requis' }
+  }
+
+  const { data: resa } = await supabase
+    .from('reservations')
+    .select('reservation_number, start_datetime, vehicle_id, client_id, client:clients(first_name, last_name)')
+    .eq('id', reservationId)
+    .single()
+  if (!resa) return { error: 'Réservation introuvable' }
+
+  // Anti-doublon : une créance non soldée existe déjà pour cette réservation.
+  const { data: existing } = await supabase
+    .from('financial_due_dates')
+    .select('id')
+    .eq('reservation_id', reservationId)
+    .eq('is_paid', false)
+    .is('deleted_at', null)
+    .limit(1)
+  if (existing && existing.length > 0) {
+    return { error: 'Une créance non soldée existe déjà pour cette réservation.' }
+  }
+
+  const client = Array.isArray(resa.client) ? resa.client[0] : resa.client as any
+  const clientName = client ? `${client.first_name} ${client.last_name}`.trim() : 'client'
+  const serviceDate = resa.start_datetime ? String(resa.start_datetime).slice(0, 10) : dueDate
+
+  const { error } = await supabase.from('financial_due_dates').insert({
+    description: `Location ${resa.reservation_number} — ${clientName}`,
+    type: 'recette',
+    category: 'location',
+    amount,
+    due_date: dueDate,
+    service_date: serviceDate,
+    reservation_id: reservationId,
+    client_id: resa.client_id ?? null,
+    vehicle_id: resa.vehicle_id ?? null,
+    notes: (formData.get('notes') as string)?.trim() || null,
+    created_by: user.id,
+  })
+  if (error) return { error: error.message }
+
+  revalidatePath('/accounting/due-dates')
+  revalidatePath('/accounting/creances')
+  revalidatePath(`/reservations/${reservationId}`)
+  return { success: true }
+}
+
+/**
  * Crée en une fois toutes les mensualités d'un échéancier récurrent (loyer
  * véhicule, assurance...) — évite de répéter createDueDate manuellement pour
  * chaque mois (ex. 36 fois pour un loyer sur 3 ans). Un mois fixe (+1 mois par

@@ -21,6 +21,7 @@ import DeleteButton from '@/components/ui/DeleteButton'
 import { deleteReservation } from '@/lib/actions/delete'
 import PaymentCountdownMini from '../PaymentCountdownMini'
 import SendPaymentEmailButton from '../SendPaymentEmailButton'
+import CreateReceivableButton from '../CreateReceivableButton'
 import { syncReservationToCalendar } from '@/lib/calendar/syncRental'
 import type { ReservationStatus, PaymentStatus, PaymentMethod } from '@/types/database'
 import { format, differenceInDays, differenceInHours } from 'date-fns'
@@ -467,6 +468,14 @@ export default async function ReservationPage({
             clientEmail={c.email}
             clientName={[c.first_name, c.last_name].filter(Boolean).join(' ')}
             reservationNumber={reservation.reservation_number ?? ''}
+          />
+        )}
+        {/* Créance : seulement si un reste est dû (résa non soldée). */}
+        {reservation.payment_status !== 'paye' && (reservation.total_price ?? 0) - (reservation.payment_amount ?? 0) > 0 && (
+          <CreateReceivableButton
+            reservationId={id}
+            remaining={Math.round(((reservation.total_price ?? 0) - (reservation.payment_amount ?? 0)) * 100) / 100}
+            defaultDueDate={new Date(reservation.end_datetime).toISOString().slice(0, 10)}
           />
         )}
       </div>
