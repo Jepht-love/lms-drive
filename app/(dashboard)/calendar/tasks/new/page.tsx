@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import BackButton from '@/components/ui/BackButton'
+import DateTimeField from '@/components/ui/DateTimeField'
 import { revalidatePath } from 'next/cache'
 import TaskTypeField from './TaskTypeField'
 import { broadcastPushToManagers } from '@/lib/push/broadcastPush'
@@ -88,7 +89,7 @@ export default async function NewTaskPage({
 
           <div>
             <label className={label}>Date & heure *</label>
-            <input name="due_datetime" type="datetime-local" required defaultValue={defaultDatetime} className={input} />
+            <DateTimeField name="due_datetime" required defaultValue={defaultDatetime} className={input} />
           </div>
 
           <div>

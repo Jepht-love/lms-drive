@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import BackButton from '@/components/ui/BackButton'
+import DateTimeField from '@/components/ui/DateTimeField'
 import { createClient } from '@/lib/supabase/client'
 import { createOperation } from '@/lib/actions/partnerships'
 
@@ -132,13 +133,13 @@ export default function NewOperationPage() {
           )}
 
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className={label} htmlFor="start_date">Départ</label>
-              <input id="start_date" name="start_date" type="datetime-local" required className={input} />
+            <div className="col-span-2">
+              <label className={label}>Départ</label>
+              <DateTimeField name="start_date" required className={input} />
             </div>
-            <div>
-              <label className={label} htmlFor="end_date_expected">Retour prévu</label>
-              <input id="end_date_expected" name="end_date_expected" type="datetime-local" required className={input} />
+            <div className="col-span-2">
+              <label className={label}>Retour prévu</label>
+              <DateTimeField name="end_date_expected" required className={input} />
             </div>
             <div>
               <label className={label} htmlFor="departure_km">Km départ</label>

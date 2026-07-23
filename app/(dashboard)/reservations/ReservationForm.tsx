@@ -5,6 +5,7 @@ import { AlertTriangle } from 'lucide-react'
 import { calculateRentalDays, calculateRentalPrice, formatPrice } from '@/lib/utils'
 import { getMissingClientFields } from '@/lib/clients/completeness'
 import { useToast } from '@/components/Toast'
+import DateTimeField from '@/components/ui/DateTimeField'
 
 function toDatetimeLocal(d: Date): string {
   const pad = (n: number) => String(n).padStart(2, '0')
@@ -230,25 +231,23 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
 
           <div>
             <label className="block text-[11px] font-bold text-gray-400 mb-1.5 uppercase tracking-wide">Départ *</label>
-            <input
-              type="datetime-local"
+            <DateTimeField
               name="start_datetime"
               value={startDatetime}
-              onChange={e => setStartDatetime(e.target.value)}
+              onChange={setStartDatetime}
               required
-              className="w-full min-w-0 px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm"
+              className="px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm"
             />
           </div>
           <div>
             <label className="block text-[11px] font-bold text-gray-400 mb-1.5 uppercase tracking-wide">Retour *</label>
-            <input
-              type="datetime-local"
+            <DateTimeField
               name="end_datetime"
               value={endDatetime}
-              onChange={e => setEndDatetime(e.target.value)}
+              onChange={setEndDatetime}
               required
               min={startDatetime}
-              className="w-full min-w-0 px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm"
+              className="px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm"
             />
           </div>
           <div>

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { format } from 'date-fns'
 import { ExternalLink, ClipboardCheck, User, Car, Lock } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import DateTimeField from '@/components/ui/DateTimeField'
 import type { CalendarEvent, CalendarResource, EventStatus, EventType } from '@/types/calendar'
 import { EVENT_TYPE_LABELS, EVENT_COLORS, EVENT_STATUS_LABELS, STATUS_COLORS, UNASSIGNED_RESOURCE_ID } from '@/lib/calendar/constants'
 
@@ -340,28 +341,25 @@ export default function EventDrawer({ open, event, slotContext, resources, prese
             })}
           </div>
 
-          {/* Début / Fin côte à côte sur mobile pour gagner de la place.
-              min-w-0 (cellule + input) : un datetime-local a une largeur
-              intrinsèque et déborderait de sa colonne dans le drawer étroit. */}
-          <div className="grid grid-cols-2 gap-2 mb-3">
-            <div className="min-w-0">
+          {/* Début / Fin empilés : champs date + heure séparés (un datetime-local
+              a une largeur incompressible sur Safari et déborderait du drawer). */}
+          <div className="space-y-2.5 mb-3">
+            <div>
               <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1">Début</label>
-              <input
-                type="datetime-local"
+              <DateTimeField
                 value={startAt}
-                onChange={e => setStartAt(e.target.value)}
+                onChange={setStartAt}
                 disabled={locked}
-                className="w-full min-w-0 border border-gray-200 rounded-lg px-2 h-9 text-[12px] disabled:bg-gray-50 disabled:text-gray-400"
+                className="border border-gray-200 rounded-lg px-2 h-9 text-[12px] disabled:bg-gray-50 disabled:text-gray-400"
               />
             </div>
-            <div className="min-w-0">
+            <div>
               <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1">Fin</label>
-              <input
-                type="datetime-local"
+              <DateTimeField
                 value={endAt}
-                onChange={e => setEndAt(e.target.value)}
+                onChange={setEndAt}
                 disabled={locked}
-                className="w-full min-w-0 border border-gray-200 rounded-lg px-2 h-9 text-[12px] disabled:bg-gray-50 disabled:text-gray-400"
+                className="border border-gray-200 rounded-lg px-2 h-9 text-[12px] disabled:bg-gray-50 disabled:text-gray-400"
               />
             </div>
           </div>

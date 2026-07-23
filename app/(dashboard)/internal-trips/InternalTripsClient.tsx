@@ -7,6 +7,7 @@ import { useToast } from '@/components/Toast'
 import { formatDateTime, formatPrice } from '@/lib/utils'
 import { Plus, Navigation, Clock, CheckCircle2, CalendarClock, UserPlus, Play, Trash2, User, Search } from 'lucide-react'
 import Drawer from '@/components/Drawer'
+import DateTimeField from '@/components/ui/DateTimeField'
 
 interface Vehicle { id: string; plate: string; brand: string; model: string; current_km: number }
 interface Member { id: string; full_name: string; role: string }
@@ -292,7 +293,7 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
           </div>
           <div>
             <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Date et heure *</label>
-            <input type="datetime-local" name="start_datetime" required className="w-full min-w-0 px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white" />
+            <DateTimeField name="start_datetime" required className="px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white" />
           </div>
           <div>
             <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Motif *</label>
