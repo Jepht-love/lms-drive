@@ -218,3 +218,106 @@ export function contractRetourEmail(p: Partie & { hasInvoice: boolean }): {
     }),
   }
 }
+
+/**
+ * Invitation d'un membre de l'équipe (gérant, associé, employé, prestataire).
+ * Email interne : charte noir & blanc LMS Drive (logo blanc sur bandeau noir),
+ * enveloppe dédiée — pas de coordonnées d'agence ni de mention RGPD « contrat
+ * de location », remplacée par une note propre au compte collaborateur.
+ */
+
+/** Logo hébergé sur la prod (les clients mail exigent une URL publique ;
+ *  jamais localhost, même pour un envoi depuis l'environnement de dev). */
+const LOGO_BLANC = 'https://lms-drive.vercel.app/logo-white.png'
+export function inviteEmail(p: {
+  /** Nom de la personne qui invite (ex. le gérant). */
+  inviterName: string
+  /** Nom complet de l'invité, tel que saisi dans le formulaire. */
+  inviteeName: string
+  /** Libellé du rôle attribué (« Employé », « Associé »…). */
+  roleLabel: string
+  /** Lien d'activation Supabase (action_link) vers /auth/confirm. */
+  actionLink: string
+}): { subject: string; html: string } {
+  const invitant = esc(p.inviterName)
+  const prenom = esc(p.inviteeName.split(' ')[0])
+  const role = esc(p.roleLabel)
+  const lien = esc(p.actionLink)
+
+  const preheader = `${p.inviterName} vous a créé un espace ${p.roleLabel} sur LMS Drive`
+
+  const html = `
+<!-- preheader (aperçu masqué) -->
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">${esc(preheader)}</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F3F4F6;padding:24px 0;">
+  <tr><td align="center">
+    <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:100%;background:#FFFFFF;border-radius:14px;overflow:hidden;font-family:Arial,Helvetica,sans-serif;">
+
+      <!-- En-tête : logo blanc sur fond noir (alt typographique si images bloquées) -->
+      <tr><td style="background:${NOIR};padding:26px 32px;text-align:center;">
+        <img src="${LOGO_BLANC}" alt="LMS DRIVE" width="150"
+             style="display:inline-block;width:150px;max-width:60%;height:auto;border:0;" />
+        <div style="font-size:11px;letter-spacing:2px;color:#9CA3AF;text-transform:uppercase;margin-top:8px;">Plateforme de gestion</div>
+      </td></tr>
+
+      <!-- Bandeau invitation -->
+      <tr><td style="background:#F5F5F5;border-bottom:1px solid ${BORDER};padding:16px 32px;">
+        <div style="font-size:12px;color:${MUTE};text-transform:uppercase;letter-spacing:1px;">Invitation</div>
+        <div style="font-size:18px;font-weight:700;color:${INK};margin-top:2px;">Votre espace ${role}</div>
+      </td></tr>
+
+      <!-- Corps -->
+      <tr><td style="padding:28px 32px;color:${INK};font-size:15px;line-height:1.65;">
+        <p style="margin:0 0 16px;">Bonjour ${prenom},</p>
+        <p style="margin:0 0 16px;">
+          <strong>${invitant}</strong> vous a créé un espace <strong>${role}</strong> sur
+          <strong>LMS Drive</strong>, la plateforme de gestion de l'agence : véhicules,
+          réservations, calendrier, documents et équipe.
+        </p>
+        <p style="margin:0 0 24px;">
+          Votre espace est déjà configuré. Il ne vous reste qu'à choisir votre mot de passe
+          pour y accéder.
+        </p>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
+          <tr><td align="center">
+            <a href="${lien}"
+               style="display:inline-block;background:${NOIR};color:#FFFFFF;font-size:15px;font-weight:700;letter-spacing:1px;text-decoration:none;padding:15px 36px;border-radius:10px;">
+              CRÉER MON ESPACE
+            </a>
+          </td></tr>
+        </table>
+        <p style="margin:0 0 16px;color:${MUTE};font-size:13px;">
+          Ce lien est personnel et valable 24&nbsp;heures. S'il a expiré, demandez à
+          ${invitant} de renvoyer l'invitation.
+        </p>
+        <p style="margin:0 0 16px;color:${MUTE};font-size:12px;word-break:break-all;">
+          Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur&nbsp;:<br>
+          <a href="${lien}" style="color:${MUTE};">${lien}</a>
+        </p>
+        <p style="margin:0;color:${MUTE};">À très vite,<br><strong style="color:${INK};">L'équipe LMS Drive</strong></p>
+      </td></tr>
+
+      <!-- Pied de page -->
+      <tr><td style="background:${NOIR};padding:20px 32px;text-align:center;">
+        <img src="${LOGO_BLANC}" alt="LMS DRIVE" width="90"
+             style="display:inline-block;width:90px;height:auto;border:0;" />
+      </td></tr>
+
+      <!-- Mention compte -->
+      <tr><td style="padding:16px 32px 24px;">
+        <p style="color:#9CA3AF;font-size:11px;line-height:1.5;margin:0;">
+          Vous recevez cet email car un compte collaborateur a été créé à votre adresse sur
+          LMS Drive. Si vous n'êtes pas concerné, ignorez simplement ce message — aucun accès
+          ne sera activé sans ce lien. Message automatique, merci de ne pas y répondre.
+        </p>
+      </td></tr>
+
+    </table>
+  </td></tr>
+</table>`
+
+  return {
+    subject: `${p.inviterName} vous invite à rejoindre LMS Drive`,
+    html,
+  }
+}

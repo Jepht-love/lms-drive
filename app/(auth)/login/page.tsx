@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
@@ -12,6 +12,14 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const router = useRouter()
   const supabase = createClient()
+
+  // Message d'erreur des liens email (ex. invitation expirée) — lu depuis
+  // l'URL en effet pour éviter le <Suspense> qu'exige useSearchParams.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('error') === 'lien_invalide') {
+      setError("Lien d'invitation invalide ou expiré. Demandez à votre gérant de renvoyer l'invitation.")
+    }
+  }, [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()

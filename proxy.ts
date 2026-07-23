@@ -51,7 +51,9 @@ export async function proxy(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
-  if (!user && !pathname.startsWith('/login')) {
+  // /auth/* : routes des liens email (confirmation d'invitation, bienvenue…) —
+  // accessibles sans session, c'est justement là que la session se crée.
+  if (!user && !pathname.startsWith('/login') && !pathname.startsWith('/auth/')) {
     // Routes API : renvoyer un 401 JSON plutôt qu'une redirection HTML vers /login.
     // Sinon un fetch() côté client (ex : recherche typeahead /api/search) reçoit la
     // page de login en HTML, res.json() échoue silencieusement, et le menu de
