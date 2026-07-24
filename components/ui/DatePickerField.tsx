@@ -5,7 +5,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { fr } from 'date-fns/locale'
 import {
   format, addMonths, subMonths, startOfMonth, startOfWeek, addDays,
-  isSameDay, isSameMonth, isBefore, startOfDay, parse,
+  isSameDay, isSameMonth, isBefore, isAfter, startOfDay, parse,
 } from 'date-fns'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
@@ -35,6 +35,8 @@ interface Props {
   defaultValue?: string
   /** Borne basse « YYYY-MM-DD » : les jours antérieurs sont désactivés. */
   min?: string
+  /** Borne haute « YYYY-MM-DD » : les jours postérieurs sont désactivés. */
+  max?: string
   required?: boolean
   disabled?: boolean
   /** Palette claire (défaut) ou sombre (déclencheur sur panneau foncé). */
@@ -60,6 +62,7 @@ export default function DatePickerField({
   name,
   defaultValue,
   min,
+  max,
   required,
   disabled,
   tone = 'light',
@@ -73,6 +76,7 @@ export default function DatePickerField({
   const current = controlled ? (value ?? '') : internal
   const selectedDate = parseYmd(current)
   const minDate = parseYmd(min)
+  const maxDate = parseYmd(max)
   const dark = tone === 'dark'
 
   const [open, setOpen] = useState(false)
@@ -157,7 +161,9 @@ export default function DatePickerField({
               const inMonth = isSameMonth(day, viewMonth)
               const isSel = selectedDate != null && isSameDay(day, selectedDate)
               const isToday = isSameDay(day, today)
-              const isDisabled = minDate != null && isBefore(startOfDay(day), startOfDay(minDate))
+              const isDisabled =
+                (minDate != null && isBefore(startOfDay(day), startOfDay(minDate))) ||
+                (maxDate != null && isAfter(startOfDay(day), startOfDay(maxDate)))
               return (
                 <button
                   key={i}

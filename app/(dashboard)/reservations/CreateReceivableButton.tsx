@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { HandCoins, Check, X, Loader2 } from 'lucide-react'
 import { createReceivable } from '@/lib/actions/dueDates'
 import { formatPrice } from '@/lib/utils'
+import DatePickerField from '@/components/ui/DatePickerField'
 
 interface Props {
   reservationId: string
@@ -94,10 +95,10 @@ export default function CreateReceivableButton({ reservationId, remaining, defau
         <div>
           <label className={labelCls}>Échéance</label>
           <div className={fieldCls}>
-            <input
-              type="date"
+            <DatePickerField
               value={dueDate}
-              onChange={e => setDueDate(e.target.value)}
+              onChange={setDueDate}
+              tone="dark"
               className={numCls}
             />
           </div>

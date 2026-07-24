@@ -5,6 +5,7 @@ import { Camera, Upload, X, Check, Loader2 } from 'lucide-react'
 import type { Client } from '@/types/database'
 import { useToast } from '@/components/Toast'
 import { uploadFileToSupabase } from '@/lib/upload'
+import DatePickerField from '@/components/ui/DatePickerField'
 
 interface ClientFormProps {
   action: (formData: FormData) => Promise<{ error: string } | void>
@@ -311,17 +312,23 @@ function Field({ label, name, type = 'text', defaultValue = '', required = false
   autoComplete?: string; autoCapitalize?: string; autoCorrect?: string
   enterKeyHint?: 'done' | 'enter' | 'go' | 'next' | 'previous' | 'search' | 'send'
 }) {
+  const cls = 'w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm'
   return (
     <div>
       <label htmlFor={name} className="block text-xs font-medium text-gray-600 mb-1.5 uppercase tracking-wide">{label}</label>
-      <input
-        id={name} name={name} type={type} defaultValue={defaultValue}
-        required={required} placeholder={placeholder} step={step}
-        inputMode={inputMode} autoComplete={autoComplete}
-        autoCapitalize={autoCapitalize} autoCorrect={autoCorrect}
-        enterKeyHint={enterKeyHint}
-        className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm"
-      />
+      {type === 'date' ? (
+        // Sélecteur maison en français (la roue native iOS reste en anglais).
+        <DatePickerField id={name} name={name} defaultValue={defaultValue} required={required} className={cls} aria-label={label} />
+      ) : (
+        <input
+          id={name} name={name} type={type} defaultValue={defaultValue}
+          required={required} placeholder={placeholder} step={step}
+          inputMode={inputMode} autoComplete={autoComplete}
+          autoCapitalize={autoCapitalize} autoCorrect={autoCorrect}
+          enterKeyHint={enterKeyHint}
+          className={cls}
+        />
+      )}
     </div>
   )
 }

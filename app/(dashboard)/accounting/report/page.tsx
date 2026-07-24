@@ -6,6 +6,7 @@ import { formatPrice, formatDate } from '@/lib/utils'
 import { FileDown, Check, Minus } from 'lucide-react'
 import AnimatedTabs from '@/components/AnimatedTabs'
 import { AnimatedList, AnimatedListItem } from '@/components/AnimatedList'
+import DatePickerField from '@/components/ui/DatePickerField'
 
 type VehicleSource = 'all' | 'propre' | 'inter_agence'
 
@@ -245,13 +246,13 @@ export default function AccountingReportPage() {
 
       {isCustom && (
         <div className="flex items-center gap-2 bg-white rounded-xl border border-gray-100 shadow-sm p-3">
-          <input
-            type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)}
+          <DatePickerField
+            value={customFrom} onChange={setCustomFrom}
             className="flex-1 text-sm border border-gray-200 rounded-lg px-2 py-1.5 text-gray-900"
           />
           <span className="text-gray-400 text-xs">→</span>
-          <input
-            type="date" value={customTo} onChange={e => setCustomTo(e.target.value)}
+          <DatePickerField
+            value={customTo} onChange={setCustomTo} min={customFrom}
             className="flex-1 text-sm border border-gray-200 rounded-lg px-2 py-1.5 text-gray-900"
           />
         </div>

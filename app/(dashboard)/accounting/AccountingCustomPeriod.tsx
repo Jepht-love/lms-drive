@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import DatePickerField from '@/components/ui/DatePickerField'
 
 export default function AccountingCustomPeriod({
   from,
@@ -29,11 +30,11 @@ export default function AccountingCustomPeriod({
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex gap-3 items-end">
       <div className="flex-1">
         <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Du</p>
-        <input type="date" value={f} onChange={e => setF(e.target.value)} className={inp} />
+        <DatePickerField value={f} onChange={setF} className={inp} />
       </div>
       <div className="flex-1">
         <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Au</p>
-        <input type="date" value={t} onChange={e => setT(e.target.value)} className={inp} />
+        <DatePickerField value={t} onChange={setT} min={f} className={inp} />
       </div>
       <button
         onClick={apply}

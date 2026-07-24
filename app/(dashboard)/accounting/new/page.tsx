@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import BackButton from '@/components/ui/BackButton'
+import DatePickerField from '@/components/ui/DatePickerField'
 import { createClient } from '@/lib/supabase/client'
 import { REVENUE_CATEGORIES, PAYMENT_METHODS, expenseCategoriesByFamily } from '@/lib/accounting/categories'
 import { createTransaction } from '@/lib/actions/accounting'
@@ -84,7 +85,7 @@ export default function NewTransactionPage() {
             </div>
             <div>
               <label className={label} htmlFor="date">Date</label>
-              <input id="date" name="date" type="date" defaultValue={today} className={input} />
+              <DatePickerField id="date" name="date" defaultValue={today} className={input} />
             </div>
             <div>
               <label className={label} htmlFor="payment_method">Mode de paiement</label>

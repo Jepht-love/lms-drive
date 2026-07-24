@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import DatePickerField from '@/components/ui/DatePickerField'
 
 export default function DayPicker({ date }: { date: string }) {
   const router = useRouter()
@@ -18,9 +19,9 @@ export default function DayPicker({ date }: { date: string }) {
         className="p-2 rounded-xl border border-gray-200 text-gray-500 hover:bg-gray-50">
         <ChevronLeft className="w-4 h-4" />
       </button>
-      <input
-        type="date" value={date} max={today}
-        onChange={e => e.target.value && router.push(`/accounting/close/daily?date=${e.target.value}`)}
+      <DatePickerField
+        value={date} max={today}
+        onChange={v => v && router.push(`/accounting/close/daily?date=${v}`)}
         className="flex-1 text-sm border border-gray-200 rounded-xl px-3 py-2 text-gray-900"
       />
       <button onClick={() => shift(1)} disabled={date >= today}
