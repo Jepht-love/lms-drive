@@ -146,7 +146,16 @@ export default async function DocumentsPage() {
       .sort((a, b) => (b.start_datetime ?? '').localeCompare(a.start_datetime ?? ''))
   }
 
-  const visibleDocuments = (documents ?? []).filter(d => visibleCategories.includes(d.category))
+  // Pièces client importées en masse mais pas encore rattachées à un client
+  // (entity_id vide) : elles ne vivent QUE dans l'écran d'import & tri, pas dans
+  // la bibliothèque. On les compte pour le badge d'entrée « Import ».
+  const isUntriagedClientDoc = (d: any) =>
+    d.category === 'client' && d.entity_type === 'client' && !d.entity_id && !d.is_auto_generated
+  const untriagedCount = (documents ?? []).filter(isUntriagedClientDoc).length
+
+  const visibleDocuments = (documents ?? [])
+    .filter(d => visibleCategories.includes(d.category))
+    .filter(d => !isUntriagedClientDoc(d))
 
   // URLs signées pour chaque document archivé. Deux formats coexistent :
   // - Ancien : URL publique complète (ex-getPublicUrl) → regex extrait bucket+path
@@ -195,6 +204,7 @@ export default async function DocumentsPage() {
       visibleCategories={visibleCategories}
       reservationDocs={reservationDocs}
       docSignedUrls={docSignedUrls}
+      untriagedCount={untriagedCount}
     />
   )
 }

@@ -67,6 +67,8 @@ interface Props {
   visibleCategories?: string[]
   reservationDocs: ReservationDoc[]
   docSignedUrls: Record<string, string>
+  /** Nombre de pièces client importées en masse pas encore rattachées à un client. */
+  untriagedCount?: number
 }
 
 const RESA_STATUS_LABEL: Record<string, string> = {
@@ -156,7 +158,7 @@ function StatusBadge({ doc }: { doc: Document }) {
   return <span className={`ml-2 text-[10px] font-semibold px-2 py-0.5 rounded-full ${s.cls}`}>{s.label}</span>
 }
 
-export default function DocumentsClient({ documents, vehicles, clients, partners, userRole, visibleCategories, reservationDocs, docSignedUrls }: Props) {
+export default function DocumentsClient({ documents, vehicles, clients, partners, userRole, visibleCategories, reservationDocs, docSignedUrls, untriagedCount = 0 }: Props) {
   const allCatIds = ['entreprise', 'vehicule', 'client', 'partenaire']
   const visibleCats = visibleCategories ?? allCatIds
   const [category,    setCategory]    = useState<ActiveTab>('all')
@@ -414,14 +416,27 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <h1 className="text-xl font-black text-gray-900">Documents</h1>
-        <button
-          onClick={() => setShowUpload(true)}
-          className="flex items-center gap-1.5 px-4 py-2.5 bg-[#111111] text-white rounded-xl font-semibold text-sm active:scale-[.97]"
-        >
-          <Plus className="w-4 h-4" /> Ajouter
-        </button>
+        <div className="flex items-center gap-2">
+          <a
+            href="/documents/import"
+            className="flex items-center gap-1.5 px-3.5 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl font-semibold text-sm active:scale-[.97]"
+          >
+            <Paperclip className="w-4 h-4" /> Import
+            {untriagedCount > 0 && (
+              <span className="ml-0.5 text-[10px] font-black bg-amber-500 text-white px-1.5 py-0.5 rounded-full">
+                {untriagedCount}
+              </span>
+            )}
+          </a>
+          <button
+            onClick={() => setShowUpload(true)}
+            className="flex items-center gap-1.5 px-4 py-2.5 bg-[#111111] text-white rounded-xl font-semibold text-sm active:scale-[.97]"
+          >
+            <Plus className="w-4 h-4" /> Ajouter
+          </button>
+        </div>
       </div>
 
       <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">

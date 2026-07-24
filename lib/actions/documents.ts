@@ -95,11 +95,87 @@ export async function bulkCreateClientDocuments(
 }
 
 /**
+ * Dépose un lot de pièces client « à trier » : lignes `documents` sans client
+ * rattaché (entity_id vide), issues d'un import en masse (export Telegram…).
+ * Les fichiers sont déjà téléversés côté navigateur dans le bucket `documents`.
+ * L'écran d'import & tri les liste puis les assigne à un client via
+ * `assignClientDocuments`. Persister dès l'import permet de reprendre le tri
+ * plus tard sans re-téléverser.
+ */
+export async function stageClientDocuments(
+  docs: { name: string; file_url: string; file_type?: string | null; file_size?: number | null }[],
+) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Non authentifié')
+
+  const rows = (docs ?? [])
+    .filter(d => d?.file_url && d?.name)
+    .map(d => ({
+      category: 'client' as const,
+      subcategory: 'autres',
+      name: d.name.trim().slice(0, 200),
+      file_url: d.file_url,
+      file_type: d.file_type || null,
+      file_size: typeof d.file_size === 'number' ? d.file_size : null,
+      entity_id: null,
+      entity_type: 'client' as const,
+      is_auto_generated: false,
+      created_by: user.id,
+    }))
+
+  if (rows.length === 0) return { error: 'Aucun document valide à importer' }
+
+  const { error } = await supabase.from('documents').insert(rows)
+  if (error) throw new Error(`Import échoué : ${error.message}`)
+
+  revalidatePath('/documents')
+  revalidatePath('/documents/import')
+  return { success: true, count: rows.length }
+}
+
+/**
+ * Assigne un lot de pièces « à trier » à UN client (avec un type commun). Sert
+ * au tri visuel : on coche les pièces d'un même client (recto/verso/justif…) et
+ * on les rattache d'un geste. Renseigne entity_id + subcategory.
+ */
+export async function assignClientDocuments(
+  documentIds: string[],
+  clientId: string,
+  subcategory: string,
+) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Non authentifié')
+  if (!clientId) return { error: 'Client requis' }
+  const ids = (documentIds ?? []).filter(Boolean)
+  if (ids.length === 0) return { error: 'Aucune pièce sélectionnée' }
+
+  const allowed = new Set(DOCUMENT_SUBCATEGORIES.client.map(s => s.id))
+  const sub = allowed.has(subcategory) ? subcategory : 'autres'
+
+  // On ne réassigne que des pièces réellement « à trier » (entity_id vide) pour
+  // éviter de détacher par erreur un document déjà rattaché à un autre client.
+  const { error } = await supabase
+    .from('documents')
+    .update({ entity_id: clientId, subcategory: sub })
+    .in('id', ids)
+    .is('entity_id', null)
+    .eq('entity_type', 'client')
+  if (error) throw new Error(`Assignation échouée : ${error.message}`)
+
+  revalidatePath('/documents')
+  revalidatePath('/documents/import')
+  revalidatePath(`/clients/${clientId}`)
+  return { success: true, count: ids.length }
+}
+
+/**
  * Supprime un document client depuis la fiche client (Système A). Retire le
  * fichier du bucket `documents` puis la ligne, et rafraîchit la fiche.
  * Distinct de `deleteDocument` (qui ne revalide que /documents).
  */
-export async function deleteClientDocument(documentId: string, clientId: string) {
+export async function deleteClientDocument(documentId: string, clientId?: string | null) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Non authentifié')
@@ -118,8 +194,9 @@ export async function deleteClientDocument(documentId: string, clientId: string)
 
   await supabase.from('documents').delete().eq('id', documentId)
 
-  revalidatePath(`/clients/${clientId}`)
+  if (clientId) revalidatePath(`/clients/${clientId}`)
   revalidatePath('/documents')
+  revalidatePath('/documents/import')
   return { success: true }
 }
 
