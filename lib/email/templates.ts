@@ -73,6 +73,10 @@ export function supportContactBlock(): string {
           <br>
           <a href="tel:${SUPPORT_TEL_HREF}" style="color:${OR};font-weight:600;text-decoration:none;white-space:nowrap;">${SUPPORT_TEL_DISPLAY}</a>
         </div>
+        <div style="font-size:12px;color:${MUTE};line-height:1.5;margin:12px 0 0;padding-top:12px;border-top:1px solid ${BORDER};">
+          Merci de ne pas répondre à cet email&nbsp;: cette adresse d'envoi automatique
+          n'est pas surveillée. Pour toute demande, utilisez le contact ci-dessus.
+        </div>
       </td></tr>
     </table>`
 }
@@ -128,7 +132,6 @@ function layout(opts: {
           ${esc(agency?.companyName || 'LMS Drive')} dans le cadre de l'exécution du contrat de location (Art. 6.1.b RGPD).
           Elles sont conservées 5 ans à compter de la fin du contrat. Vous disposez d'un droit d'accès, de
           rectification, d'effacement et de portabilité ; pour les exercer, contactez-nous par email.
-          Ceci est un message automatique, merci de ne pas y répondre.
         </p>
       </td></tr>
 
