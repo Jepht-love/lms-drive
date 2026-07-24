@@ -191,35 +191,13 @@ export default async function ReservationPage({
 
       {/* ─── Hero statut ─── */}
       <div className={`rounded-2xl p-5 ${cfg.hero}`}>
-        <div className="flex items-center justify-between mb-4 flex-wrap gap-y-2">
-          <div className="flex items-center gap-3 flex-wrap">
-            <span className={`text-xs px-3 py-1 rounded-full font-bold ${cfg.badge}`}>
-              {cfg.label}
-            </span>
-            {['en_cours', 'en_retard', 'confirmee'].includes(reservation.status) && (
-              <ProlongReservation
-                reservationId={id}
-                contractId={contract?.id}
-                startDatetime={reservation.start_datetime}
-                endDatetime={reservation.end_datetime}
-                dailyPrice={reservation.daily_price}
-                weeklyPrice={(reservation.vehicle as any)?.weekly_price ?? null}
-                currentTotal={reservation.total_price}
-                kmIncludedDaily={reservation.km_included}
-                reservationStatus={reservation.status}
-              />
-            )}
-            <EditDatesPanel
-              reservationId={id}
-              startDatetime={reservation.start_datetime}
-              endDatetime={reservation.end_datetime}
-              dailyPrice={reservation.daily_price}
-              weeklyPrice={(reservation.vehicle as any)?.weekly_price ?? null}
-              currentTotal={reservation.total_price}
-              reservationStatus={reservation.status}
-              variant="hero"
-            />
-          </div>
+        {/* Ligne 1 : statut « En location » seul à gauche + alertes à droite.
+            (Auparavant le badge partageait une ligne flex-wrap avec les boutons →
+            chevauchement/décalage sur mobile.) */}
+        <div className="flex items-center justify-between gap-3 flex-wrap gap-y-2 mb-3">
+          <span className={`text-xs px-3 py-1 rounded-full font-bold ${cfg.badge}`}>
+            {cfg.label}
+          </span>
           <div className="flex items-center gap-2">
             {isLate && (
               <span className="flex items-center gap-1.5 text-xs text-red-200">
@@ -230,6 +208,34 @@ export default async function ReservationPage({
               <PaymentCountdownMini reservationId={id} deadline={acompteDeadline} onDark />
             )}
           </div>
+        </div>
+
+        {/* Ligne 2 : actions alignées ensemble (Prolonger · Modifier les dates & tarif).
+            Un panneau ouvert passe en w-full sur sa propre ligne (cf composants). */}
+        <div className="flex items-center gap-2 flex-wrap mb-4">
+          {['en_cours', 'en_retard', 'confirmee'].includes(reservation.status) && (
+            <ProlongReservation
+              reservationId={id}
+              contractId={contract?.id}
+              startDatetime={reservation.start_datetime}
+              endDatetime={reservation.end_datetime}
+              dailyPrice={reservation.daily_price}
+              weeklyPrice={(reservation.vehicle as any)?.weekly_price ?? null}
+              currentTotal={reservation.total_price}
+              kmIncludedDaily={reservation.km_included}
+              reservationStatus={reservation.status}
+            />
+          )}
+          <EditDatesPanel
+            reservationId={id}
+            startDatetime={reservation.start_datetime}
+            endDatetime={reservation.end_datetime}
+            dailyPrice={reservation.daily_price}
+            weeklyPrice={(reservation.vehicle as any)?.weekly_price ?? null}
+            currentTotal={reservation.total_price}
+            reservationStatus={reservation.status}
+            variant="hero"
+          />
         </div>
 
         {/* Véhicule + client */}
