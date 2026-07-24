@@ -53,30 +53,25 @@ function ligneDetail(label: string, valeur: string): string {
     </tr>`
 }
 
-/** Coordonnées de contact non vides, façon « au 01 23 … · email ». */
-function contactInline(agency: Agency): string {
-  const bits = [agency?.phone, agency?.email].filter(Boolean)
-  return bits.map(b => esc(b)).join(' · ')
-}
-
 // ── Contact SAV client ───────────────────────────────────────────────────────
 // Coordonnées d'assistance affichées « en cas de souci » dans TOUS les emails
 // de location adressés au client (départ, retour, relance retard). Source unique.
 const SUPPORT_EMAIL = 'LMS.drive.pro@gmail.com'
-const SUPPORT_TEL_DISPLAY = '+33 7 44 14 51 50'
-const SUPPORT_TEL_HREF = '+33744145150'
+const SUPPORT_TEL_DISPLAY = '+33 6 65 74 40 09'
+const SUPPORT_TEL_HREF = '+33665744009'
 
-/** Encadré « Un souci ? » — contact SAV commun à tous les emails clients. */
+/** Encadré « Un souci ? » — contact SAV commun à tous les emails clients.
+ * « Contactez-nous : » en intitulé, puis l'email et le numéro chacun sur sa
+ * propre ligne (centrés, même longueur visuelle) pour éviter tout débordement. */
 export function supportContactBlock(): string {
   return `
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${CREME};border:1px solid ${BORDER};border-radius:10px;font-family:Arial,Helvetica,sans-serif;">
-      <tr><td style="padding:14px 18px;">
-        <div style="font-size:13px;font-weight:700;color:${INK};margin:0 0 4px;">Un souci ou une question&nbsp;?</div>
-        <div style="font-size:14px;color:${INK};line-height:1.6;">
-          Contactez-nous à
+      <tr><td style="padding:16px 18px;text-align:center;">
+        <div style="font-size:13px;font-weight:700;color:${INK};margin:0 0 8px;">Un souci ou une question&nbsp;? Contactez-nous&nbsp;:</div>
+        <div style="font-size:15px;line-height:1.8;">
           <a href="mailto:${SUPPORT_EMAIL}" style="color:${OR};font-weight:600;text-decoration:none;">${SUPPORT_EMAIL}</a>
-          ou au
-          <a href="tel:${SUPPORT_TEL_HREF}" style="color:${OR};font-weight:600;text-decoration:none;white-space:nowrap;">${SUPPORT_TEL_DISPLAY}</a>.
+          <br>
+          <a href="tel:${SUPPORT_TEL_HREF}" style="color:${OR};font-weight:600;text-decoration:none;white-space:nowrap;">${SUPPORT_TEL_DISPLAY}</a>
         </div>
       </td></tr>
     </table>`
@@ -91,8 +86,6 @@ function layout(opts: {
   agency: Agency
 }): string {
   const { preheader, refLabel, refValue, body, agency } = opts
-  const contact = contactInline(agency)
-  const adresse = esc(agency?.address)
   return `
 <!-- preheader (aperçu masqué) -->
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">${esc(preheader)}</div>
@@ -123,12 +116,9 @@ function layout(opts: {
         ${supportContactBlock()}
       </td></tr>
 
-      <!-- Pied de page -->
-      <tr><td style="background:${NOIR};padding:22px 32px;text-align:center;">
-        <img src="${LOGO_BLANC}" alt="LMS DRIVE" width="96" style="display:inline-block;width:96px;height:auto;border:0;margin-bottom:2px;" />
-        ${agency?.companyName ? `<div style="color:#D1D5DB;font-size:12px;margin-top:8px;">${esc(agency.companyName)}</div>` : ''}
-        ${contact ? `<div style="color:#9CA3AF;font-size:12px;margin-top:4px;">${contact}</div>` : ''}
-        ${adresse ? `<div style="color:#9CA3AF;font-size:12px;margin-top:4px;">${adresse}</div>` : ''}
+      <!-- Pied de page : logo LMS Drive seul (ni raison sociale, ni coordonnées agence) -->
+      <tr><td style="background:${NOIR};padding:24px 32px;text-align:center;">
+        <img src="${LOGO_BLANC}" alt="LMS DRIVE" width="96" style="display:inline-block;width:96px;height:auto;border:0;" />
       </td></tr>
 
       <!-- Mention RGPD -->
