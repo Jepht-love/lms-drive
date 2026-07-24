@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import DatePickerField from '@/components/ui/DatePickerField'
+import TimePickerField from '@/components/ui/TimePickerField'
 
 /**
  * Champ date + heure SÉPARÉS — remplace partout input[type=datetime-local].
@@ -9,6 +10,10 @@ import DatePickerField from '@/components/ui/DatePickerField'
  * Pourquoi : sur Safari, un datetime-local a une largeur incompressible qui
  * déborde de son conteneur (constaté en prod le 23/07/2026 sur la fiche résa).
  * Deux contrôles compacts (date | heure) tiennent partout, sur tous les moteurs.
+ *
+ * Date ET heure passent désormais par nos sélecteurs maison (DatePickerField +
+ * TimePickerField, popovers rendus en français) : fini les roues natives iOS
+ * (calendrier en anglais, style système incohérent). Aucun input date/time natif.
  *
  * Deux modes :
  * - contrôlé : `value` + `onChange` (valeur combinée « YYYY-MM-DDTHH:mm ») ;
@@ -98,12 +103,12 @@ export default function DateTimeField({
           className={`flex-1 min-w-0 ${inner}`}
         />
         <div className={sep} aria-hidden />
-        <input
-          type="time"
+        <TimePickerField
           value={time}
-          onChange={e => { setTime(e.target.value); emit(date, e.target.value) }}
+          onChange={t => { setTime(t); emit(date, t) }}
           required={required}
           disabled={disabled}
+          tone={dark ? 'dark' : 'light'}
           className={`w-[100px] flex-none text-center ${inner}`}
         />
         {hidden}
@@ -126,10 +131,9 @@ export default function DateTimeField({
         />
       </div>
       <div className="w-[104px] flex-none">
-        <input
-          type="time"
+        <TimePickerField
           value={time}
-          onChange={e => { setTime(e.target.value); emit(date, e.target.value) }}
+          onChange={t => { setTime(t); emit(date, t) }}
           required={required}
           disabled={disabled}
           className={inputCls}

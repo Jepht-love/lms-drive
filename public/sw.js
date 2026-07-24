@@ -38,7 +38,7 @@ if (isLocalDev) {
   // ═════════════════════════════════════════════════════════════════════════
   // PROD — Cache PWA
   // ═════════════════════════════════════════════════════════════════════════
-  const CACHE_VERSION = 'v118'
+  const CACHE_VERSION = 'v119'
   const STATIC_CACHE = `lms-static-${CACHE_VERSION}`
   const PAGES_CACHE = `lms-pages-${CACHE_VERSION}`
   const ALL_CACHES = [STATIC_CACHE, PAGES_CACHE]
