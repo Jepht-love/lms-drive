@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Check, Loader2 } from 'lucide-react'
 import Toggle from '@/components/ui/Toggle'
+import DatePickerField from '@/components/ui/DatePickerField'
 
 const ROLES = [
   { value: 'gerant',      label: 'Gérant',      desc: 'Accès total' },
@@ -99,10 +100,11 @@ export default function EditMemberForm({ member }: { member: Member }) {
         </div>
         <div>
           <label className="text-xs font-bold text-gray-500 block mb-1.5">Date d&apos;embauche</label>
-          <input
-            type="date" value={form.hire_date}
-            onChange={e => set('hire_date', e.target.value)}
+          <DatePickerField
+            value={form.hire_date}
+            onChange={v => set('hire_date', v)}
             className="w-full bg-gray-50 rounded-xl px-4 py-3 text-sm font-semibold text-gray-900 outline-none focus:ring-2 focus:ring-black/10"
+            aria-label="Date d'embauche"
           />
         </div>
       </div>

@@ -10,6 +10,7 @@ import {
   type DocumentCategory,
 } from '@/lib/documents/categories'
 import Drawer from '@/components/Drawer'
+import DatePickerField from '@/components/ui/DatePickerField'
 import PdfPages from '@/components/pdf/PdfPages'
 import { AnimatedList, AnimatedListItem } from '@/components/AnimatedList'
 import { uploadDocument, deleteDocument, replaceDocument } from '@/lib/actions/documents'
@@ -668,8 +669,8 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
 
           <div className="mb-3">
             <label className="block text-[11px] font-medium text-gray-400 uppercase tracking-wide mb-1">Date d'expiration (optionnel)</label>
-            <input type="date" value={expiryDate} onChange={e => setExpiryDate(e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px]" />
+            <DatePickerField value={expiryDate} onChange={setExpiryDate}
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px]" aria-label="Date d'expiration" />
           </div>
 
           <label className="flex items-center gap-3 border-2 border-dashed border-gray-300 rounded-xl px-4 py-4 cursor-pointer mb-4 hover:border-gray-400">
@@ -703,8 +704,8 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
 
           <div className="mb-3">
             <label className="block text-[11px] font-medium text-gray-400 uppercase tracking-wide mb-1">Nouvelle date d&apos;expiration (optionnel)</label>
-            <input type="date" value={replaceExpiry} onChange={e => setReplaceExpiry(e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px]" />
+            <DatePickerField value={replaceExpiry} onChange={setReplaceExpiry}
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px]" aria-label="Nouvelle date d'expiration" />
           </div>
 
           <label className="flex items-center gap-3 border-2 border-dashed border-gray-300 rounded-xl px-4 py-4 cursor-pointer mb-4 hover:border-gray-400">

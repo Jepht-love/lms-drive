@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Send } from 'lucide-react'
 import BackButton from '@/components/ui/BackButton'
+import DatePickerField from '@/components/ui/DatePickerField'
 import { APP_TABS, ALL_TAB_KEYS } from '@/lib/navigation/tabs'
 import { DOCUMENT_CATEGORIES } from '@/lib/documents/categories'
 import Toggle from '@/components/ui/Toggle'
@@ -129,10 +130,11 @@ export default function InviteTeamMemberPage() {
 
           <div>
             <label className="text-xs font-bold text-gray-500 block mb-1.5">Date d'embauche</label>
-            <input
-              type="date" value={form.hire_date}
-              onChange={e => set('hire_date', e.target.value)}
+            <DatePickerField
+              value={form.hire_date}
+              onChange={v => set('hire_date', v)}
               className="w-full bg-gray-50 rounded-xl px-4 py-3 text-sm font-semibold text-gray-900 outline-none focus:ring-2 focus:ring-black/10"
+              aria-label="Date d'embauche"
             />
           </div>
         </div>

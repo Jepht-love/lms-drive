@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { MARKETING_CHANNELS } from '@/lib/marketing/channels'
 import { createCampaign } from '@/lib/actions/campaigns'
+import DatePickerField from '@/components/ui/DatePickerField'
 
 export default function NewCampaignPage() {
   const router = useRouter()
@@ -67,11 +68,11 @@ export default function NewCampaignPage() {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className={label}>Date de lancement *</label>
-              <input name="start_date" type="date" required className={input} />
+              <DatePickerField name="start_date" required className={input} aria-label="Date de lancement" />
             </div>
             <div>
               <label className={label}>Date de fin</label>
-              <input name="end_date" type="date" className={input} />
+              <DatePickerField name="end_date" className={input} aria-label="Date de fin" />
             </div>
           </div>
           <div>

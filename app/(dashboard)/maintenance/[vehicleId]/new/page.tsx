@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import BackButton from '@/components/ui/BackButton'
+import DatePickerField from '@/components/ui/DatePickerField'
 import { MAINTENANCE_TYPES } from '@/lib/maintenance'
 import { createMaintenanceRecord } from '@/lib/actions/maintenance'
 
@@ -58,7 +59,7 @@ export default function NewMaintenancePage() {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className={labelCls} htmlFor="date">Date</label>
-              <input id="date" name="date" type="date" defaultValue={today} className={inputCls} required />
+              <DatePickerField id="date" name="date" defaultValue={today} required className={inputCls} />
             </div>
             <div>
               <label className={labelCls} htmlFor="amount">Montant (€)</label>

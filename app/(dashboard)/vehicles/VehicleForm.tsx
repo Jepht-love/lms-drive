@@ -3,6 +3,7 @@
 import { useActionState } from 'react'
 import type { Vehicle } from '@/types/database'
 import { useToast } from '@/components/Toast'
+import DatePickerField from '@/components/ui/DatePickerField'
 
 interface VehicleFormProps {
   action: (formData: FormData) => Promise<{ error: string } | void>
@@ -127,22 +128,31 @@ function Field({
       <label htmlFor={name} className="block text-[11px] font-bold text-gray-400 mb-1.5 uppercase tracking-wide">
         {label}
       </label>
-      <input
-        id={name}
-        name={name}
-        type={type}
-        defaultValue={defaultValue}
-        required={required}
-        placeholder={placeholder}
-        min={min}
-        max={max}
-        step={step}
-        inputMode={inputMode}
-        autoCapitalize={autoCapitalize}
-        autoCorrect={autoCorrect}
-        enterKeyHint={enterKeyHint}
-        className={`w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm ${className ?? ''}`}
-      />
+      {type === 'date' ? (
+        // Sélecteur maison en français (la roue native iOS reste en anglais).
+        <DatePickerField
+          id={name} name={name} defaultValue={defaultValue} required={required}
+          min={min} max={max} aria-label={label}
+          className={`w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm ${className ?? ''}`}
+        />
+      ) : (
+        <input
+          id={name}
+          name={name}
+          type={type}
+          defaultValue={defaultValue}
+          required={required}
+          placeholder={placeholder}
+          min={min}
+          max={max}
+          step={step}
+          inputMode={inputMode}
+          autoCapitalize={autoCapitalize}
+          autoCorrect={autoCorrect}
+          enterKeyHint={enterKeyHint}
+          className={`w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm ${className ?? ''}`}
+        />
+      )}
     </div>
   )
 }

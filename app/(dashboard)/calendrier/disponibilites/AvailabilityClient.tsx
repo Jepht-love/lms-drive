@@ -6,6 +6,8 @@ import { fr } from 'date-fns/locale'
 import { Plus, ChevronLeft, ChevronRight, ChevronDown, Pencil, Trash2 } from 'lucide-react'
 import { EVENT_TYPE_LABELS, EVENT_COLORS } from '@/lib/calendar/constants'
 import type { EventType } from '@/types/calendar'
+import DatePickerField from '@/components/ui/DatePickerField'
+import TimePickerField from '@/components/ui/TimePickerField'
 
 // Abréviations des 7 jours dans l'ordre d'affichage de la semaine (lundi → dimanche).
 const WEEK_ABBR = ['lun', 'mar', 'mer', 'jeu', 'ven', 'sam', 'dim']
@@ -201,14 +203,14 @@ function BookSlotModal({
         <div className="flex items-center gap-2">
           <div className="flex-1">
             <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Début</label>
-            <input type="time" value={start} onChange={e => setStart(e.target.value)}
-              className="mt-1 w-full text-sm border border-gray-200 rounded-xl px-3 py-2.5" />
+            <TimePickerField value={start} onChange={setStart}
+              className="mt-1 w-full text-sm border border-gray-200 rounded-xl px-3 py-2.5" aria-label="Heure de début" />
           </div>
           <span className="text-gray-300 mt-5">→</span>
           <div className="flex-1">
             <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Fin</label>
-            <input type="time" value={end} onChange={e => setEnd(e.target.value)}
-              className="mt-1 w-full text-sm border border-gray-200 rounded-xl px-3 py-2.5" />
+            <TimePickerField value={end} onChange={setEnd}
+              className="mt-1 w-full text-sm border border-gray-200 rounded-xl px-3 py-2.5" aria-label="Heure de fin" />
           </div>
         </div>
 
@@ -324,12 +326,11 @@ function AvailabilityScheduler({ profiles }: { profiles: Profile[] }) {
 
       {/* M — navigateur rapide : saut à une date */}
       <div className="flex items-center gap-2 mb-3">
-        <input
-          type="date"
+        <DatePickerField
           value={format(weekStart, 'yyyy-MM-dd')}
-          onChange={e => {
-            if (!e.target.value) return
-            const picked = new Date(e.target.value + 'T00:00:00')
+          onChange={v => {
+            if (!v) return
+            const picked = new Date(v + 'T00:00:00')
             const target = startOfWeek(picked, { weekStartsOn: 1 })
             const origin = startOfWeek(new Date(), { weekStartsOn: 1 })
             setWeekOffset(Math.round((target.getTime() - origin.getTime()) / (7 * 24 * 3600 * 1000)))
@@ -338,6 +339,7 @@ function AvailabilityScheduler({ profiles }: { profiles: Profile[] }) {
             setSelectedDayIdx((picked.getDay() + 6) % 7)
           }}
           className="flex-1 text-xs border border-gray-200 rounded-xl px-2.5 py-2 text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-black/10"
+          aria-label="Aller à une date"
         />
         <button
           type="button"

@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Check, X, Loader2 } from 'lucide-react'
+import DatePickerField from '@/components/ui/DatePickerField'
 import { resolveVehicleIssue } from '@/lib/actions/vehicle-issues'
 import type { MaintenanceFlag } from '@/types/database'
 
@@ -78,11 +79,11 @@ export default function ResolveDamageRow({ vehicleId, flag }: { vehicleId: strin
             </div>
             <div className="flex-1">
               <label className="block text-[10px] text-gray-400 mb-0.5">Date</label>
-              <input
-                type="date"
+              <DatePickerField
                 value={date}
-                onChange={e => setDate(e.target.value)}
+                onChange={setDate}
                 className="w-full px-2.5 py-1.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
+                aria-label="Date"
               />
             </div>
           </div>

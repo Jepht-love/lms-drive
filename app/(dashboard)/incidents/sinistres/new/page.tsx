@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { ArrowLeft, UserCheck, UserCog, AlertTriangle } from 'lucide-react'
 import BackButton from '@/components/ui/BackButton'
 import Toggle from '@/components/ui/Toggle'
+import DatePickerField from '@/components/ui/DatePickerField'
 import { createClient } from '@/lib/supabase/client'
 import { lookupDriver, createAccident } from '@/lib/actions/incidents'
 
@@ -86,8 +87,8 @@ export default function NewSinistrePage() {
             </div>
             <div>
               <label className={label} htmlFor="accident_date">Date du sinistre</label>
-              <input id="accident_date" name="accident_date" type="date" required className={input}
-                value={date} onChange={e => setDate(e.target.value)} />
+              <DatePickerField id="accident_date" name="accident_date" required className={input}
+                value={date} onChange={setDate} aria-label="Date du sinistre" />
             </div>
           </div>
 

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { closeCampaign } from '@/lib/actions/campaigns'
+import DatePickerField from '@/components/ui/DatePickerField'
 
 export default function CloseForm({ campaignId, endDate }: { campaignId: string; endDate: string | null }) {
   const [open, setOpen] = useState(false)
@@ -55,7 +56,7 @@ export default function CloseForm({ campaignId, endDate }: { campaignId: string;
 
       <div>
         <label className={label}>Date de fin</label>
-        <input name="end_date" type="date" defaultValue={endDate ?? ''} className={input} />
+        <DatePickerField name="end_date" defaultValue={endDate ?? ''} className={input} aria-label="Date de fin" />
       </div>
 
       <div>

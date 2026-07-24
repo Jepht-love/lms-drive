@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, UserCheck, UserCog, AlertTriangle } from 'lucide-react'
 import BackButton from '@/components/ui/BackButton'
+import DatePickerField from '@/components/ui/DatePickerField'
+import TimePickerField from '@/components/ui/TimePickerField'
 import { createClient } from '@/lib/supabase/client'
 import { INFRACTION_TYPES } from '@/lib/incidents'
 import { lookupDriver, createInfraction } from '@/lib/actions/incidents'
@@ -84,13 +86,13 @@ export default function NewInfractionPage() {
             </div>
             <div>
               <label className={label} htmlFor="infraction_date">Date de l'infraction</label>
-              <input id="infraction_date" name="infraction_date" type="date" required className={input}
-                value={date} onChange={e => setDate(e.target.value)} />
+              <DatePickerField id="infraction_date" name="infraction_date" required className={input}
+                value={date} onChange={setDate} aria-label="Date de l'infraction" />
             </div>
             <div>
               <label className={label} htmlFor="infraction_time">Heure de l'infraction</label>
-              <input id="infraction_time" name="infraction_time" type="time" className={input}
-                value={time} onChange={e => setTime(e.target.value)} />
+              <TimePickerField id="infraction_time" name="infraction_time" className={input}
+                value={time} onChange={setTime} aria-label="Heure de l'infraction" />
             </div>
           </div>
 
@@ -129,7 +131,7 @@ export default function NewInfractionPage() {
             </div>
             <div>
               <label className={label} htmlFor="reception_date">Date de réception de l'avis</label>
-              <input id="reception_date" name="reception_date" type="date" className={input} />
+              <DatePickerField id="reception_date" name="reception_date" className={input} aria-label="Date de réception de l'avis" />
             </div>
             <div>
               <label className={label} htmlFor="admin_fees">Frais de dossier LMS (€)</label>
