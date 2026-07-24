@@ -77,14 +77,19 @@ export default async function VehiclesPage({
   // Date de retour (la plus tardive parmi les réservations actives/à venir non
   // annulées) pour chaque véhicule loué/réservé — affichée au-dessus du bouton
   // "Réserver après" pour savoir à partir de quand le véhicule est libre.
-  const busyVehicleIds = allVehicles.filter(v => ['loue', 'reserve'].includes(v.status)).map(v => v.id)
+  // Tous les véhicules « louables » (disponible/loué/réservé) : on charge leurs
+  // réservations actives pour recaler le statut — Y COMPRIS un « disponible » qui
+  // serait en réalité sorti (réservation démarrée sans passage à « loué »). Sans
+  // inclure « disponible » ici, un véhicule loué resté « disponible » était invisible
+  // de la réconciliation et ne se corrigeait jamais.
+  const louableVehicleIds = allVehicles.filter(v => ['disponible', 'loue', 'reserve'].includes(v.status)).map(v => v.id)
   const returnDateByVehicle: Record<string, string> = {}
   const nextStartByVehicle: Record<string, string> = {}
-  if (busyVehicleIds.length > 0) {
+  if (louableVehicleIds.length > 0) {
     const { data: activeReservations } = await supabase
       .from('reservations')
       .select('vehicle_id, start_datetime, end_datetime, status')
-      .in('vehicle_id', busyVehicleIds)
+      .in('vehicle_id', louableVehicleIds)
       .not('status', 'in', '("annulee","terminee")')
 
     const activeStatusesByVehicle = new Map<string, string[]>()
@@ -110,16 +115,17 @@ export default async function VehiclesPage({
       }
     }
 
-    // Réconciliation des statuts : un véhicule marqué loué/réservé mais SANS
-    // réservation active correspondante (statut forcé à la main, réservation
-    // supprimée, contrat clôturé sans repasser le véhicule à disponible…) est
-    // remis au statut réellement dérivé des réservations. Corrige les orphelins
-    // « loué sans date de retour ni contrat » (ex. BMW i8) dès l'ouverture de la
-    // flotte. Même dérivation que recomputeVehicleStatus ; idempotent : n'écrit
-    // qu'en cas d'écart, et corrige aussi l'affichage en mémoire immédiatement.
+    // Réconciliation des statuts : le statut véhicule est recalé sur ce que disent
+    // réellement les réservations. Corrige les DEUX sens :
+    //  - « loué/réservé » SANS réservation active (statut orphelin : résa supprimée,
+    //    contrat clôturé sans repasser à disponible…) → remis à jour ;
+    //  - « disponible » AVEC une réservation démarrée (le passage à « loué » n'a pas eu
+    //    lieu) → passé à « loué ». C'est ce cas qui donnait « 8 véhicules dont 6 loués
+    //    mais tous marqués disponibles ».
+    // Même dérivation que recomputeVehicleStatus ; idempotent : n'écrit qu'en cas d'écart.
     const toPersist: string[] = []
     for (const v of allVehicles) {
-      if (!['loue', 'reserve'].includes(v.status)) continue
+      if (!['disponible', 'loue', 'reserve'].includes(v.status)) continue
       const statuses = activeStatusesByVehicle.get(v.id) ?? []
       const hasOngoing  = statuses.some(s => ['en_cours', 'en_retard'].includes(s))
       const hasUpcoming = statuses.some(s => ['confirmee', 'option'].includes(s))
