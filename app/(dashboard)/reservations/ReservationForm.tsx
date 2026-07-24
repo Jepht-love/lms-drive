@@ -6,11 +6,24 @@ import { calculateRentalDays, calculateRentalPrice, formatPrice } from '@/lib/ut
 import { getMissingClientFields } from '@/lib/clients/completeness'
 import { useToast } from '@/components/Toast'
 import DateTimeField from '@/components/ui/DateTimeField'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
 
 function toDatetimeLocal(d: Date): string {
   const pad = (n: number) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
+
+// Style commun des <select> natifs — alignés sur la primitive Input (le formulaire
+// poste via `name`, donc on garde des selects natifs plutôt que Radix Select).
+const selectClass =
+  'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base md:text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50'
+
+// Libellé de champ — identité LMS Drive (petit, majuscules) via la primitive Label.
+const labelClass = 'mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-muted-foreground'
 
 interface Vehicle {
   id: string; plate: string; brand: string; model: string
@@ -118,329 +131,327 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
   return (
     <form action={formAction} className="space-y-6">
       {state?.error && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-700 font-medium">
+        <div className="rounded-md border border-destructive/30 bg-destructive/10 p-4 text-sm font-medium text-destructive">
           {state.error}
         </div>
       )}
 
-      <div className="grid lg:grid-cols-2 gap-6">
-        {/* Vehicle + client */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
-          <h3 className="font-bold text-gray-900">Véhicule & client</h3>
-
-          <div>
-            <label className="block text-[11px] font-bold text-gray-400 mb-1.5 uppercase tracking-wide">Véhicule *</label>
-            <select
-              name="vehicle_id"
-              value={selectedVehicleId}
-              onChange={e => setSelectedVehicleId(e.target.value)}
-              required
-              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white"
-            >
-              <option value="">— Choisir un véhicule —</option>
-              {vehicles.map(v => (
-                <option key={v.id} value={v.id}>
-                  {v.brand} {v.model} — {v.plate} {v.daily_price ? `(${v.daily_price}€/j)` : ''}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wide">Client *</label>
-              <button
-                type="button"
-                onClick={() => setCreatingNewClient(v => !v)}
-                className="text-xs font-semibold text-gray-700 hover:underline"
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Véhicule & client */}
+        <Card>
+          <CardHeader className="p-5 pb-0">
+            <CardTitle className="text-base font-semibold">Véhicule &amp; client</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4 p-5">
+            <div>
+              <Label htmlFor="vehicle_id" className={labelClass}>Véhicule *</Label>
+              <select
+                id="vehicle_id"
+                name="vehicle_id"
+                value={selectedVehicleId}
+                onChange={e => setSelectedVehicleId(e.target.value)}
+                required
+                className={selectClass}
               >
-                {creatingNewClient ? 'Choisir un client existant' : '+ Nouveau client'}
-              </button>
+                <option value="">— Choisir un véhicule —</option>
+                {vehicles.map(v => (
+                  <option key={v.id} value={v.id}>
+                    {v.brand} {v.model} — {v.plate} {v.daily_price ? `(${v.daily_price}€/j)` : ''}
+                  </option>
+                ))}
+              </select>
             </div>
-            {creatingNewClient ? (
-              <div className="grid grid-cols-3 gap-2">
-                <input name="new_client_first_name" placeholder="Prénom" required enterKeyHint="next"
-                  className="px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm" />
-                <input name="new_client_last_name" placeholder="Nom" required enterKeyHint="next"
-                  className="px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm" />
-                <input name="new_client_phone" type="tel" placeholder="Téléphone" required inputMode="tel" autoComplete="tel" enterKeyHint="done"
-                  className="px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm" />
+
+            <div>
+              <div className="mb-1.5 flex items-center justify-between">
+                <Label htmlFor="client_search" className={`${labelClass} mb-0`}>Client *</Label>
+                <button
+                  type="button"
+                  onClick={() => setCreatingNewClient(v => !v)}
+                  className="text-xs font-semibold text-foreground hover:underline"
+                >
+                  {creatingNewClient ? 'Choisir un client existant' : '+ Nouveau client'}
+                </button>
               </div>
-            ) : (
-              <div className="relative">
-                <input type="hidden" name="client_id" value={selectedClientId} />
-                <input
-                  type="text"
-                  placeholder="Rechercher par nom ou téléphone..."
-                  value={selectedClient ? `${selectedClient.first_name} ${selectedClient.last_name} — ${selectedClient.phone}` : clientQuery}
-                  onChange={e => { setSelectedClientId(''); setClientQuery(e.target.value); setShowClientResults(true) }}
-                  onFocus={() => setShowClientResults(true)}
-                  onBlur={() => setTimeout(() => {
-                    if (!selectedClientId) setClientQuery('')
-                    setShowClientResults(false)
-                  }, 150)}
-                  required
-                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white"
-                />
-                {showClientResults && filteredClients.length > 0 && (
-                  <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg max-h-56 overflow-y-auto">
-                    {filteredClients.map(c => (
-                      <button
-                        key={c.id}
-                        type="button"
-                        disabled={c.status === 'blackliste'}
-                        onMouseDown={e => e.preventDefault()}
-                        onClick={() => { setSelectedClientId(c.id); setClientQuery(''); setShowClientResults(false) }}
-                        className="w-full text-left px-3 py-2 hover:bg-gray-50 text-sm disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white"
-                      >
-                        {c.status === 'blackliste' ? '⚠ ' : ''}{c.first_name} {c.last_name} — {c.phone}
-                      </button>
-                    ))}
-                  </div>
-                )}
+              {creatingNewClient ? (
+                <div className="grid grid-cols-3 gap-2">
+                  <Input name="new_client_first_name" placeholder="Prénom" required enterKeyHint="next" />
+                  <Input name="new_client_last_name" placeholder="Nom" required enterKeyHint="next" />
+                  <Input name="new_client_phone" type="tel" placeholder="Téléphone" required inputMode="tel" autoComplete="tel" enterKeyHint="done" />
+                </div>
+              ) : (
+                <div className="relative">
+                  <input type="hidden" name="client_id" value={selectedClientId} />
+                  <Input
+                    id="client_search"
+                    type="text"
+                    placeholder="Rechercher par nom ou téléphone..."
+                    value={selectedClient ? `${selectedClient.first_name} ${selectedClient.last_name} — ${selectedClient.phone}` : clientQuery}
+                    onChange={e => { setSelectedClientId(''); setClientQuery(e.target.value); setShowClientResults(true) }}
+                    onFocus={() => setShowClientResults(true)}
+                    onBlur={() => setTimeout(() => {
+                      if (!selectedClientId) setClientQuery('')
+                      setShowClientResults(false)
+                    }, 150)}
+                    required
+                  />
+                  {showClientResults && filteredClients.length > 0 && (
+                    <div className="absolute z-10 mt-1 w-full overflow-y-auto rounded-md border border-border bg-popover shadow-md max-h-56">
+                      {filteredClients.map(c => (
+                        <button
+                          key={c.id}
+                          type="button"
+                          disabled={c.status === 'blackliste'}
+                          onMouseDown={e => e.preventDefault()}
+                          onClick={() => { setSelectedClientId(c.id); setClientQuery(''); setShowClientResults(false) }}
+                          className="w-full px-3 py-2 text-left text-sm hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                        >
+                          {c.status === 'blackliste' ? '⚠ ' : ''}{c.first_name} {c.last_name} — {c.phone}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Dossier incomplet — alerte + confirmation avant création (client existant) */}
+            {missingFields.length > 0 && (
+              <div className="flex items-start gap-3 rounded-md border border-orange-200 bg-orange-50 px-3 py-2.5">
+                <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-orange-500" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-bold text-orange-800">Dossier incomplet — impossibilité de louer</p>
+                  <p className="mt-0.5 text-[11px] text-orange-600">Manquant : {missingFields.join(', ')}</p>
+                  <label className="mt-2 flex cursor-pointer select-none items-start gap-2">
+                    <input
+                      type="checkbox"
+                      checked={dossierConfirmed}
+                      onChange={e => setDossierConfirmed(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 flex-shrink-0 accent-orange-600"
+                    />
+                    <span className="text-[11px] font-semibold text-orange-800">
+                      Je confirme créer la réservation malgré le dossier incomplet
+                    </span>
+                  </label>
+                </div>
               </div>
             )}
-          </div>
-
-          {/* Dossier incomplet — alerte + confirmation avant création (client existant) */}
-          {missingFields.length > 0 && (
-            <div className="flex items-start gap-3 bg-orange-50 border border-orange-200 rounded-xl px-3 py-2.5">
-              <AlertTriangle className="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5" />
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold text-orange-800">Dossier incomplet — impossibilité de louer</p>
-                <p className="text-[11px] text-orange-600 mt-0.5">Manquant : {missingFields.join(', ')}</p>
-                <label className="flex items-start gap-2 mt-2 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={dossierConfirmed}
-                    onChange={e => setDossierConfirmed(e.target.checked)}
-                    className="mt-0.5 accent-orange-600 w-4 h-4 flex-shrink-0"
-                  />
-                  <span className="text-[11px] font-semibold text-orange-800">
-                    Je confirme créer la réservation malgré le dossier incomplet
-                  </span>
-                </label>
-              </div>
-            </div>
-          )}
-        </div>
+          </CardContent>
+        </Card>
 
         {/* Dates */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
-          <h3 className="font-bold text-gray-900">Dates</h3>
-
-          <div>
-            <label className="block text-[11px] font-bold text-gray-400 mb-1.5 uppercase tracking-wide">Départ *</label>
-            <DateTimeField
-              name="start_datetime"
-              value={startDatetime}
-              onChange={setStartDatetime}
-              required
-              className="px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-[11px] font-bold text-gray-400 mb-1.5 uppercase tracking-wide">Retour *</label>
-            <DateTimeField
-              name="end_datetime"
-              value={endDatetime}
-              onChange={setEndDatetime}
-              required
-              min={startDatetime}
-              className="px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-[11px] font-bold text-gray-400 mb-1.5 uppercase tracking-wide">Durée</label>
-            <div className="flex items-end gap-3">
-              <div className="flex-1">
-                <input
-                  type="number" min="0" placeholder="0"
-                  value={durDays || ''}
-                  onChange={e => {
-                    const d = Math.max(0, parseInt(e.target.value) || 0)
-                    setDurDays(d)
-                    setDuration(d * 24 + durHours)
-                  }}
-                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm"
-                />
-                <span className="text-[10px] text-gray-400 mt-0.5 block">jours</span>
-              </div>
-              <div className="flex-1">
-                <input
-                  type="number" min="0" max="23" placeholder="0"
-                  value={durHours || ''}
-                  onChange={e => {
-                    const h = Math.min(23, Math.max(0, parseInt(e.target.value) || 0))
-                    setDurHours(h)
-                    setDuration(durDays * 24 + h)
-                  }}
-                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm"
-                />
-                <span className="text-[10px] text-gray-400 mt-0.5 block">heures</span>
+        <Card>
+          <CardHeader className="p-5 pb-0">
+            <CardTitle className="text-base font-semibold">Dates</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4 p-5">
+            <div>
+              <Label className={labelClass}>Départ *</Label>
+              <DateTimeField
+                name="start_datetime"
+                value={startDatetime}
+                onChange={setStartDatetime}
+                required
+                grouped
+              />
+            </div>
+            <div>
+              <Label className={labelClass}>Retour *</Label>
+              <DateTimeField
+                name="end_datetime"
+                value={endDatetime}
+                onChange={setEndDatetime}
+                required
+                min={startDatetime}
+                grouped
+              />
+            </div>
+            <div>
+              <Label className={labelClass}>Durée</Label>
+              <div className="flex items-end gap-3">
+                <div className="flex-1">
+                  <Input
+                    type="number" min="0" placeholder="0"
+                    value={durDays || ''}
+                    onChange={e => {
+                      const d = Math.max(0, parseInt(e.target.value) || 0)
+                      setDurDays(d)
+                      setDuration(d * 24 + durHours)
+                    }}
+                  />
+                  <span className="mt-0.5 block text-[10px] text-muted-foreground">jours</span>
+                </div>
+                <div className="flex-1">
+                  <Input
+                    type="number" min="0" max="23" placeholder="0"
+                    value={durHours || ''}
+                    onChange={e => {
+                      const h = Math.min(23, Math.max(0, parseInt(e.target.value) || 0))
+                      setDurHours(h)
+                      setDuration(durDays * 24 + h)
+                    }}
+                  />
+                  <span className="mt-0.5 block text-[10px] text-muted-foreground">heures</span>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Tarification */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-        <h3 className="font-bold text-gray-900 mb-4">Tarification</h3>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-[11px] font-bold text-gray-400 mb-1.5 uppercase tracking-wide">Prix/jour (€) *</label>
-            <input
+      <Card>
+        <CardHeader className="p-5 pb-0">
+          <CardTitle className="text-base font-semibold">Tarification</CardTitle>
+        </CardHeader>
+        <CardContent className="p-5">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div>
+              <Label htmlFor="daily_price" className={labelClass}>Prix/jour (€) *</Label>
+              <Input
+                id="daily_price"
+                type="number"
+                name="daily_price"
+                value={dailyPrice}
+                onChange={e => setDailyPrice(e.target.value)}
+                required
+                step="0.01"
+                min="0"
+                inputMode="decimal"
+                enterKeyHint="next"
+              />
+            </div>
+            <div>
+              <Label htmlFor="km_included" className={labelClass}>KM inclus/jour</Label>
+              <Input
+                id="km_included"
+                type="number"
+                name="km_included"
+                defaultValue={selectedVehicle?.km_included_daily?.toString() ?? ''}
+                inputMode="numeric"
+                enterKeyHint="next"
+              />
+            </div>
+            <div>
+              <Label htmlFor="extra_km_price" className={labelClass}>Supplément KM (€/km)</Label>
+              <Input
+                id="extra_km_price"
+                type="number"
+                name="extra_km_price"
+                defaultValue={selectedVehicle?.extra_km_price?.toString() ?? ''}
+                step="0.01"
+                inputMode="decimal"
+                enterKeyHint="next"
+              />
+            </div>
+            <div>
+              <Label htmlFor="deposit_amount" className={labelClass}>Caution (€)</Label>
+              <Input
+                id="deposit_amount"
+                type="number"
+                name="deposit_amount"
+                defaultValue={selectedVehicle?.deposit_amount?.toString() ?? ''}
+                step="0.01"
+                inputMode="decimal"
+                enterKeyHint="next"
+              />
+            </div>
+            <div>
+              <Label htmlFor="deposit_method" className={labelClass}>Mode caution</Label>
+              <select id="deposit_method" name="deposit_method" className={selectClass}>
+                <option value="">— Choisir —</option>
+                <option value="especes">Espèces</option>
+                <option value="virement">Virement</option>
+                <option value="cb">Carte bancaire</option>
+                <option value="cheque">Chèque</option>
+              </select>
+            </div>
+            <div>
+              <Label htmlFor="deposit_ref" className={labelClass}>Référence caution</Label>
+              <Input id="deposit_ref" type="text" name="deposit_ref" enterKeyHint="next" />
+            </div>
+            <div>
+              <Label htmlFor="payment_amount" className={labelClass}>Acompte encaissé (€)</Label>
+              <Input
+                id="payment_amount"
+                type="number"
+                name="payment_amount"
+                value={acompte}
+                onChange={e => setAcompte(e.target.value)}
+                step="0.01"
+                min="0"
+                placeholder="0"
+                inputMode="decimal"
+                enterKeyHint="done"
+              />
+            </div>
+          </div>
+
+          {/* Réduction manuelle (montant fixe en €), déduite du total */}
+          <div className="mt-4">
+            <Label htmlFor="discount_amount" className={labelClass}>Réduction (€)</Label>
+            <Input
+              id="discount_amount"
               type="number"
-              name="daily_price"
-              value={dailyPrice}
-              onChange={e => setDailyPrice(e.target.value)}
-              required
-              step="0.01"
-              min="0"
-              inputMode="decimal"
-              enterKeyHint="next"
-              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-[11px] font-bold text-gray-400 mb-1.5 uppercase tracking-wide">KM inclus/jour</label>
-            <input
-              type="number"
-              name="km_included"
-              defaultValue={selectedVehicle?.km_included_daily?.toString() ?? ''}
-              inputMode="numeric"
-              enterKeyHint="next"
-              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-[11px] font-bold text-gray-400 mb-1.5 uppercase tracking-wide">Supplément KM (€/km)</label>
-            <input
-              type="number"
-              name="extra_km_price"
-              defaultValue={selectedVehicle?.extra_km_price?.toString() ?? ''}
-              step="0.01"
-              inputMode="decimal"
-              enterKeyHint="next"
-              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-[11px] font-bold text-gray-400 mb-1.5 uppercase tracking-wide">Caution (€)</label>
-            <input
-              type="number"
-              name="deposit_amount"
-              defaultValue={selectedVehicle?.deposit_amount?.toString() ?? ''}
-              step="0.01"
-              inputMode="decimal"
-              enterKeyHint="next"
-              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-[11px] font-bold text-gray-400 mb-1.5 uppercase tracking-wide">Mode caution</label>
-            <select
-              name="deposit_method"
-              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white"
-            >
-              <option value="">— Choisir —</option>
-              <option value="especes">Espèces</option>
-              <option value="virement">Virement</option>
-              <option value="cb">Carte bancaire</option>
-              <option value="cheque">Chèque</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-[11px] font-bold text-gray-400 mb-1.5 uppercase tracking-wide">Référence caution</label>
-            <input
-              type="text"
-              name="deposit_ref"
-              enterKeyHint="next"
-              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-[11px] font-bold text-gray-400 mb-1.5 uppercase tracking-wide">Acompte encaissé (€)</label>
-            <input
-              type="number"
-              name="payment_amount"
-              value={acompte}
-              onChange={e => setAcompte(e.target.value)}
+              name="discount_amount"
+              value={discount}
+              onChange={e => setDiscount(e.target.value)}
               step="0.01"
               min="0"
               placeholder="0"
               inputMode="decimal"
               enterKeyHint="done"
-              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm"
             />
           </div>
-        </div>
 
-        {/* Réduction manuelle (montant fixe en €), déduite du total */}
-        <div className="mt-1">
-          <label className="block text-[11px] font-bold text-gray-400 mb-1.5 uppercase tracking-wide">Réduction (€)</label>
-          <input
-            type="number"
-            name="discount_amount"
-            value={discount}
-            onChange={e => setDiscount(e.target.value)}
-            step="0.01"
-            min="0"
-            placeholder="0"
-            inputMode="decimal"
-            enterKeyHint="done"
-            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm"
-          />
-        </div>
-
-        {totalPrice > 0 && (
-          <div className="mt-4 p-4 bg-gray-50 rounded-xl border border-gray-100 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-blue-800">Total estimé ({days} jour{days > 1 ? 's' : ''})</span>
-              <span className={discountNum > 0 ? 'text-base font-bold text-blue-900 line-through opacity-60' : 'text-xl font-bold text-blue-900'}>{formatPrice(totalPrice)}</span>
-            </div>
-            {discountNum > 0 && (
-              <>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-green-700">Réduction</span>
-                  <span className="text-sm font-bold text-green-700">− {formatPrice(discountNum)}</span>
-                </div>
-                <div className="flex items-center justify-between pt-2 border-t border-blue-100">
-                  <span className="text-sm font-medium text-blue-800">Total après réduction</span>
-                  <span className="text-xl font-bold text-blue-900">{formatPrice(netTotal)}</span>
-                </div>
-              </>
-            )}
-            {Number(acompte) > 0 && (
-              <div className="flex items-center justify-between pt-2 border-t border-blue-100">
-                <span className="text-sm font-medium text-blue-700">Reste à payer (acompte {formatPrice(Number(acompte))})</span>
-                <span className="text-lg font-bold text-blue-900">{formatPrice(Math.max(0, netTotal - Number(acompte)))}</span>
+          {totalPrice > 0 && (
+            <div className="mt-4 space-y-2 rounded-md border border-border bg-muted p-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-muted-foreground">Total estimé ({days} jour{days > 1 ? 's' : ''})</span>
+                <span className={discountNum > 0 ? 'text-base font-bold text-foreground line-through opacity-50' : 'text-xl font-bold text-foreground'}>{formatPrice(totalPrice)}</span>
               </div>
-            )}
-          </div>
-        )}
-      </div>
+              {discountNum > 0 && (
+                <>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-green-700">Réduction</span>
+                    <span className="text-sm font-bold text-green-700">− {formatPrice(discountNum)}</span>
+                  </div>
+                  <div className="flex items-center justify-between border-t border-border pt-2">
+                    <span className="text-sm font-medium text-foreground">Total après réduction</span>
+                    <span className="text-xl font-bold text-foreground">{formatPrice(netTotal)}</span>
+                  </div>
+                </>
+              )}
+              {Number(acompte) > 0 && (
+                <div className="flex items-center justify-between border-t border-border pt-2">
+                  <span className="text-sm font-medium text-muted-foreground">Reste à payer (acompte {formatPrice(Number(acompte))})</span>
+                  <span className="text-lg font-bold text-foreground">{formatPrice(Math.max(0, netTotal - Number(acompte)))}</span>
+                </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Notes */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-        <h3 className="font-bold text-gray-900 mb-3">Notes internes</h3>
-        <textarea
-          name="internal_notes"
-          rows={2}
-          placeholder="Observations, demandes spéciales..."
-          className="w-full px-4 py-3 rounded-xl border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm resize-none"
-        />
-      </div>
+      <Card>
+        <CardHeader className="p-5 pb-0">
+          <CardTitle className="text-base font-semibold">Notes internes</CardTitle>
+        </CardHeader>
+        <CardContent className="p-5">
+          <Textarea
+            name="internal_notes"
+            rows={2}
+            placeholder="Observations, demandes spéciales..."
+            className="resize-none"
+          />
+        </CardContent>
+      </Card>
 
-      <p className="text-[11px] text-gray-400">* Champ obligatoire</p>
-      <button
-        type="submit"
-        disabled={pending || dossierBlocked}
-        className="px-6 py-3 bg-[#111111] hover:bg-gray-800 disabled:opacity-40 text-white font-semibold rounded-xl transition-all active:scale-[.97] text-sm"
-      >
+      <p className="text-[11px] text-muted-foreground">* Champ obligatoire</p>
+      <Button type="submit" disabled={pending || dossierBlocked} size="lg">
         {pending ? 'Création...' : 'Créer la réservation'}
-      </button>
+      </Button>
     </form>
   )
 }

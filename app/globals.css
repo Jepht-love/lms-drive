@@ -48,21 +48,57 @@ input, textarea, [contenteditable="true"] {
   /* Borders */
   --border:        #E5E7EB;
 
-  /* Accent — NOIR logo LMS Drive */
-  --accent:        #111111;
-
   /* Status fonctionnel */
   --green:         #16A34A;
   --orange:        #D97706;
   --red:           #DC2626;
   --blue:          #2563EB;
   --badge-red:     #EF4444;
+
+  /* ── Tokens shadcn/ui — mappés sur la charte LMS Drive (noir/blanc/gris) ──
+     Rien ne les référençait avant : les câbler n'affecte aucun écran existant,
+     ça active seulement les primitives components/ui/* (Button, Card, Input…). */
+  --card:               #FFFFFF;
+  --card-foreground:    #111111;
+  --popover:            #FFFFFF;
+  --popover-foreground: #111111;
+  --primary:            #111111;   /* noir logo LMS Drive */
+  --primary-foreground: #FFFFFF;
+  --secondary:            #F1F1F1;
+  --secondary-foreground: #111111;
+  --muted:            #F1F1F1;
+  --muted-foreground: #6B7280;
+  --accent:            #F4F4F5;    /* survol clair (sémantique shadcn) */
+  --accent-foreground: #111111;
+  --destructive:            #DC2626;
+  --destructive-foreground: #FFFFFF;
+  --input: #E5E7EB;
+  --ring:  #111111;
 }
 
 @theme inline {
   --color-background: var(--bg);
   --color-foreground: var(--text-primary);
   --font-sans: var(--font-inter);
+
+  /* Tokens shadcn/ui exposés aux utilitaires (bg-primary, border-input, ring-ring…) */
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
 }
 
 /* Rayons resserrés (Jepht 23/07/2026) : fini les grosses formes « bulle »,

@@ -13,6 +13,10 @@ import { useState } from 'react'
  * - contrôlé : `value` + `onChange` (valeur combinée « YYYY-MM-DDTHH:mm ») ;
  * - formulaire : `name` (+ `defaultValue`) — un input caché porte la valeur
  *   combinée, lisible côté serveur exactement comme l'ancien datetime-local.
+ *
+ * `grouped` (opt-in) : date + heure dans UN seul champ bordé avec un séparateur
+ * fin — aspect shadcn cohérent (les deux ne ressemblent plus à deux boîtes qui
+ * s'entrechoquent). Le rendu par défaut (deux boîtes) est inchangé.
  */
 interface Props {
   value?: string
@@ -23,8 +27,10 @@ interface Props {
   disabled?: boolean
   /** Borne basse « YYYY-MM-DDTHH:mm » — seule la partie date est appliquée. */
   min?: string
-  /** Classes des deux inputs visibles (bordure, padding, focus…) — sans largeur. */
+  /** Classes des deux inputs visibles (bordure, padding, focus…) — sans largeur. Ignoré en mode `grouped`. */
   className?: string
+  /** Regroupe date + heure dans un seul champ bordé (séparateur fin) — style shadcn. */
+  grouped?: boolean
 }
 
 export default function DateTimeField({
@@ -36,6 +42,7 @@ export default function DateTimeField({
   disabled,
   min,
   className = '',
+  grouped = false,
 }: Props) {
   const controlled = value !== undefined
   const init = (controlled ? value : defaultValue) ?? ''
@@ -60,9 +67,45 @@ export default function DateTimeField({
     onChange?.(d && t ? `${d}T${t}` : '')
   }
 
-  const inputCls = `w-full min-w-0 ${className}`
   const combined = date && time ? `${date}T${time}` : ''
+  const hidden = name ? <input type="hidden" name={name} value={combined} /> : null
+  const minDate = min ? min.slice(0, 10) : undefined
 
+  // ── Mode groupé : un seul champ pro (date | séparateur | heure) ──────────────
+  if (grouped) {
+    const inner =
+      'bg-transparent border-0 outline-none px-3 py-2.5 text-sm text-gray-900 disabled:text-gray-400'
+    return (
+      <div
+        className={`flex items-stretch rounded-xl border border-gray-200 bg-white overflow-hidden transition focus-within:border-gray-300 focus-within:ring-2 focus-within:ring-black/15 ${
+          disabled ? 'opacity-60' : ''
+        }`}
+      >
+        <input
+          type="date"
+          value={date}
+          onChange={e => { setDate(e.target.value); emit(e.target.value, time) }}
+          required={required}
+          disabled={disabled}
+          min={minDate}
+          className={`flex-1 min-w-0 ${inner}`}
+        />
+        <div className="w-px bg-gray-200 my-1.5 flex-none" aria-hidden />
+        <input
+          type="time"
+          value={time}
+          onChange={e => { setTime(e.target.value); emit(date, e.target.value) }}
+          required={required}
+          disabled={disabled}
+          className={`w-[100px] flex-none text-center ${inner}`}
+        />
+        {hidden}
+      </div>
+    )
+  }
+
+  // ── Mode par défaut : deux boîtes séparées (inchangé) ────────────────────────
+  const inputCls = `w-full min-w-0 ${className}`
   return (
     <div className="flex gap-2">
       <div className="flex-1 min-w-0">
@@ -72,7 +115,7 @@ export default function DateTimeField({
           onChange={e => { setDate(e.target.value); emit(e.target.value, time) }}
           required={required}
           disabled={disabled}
-          min={min ? min.slice(0, 10) : undefined}
+          min={minDate}
           className={inputCls}
         />
       </div>
@@ -86,7 +129,7 @@ export default function DateTimeField({
           className={inputCls}
         />
       </div>
-      {name && <input type="hidden" name={name} value={combined} />}
+      {hidden}
     </div>
   )
 }
