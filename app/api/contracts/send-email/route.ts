@@ -68,13 +68,39 @@ export async function POST(request: NextRequest) {
       ? contractRetourEmail({ ...parties, hasInvoice: !!invoiceAttachment })
       : contractDepartEmail({ ...parties, totalPrice: r?.total_price })
 
-    await resend.emails.send({
+    // Resend ne LÈVE PAS d'exception quand il refuse un envoi (domaine non
+    // vérifié, pièce jointe trop lourde, quota…) : il renvoie `{ data, error }`.
+    // Il FAUT donc inspecter `error`, sinon on marque « envoyé » un mail qui n'est
+    // jamais parti (cause du « le mail ne s'envoie pas » alors que la route rend 200).
+    const { error: sendError } = await resend.emails.send({
       from: RESEND_FROM,
       to: resendTo(c.email),
       subject: mail.subject,
       html: mail.html,
       attachments,
     })
+
+    if (sendError) {
+      // Échec réel : NE PAS marquer « envoyé » (ni le contrat, ni la facture).
+      // On journalise l'échec avec le message Resend et on le remonte au gérant.
+      const totalMo = (attachments.reduce((s, a) => s + a.content.length, 0) / (1024 * 1024)).toFixed(1)
+      console.error(`Resend send error (contract ${contractId}, pièces jointes ${totalMo} Mo):`, sendError)
+      await logEmail({
+        type: hasArrivee ? 'contrat_restitution' : 'contrat_location',
+        recipient: c.email,
+        subject: mail.subject,
+        status: 'echec',
+        error: sendError.message,
+        referenceType: 'contract',
+        referenceId: contractId,
+        clientId: c.id,
+        sentBy: user.id,
+      })
+      return NextResponse.json(
+        { error: `L'email n'a pas pu être envoyé : ${sendError.message}` },
+        { status: 502 }
+      )
+    }
 
     // L'email (contrat + éventuelle facture) est parti : on fige maintenant l'état
     // « envoyée » de la facture (archive, échéance, audit) — jamais avant.
