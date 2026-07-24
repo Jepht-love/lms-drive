@@ -28,16 +28,24 @@ export default function VehiclesGridSwipeable({
   needsByVehicle = {},
   returnDateByVehicle = {},
   nextStartByVehicle = {},
+  engagedVehicleIds = [],
 }: {
   vehicles: Vehicle[]
   needsByVehicle?: Record<string, NeedBadge[]>
   returnDateByVehicle?: Record<string, string>
   nextStartByVehicle?: Record<string, string>
+  /** Véhicules dont une réservation a déjà démarré (départ passé, non clôturée). */
+  engagedVehicleIds?: string[]
 }) {
   return (
     <AnimatedList className="grid sm:grid-cols-2 gap-3 items-stretch">
       {vehicles.map(v => {
-        const cfg = STATUS_CONFIG[v.status] ?? STATUS_CONFIG.hors_service
+        // « disponible » mais engagé (réservation démarrée, EDL de départ non fait) =
+        // en réalité sorti → affiché comme « Loué » (badge + bouton « Réserver après »
+        // au lieu du « Réserver » qui laisserait croire qu'il est libre maintenant).
+        const isEngaged = engagedVehicleIds.includes(v.id)
+        const displayStatus = isEngaged && v.status === 'disponible' ? 'loue' : v.status
+        const cfg = STATUS_CONFIG[displayStatus] ?? STATUS_CONFIG.hors_service
         const badges = needsByVehicle[v.id] ?? []
 
         return (
@@ -101,7 +109,7 @@ export default function VehiclesGridSwipeable({
                   )}
                 </div>
               </Link>
-              {v.status === 'disponible' && (
+              {displayStatus === 'disponible' && (
                 <Link
                   href={`/reservations/new?vehicle=${v.id}`}
                   className="flex items-center justify-center gap-2 border-t border-gray-50 py-3 text-sm font-bold text-green-700 bg-green-50/40 hover:bg-green-50 transition-colors active:scale-[.99]"
@@ -109,7 +117,7 @@ export default function VehiclesGridSwipeable({
                   <Plus className="w-4 h-4" /> Réserver
                 </Link>
               )}
-              {['loue', 'reserve'].includes(v.status) && (
+              {['loue', 'reserve'].includes(displayStatus) && (
                 <div className="border-t border-gray-50">
                   {v.status === 'reserve' && nextStartByVehicle[v.id] ? (
                     <p className="text-center text-xs text-gray-400 pt-2">

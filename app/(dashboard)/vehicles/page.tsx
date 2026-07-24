@@ -322,7 +322,7 @@ export default async function VehiclesPage({
           </Link>
         </div>
       ) : (
-        <VehiclesGridSwipeable vehicles={vehicles} needsByVehicle={needsByVehicle} returnDateByVehicle={returnDateByVehicle} nextStartByVehicle={nextStartByVehicle} />
+        <VehiclesGridSwipeable vehicles={vehicles} needsByVehicle={needsByVehicle} returnDateByVehicle={returnDateByVehicle} nextStartByVehicle={nextStartByVehicle} engagedVehicleIds={[...engagedVehicleIds]} />
       )}
     </div>
   )
