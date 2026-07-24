@@ -95,15 +95,23 @@ export default function ProlongReservation({
     )
   }
 
+  // Panneau « dark glass » (style shadcn) — cohérent avec « Modifier tarif » :
+  // translucide, s'adapte à tous les fonds de hero, aucune boîte blanche.
+  const labelCls = 'block text-[11px] font-bold uppercase tracking-wide text-white/50 mb-1'
+  const inputCls = 'w-full min-w-0 rounded-xl border border-white/15 bg-white/5 px-3 py-2.5 text-sm text-white [color-scheme:dark] outline-none transition focus:border-white/25 focus:ring-2 focus:ring-white/10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none'
+
   return (
-    <div className="mt-3 p-4 bg-blue-50 border border-blue-200 rounded-xl space-y-3 w-full">
+    <div className="mt-3 p-4 bg-black/40 border border-white/15 rounded-2xl backdrop-blur-sm space-y-3 w-full max-w-xl">
       <div className="flex items-center gap-2">
-        <CalendarPlus className="w-4 h-4 text-blue-600 flex-shrink-0" />
-        <p className="text-sm font-semibold text-blue-800">Prolonger la location</p>
+        <CalendarPlus className="w-4 h-4 text-white/60 flex-shrink-0" />
+        <p className="text-sm font-bold text-white">Prolonger la location</p>
+        <button onClick={() => { setOpen(false); setError(null) }} className="ml-auto p-1.5 rounded-lg text-white/50 hover:bg-white/10 transition-colors" aria-label="Fermer">
+          <X className="w-4 h-4" />
+        </button>
       </div>
 
       {deadlinePassed ? (
-        <div className="flex items-start gap-2 text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5">
+        <div className="flex items-start gap-2 text-xs text-red-300 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2.5">
           <Clock className="w-4 h-4 flex-shrink-0 mt-0.5" />
           <span>
             Le délai de prolongation ({DEADLINE_HOURS} h avant la fin prévue, le {formatDateTime(endDatetime)})
@@ -114,61 +122,57 @@ export default function ProlongReservation({
         <>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs text-blue-700 font-medium uppercase tracking-wide mb-1">
-                Jours en plus
-              </label>
+              <label className={labelCls}>Jours en plus</label>
               <input
                 type="number" min="1" step="1" inputMode="numeric" placeholder="1" value={daysStr}
                 onChange={e => setDaysStr(e.target.value)}
-                className="w-full min-w-0 px-3 py-2 rounded-xl border border-blue-200 bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                className={inputCls}
               />
             </div>
             <div>
-              <label className="block text-xs text-blue-700 font-medium uppercase tracking-wide mb-1">
-                Prix / jour (€)
-              </label>
+              <label className={labelCls}>Prix / jour (€)</label>
               <input
                 type="number" min="0" step="0.01" inputMode="decimal" placeholder="0" value={priceStr}
                 onChange={e => setPriceStr(e.target.value)}
-                className="w-full min-w-0 px-3 py-2 rounded-xl border border-blue-200 bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                className={inputCls}
               />
             </div>
           </div>
 
-          <div className="bg-white border border-blue-200 rounded-xl px-3 py-2.5 space-y-1.5">
-            <div className="flex items-center justify-between text-xs text-gray-500">
+          <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 space-y-1.5">
+            <div className="flex items-center justify-between text-xs text-white/60">
               <span>Nouvelle fin</span>
-              <span className="font-semibold text-gray-800">{formatDateTime(newEnd)}</span>
+              <span className="font-semibold text-white">{formatDateTime(newEnd)}</span>
             </div>
             {addedKm > 0 && (
-              <div className="flex items-center justify-between text-xs text-gray-500">
+              <div className="flex items-center justify-between text-xs text-white/60">
                 <span>Km inclus en plus ({kmIncludedDaily} km/j × {days})</span>
-                <span className="font-semibold text-gray-800">+{addedKm.toLocaleString('fr-FR')} km</span>
+                <span className="font-semibold text-white">+{addedKm.toLocaleString('fr-FR')} km</span>
               </div>
             )}
-            <div className="flex items-center justify-between text-xs border-t border-gray-100 pt-1.5">
-              <span className="text-gray-500">Nouveau total ({totalDays} j)</span>
-              <span className="font-bold text-blue-700 text-sm">{formatPrice(newTotal)}</span>
+            <div className="flex items-center justify-between text-xs border-t border-white/10 pt-1.5">
+              <span className="text-white/60">Nouveau total ({totalDays} j)</span>
+              <span className="font-bold text-white text-sm">{formatPrice(newTotal)}</span>
             </div>
             {added !== 0 && (
-              <div className="text-xs font-medium text-emerald-600">
+              <div className="text-xs font-medium text-emerald-300">
                 {added > 0 ? '+' : ''}{formatPrice(added)} vs total actuel ({formatPrice(currentTotal)})
               </div>
             )}
           </div>
 
-          <div className="flex items-start gap-2 text-xs text-blue-700">
+          <div className="flex items-start gap-2 text-xs text-amber-300">
             <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
             <span>Prolongation possible jusqu&apos;à {DEADLINE_HOURS} h avant la fin prévue. Au-delà : nouvelle réservation.</span>
           </div>
         </>
       )}
 
-      {error && <p className="text-xs text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
+      {error && <p className="text-xs text-red-300 bg-red-500/10 border border-red-500/20 px-3 py-2 rounded-lg">{error}</p>}
 
       {saved ? (
         <div className="space-y-2">
-          <div className="flex items-start gap-2 text-xs text-green-800 bg-green-50 border border-green-200 rounded-lg px-3 py-2.5">
+          <div className="flex items-start gap-2 text-xs text-emerald-300 bg-emerald-400/15 border border-emerald-400/20 rounded-lg px-3 py-2.5">
             <Check className="w-4 h-4 flex-shrink-0 mt-0.5" />
             <span>Prolongation enregistrée. Le prix du contrat est à jour (détail ajouté au PDF). Aucune nouvelle signature requise.</span>
           </div>
@@ -177,8 +181,8 @@ export default function ProlongReservation({
               <button
                 onClick={handleResend}
                 disabled={resending || resent}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all disabled:opacity-60 ${
-                  resent ? 'bg-green-100 text-green-700' : 'bg-blue-600 text-white hover:bg-blue-700'
+                className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all disabled:opacity-60 ${
+                  resent ? 'bg-emerald-400/15 text-emerald-300' : 'bg-white text-[#111111] hover:bg-white/90'
                 }`}
               >
                 {resending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Mail className="w-3.5 h-3.5" />}
@@ -187,7 +191,7 @@ export default function ProlongReservation({
             )}
             <button
               onClick={() => { setOpen(false); setSaved(false); setResent(false); setError(null) }}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium border border-blue-200 text-blue-700 hover:bg-blue-100 transition-colors"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium border border-white/20 text-white hover:bg-white/10 transition-colors"
             >
               <X className="w-3.5 h-3.5" /> Fermer
             </button>
@@ -199,7 +203,7 @@ export default function ProlongReservation({
             <button
               onClick={handleSave}
               disabled={loading || days < 1 || price <= 0}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all disabled:opacity-50 bg-blue-600 text-white hover:bg-blue-700"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all disabled:opacity-50 bg-white text-[#111111] hover:bg-white/90"
             >
               {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
               Confirmer la prolongation
@@ -207,7 +211,7 @@ export default function ProlongReservation({
           )}
           <button
             onClick={() => { setOpen(false); setError(null) }}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium border border-blue-200 text-blue-700 hover:bg-blue-100 transition-colors"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium border border-white/20 text-white hover:bg-white/10 transition-colors"
           >
             <X className="w-3.5 h-3.5" /> Fermer
           </button>

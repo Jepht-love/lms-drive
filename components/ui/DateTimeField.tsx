@@ -31,6 +31,8 @@ interface Props {
   className?: string
   /** Regroupe date + heure dans un seul champ bordé (séparateur fin) — style shadcn. */
   grouped?: boolean
+  /** En mode `grouped` : palette claire (défaut) ou sombre (panneaux sur fond foncé). */
+  tone?: 'light' | 'dark'
 }
 
 export default function DateTimeField({
@@ -43,6 +45,7 @@ export default function DateTimeField({
   min,
   className = '',
   grouped = false,
+  tone = 'light',
 }: Props) {
   const controlled = value !== undefined
   const init = (controlled ? value : defaultValue) ?? ''
@@ -73,14 +76,17 @@ export default function DateTimeField({
 
   // ── Mode groupé : un seul champ pro (date | séparateur | heure) ──────────────
   if (grouped) {
-    const inner =
-      'bg-transparent border-0 outline-none px-3 py-2.5 text-sm text-gray-900 disabled:text-gray-400'
+    const dark = tone === 'dark'
+    // color-scheme:dark → les widgets natifs date/heure de WebKit s'affichent en clair.
+    const inner = dark
+      ? 'bg-transparent border-0 outline-none px-3 py-2.5 text-sm text-white [color-scheme:dark] disabled:text-white/40'
+      : 'bg-transparent border-0 outline-none px-3 py-2.5 text-sm text-gray-900 disabled:text-gray-400'
+    const container = dark
+      ? 'flex items-stretch rounded-xl border border-white/15 bg-white/5 overflow-hidden transition focus-within:border-white/25 focus-within:ring-2 focus-within:ring-white/10'
+      : 'flex items-stretch rounded-xl border border-gray-200 bg-white overflow-hidden transition focus-within:border-gray-300 focus-within:ring-2 focus-within:ring-black/15'
+    const sep = dark ? 'w-px bg-white/15 my-1.5 flex-none' : 'w-px bg-gray-200 my-1.5 flex-none'
     return (
-      <div
-        className={`flex items-stretch rounded-xl border border-gray-200 bg-white overflow-hidden transition focus-within:border-gray-300 focus-within:ring-2 focus-within:ring-black/15 ${
-          disabled ? 'opacity-60' : ''
-        }`}
-      >
+      <div className={`${container} ${disabled ? 'opacity-60' : ''}`}>
         <input
           type="date"
           value={date}
@@ -90,7 +96,7 @@ export default function DateTimeField({
           min={minDate}
           className={`flex-1 min-w-0 ${inner}`}
         />
-        <div className="w-px bg-gray-200 my-1.5 flex-none" aria-hidden />
+        <div className={sep} aria-hidden />
         <input
           type="time"
           value={time}
