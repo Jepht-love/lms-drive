@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation'
 import { format, addDays, startOfDay, startOfWeek, isSameDay } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import {
-  ArrowLeft, Phone, Mail, Calendar, Briefcase,
+  ArrowLeft, Mail, Calendar,
   ChevronRight, Plus, CheckCircle2, Clock,
 } from 'lucide-react'
 import BackButton from '@/components/ui/BackButton'
@@ -153,20 +153,14 @@ export default async function MemberProfilePage({
           </div>
         </div>
 
-        <div className="mt-4 space-y-2">
+        <div className="mt-4 space-y-1.5">
           {member.phone && (
-            <div className="flex items-center gap-2.5">
-              <Phone className="w-4 h-4 text-gray-300 flex-shrink-0" />
-              <a href={`tel:${member.phone}`} className="text-sm text-gray-700 font-medium leading-4">{member.phone}</a>
-            </div>
+            <a href={`tel:${member.phone}`} className="block text-sm text-gray-700 font-medium">{member.phone}</a>
           )}
           {member.hire_date && (
-            <div className="flex items-center gap-2.5">
-              <Briefcase className="w-4 h-4 text-gray-300 flex-shrink-0" />
-              <p className="text-sm text-gray-500 leading-4">
-                Embauché le {format(new Date(member.hire_date), 'd MMMM yyyy', { locale: fr })}
-              </p>
-            </div>
+            <p className="text-sm text-gray-500">
+              Embauché le {format(new Date(member.hire_date), 'd MMMM yyyy', { locale: fr })}
+            </p>
           )}
         </div>
       </div>

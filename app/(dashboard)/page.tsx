@@ -190,7 +190,7 @@ export default async function DashboardPage() {
   const disponibles    = vehicles?.filter(v => ['disponible', 'reserve'].includes(v.status) && !engagedVehicleIds.has(v.id)).length ?? 0
   // « En location » = réellement engagé : loué / mis à disposition, OU réservé dont
   // le départ est déjà passé (client parti ou à récupérer). C'est le taux d'occupation.
-  const enLocation     = vehicles?.filter(v => ['loue', 'mis_a_disposition'].includes(v.status) || (v.status === 'reserve' && engagedVehicleIds.has(v.id))).length ?? 0
+  const enLocation     = vehicles?.filter(v => ['loue', 'mis_a_disposition'].includes(v.status) || (['disponible', 'reserve'].includes(v.status) && engagedVehicleIds.has(v.id))).length ?? 0
   // « mis_a_disposition » exclu : chez partenaire ≠ immobilisé (aligné avec la
   // page Flotte, où il a sa propre pastille « Chez partenaire »).
   const immobilises    = vehicles?.filter(v =>

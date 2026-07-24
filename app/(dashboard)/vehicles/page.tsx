@@ -72,7 +72,7 @@ export default async function VehiclesPage({
     .lte('start_datetime', nowIso)
   const engagedVehicleIds = new Set((startedRes ?? []).map(r => r.vehicle_id as string))
   const isDisponibleV = (v: Vehicle) => DISPONIBLE_STATUSES.includes(v.status) && !engagedVehicleIds.has(v.id)
-  const isEnLocationV = (v: Vehicle) => EN_LOCATION_STATUSES.includes(v.status) || (v.status === 'reserve' && engagedVehicleIds.has(v.id))
+  const isEnLocationV = (v: Vehicle) => EN_LOCATION_STATUSES.includes(v.status) || (DISPONIBLE_STATUSES.includes(v.status) && engagedVehicleIds.has(v.id))
 
   // Date de retour (la plus tardive parmi les réservations actives/à venir non
   // annulées) pour chaque véhicule loué/réservé — affichée au-dessus du bouton
