@@ -22,6 +22,9 @@ const CREME = '#FAF7F0'
 const INK = '#111111'
 const MUTE = '#6B7280'
 const BORDER = '#E5E7EB'
+// Logo LMS (blanc) hébergé sur la prod — les clients mail exigent une URL publique
+// (jamais localhost, même pour un envoi depuis l'environnement de dev).
+const LOGO_BLANC = 'https://lms-drive.vercel.app/logo-white.png'
 
 function esc(s: string | null | undefined): string {
   return String(s ?? '')
@@ -60,8 +63,8 @@ function contactInline(agency: Agency): string {
 // Coordonnées d'assistance affichées « en cas de souci » dans TOUS les emails
 // de location adressés au client (départ, retour, relance retard). Source unique.
 const SUPPORT_EMAIL = 'LMS.drive.pro@gmail.com'
-const SUPPORT_TEL_DISPLAY = '06 65 74 40 09'
-const SUPPORT_TEL_HREF = '+33665744009'
+const SUPPORT_TEL_DISPLAY = '+33 7 44 14 51 50'
+const SUPPORT_TEL_HREF = '+33744145150'
 
 /** Encadré « Un souci ? » — contact SAV commun à tous les emails clients. */
 export function supportContactBlock(): string {
@@ -98,9 +101,9 @@ function layout(opts: {
     <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:100%;background:#FFFFFF;border-radius:14px;overflow:hidden;font-family:Arial,Helvetica,sans-serif;">
 
       <!-- En-tête -->
-      <tr><td style="background:${NOIR};padding:30px 32px;text-align:center;">
-        <div style="font-size:26px;font-weight:800;letter-spacing:4px;color:${OR};">LMS DRIVE</div>
-        <div style="font-size:11px;letter-spacing:2px;color:#9CA3AF;text-transform:uppercase;margin-top:6px;">Location de véhicules</div>
+      <tr><td style="background:${NOIR};padding:28px 32px;text-align:center;">
+        <img src="${LOGO_BLANC}" alt="LMS DRIVE" width="160" style="display:inline-block;width:160px;max-width:65%;height:auto;border:0;" />
+        <div style="font-size:11px;letter-spacing:2px;color:#9CA3AF;text-transform:uppercase;margin-top:8px;">Location de véhicules</div>
       </td></tr>
       <tr><td style="height:4px;background:${OR};background:linear-gradient(90deg,${OR},${OR_CLAIR});font-size:0;line-height:0;">&nbsp;</td></tr>
 
@@ -121,8 +124,8 @@ function layout(opts: {
       </td></tr>
 
       <!-- Pied de page -->
-      <tr><td style="background:${NOIR};padding:24px 32px;text-align:center;">
-        <div style="font-size:15px;font-weight:700;letter-spacing:3px;color:${OR};">LMS DRIVE</div>
+      <tr><td style="background:${NOIR};padding:22px 32px;text-align:center;">
+        <img src="${LOGO_BLANC}" alt="LMS DRIVE" width="96" style="display:inline-block;width:96px;height:auto;border:0;margin-bottom:2px;" />
         ${agency?.companyName ? `<div style="color:#D1D5DB;font-size:12px;margin-top:8px;">${esc(agency.companyName)}</div>` : ''}
         ${contact ? `<div style="color:#9CA3AF;font-size:12px;margin-top:4px;">${contact}</div>` : ''}
         ${adresse ? `<div style="color:#9CA3AF;font-size:12px;margin-top:4px;">${adresse}</div>` : ''}
@@ -250,9 +253,6 @@ export function contractRetourEmail(p: Partie & { hasInvoice: boolean }): {
  * de location », remplacée par une note propre au compte collaborateur.
  */
 
-/** Logo hébergé sur la prod (les clients mail exigent une URL publique ;
- *  jamais localhost, même pour un envoi depuis l'environnement de dev). */
-const LOGO_BLANC = 'https://lms-drive.vercel.app/logo-white.png'
 export function inviteEmail(p: {
   /** Nom de la personne qui invite (ex. le gérant). */
   inviterName: string
