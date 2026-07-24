@@ -28,10 +28,28 @@
 export const RESEND_FROM = 'LMS Drive <no-reply@sas-financial-services.com>'
 
 /**
- * Destinataire effectif : la boîte de démo si `RESEND_DEMO_TO` est définie,
- * sinon le vrai destinataire. Permet en mode test de garantir la délivrance
- * sans dépendre de l'adresse du client.
+ * ⛔️ COUPE-CIRCUIT TEST — envois clients SUSPENDUS (24/07/2026, demande Jepht).
+ *
+ * Tant que `EMAILS_TEST_MODE` est à `true`, TOUS les emails (contrat, facture,
+ * relance, invitation, notifications…) sont redirigés vers `EMAILS_TEST_INBOX` :
+ * AUCUN client ne reçoit quoi que ce soit, mais Jepht continue de voir passer les
+ * emails pour vérifier le rendu et le flux pendant les tests.
+ *
+ * ▶️ POUR RÉACTIVER LES ENVOIS RÉELS : repasser `EMAILS_TEST_MODE` à `false`
+ * (une seule ligne), commit + push. Rien d'autre à toucher.
+ *
+ * Ce garde-fou est central : les 7 points d'envoi passent tous par `resendTo()`.
+ * NB : les emails d'authentification Supabase (lien d'invitation/reset) ne
+ * transitent PAS par ici — ils partent du service Auth Supabase directement.
+ */
+const EMAILS_TEST_MODE = true
+const EMAILS_TEST_INBOX = 'akpadjijepht@gmail.com'
+
+/**
+ * Destinataire effectif. En mode test → boîte de test unique (aucun client servi).
+ * Sinon : la boîte de démo si `RESEND_DEMO_TO` est définie, sinon le vrai client.
  */
 export function resendTo(realRecipient: string): string {
+  if (EMAILS_TEST_MODE) return EMAILS_TEST_INBOX
   return process.env.RESEND_DEMO_TO || realRecipient
 }
