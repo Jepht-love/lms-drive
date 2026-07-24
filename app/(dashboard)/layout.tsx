@@ -21,7 +21,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
     .eq('id', user.id)
     .single()
 
-  if (!profile) return <ClientRedirect to="/login" />
+  // Compte authentifié SANS profil : ne pas renvoyer vers /login (le proxy
+  // renverrait aussitôt vers / puisqu'une session existe → boucle infinie
+  // « Chargement… »). On l'envoie finaliser son espace, qui (re)crée le profil.
+  if (!profile) return <ClientRedirect to="/auth/bienvenue" />
 
   // Permissions par onglet — requête séparée tolérante à l'absence de la colonne.
   // Appliquée seulement aux membres restreints (les managers voient tout).

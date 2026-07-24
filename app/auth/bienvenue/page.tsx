@@ -21,5 +21,5 @@ export default async function BienvenuePage() {
     fullName = profile?.full_name ?? null
   }
 
-  return <BienvenueForm prenom={fullName?.split(' ')[0] ?? null} />
+  return <BienvenueForm prenom={fullName?.split(' ')[0] ?? null} fullName={fullName} />
 }

@@ -4,9 +4,17 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
+import { completeOnboarding } from '@/lib/actions/auth'
 
-/** Formulaire de choix du mot de passe — le prénom arrive du serveur (pas de flash). */
-export default function BienvenueForm({ prenom }: { prenom: string | null }) {
+/**
+ * Formulaire d'onboarding : le membre choisit le **nom affiché** dans
+ * l'application et son **mot de passe**. Le nom et le prénom arrivent du
+ * serveur (pas de flash). Après l'enregistrement du mot de passe, on finalise
+ * le profil côté serveur (completeOnboarding) AVANT d'entrer dans l'app : cela
+ * garantit qu'une ligne `profiles` existe et évite la boucle « Chargement… ».
+ */
+export default function BienvenueForm({ prenom, fullName }: { prenom: string | null; fullName: string | null }) {
+  const [nom, setNom] = useState(fullName ?? '')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -18,6 +26,10 @@ export default function BienvenueForm({ prenom }: { prenom: string | null }) {
     e.preventDefault()
     setError(null)
 
+    if (nom.trim().length < 2) {
+      setError('Indiquez le nom qui sera affiché dans l’application.')
+      return
+    }
     if (password.length < 8) {
       setError('Le mot de passe doit contenir au moins 8 caractères.')
       return
@@ -31,6 +43,13 @@ export default function BienvenueForm({ prenom }: { prenom: string | null }) {
     const { error } = await supabase.auth.updateUser({ password })
     if (error) {
       setError("Impossible d'enregistrer le mot de passe. Réessayez ou demandez une nouvelle invitation.")
+      setLoading(false)
+      return
+    }
+    // Enregistre le nom visible et garantit le profil (sinon l'app boucle sur « Chargement… »).
+    const res = await completeOnboarding(nom)
+    if (res?.error) {
+      setError(res.error)
       setLoading(false)
       return
     }
@@ -58,11 +77,27 @@ export default function BienvenueForm({ prenom }: { prenom: string | null }) {
             {prenom ? `Bienvenue, ${prenom}` : 'Bienvenue'}
           </h1>
           <p className="text-sm" style={{ color: '#9A9A98' }}>
-            Votre espace est prêt. Choisissez votre mot de passe pour y accéder.
+            Votre espace est prêt. Vérifiez le nom qui vous représentera et choisissez votre mot de passe.
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
+          <div>
+            <label htmlFor="nom" className="block text-xs font-medium mb-2 uppercase tracking-widest" style={{ color: '#9A9A98' }}>
+              Nom affiché
+            </label>
+            <input
+              id="nom" type="text" value={nom}
+              onChange={e => setNom(e.target.value)} required
+              autoComplete="name"
+              placeholder="Prénom Nom"
+              className="w-full px-4 py-3.5 rounded-xl text-white placeholder-white/20 text-sm transition-all outline-none"
+              style={{ background: '#1A1A1A', border: '1px solid #2A2A2A', color: '#fff' }}
+              onFocus={e => e.target.style.borderColor = '#C4A35A'}
+              onBlur={e => e.target.style.borderColor = '#2A2A2A'}
+            />
+          </div>
+
           <div>
             <label htmlFor="password" className="block text-xs font-medium mb-2 uppercase tracking-widest" style={{ color: '#9A9A98' }}>
               Mot de passe
