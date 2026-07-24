@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import DatePickerField from '@/components/ui/DatePickerField'
 
 /**
  * Champ date + heure SÉPARÉS — remplace partout input[type=datetime-local].
@@ -87,13 +88,13 @@ export default function DateTimeField({
     const sep = dark ? 'w-px bg-white/15 my-1.5 flex-none' : 'w-px bg-gray-200 my-1.5 flex-none'
     return (
       <div className={`${container} ${disabled ? 'opacity-60' : ''}`}>
-        <input
-          type="date"
+        <DatePickerField
           value={date}
-          onChange={e => { setDate(e.target.value); emit(e.target.value, time) }}
+          onChange={d => { setDate(d); emit(d, time) }}
           required={required}
           disabled={disabled}
           min={minDate}
+          tone={dark ? 'dark' : 'light'}
           className={`flex-1 min-w-0 ${inner}`}
         />
         <div className={sep} aria-hidden />
@@ -115,10 +116,9 @@ export default function DateTimeField({
   return (
     <div className="flex gap-2">
       <div className="flex-1 min-w-0">
-        <input
-          type="date"
+        <DatePickerField
           value={date}
-          onChange={e => { setDate(e.target.value); emit(e.target.value, time) }}
+          onChange={d => { setDate(d); emit(d, time) }}
           required={required}
           disabled={disabled}
           min={minDate}
