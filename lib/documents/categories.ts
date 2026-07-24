@@ -32,10 +32,11 @@ export const DOCUMENT_SUBCATEGORIES: Record<DocumentCategory, { id: string; labe
     // des lieux inclus) vivent dans l'onglet « Contrats et factures » généré
     // automatiquement par réservation, plus dans les pièces client.
     { id: 'cni',                  label: "Carte nationale d'identité (CNI)" },
+    { id: 'permis',               label: 'Permis de conduire' },
+    { id: 'cni_permis',           label: 'CNI + permis (même photo)' },
     { id: 'passeport',            label: 'Passeport' },
     { id: 'titre_sejour',         label: 'Titre de séjour' },
     { id: 'justif_domicile',      label: 'Justificatif de domicile' },
-    { id: 'permis',               label: 'Permis de conduire' },
     { id: 'procuration',          label: 'Procuration' },
     { id: 'autres',               label: 'Autres' },
   ],
@@ -47,7 +48,7 @@ export const DOCUMENT_SUBCATEGORIES: Record<DocumentCategory, { id: string; labe
   ],
 }
 
-export const SENSITIVE_SUBCATEGORIES = ['cni', 'permis', 'passeport', 'titre_sejour']
+export const SENSITIVE_SUBCATEGORIES = ['cni', 'permis', 'cni_permis', 'passeport', 'titre_sejour']
 
 export function isExpiringSoon(date: string): boolean {
   const expiry = new Date(date)

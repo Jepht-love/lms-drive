@@ -58,7 +58,15 @@ export default function ImportTriageClient({
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [query, setQuery] = useState('')
   const [client, setClient] = useState<ClientLite | null>(null)
-  const [subcategory, setSubcategory] = useState('cni')
+  // Type de pièce : deux bascules indépendantes CNI / Permis (activables ENSEMBLE
+  // pour une photo qui contient les deux → type combiné « cni_permis »). Un type
+  // « Autre… » (otherSub) prend le dessus pour les cas rares et coupe les bascules.
+  const [quickCni, setQuickCni] = useState(true)
+  const [quickPermis, setQuickPermis] = useState(false)
+  const [otherSub, setOtherSub] = useState<string | null>(null)
+  const subcategory =
+    otherSub ??
+    (quickCni && quickPermis ? 'cni_permis' : quickCni ? 'cni' : quickPermis ? 'permis' : '')
   const [assigning, setAssigning] = useState(false)
   const [assignError, setAssignError] = useState<string | null>(null)
 
@@ -142,7 +150,9 @@ export default function ImportTriageClient({
     setSelected(new Set())
     setClient(null)
     setQuery('')
-    setSubcategory('cni')
+    setQuickCni(true)
+    setQuickPermis(false)
+    setOtherSub(null)
     setShowMoreTypes(false)
     setAssignError(null)
   }
@@ -384,27 +394,35 @@ export default function ImportTriageClient({
               </button>
             )}
 
-            {/* Type de pièce : bascule rapide CNI / Permis (les 2 seuls types du lot),
-                + « Autre… » pour les cas rares (justif domicile, passeport…). */}
+            {/* Type de pièce : CNI et Permis sont deux bascules INDÉPENDANTES —
+                activer les deux = photo contenant CNI + permis. « Autre… » pour les
+                cas rares (justif domicile, passeport…), qui coupe les bascules. */}
             <div className="space-y-2">
               <div className="flex gap-2">
-                {[{ id: 'cni', label: 'CNI' }, { id: 'permis', label: 'Permis' }].map(t => (
-                  <button
-                    key={t.id}
-                    onClick={() => { setSubcategory(t.id); setShowMoreTypes(false) }}
-                    className={`flex-1 py-2.5 rounded-xl text-sm font-bold border transition-colors ${
-                      subcategory === t.id
-                        ? 'bg-[#111111] text-white border-[#111111]'
-                        : 'bg-gray-50 text-gray-600 border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    {t.label}
-                  </button>
-                ))}
+                <button
+                  onClick={() => { setOtherSub(null); setShowMoreTypes(false); setQuickCni(v => !v) }}
+                  className={`flex-1 py-2.5 rounded-xl text-sm font-bold border transition-colors ${
+                    !otherSub && quickCni
+                      ? 'bg-[#111111] text-white border-[#111111]'
+                      : 'bg-gray-50 text-gray-600 border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  CNI
+                </button>
+                <button
+                  onClick={() => { setOtherSub(null); setShowMoreTypes(false); setQuickPermis(v => !v) }}
+                  className={`flex-1 py-2.5 rounded-xl text-sm font-bold border transition-colors ${
+                    !otherSub && quickPermis
+                      ? 'bg-[#111111] text-white border-[#111111]'
+                      : 'bg-gray-50 text-gray-600 border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  Permis
+                </button>
                 <button
                   onClick={() => setShowMoreTypes(v => !v)}
                   className={`px-3 rounded-xl text-sm font-semibold border transition-colors ${
-                    showMoreTypes || (subcategory !== 'cni' && subcategory !== 'permis')
+                    otherSub
                       ? 'bg-gray-900 text-white border-gray-900'
                       : 'bg-gray-50 text-gray-500 border-gray-200'
                   }`}
@@ -415,23 +433,26 @@ export default function ImportTriageClient({
 
               {showMoreTypes && (
                 <select
-                  value={subcategory}
-                  onChange={e => setSubcategory(e.target.value)}
+                  value={otherSub ?? ''}
+                  onChange={e => { setOtherSub(e.target.value || null); setQuickCni(false); setQuickPermis(false) }}
                   className="w-full text-[13px] font-medium text-gray-700 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 outline-none focus:border-gray-400"
                 >
-                  {CLIENT_SUBCATS.map(sc => (
-                    <option key={sc.id} value={sc.id}>{sc.label}</option>
-                  ))}
+                  <option value="">Choisir un type…</option>
+                  {CLIENT_SUBCATS
+                    .filter(sc => !['cni', 'permis', 'cni_permis'].includes(sc.id))
+                    .map(sc => (
+                      <option key={sc.id} value={sc.id}>{sc.label}</option>
+                    ))}
                 </select>
               )}
 
               <button
                 onClick={handleAssign}
-                disabled={!client || assigning}
+                disabled={!client || assigning || !subcategory}
                 className="w-full inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-[#111111] text-white text-sm font-bold hover:bg-black transition-colors disabled:opacity-50"
               >
                 {assigning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                Assigner en {getSubcategoryLabel('client', subcategory)}
+                {subcategory ? `Assigner en ${getSubcategoryLabel('client', subcategory)}` : 'Choisissez un type'}
               </button>
             </div>
 
