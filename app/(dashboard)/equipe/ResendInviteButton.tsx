@@ -27,11 +27,9 @@ export default function ResendInviteButton({ memberId }: { memberId: string }) {
         return
       }
       setState('sent')
-      setMessage(
-        data.alreadyConfirmed
-          ? `Lien de réinitialisation envoyé à ${data.email}.`
-          : `Invitation renvoyée à ${data.email}.`
-      )
+      // Même email « création d'espace » dans les deux cas — on ne surcharge pas
+      // l'utilisateur avec la distinction technique invitation/ré-accès.
+      setMessage(`Email de création d'espace envoyé à ${data.email}.`)
     } catch {
       setState('error')
       setMessage('Erreur réseau.')
