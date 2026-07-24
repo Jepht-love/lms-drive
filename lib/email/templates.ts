@@ -56,6 +56,29 @@ function contactInline(agency: Agency): string {
   return bits.map(b => esc(b)).join(' · ')
 }
 
+// ── Contact SAV client ───────────────────────────────────────────────────────
+// Coordonnées d'assistance affichées « en cas de souci » dans TOUS les emails
+// de location adressés au client (départ, retour, relance retard). Source unique.
+const SUPPORT_EMAIL = 'LMS.drive.pro@gmail.com'
+const SUPPORT_TEL_DISPLAY = '06 65 74 40 09'
+const SUPPORT_TEL_HREF = '+33665744009'
+
+/** Encadré « Un souci ? » — contact SAV commun à tous les emails clients. */
+export function supportContactBlock(): string {
+  return `
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${CREME};border:1px solid ${BORDER};border-radius:10px;font-family:Arial,Helvetica,sans-serif;">
+      <tr><td style="padding:14px 18px;">
+        <div style="font-size:13px;font-weight:700;color:${INK};margin:0 0 4px;">Un souci ou une question&nbsp;?</div>
+        <div style="font-size:14px;color:${INK};line-height:1.6;">
+          Contactez-nous à
+          <a href="mailto:${SUPPORT_EMAIL}" style="color:${OR};font-weight:600;text-decoration:none;">${SUPPORT_EMAIL}</a>
+          ou au
+          <a href="tel:${SUPPORT_TEL_HREF}" style="color:${OR};font-weight:600;text-decoration:none;white-space:nowrap;">${SUPPORT_TEL_DISPLAY}</a>.
+        </div>
+      </td></tr>
+    </table>`
+}
+
 /** Enveloppe commune : en-tête, corps injecté, pied de page + RGPD. */
 function layout(opts: {
   preheader: string
@@ -88,8 +111,13 @@ function layout(opts: {
       </td></tr>
 
       <!-- Corps -->
-      <tr><td style="padding:28px 32px;color:${INK};font-size:15px;line-height:1.65;">
+      <tr><td style="padding:28px 32px 8px;color:${INK};font-size:15px;line-height:1.65;">
         ${body}
+      </td></tr>
+
+      <!-- Contact SAV (en cas de souci) -->
+      <tr><td style="padding:8px 32px 24px;">
+        ${supportContactBlock()}
       </td></tr>
 
       <!-- Pied de page -->
@@ -133,7 +161,6 @@ export function contractDepartEmail(p: Partie & { totalPrice?: number | null }):
   const prenom = esc(p.client.firstName)
   const vehicule = `${esc(p.vehicle.brand)} ${esc(p.vehicle.model)}`.trim()
   const plaque = esc(p.vehicle.plate)
-  const contact = contactInline(p.agency)
 
   const body = `
     <p style="margin:0 0 16px;">Bonjour ${prenom},</p>
@@ -158,7 +185,6 @@ export function contractDepartEmail(p: Partie & { totalPrice?: number | null }):
       Conservez précieusement ce document : il détaille les conditions de location ainsi que l'état des lieux
       du véhicule au départ.
     </p>
-    ${contact ? `<p style="margin:0 0 16px;">Pour toute question, n'hésitez pas à nous contacter (${contact}).</p>` : ''}
     <p style="margin:0 0 4px;">Nous vous souhaitons une excellente route.</p>
     <p style="margin:0;color:${MUTE};">Cordialement,<br><strong style="color:${INK};">L'équipe LMS Drive</strong></p>`
 
@@ -182,7 +208,6 @@ export function contractRetourEmail(p: Partie & { hasInvoice: boolean }): {
   const prenom = esc(p.client.firstName)
   const vehicule = `${esc(p.vehicle.brand)} ${esc(p.vehicle.model)}`.trim()
   const plaque = esc(p.vehicle.plate)
-  const contact = contactInline(p.agency)
 
   const body = `
     <p style="margin:0 0 16px;">Bonjour ${prenom},</p>
@@ -203,7 +228,6 @@ export function contractRetourEmail(p: Partie & { hasInvoice: boolean }): {
       </td></tr>
     </table>
     ${p.hasInvoice ? `<p style="margin:0 0 16px;">Le détail des éléments facturés lors de la restitution figure dans l'estimation jointe.</p>` : ''}
-    ${contact ? `<p style="margin:0 0 16px;">En cas de question, n'hésitez pas à nous contacter (${contact}).</p>` : ''}
     <p style="margin:0 0 4px;">Nous espérons vous revoir très bientôt chez LMS Drive.</p>
     <p style="margin:0;color:${MUTE};">Cordialement,<br><strong style="color:${INK};">L'équipe LMS Drive</strong></p>`
 

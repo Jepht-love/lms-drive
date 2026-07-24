@@ -5,6 +5,7 @@ import { syncAlertsToCalendar } from '@/lib/calendar/syncAlerts'
 import { broadcastPushToManagers } from '@/lib/push/broadcastPush'
 import { ALERT_TYPE_TO_NOTIF } from '@/lib/push/notificationTypes'
 import { RESEND_FROM, resendTo } from '@/lib/email/config'
+import { supportContactBlock } from '@/lib/email/templates'
 import { businessNow } from '@/lib/calendar/dateUtils'
 import { addHours, subMinutes } from 'date-fns'
 
@@ -341,10 +342,13 @@ export async function GET(request: NextRequest) {
           subject: `Restitution de véhicule en retard — ${vehLabel || r.reservation_number}`,
           // Contenu provisoire (à finaliser avec le gérant).
           html: `
-            <p>Bonjour ${clt.first_name ?? ''},</p>
-            <p>Le véhicule <b>${vehLabel || r.reservation_number}</b> devait être restitué le <b>${retourFmt}</b> et ne nous a pas encore été rendu.</p>
-            <p>Merci de nous recontacter au plus vite afin d'organiser sa restitution.</p>
-            <p>Cordialement,<br>LMS Drive</p>
+            <div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.65;color:#111111;">
+              <p>Bonjour ${clt.first_name ?? ''},</p>
+              <p>Le véhicule <b>${vehLabel || r.reservation_number}</b> devait être restitué le <b>${retourFmt}</b> et ne nous a pas encore été rendu.</p>
+              <p>Merci de nous recontacter au plus vite afin d'organiser sa restitution.</p>
+              <div style="margin:20px 0;">${supportContactBlock()}</div>
+              <p style="color:#6B7280;">Cordialement,<br><strong style="color:#111111;">L'équipe LMS Drive</strong></p>
+            </div>
           `,
         })
       } catch {
@@ -408,6 +412,11 @@ export async function GET(request: NextRequest) {
     // manager dans broadcastPushToManagers. Les types déjà poussés plus haut
     // (retour en retard, tâche en retard) ne sont pas dans ALERT_TYPE_TO_NOTIF.
     for (const a of alerts) {
+      // Pas de push « Contrat à signer » (demande Jepht 24/07) : redondant avec la
+      // notification « Nouvelle réservation » envoyée à la création. L'alerte reste
+      // visible dans l'onglet Alertes ; seul le push mobile est supprimé. (La clôture
+      // de contrat après EDL retour garde son push, envoyé via le POST plus haut.)
+      if (a.type === 'contrat') continue
       const notifType = ALERT_TYPE_TO_NOTIF[a.type]
       if (!notifType) continue
       const entityId = a.vehicleId ?? a.reservationId
