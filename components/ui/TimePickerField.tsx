@@ -85,6 +85,9 @@ export default function TimePickerField({
     onChange?.(v)
   }
 
+  // En-tête de colonne commun : hauteur fixe + centrage → les deux libellés
+  // (« Heures » avec icône, « Minutes ») sont parfaitement alignés.
+  const headerCls = 'flex items-center justify-center gap-1 h-4 mb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400'
   const colCls = 'flex flex-col gap-0.5 max-h-[220px] overflow-y-auto py-1 px-1 [scrollbar-width:thin]'
   const cellCls = (on: boolean) =>
     cn(
@@ -114,7 +117,7 @@ export default function TimePickerField({
       >
         <div className="flex items-stretch gap-1">
           <div className="flex flex-col items-center">
-            <div className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-1">
+            <div className={headerCls}>
               <Clock className="w-3 h-3" /> Heures
             </div>
             <div className={colCls}>
@@ -138,7 +141,7 @@ export default function TimePickerField({
           <div className="w-px bg-gray-200 my-6" aria-hidden />
 
           <div className="flex flex-col items-center">
-            <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-1 mt-0.5">Minutes</div>
+            <div className={headerCls}>Minutes</div>
             <div className={colCls}>
               {MINUTES.map((min) => {
                 const on = m === min
