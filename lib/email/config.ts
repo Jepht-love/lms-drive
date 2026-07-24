@@ -14,9 +14,18 @@
  * → aucune modification de code nécessaire, tout passe par ces variables.
  */
 
-/** Expéditeur. Par défaut l'adresse de test Resend (marche sans domaine). */
-export const RESEND_FROM =
-  process.env.RESEND_FROM ?? 'LMS Drive <onboarding@resend.dev>'
+/**
+ * Expéditeur : adresse **no-reply** sur le domaine vérifié dans Resend
+ * (`sas-financial-services.com`). Le domaine étant vérifié, n'importe quel
+ * local-part (@ce-domaine) est délivrable — pas de vérification par adresse.
+ *
+ * Valeur FIGÉE dans le code (ne lit plus `process.env.RESEND_FROM`) : demande de
+ * Jepht d'avoir un expéditeur no-reply, sans dépendre d'une variable d'env qui
+ * pointait sur `notifications@…`. Pour changer d'adresse/domaine à l'avenir,
+ * éditer cette constante (et vérifier le nouveau domaine dans Resend au besoin).
+ * S'applique à TOUS les emails (contrat, invitation, reset, relances…).
+ */
+export const RESEND_FROM = 'LMS Drive <no-reply@sas-financial-services.com>'
 
 /**
  * Destinataire effectif : la boîte de démo si `RESEND_DEMO_TO` est définie,

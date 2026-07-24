@@ -95,7 +95,7 @@ function layout(opts: {
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">${esc(preheader)}</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F3F4F6;padding:24px 0;">
   <tr><td align="center">
-    <table role="presentation" width="680" cellpadding="0" cellspacing="0" style="width:680px;max-width:100%;background:#FFFFFF;border-radius:14px;overflow:hidden;font-family:Arial,Helvetica,sans-serif;">
+    <table role="presentation" width="920" cellpadding="0" cellspacing="0" style="width:920px;max-width:100%;background:#FFFFFF;border-radius:14px;overflow:hidden;font-family:Arial,Helvetica,sans-serif;">
 
       <!-- En-tête -->
       <tr><td style="background:${NOIR};padding:28px 32px;text-align:center;">
