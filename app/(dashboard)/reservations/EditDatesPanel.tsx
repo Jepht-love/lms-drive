@@ -130,10 +130,12 @@ export default function EditDatesPanel({
     `min-h-[auto] h-8 px-3.5 rounded-md text-xs font-bold transition-colors ${on ? 'bg-white/15 text-white' : 'text-white/55 hover:text-white'}`
 
   return (
-    // En mode hero, w-full fait passer le panneau sous la ligne des badges
-    // (flex-wrap) ; max-w-xl évite des champs démesurés sur grand écran.
-    <div className={`mt-3 p-4 bg-black/40 border border-white/15 rounded-2xl backdrop-blur-sm space-y-4 ${
-      variant === 'hero' ? 'w-full max-w-xl' : ''
+    // Wrapper pleine largeur (hero) : force le panneau sur sa propre ligne du
+    // flex-wrap → il ne partage plus la ligne du badge de statut et s'aligne à
+    // gauche avec « Prolonger ». max-w-xl à l'intérieur évite des champs démesurés.
+    <div className={variant === 'hero' ? 'mt-3 w-full' : 'mt-3'}>
+    <div className={`p-4 bg-black/40 border border-white/15 rounded-2xl backdrop-blur-sm space-y-4 ${
+      variant === 'hero' ? 'max-w-xl' : ''
     }`}>
       <div className="flex items-center gap-2">
         <CalendarClock className="w-4 h-4 text-white/60 flex-shrink-0" />
@@ -300,6 +302,7 @@ export default function EditDatesPanel({
           <X className="w-3.5 h-3.5" /> Annuler
         </button>
       </div>
+    </div>
     </div>
   )
 }

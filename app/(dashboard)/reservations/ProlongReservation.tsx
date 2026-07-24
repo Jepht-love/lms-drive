@@ -101,7 +101,11 @@ export default function ProlongReservation({
   const inputCls = 'w-full min-w-0 rounded-xl border border-white/15 bg-white/5 px-3 py-2.5 text-sm text-white [color-scheme:dark] outline-none transition focus:border-white/25 focus:ring-2 focus:ring-white/10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none'
 
   return (
-    <div className="mt-3 p-4 bg-black/40 border border-white/15 rounded-2xl backdrop-blur-sm space-y-3 w-full max-w-xl">
+    // Wrapper pleine largeur : force le panneau sur sa propre ligne du flex-wrap
+    // (le badge de statut ne partage plus sa ligne) → alignement à gauche avec
+    // « Modifier tarif ». max-w-xl à l'intérieur évite des champs démesurés.
+    <div className="mt-3 w-full">
+    <div className="p-4 bg-black/40 border border-white/15 rounded-2xl backdrop-blur-sm space-y-3 max-w-xl">
       <div className="flex items-center gap-2">
         <CalendarPlus className="w-4 h-4 text-white/60 flex-shrink-0" />
         <p className="text-sm font-bold text-white">Prolonger la location</p>
@@ -217,6 +221,7 @@ export default function ProlongReservation({
           </button>
         </div>
       )}
+    </div>
     </div>
   )
 }
