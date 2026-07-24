@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import type { DocumentCategory } from '@/lib/documents/categories'
+import { DOCUMENT_SUBCATEGORIES } from '@/lib/documents/categories'
 import { RESEND_FROM, resendTo } from '@/lib/email/config'
 
 export async function uploadDocument(formData: FormData) {
@@ -47,6 +48,79 @@ export async function uploadDocument(formData: FormData) {
   if (error) throw new Error(`Enregistrement échoué : ${error.message}`)
 
   revalidatePath('/documents')
+}
+
+/**
+ * Import en masse de documents pour un client (ex. lot de pièces reçu par le
+ * gérant sur Telegram, téléchargé puis déposé d'un coup sur la fiche client).
+ * Les fichiers sont déjà téléversés côté navigateur dans le bucket `documents`
+ * (contourne la limite de payload Vercel — même pattern que les pièces client) ;
+ * ici on ne fait qu'insérer les métadonnées, une ligne `documents` par fichier.
+ */
+export async function bulkCreateClientDocuments(
+  clientId: string,
+  docs: { name: string; subcategory: string; file_url: string; file_type?: string | null; file_size?: number | null }[],
+) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Non authentifié')
+  if (!clientId) return { error: 'Client requis' }
+
+  // Sous-catégories client valides (repli sur « autres » si l'UI envoie autre chose).
+  const allowed = new Set(DOCUMENT_SUBCATEGORIES.client.map(s => s.id))
+
+  const rows = (docs ?? [])
+    .filter(d => d?.file_url && d?.name)
+    .map(d => ({
+      category: 'client' as const,
+      subcategory: allowed.has(d.subcategory) ? d.subcategory : 'autres',
+      name: d.name.trim().slice(0, 200),
+      file_url: d.file_url,
+      file_type: d.file_type || null,
+      file_size: typeof d.file_size === 'number' ? d.file_size : null,
+      entity_id: clientId,
+      entity_type: 'client' as const,
+      is_auto_generated: false,
+      created_by: user.id,
+    }))
+
+  if (rows.length === 0) return { error: 'Aucun document valide à importer' }
+
+  const { error } = await supabase.from('documents').insert(rows)
+  if (error) throw new Error(`Import échoué : ${error.message}`)
+
+  revalidatePath(`/clients/${clientId}`)
+  revalidatePath('/documents')
+  return { success: true, count: rows.length }
+}
+
+/**
+ * Supprime un document client depuis la fiche client (Système A). Retire le
+ * fichier du bucket `documents` puis la ligne, et rafraîchit la fiche.
+ * Distinct de `deleteDocument` (qui ne revalide que /documents).
+ */
+export async function deleteClientDocument(documentId: string, clientId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Non authentifié')
+
+  const { data: doc } = await supabase
+    .from('documents')
+    .select('id, file_url')
+    .eq('id', documentId)
+    .single()
+  if (!doc) return { error: 'Document introuvable' }
+
+  const storagePath = doc.file_url.startsWith('http')
+    ? (new URL(doc.file_url).pathname.split('/storage/v1/object/public/documents/')[1] ?? null)
+    : doc.file_url
+  if (storagePath) await supabase.storage.from('documents').remove([storagePath])
+
+  await supabase.from('documents').delete().eq('id', documentId)
+
+  revalidatePath(`/clients/${clientId}`)
+  revalidatePath('/documents')
+  return { success: true }
 }
 
 /**

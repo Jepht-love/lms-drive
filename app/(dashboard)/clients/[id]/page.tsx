@@ -10,6 +10,7 @@ import { infractionTypeLabel, INFRACTION_STATUS, SINISTRE_STATUS } from '@/lib/i
 import DeleteButton from '@/components/ui/DeleteButton'
 import { deleteClient } from '@/lib/actions/delete'
 import ClientDocPhotos from './ClientDocPhotos'
+import ClientDocuments, { type ClientDoc } from './ClientDocuments'
 import ClientNotesEditor from './ClientNotesEditor'
 import ClientStatusActions from './ClientStatusActions'
 import BackButton from '@/components/ui/BackButton'
@@ -116,6 +117,39 @@ export default async function ClientPage({
     getSignedUrl(client.license_back_path),
     getSignedUrl(client.proof_of_address_path),
   ])
+
+  // ── Documents importés (Système A : table `documents`, bucket `documents`) ──
+  // Pièces déposées en masse depuis la fiche (lot Telegram…). On exclut les
+  // documents auto-générés (contrats/factures) qui vivent dans leur propre onglet.
+  const { data: docRows } = await supabase
+    .from('documents')
+    .select('id, name, subcategory, file_url, file_type, created_at')
+    .eq('entity_id', id)
+    .eq('entity_type', 'client')
+    .eq('is_auto_generated', false)
+    .order('created_at', { ascending: false })
+
+  async function getDocSignedUrl(path: string | null | undefined): Promise<string | null> {
+    if (!path) return null
+    // Tolère l'ancien format URL publique et le nouveau format chemin brut.
+    const raw = path.startsWith('http')
+      ? (path.split('/storage/v1/object/public/documents/')[1] ?? null)
+      : path
+    if (!raw) return null
+    const { data } = await supabase.storage.from('documents').createSignedUrl(raw, 3600)
+    return data?.signedUrl ?? null
+  }
+
+  const clientDocs: ClientDoc[] = await Promise.all(
+    (docRows ?? []).map(async (d: any) => ({
+      id: d.id,
+      name: d.name,
+      subcategory: d.subcategory,
+      url: await getDocSignedUrl(d.file_url),
+      fileType: d.file_type ?? null,
+      createdAt: d.created_at,
+    })),
+  )
 
   // ── Indicateurs financiers ──
   const completed  = reservations?.filter(r => r.status === 'terminee') ?? []
@@ -517,6 +551,19 @@ export default async function ClientPage({
             />
           </div>
         )}
+      </div>
+
+      {/* ─── Autres documents (import en masse) ─── */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+        <div className="flex items-center justify-between mb-3">
+          <SectionLabel>Autres documents</SectionLabel>
+          {clientDocs.length > 0 && (
+            <span className="text-[10px] font-black bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
+              {clientDocs.length}
+            </span>
+          )}
+        </div>
+        <ClientDocuments clientId={id} docs={clientDocs} />
       </div>
 
       {/* ─── Infos commerciales ─── */}

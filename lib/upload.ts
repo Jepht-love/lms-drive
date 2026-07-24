@@ -1,20 +1,24 @@
 import { createClient } from '@/lib/supabase/client'
 
-export async function uploadFileToSupabase(file: File, folder: string): Promise<string | null> {
+export async function uploadFileToSupabase(
+  file: File,
+  folder: string,
+  bucket = 'client-documents',
+): Promise<string | null> {
   try {
     const supabase = createClient()
-    
+
     // Generate a unique filename to avoid collisions
     const fileExt = file.name.split('.').pop() || ''
     const fileName = `${crypto.randomUUID()}.${fileExt}`
     const path = `${folder}/${fileName}`
-    
+
     // Convert file to ArrayBuffer for upload
     const bytes = await file.arrayBuffer()
-    
+
     // Upload to Supabase Storage
     const { error } = await supabase.storage
-      .from('client-documents')
+      .from(bucket)
       .upload(path, bytes, {
         contentType: file.type || 'application/octet-stream',
         upsert: true
