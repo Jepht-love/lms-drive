@@ -7,11 +7,10 @@ import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import {
   AlertTriangle, Clock, FileText, Wrench,
-  ShieldAlert, ChevronRight, Bell, ArrowLeft,
+  ShieldAlert, ChevronRight, Bell,
 } from 'lucide-react'
 import type { AppAlert } from '@/lib/utils/alerts'
 import { AnimatedList, AnimatedListItem } from '@/components/AnimatedList'
-import BackButton from '@/components/ui/BackButton'
 
 function AlertIcon({ type }: { type: string }) {
   const cls = 'w-5 h-5'
@@ -87,9 +86,6 @@ export default async function NotificationsPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-3">
-          <BackButton fallbackHref="/" className="p-2 rounded-xl hover:bg-gray-100 transition-colors -ml-2">
-            <ArrowLeft className="w-5 h-5 text-gray-600" />
-          </BackButton>
           <Bell className="w-5 h-5 text-gray-400" />
           <h1 className="text-xl font-black text-gray-900">Alertes</h1>
         </div>
