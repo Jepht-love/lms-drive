@@ -149,6 +149,55 @@ export async function createClientAction(formData: FormData) {
   redirect(`/clients/${data.id}`)
 }
 
+/**
+ * Création EXPRESS d'une fiche client à partir d'un simple nom — utilisée pendant
+ * le tri des pièces importées (écran /documents/import) quand on tombe sur une
+ * personne dont les pièces sont là mais qui n'a pas encore de fiche. On crée le
+ * minimum (nom + téléphone vide, obligatoires en base), on renvoie l'id sans
+ * rediriger ; le reste de la fiche se complète plus tard depuis la CNI/le permis.
+ */
+export async function createClientQuick(fullName: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié' }
+
+  const clean = (fullName ?? '').trim().replace(/\s+/g, ' ')
+  if (!clean) return { error: 'Nom requis' }
+
+  const parts = clean.split(' ')
+  let first_name = ''
+  let last_name = ''
+  if (parts.length === 1) {
+    last_name = parts[0]
+  } else {
+    first_name = parts[0]
+    last_name = parts.slice(1).join(' ')
+  }
+
+  const { data, error } = await supabase
+    .from('clients')
+    // phone est NOT NULL en base → chaîne vide (à compléter plus tard).
+    .insert({ first_name, last_name, phone: '', created_by: user.id })
+    .select('id, first_name, last_name')
+    .single()
+  if (error) return { error: error.message }
+
+  await supabase.from('audit_logs').insert({
+    user_id: user.id,
+    action: 'client_created',
+    entity_type: 'clients',
+    entity_id: data.id,
+    metadata: { via: 'import_tri' },
+  })
+
+  revalidatePath('/clients')
+  revalidatePath('/documents/import')
+  return {
+    success: true,
+    client: { id: data.id, name: `${data.first_name} ${data.last_name}`.trim() },
+  }
+}
+
 export async function updateClientAction(id: string, formData: FormData) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

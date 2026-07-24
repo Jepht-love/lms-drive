@@ -4,13 +4,14 @@ import { useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   UploadCloud, Loader2, FileText, Image as ImageIcon, X, Check, Trash2,
-  Search, ArrowLeft, Users,
+  Search, ArrowLeft, Users, UserPlus,
 } from 'lucide-react'
 import { uploadFileToSupabase } from '@/lib/upload'
 import {
   stageClientDocuments, assignClientDocuments, deleteClientDocument,
 } from '@/lib/actions/documents'
-import { DOCUMENT_SUBCATEGORIES } from '@/lib/documents/categories'
+import { createClientQuick } from '@/lib/actions/clients'
+import { DOCUMENT_SUBCATEGORIES, getSubcategoryLabel } from '@/lib/documents/categories'
 
 export interface StagedDoc {
   id: string
@@ -41,6 +42,12 @@ export default function ImportTriageClient({
   const router = useRouter()
   const inputRef = useRef<HTMLInputElement>(null)
 
+  // Liste clients locale : permet d'ajouter aussitôt une fiche créée à la volée
+  // (client dont les pièces sont là mais qui n'existait pas encore en base).
+  const [clientList, setClientList] = useState<ClientLite[]>(clients)
+  const [creating, setCreating] = useState(false)
+  const [showMoreTypes, setShowMoreTypes] = useState(false)
+
   // ── Upload ──
   const [dragOver, setDragOver] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -51,7 +58,7 @@ export default function ImportTriageClient({
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [query, setQuery] = useState('')
   const [client, setClient] = useState<ClientLite | null>(null)
-  const [subcategory, setSubcategory] = useState('autres')
+  const [subcategory, setSubcategory] = useState('cni')
   const [assigning, setAssigning] = useState(false)
   const [assignError, setAssignError] = useState<string | null>(null)
 
@@ -60,11 +67,30 @@ export default function ImportTriageClient({
 
   const filteredClients = useMemo(() => {
     const q = query.trim().toLowerCase()
-    if (!q) return clients.slice(0, 8)
-    return clients
+    if (!q) return clientList.slice(0, 8)
+    return clientList
       .filter(c => c.name.toLowerCase().includes(q) || (c.phone ?? '').includes(q))
       .slice(0, 8)
-  }, [clients, query])
+  }, [clientList, query])
+
+  // Pas de client existant portant EXACTEMENT ce nom → on propose de le créer.
+  const trimmedQuery = query.trim()
+  const hasExactMatch = clientList.some(c => c.name.toLowerCase() === trimmedQuery.toLowerCase())
+  const canCreate = trimmedQuery.length >= 2 && !hasExactMatch
+
+  async function handleCreateClient() {
+    if (!canCreate) return
+    setAssignError(null)
+    setCreating(true)
+    const res = await createClientQuick(trimmedQuery)
+    setCreating(false)
+    if (res?.error || !res?.client) { setAssignError(res?.error ?? 'Création impossible'); return }
+    // Ajoute la fiche à la liste locale et la sélectionne aussitôt pour l'assignation.
+    setClientList(prev => [{ id: res.client.id, name: res.client.name, phone: null }, ...prev])
+    setClient({ id: res.client.id, name: res.client.name, phone: null })
+    setQuery('')
+    router.refresh()
+  }
 
   async function handleFiles(list: FileList | null) {
     if (!list || list.length === 0) return
@@ -116,7 +142,8 @@ export default function ImportTriageClient({
     setSelected(new Set())
     setClient(null)
     setQuery('')
-    setSubcategory('autres')
+    setSubcategory('cni')
+    setShowMoreTypes(false)
     setAssignError(null)
   }
 
@@ -315,10 +342,8 @@ export default function ImportTriageClient({
                   className="w-full pl-9 pr-4 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-[13px] text-gray-800 placeholder-gray-400 outline-none focus:border-gray-400"
                 />
                 {(query.trim() !== '' || filteredClients.length > 0) && (
-                  <div className="mt-1.5 max-h-44 overflow-y-auto rounded-xl border border-gray-200 divide-y divide-gray-100 bg-white">
-                    {filteredClients.length === 0 ? (
-                      <p className="text-[12px] text-gray-400 px-3 py-2.5">Aucun client trouvé</p>
-                    ) : filteredClients.map(c => (
+                  <div className="mt-1.5 max-h-52 overflow-y-auto rounded-xl border border-gray-200 divide-y divide-gray-100 bg-white">
+                    {filteredClients.map(c => (
                       <button
                         key={c.id}
                         onClick={() => { setClient(c); setQuery('') }}
@@ -328,6 +353,24 @@ export default function ImportTriageClient({
                         {c.phone && <span className="text-[11px] text-gray-400 ml-2">{c.phone}</span>}
                       </button>
                     ))}
+                    {filteredClients.length === 0 && !canCreate && (
+                      <p className="text-[12px] text-gray-400 px-3 py-2.5">Tapez un nom pour rechercher ou créer</p>
+                    )}
+                    {/* Client absent de la base → création express de la fiche */}
+                    {canCreate && (
+                      <button
+                        onClick={handleCreateClient}
+                        disabled={creating}
+                        className="w-full text-left px-3 py-2.5 bg-emerald-50 hover:bg-emerald-100 flex items-center gap-2 disabled:opacity-60"
+                      >
+                        {creating
+                          ? <Loader2 className="w-4 h-4 text-emerald-600 animate-spin flex-shrink-0" />
+                          : <UserPlus className="w-4 h-4 text-emerald-600 flex-shrink-0" />}
+                        <span className="text-[13px] font-semibold text-emerald-700">
+                          Créer le client « {trimmedQuery} »
+                        </span>
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -341,24 +384,54 @@ export default function ImportTriageClient({
               </button>
             )}
 
-            {/* Type + assigner */}
-            <div className="flex gap-2">
-              <select
-                value={subcategory}
-                onChange={e => setSubcategory(e.target.value)}
-                className="flex-1 min-w-0 text-[13px] font-medium text-gray-700 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 outline-none focus:border-gray-400"
-              >
-                {CLIENT_SUBCATS.map(sc => (
-                  <option key={sc.id} value={sc.id}>{sc.label}</option>
+            {/* Type de pièce : bascule rapide CNI / Permis (les 2 seuls types du lot),
+                + « Autre… » pour les cas rares (justif domicile, passeport…). */}
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                {[{ id: 'cni', label: 'CNI' }, { id: 'permis', label: 'Permis' }].map(t => (
+                  <button
+                    key={t.id}
+                    onClick={() => { setSubcategory(t.id); setShowMoreTypes(false) }}
+                    className={`flex-1 py-2.5 rounded-xl text-sm font-bold border transition-colors ${
+                      subcategory === t.id
+                        ? 'bg-[#111111] text-white border-[#111111]'
+                        : 'bg-gray-50 text-gray-600 border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    {t.label}
+                  </button>
                 ))}
-              </select>
+                <button
+                  onClick={() => setShowMoreTypes(v => !v)}
+                  className={`px-3 rounded-xl text-sm font-semibold border transition-colors ${
+                    showMoreTypes || (subcategory !== 'cni' && subcategory !== 'permis')
+                      ? 'bg-gray-900 text-white border-gray-900'
+                      : 'bg-gray-50 text-gray-500 border-gray-200'
+                  }`}
+                >
+                  Autre…
+                </button>
+              </div>
+
+              {showMoreTypes && (
+                <select
+                  value={subcategory}
+                  onChange={e => setSubcategory(e.target.value)}
+                  className="w-full text-[13px] font-medium text-gray-700 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 outline-none focus:border-gray-400"
+                >
+                  {CLIENT_SUBCATS.map(sc => (
+                    <option key={sc.id} value={sc.id}>{sc.label}</option>
+                  ))}
+                </select>
+              )}
+
               <button
                 onClick={handleAssign}
                 disabled={!client || assigning}
-                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#111111] text-white text-sm font-bold hover:bg-black transition-colors disabled:opacity-50"
+                className="w-full inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-[#111111] text-white text-sm font-bold hover:bg-black transition-colors disabled:opacity-50"
               >
                 {assigning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                Assigner
+                Assigner en {getSubcategoryLabel('client', subcategory)}
               </button>
             </div>
 
