@@ -11,6 +11,7 @@ import BackButton from '@/components/ui/BackButton'
 import { taskActionHref } from '@/lib/utils'
 import MemberTabsEditor from './MemberTabsEditor'
 import MemberActiveToggle from './MemberActiveToggle'
+import ResendInviteButton from '../ResendInviteButton'
 
 const ROLE_CONFIG: Record<string, { label: string; bg: string; text: string }> = {
   gerant:      { label: 'Gérant',      bg: 'bg-black',    text: 'text-white' },
@@ -43,11 +44,13 @@ export default async function MemberProfilePage({
   if (!user) redirect('/login')
 
   const { data: caller } = await supabase
-    .from('profiles').select('role').eq('id', user.id).single()
+    .from('profiles').select('role, is_admin').eq('id', user.id).single()
 
-  if (caller?.role !== 'gerant' && caller?.role !== 'associe') redirect('/')
+  if (caller?.role !== 'gerant' && caller?.role !== 'associe' && !caller?.is_admin) redirect('/')
 
   const isManager = caller?.role === 'gerant'
+  // Renvoi de lien d'accès : autorisé au gérant ET au super-utilisateur (admin).
+  const canResendInvite = isManager || !!caller?.is_admin
 
   const { data: member } = await supabase
     .from('profiles')
@@ -283,24 +286,29 @@ export default async function MemberProfilePage({
         />
       )}
 
-      {/* Actions gérant */}
-      {isManager && (
+      {/* Actions gérant / admin */}
+      {(isManager || canResendInvite) && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm divide-y divide-gray-50">
-          <Link href={`/equipe/${id}/edit`}>
-            <div className="flex items-center gap-3 px-4 py-4 hover:bg-gray-50 transition-colors">
-              <Mail className="w-4 h-4 text-gray-400" />
-              <span className="flex-1 text-sm font-semibold text-gray-700">Modifier le profil</span>
-              <ChevronRight className="w-4 h-4 text-gray-200" />
+          {isManager && (
+            <Link href={`/equipe/${id}/edit`}>
+              <div className="flex items-center gap-3 px-4 py-4 hover:bg-gray-50 transition-colors">
+                <Mail className="w-4 h-4 text-gray-400" />
+                <span className="flex-1 text-sm font-semibold text-gray-700">Modifier le profil</span>
+                <ChevronRight className="w-4 h-4 text-gray-200" />
+              </div>
+            </Link>
+          )}
+          {canResendInvite && <ResendInviteButton memberId={id} />}
+          {isManager && (
+            <div className="flex items-center gap-3 px-4 py-4">
+              <Clock className="w-4 h-4 text-gray-400 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-gray-700">Compte actif</p>
+                <p className="text-xs text-gray-400">Un compte inactif ne peut plus se connecter.</p>
+              </div>
+              <MemberActiveToggle memberId={id} initialActive={member.is_active} />
             </div>
-          </Link>
-          <div className="flex items-center gap-3 px-4 py-4">
-            <Clock className="w-4 h-4 text-gray-400 flex-shrink-0" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-gray-700">Compte actif</p>
-              <p className="text-xs text-gray-400">Un compte inactif ne peut plus se connecter.</p>
-            </div>
-            <MemberActiveToggle memberId={id} initialActive={member.is_active} />
-          </div>
+          )}
         </div>
       )}
 
