@@ -51,7 +51,7 @@ export default async function MemberProfilePage({
 
   const { data: member } = await supabase
     .from('profiles')
-    .select('id, full_name, role, phone, color, is_active, hire_date')
+    .select('id, full_name, role, phone, color, is_active, hire_date, is_admin')
     .eq('id', id)
     .single()
 
@@ -116,7 +116,11 @@ export default async function MemberProfilePage({
     .lte('due_datetime', addDays(weekStart, 6).toISOString())
 
   const initials = member.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
-  const role     = ROLE_CONFIG[member.role] ?? { label: member.role, bg: 'bg-gray-100', text: 'text-gray-600' }
+  // Super-utilisateur : badge « Admin » doré, prioritaire sur le rôle (cohérent
+  // avec la liste Équipe, le Menu et la fiche profil).
+  const role     = member.is_admin
+    ? { label: 'Admin', bg: 'bg-amber-100', text: 'text-amber-800' }
+    : ROLE_CONFIG[member.role] ?? { label: member.role, bg: 'bg-gray-100', text: 'text-gray-600' }
 
   return (
     <div className="space-y-4">
@@ -153,13 +157,13 @@ export default async function MemberProfilePage({
           {member.phone && (
             <div className="flex items-center gap-2.5">
               <Phone className="w-4 h-4 text-gray-300 flex-shrink-0" />
-              <a href={`tel:${member.phone}`} className="text-sm text-gray-700 font-medium leading-none">{member.phone}</a>
+              <a href={`tel:${member.phone}`} className="text-sm text-gray-700 font-medium leading-4">{member.phone}</a>
             </div>
           )}
           {member.hire_date && (
             <div className="flex items-center gap-2.5">
               <Briefcase className="w-4 h-4 text-gray-300 flex-shrink-0" />
-              <p className="text-sm text-gray-500 leading-none">
+              <p className="text-sm text-gray-500 leading-4">
                 Embauché le {format(new Date(member.hire_date), 'd MMMM yyyy', { locale: fr })}
               </p>
             </div>

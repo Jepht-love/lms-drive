@@ -66,11 +66,12 @@ export default async function SettingsPage() {
                 {p.phone && <p className="text-xs text-gray-400">{p.phone}</p>}
               </div>
               <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
+                p.is_admin ? 'bg-amber-100 text-amber-800' :
                 p.role === 'gerant' ? 'bg-purple-100 text-purple-700' :
                 p.role === 'associe' ? 'bg-blue-100 text-blue-700' :
                 'bg-gray-100 text-gray-600'
               }`}>
-                {roleLabel(p.role)}
+                {roleLabel(p.role, p.is_admin)}
               </span>
               {!p.is_active && <span className="text-xs text-red-500">Inactif</span>}
             </div>

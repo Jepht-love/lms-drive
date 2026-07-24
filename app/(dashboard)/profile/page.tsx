@@ -33,11 +33,12 @@ export default async function ProfilePage() {
           <div>
             <h2 className="text-xl font-bold text-gray-900">{profile.full_name}</h2>
             <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
+              profile.is_admin ? 'bg-amber-100 text-amber-800' :
               profile.role === 'gerant' ? 'bg-purple-100 text-purple-700' :
               profile.role === 'associe' ? 'bg-blue-100 text-blue-700' :
               'bg-gray-100 text-gray-600'
             }`}>
-              {roleLabel(profile.role)}
+              {roleLabel(profile.role, profile.is_admin)}
             </span>
           </div>
         </div>
@@ -53,7 +54,7 @@ export default async function ProfilePage() {
           </div>
           <div className="flex justify-between py-2 border-b border-gray-50">
             <dt className="text-sm text-gray-500">Rôle</dt>
-            <dd className="text-sm font-medium text-gray-900">{roleLabel(profile.role)}</dd>
+            <dd className="text-sm font-medium text-gray-900">{roleLabel(profile.role, profile.is_admin)}</dd>
           </div>
           <div className="flex justify-between py-2">
             <dt className="text-sm text-gray-500">Membre depuis</dt>
