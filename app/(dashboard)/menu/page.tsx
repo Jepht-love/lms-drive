@@ -48,7 +48,7 @@ export default async function MenuPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('full_name, role')
+    .select('full_name, role, is_admin')
     .eq('id', user.id)
     .single()
 
@@ -76,7 +76,11 @@ export default async function MenuPage() {
     .toUpperCase()
     .slice(0, 2) ?? '?'
 
-  const roleLabel = ROLE_LABELS[profile?.role ?? ''] ?? profile?.role ?? ''
+  // Un compte super-utilisateur (is_admin) est signé « Admin », prioritaire sur le
+  // rôle technique (qui reste 'gerant' pour conserver tous les droits d'accès).
+  const roleLabel = (profile as { is_admin?: boolean } | null)?.is_admin
+    ? 'Admin'
+    : ROLE_LABELS[profile?.role ?? ''] ?? profile?.role ?? ''
 
   return (
     // Casse le padding du layout pour aller bord-à-bord
