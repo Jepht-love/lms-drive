@@ -476,14 +476,14 @@ export default async function ReservationPage({
             reservationNumber={reservation.reservation_number ?? ''}
           />
         )}
-        {/* Créance : seulement si un reste est dû (résa non soldée). */}
-        {reservation.payment_status !== 'paye' && (reservation.total_price ?? 0) - (reservation.payment_amount ?? 0) > 0 && (
-          <CreateReceivableButton
-            reservationId={id}
-            remaining={Math.round(((reservation.total_price ?? 0) - (reservation.payment_amount ?? 0)) * 100) / 100}
-            defaultDueDate={new Date(reservation.end_datetime).toISOString().slice(0, 10)}
-          />
-        )}
+        {/* Créance : toujours disponible (même résa marquée réglée) — le reste dû
+            pré-remplit la 1re échéance, mais on peut enregistrer un complément
+            (dommages, frais…) ou un paiement échelonné à tout moment. */}
+        <CreateReceivableButton
+          reservationId={id}
+          remaining={Math.round(((reservation.total_price ?? 0) - (reservation.payment_amount ?? 0)) * 100) / 100}
+          defaultDueDate={new Date(reservation.end_datetime).toISOString().slice(0, 10)}
+        />
       </div>
 
       {/* ─── Notes internes ─── */}

@@ -47,11 +47,34 @@ export async function createReceivable(formData: FormData) {
   if (!user) return { error: 'Non authentifié' }
 
   const reservationId = (formData.get('reservation_id') as string)?.trim()
-  const amountRaw = (formData.get('amount') as string)?.trim()
-  const amount = amountRaw ? parseFloat(amountRaw.replace(',', '.')) : 0
-  const dueDate = (formData.get('due_date') as string)?.trim()
-  if (!reservationId || !(amount > 0) || !dueDate) {
-    return { error: 'Réservation, montant (> 0) et date d’échéance requis' }
+  if (!reservationId) return { error: 'Réservation requise' }
+
+  // Une créance peut être découpée en plusieurs échéances (paiement échelonné) :
+  // on lit une liste JSON [{amount, due_date}, ...]. Repli sur le couple simple
+  // (amount, due_date) pour compat ascendante avec d'anciens appels.
+  type Echeance = { amount: number; due_date: string }
+  let echeances: Echeance[] = []
+  const raw = (formData.get('echeances') as string)?.trim()
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw)
+      if (!Array.isArray(parsed)) return { error: 'Échéances invalides' }
+      echeances = parsed.map((e: any) => ({
+        amount: typeof e.amount === 'number' ? e.amount : parseFloat(String(e.amount ?? '').replace(',', '.')),
+        due_date: String(e.due_date ?? '').trim(),
+      }))
+    } catch { return { error: 'Échéances invalides' } }
+  } else {
+    const amountRaw = (formData.get('amount') as string)?.trim()
+    echeances = [{
+      amount: amountRaw ? parseFloat(amountRaw.replace(',', '.')) : 0,
+      due_date: (formData.get('due_date') as string)?.trim() ?? '',
+    }]
+  }
+
+  echeances = echeances.filter(e => e.amount > 0 && e.due_date)
+  if (echeances.length === 0) {
+    return { error: 'Au moins une échéance (montant > 0 et date) est requise' }
   }
 
   const { data: resa } = await supabase
@@ -61,41 +84,48 @@ export async function createReceivable(formData: FormData) {
     .single()
   if (!resa) return { error: 'Réservation introuvable' }
 
-  // Anti-doublon : une créance non soldée existe déjà pour cette réservation.
-  const { data: existing } = await supabase
+  const client = Array.isArray(resa.client) ? resa.client[0] : resa.client as any
+  const clientName = client ? `${client.first_name} ${client.last_name}`.trim() : 'client'
+  const serviceDate = resa.start_datetime ? String(resa.start_datetime).slice(0, 10) : echeances[0].due_date
+
+  // Anti-double-clic : on écarte les échéances STRICTEMENT identiques (même
+  // montant + même date) déjà en attente pour cette réservation — sans bloquer
+  // l'ajout légitime de nouvelles échéances (paiement échelonné, complément après
+  // une location déjà marquée réglée…).
+  const { data: existingRows } = await supabase
     .from('financial_due_dates')
-    .select('id')
+    .select('amount, due_date')
     .eq('reservation_id', reservationId)
     .eq('is_paid', false)
     .is('deleted_at', null)
-    .limit(1)
-  if (existing && existing.length > 0) {
-    return { error: 'Une créance non soldée existe déjà pour cette réservation.' }
+  const seen = new Set((existingRows ?? []).map((r: any) => `${r.amount}|${r.due_date}`))
+  const toInsert = echeances.filter(e => !seen.has(`${e.amount}|${e.due_date}`))
+  if (toInsert.length === 0) {
+    return { error: 'Ces échéances existent déjà pour cette réservation.' }
   }
 
-  const client = Array.isArray(resa.client) ? resa.client[0] : resa.client as any
-  const clientName = client ? `${client.first_name} ${client.last_name}`.trim() : 'client'
-  const serviceDate = resa.start_datetime ? String(resa.start_datetime).slice(0, 10) : dueDate
-
-  const { error } = await supabase.from('financial_due_dates').insert({
+  const notes = (formData.get('notes') as string)?.trim() || null
+  const rows = toInsert.map(e => ({
     description: `Location ${resa.reservation_number} — ${clientName}`,
     type: 'recette',
     category: 'location',
-    amount,
-    due_date: dueDate,
+    amount: e.amount,
+    due_date: e.due_date,
     service_date: serviceDate,
     reservation_id: reservationId,
     client_id: resa.client_id ?? null,
     vehicle_id: resa.vehicle_id ?? null,
-    notes: (formData.get('notes') as string)?.trim() || null,
+    notes,
     created_by: user.id,
-  })
+  }))
+
+  const { error } = await supabase.from('financial_due_dates').insert(rows)
   if (error) return { error: error.message }
 
   revalidatePath('/accounting/due-dates')
   revalidatePath('/accounting/creances')
   revalidatePath(`/reservations/${reservationId}`)
-  return { success: true }
+  return { success: true, count: rows.length }
 }
 
 /**
