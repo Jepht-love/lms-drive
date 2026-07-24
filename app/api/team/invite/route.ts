@@ -100,7 +100,7 @@ export async function POST(req: Request) {
 
   const { error: sendError } = await resend.emails.send({
     from: RESEND_FROM,
-    to: resendTo(email),
+    to: resendTo(email, 'team'), // membre invité (associé inclus) → envoi RÉEL
     subject: tpl.subject,
     html: tpl.html,
   })

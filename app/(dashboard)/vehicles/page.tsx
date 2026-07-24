@@ -61,6 +61,19 @@ export default async function VehiclesPage({
 
   const allVehicles = (vehiclesRaw ?? []) as Vehicle[]
 
+  // Véhicules ENGAGÉS maintenant (une réservation a déjà démarré, départ <= maintenant,
+  // non clôturée) : PAS disponibles même si le statut est resté « reserve » (EDL de
+  // départ non fait). Aligné avec les compteurs du tableau de bord (demande gérant 24/07).
+  const nowIso = new Date().toISOString()
+  const { data: startedRes } = await supabase
+    .from('reservations')
+    .select('vehicle_id')
+    .in('status', ['option', 'confirmee', 'en_cours', 'en_retard'])
+    .lte('start_datetime', nowIso)
+  const engagedVehicleIds = new Set((startedRes ?? []).map(r => r.vehicle_id as string))
+  const isDisponibleV = (v: Vehicle) => DISPONIBLE_STATUSES.includes(v.status) && !engagedVehicleIds.has(v.id)
+  const isEnLocationV = (v: Vehicle) => EN_LOCATION_STATUSES.includes(v.status) || (v.status === 'reserve' && engagedVehicleIds.has(v.id))
+
   // Date de retour (la plus tardive parmi les réservations actives/à venir non
   // annulées) pour chaque véhicule loué/réservé — affichée au-dessus du bouton
   // "Réserver après" pour savoir à partir de quand le véhicule est libre.
@@ -163,8 +176,8 @@ export default async function VehiclesPage({
   const matchesStatus = (v: Vehicle) =>
     !status ||
     (status === 'immobilises'  ? IMMOBILISES_STATUSES.includes(v.status)
-     : status === 'en_location' ? EN_LOCATION_STATUSES.includes(v.status)
-     : status === 'disponibles' ? DISPONIBLE_STATUSES.includes(v.status)
+     : status === 'en_location' ? isEnLocationV(v)
+     : status === 'disponibles' ? isDisponibleV(v)
      : v.status === status)
   const needle = q?.trim().toLowerCase()
   const vehicles = allVehicles.filter(v =>
@@ -175,7 +188,7 @@ export default async function VehiclesPage({
 
   const total = allVehicles.length
   const immobilisesCount = allVehicles.filter(v => IMMOBILISES_STATUSES.includes(v.status)).length
-  const enLocationCount = allVehicles.filter(v => EN_LOCATION_STATUSES.includes(v.status)).length
+  const enLocationCount = allVehicles.filter(isEnLocationV).length
 
   return (
     <div className="space-y-4">

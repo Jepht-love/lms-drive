@@ -447,8 +447,8 @@ export default async function ClientPage({
         <div>
           {client.phone && (
             <InfoRow label="Téléphone">
-              <a href={`tel:${client.phone}`} className="text-[#111111] font-semibold flex items-center gap-1.5">
-                <Phone className="w-3.5 h-3.5" /> {client.phone}
+              <a href={`tel:${client.phone}`} className="text-[#111111] font-semibold flex items-center gap-1.5 leading-none">
+                <Phone className="w-3.5 h-3.5 flex-shrink-0" /><span>{client.phone}</span>
               </a>
             </InfoRow>
           )}

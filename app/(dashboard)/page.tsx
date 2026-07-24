@@ -171,14 +171,26 @@ export default async function DashboardPage() {
   const externalIds = new Set((externalRows ?? []).map(v => v.id))
   const vehicles = (vehiclesRaw ?? []).filter(v => !externalIds.has(v.id))
 
+  // Véhicules ENGAGÉS maintenant : une réservation a déjà démarré (heure de départ
+  // <= maintenant) sans être clôturée. Ils sont sortis OU à récupérer, donc PAS
+  // disponibles — même quand leur statut est resté « reserve » faute d'EDL de départ
+  // (le passage à « loué » se fait à l'état des lieux). Sans ça, un véhicule parti
+  // restait compté « disponible » (bug « tout loué mais N disponibles », 24/07).
+  const { data: startedRes } = await supabase
+    .from('reservations')
+    .select('vehicle_id')
+    .in('status', ['option', 'confirmee', 'en_cours', 'en_retard'])
+    .lte('start_datetime', now.toISOString())
+  const engagedVehicleIds = new Set((startedRes ?? []).map(r => r.vehicle_id as string))
+
   const total          = vehicles?.length ?? 0
-  // « Réservé » = départ à venir, le véhicule est TOUJOURS physiquement sur le
-  // parc → il compte comme DISPONIBLE tant qu'il n'est pas parti (demande gérant :
-  // « les autres sont juste réservés, ils doivent être dans disponibles »).
-  const disponibles    = vehicles?.filter(v => ['disponible', 'reserve'].includes(v.status)).length ?? 0
-  // « En location » = réellement sorti : loué (client) ou mis à disposition (chez
-  // partenaire). Le réservé n'en fait PAS partie. C'est aussi le taux d'occupation.
-  const enLocation     = vehicles?.filter(v => ['loue', 'mis_a_disposition'].includes(v.status)).length ?? 0
+  // « Disponible » = louable tout de suite : garé (statut disponible) OU réservé
+  // dont le départ est ENCORE À VENIR. Dès que l'heure de départ est passée, le
+  // véhicule est engagé → il bascule en « En location » (cf. engagedVehicleIds).
+  const disponibles    = vehicles?.filter(v => ['disponible', 'reserve'].includes(v.status) && !engagedVehicleIds.has(v.id)).length ?? 0
+  // « En location » = réellement engagé : loué / mis à disposition, OU réservé dont
+  // le départ est déjà passé (client parti ou à récupérer). C'est le taux d'occupation.
+  const enLocation     = vehicles?.filter(v => ['loue', 'mis_a_disposition'].includes(v.status) || (v.status === 'reserve' && engagedVehicleIds.has(v.id))).length ?? 0
   // « mis_a_disposition » exclu : chez partenaire ≠ immobilisé (aligné avec la
   // page Flotte, où il a sa propre pastille « Chez partenaire »).
   const immobilises    = vehicles?.filter(v =>

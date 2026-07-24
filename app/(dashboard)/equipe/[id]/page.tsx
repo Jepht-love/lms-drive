@@ -151,15 +151,15 @@ export default async function MemberProfilePage({
 
         <div className="mt-4 space-y-2">
           {member.phone && (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5">
               <Phone className="w-4 h-4 text-gray-300 flex-shrink-0" />
-              <a href={`tel:${member.phone}`} className="text-sm text-gray-700 font-medium">{member.phone}</a>
+              <a href={`tel:${member.phone}`} className="text-sm text-gray-700 font-medium leading-none">{member.phone}</a>
             </div>
           )}
           {member.hire_date && (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5">
               <Briefcase className="w-4 h-4 text-gray-300 flex-shrink-0" />
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-gray-500 leading-none">
                 Embauché le {format(new Date(member.hire_date), 'd MMMM yyyy', { locale: fr })}
               </p>
             </div>
