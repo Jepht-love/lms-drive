@@ -4,6 +4,7 @@ import { Plus, Car, Wrench } from 'lucide-react'
 import VehiclesGridSwipeable from './VehiclesGridSwipeable'
 import SmartSearch from '@/components/ui/SmartSearch'
 import type { Vehicle } from '@/types/database'
+import { fetchActiveInternalTrips, internalTripPurposeLabel } from '@/lib/vehicles/internalTrips'
 import {
   computeVehicleNeeds,
   buildLastByType,
@@ -71,8 +72,16 @@ export default async function VehiclesPage({
     .in('status', ['option', 'confirmee', 'en_cours', 'en_retard'])
     .lte('start_datetime', nowIso)
   const engagedVehicleIds = new Set((startedRes ?? []).map(r => r.vehicle_id as string))
-  const isDisponibleV = (v: Vehicle) => DISPONIBLE_STATUSES.includes(v.status) && !engagedVehicleIds.has(v.id)
+
+  // Véhicules pris par un déplacement interne EN COURS (ou planifié sur le créneau
+  // présent) : ni disponibles ni en location → comptés avec les immobilisés, badge
+  // « Déplacement pro » sur la carte. Le statut en base reste intact.
+  const activeTrips = await fetchActiveInternalTrips(supabase, nowIso)
+  const isOnTripV = (v: Vehicle) => activeTrips.has(v.id) && !EN_LOCATION_STATUSES.includes(v.status)
+
+  const isDisponibleV = (v: Vehicle) => DISPONIBLE_STATUSES.includes(v.status) && !engagedVehicleIds.has(v.id) && !isOnTripV(v)
   const isEnLocationV = (v: Vehicle) => EN_LOCATION_STATUSES.includes(v.status) || (DISPONIBLE_STATUSES.includes(v.status) && engagedVehicleIds.has(v.id))
+  const isImmobiliseV = (v: Vehicle) => IMMOBILISES_STATUSES.includes(v.status) || isOnTripV(v)
 
   // Date de retour (la plus tardive parmi les réservations actives/à venir non
   // annulées) pour chaque véhicule loué/réservé — affichée au-dessus du bouton
@@ -167,9 +176,14 @@ export default async function VehiclesPage({
     needsByVehicle[v.id] = groupNeedsForBadges(needs)
   }
 
-  // Compteurs statut
+  // Compteurs statut — un véhicule en déplacement interne est compté sous
+  // « Déplacement pro » (et pas sous « Disponible ») pour que la pastille et la
+  // carte racontent la même chose.
   const counts: Record<string, number> = {}
-  for (const v of allVehicles) counts[v.status] = (counts[v.status] ?? 0) + 1
+  for (const v of allVehicles) {
+    const key = isOnTripV(v) ? 'deplacement_pro' : v.status
+    counts[key] = (counts[key] ?? 0) + 1
+  }
 
   // Compteurs maintenance par catégorie (Garage / Vidange / Pneus / Dégradé)
   const needCounts: Record<string, number> = {}
@@ -181,9 +195,11 @@ export default async function VehiclesPage({
   // Filtres (statut OU groupe « immobilisés » OU besoin maintenance) appliqués en JS
   const matchesStatus = (v: Vehicle) =>
     !status ||
-    (status === 'immobilises'  ? IMMOBILISES_STATUSES.includes(v.status)
+    (status === 'immobilises'  ? isImmobiliseV(v)
      : status === 'en_location' ? isEnLocationV(v)
      : status === 'disponibles' ? isDisponibleV(v)
+     // Pastille « Déplacement pro » : statut posé à la main OU déplacement interne réel.
+     : status === 'deplacement_pro' ? v.status === 'deplacement_pro' || isOnTripV(v)
      : v.status === status)
   const needle = q?.trim().toLowerCase()
   const vehicles = allVehicles.filter(v =>
@@ -193,7 +209,7 @@ export default async function VehiclesPage({
   )
 
   const total = allVehicles.length
-  const immobilisesCount = allVehicles.filter(v => IMMOBILISES_STATUSES.includes(v.status)).length
+  const immobilisesCount = allVehicles.filter(isImmobiliseV).length
   const enLocationCount = allVehicles.filter(isEnLocationV).length
 
   return (
@@ -328,7 +344,19 @@ export default async function VehiclesPage({
           </Link>
         </div>
       ) : (
-        <VehiclesGridSwipeable vehicles={vehicles} needsByVehicle={needsByVehicle} returnDateByVehicle={returnDateByVehicle} nextStartByVehicle={nextStartByVehicle} engagedVehicleIds={[...engagedVehicleIds]} />
+        <VehiclesGridSwipeable
+          vehicles={vehicles}
+          needsByVehicle={needsByVehicle}
+          returnDateByVehicle={returnDateByVehicle}
+          nextStartByVehicle={nextStartByVehicle}
+          engagedVehicleIds={[...engagedVehicleIds]}
+          tripByVehicle={Object.fromEntries(
+            allVehicles.filter(isOnTripV).map(v => {
+              const t = activeTrips.get(v.id)!
+              return [v.id, { endAt: t.endAt, label: internalTripPurposeLabel(t.purpose, t.purposeNotes) }]
+            }),
+          )}
+        />
       )}
     </div>
   )

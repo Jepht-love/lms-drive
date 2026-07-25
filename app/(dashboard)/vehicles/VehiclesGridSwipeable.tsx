@@ -29,6 +29,7 @@ export default function VehiclesGridSwipeable({
   returnDateByVehicle = {},
   nextStartByVehicle = {},
   engagedVehicleIds = [],
+  tripByVehicle = {},
 }: {
   vehicles: Vehicle[]
   needsByVehicle?: Record<string, NeedBadge[]>
@@ -36,6 +37,8 @@ export default function VehiclesGridSwipeable({
   nextStartByVehicle?: Record<string, string>
   /** Véhicules dont une réservation a déjà démarré (départ passé, non clôturée). */
   engagedVehicleIds?: string[]
+  /** Véhicules pris par un déplacement interne en cours : motif + fin prévue. */
+  tripByVehicle?: Record<string, { endAt: string | null; label: string }>
 }) {
   return (
     <AnimatedList className="grid sm:grid-cols-2 gap-3 items-stretch">
@@ -44,7 +47,10 @@ export default function VehiclesGridSwipeable({
         // en réalité sorti → affiché comme « Loué » (badge + bouton « Réserver après »
         // au lieu du « Réserver » qui laisserait croire qu'il est libre maintenant).
         const isEngaged = engagedVehicleIds.includes(v.id)
-        const displayStatus = isEngaged && v.status === 'disponible' ? 'loue' : v.status
+        // Déplacement interne : le véhicule est parti sans être loué → badge
+        // « Déplacement pro », pas de bouton « Réserver » (il n'est pas libre).
+        const trip = tripByVehicle[v.id]
+        const displayStatus = trip ? 'deplacement_pro' : isEngaged && v.status === 'disponible' ? 'loue' : v.status
         const cfg = STATUS_CONFIG[displayStatus] ?? STATUS_CONFIG.hors_service
         const badges = needsByVehicle[v.id] ?? []
 
@@ -109,6 +115,20 @@ export default function VehiclesGridSwipeable({
                   )}
                 </div>
               </Link>
+              {trip && (
+                <div className="border-t border-gray-50">
+                  <p className="text-center text-xs text-gray-400 pt-2 px-3 truncate">
+                    {trip.label}
+                    {trip.endAt && ` · retour le ${format(new Date(trip.endAt), "d MMM 'à' HH:mm", { locale: fr })}`}
+                  </p>
+                  <Link
+                    href={`/reservations/new?vehicle=${v.id}${trip.endAt ? `&start=${encodeURIComponent(trip.endAt)}` : ''}`}
+                    className="flex items-center justify-center gap-2 py-3 text-sm font-bold text-indigo-700 bg-indigo-50/40 hover:bg-indigo-50 transition-colors active:scale-[.99]"
+                  >
+                    <Plus className="w-4 h-4" /> Réserver après
+                  </Link>
+                </div>
+              )}
               {displayStatus === 'disponible' && (
                 <Link
                   href={`/reservations/new?vehicle=${v.id}`}

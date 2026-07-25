@@ -4,6 +4,7 @@ import { ArrowLeft, AlertTriangle, Wrench, HelpCircle, ChevronRight, Briefcase }
 import BackButton from '@/components/ui/BackButton'
 import { formatDate } from '@/lib/utils'
 import { maintenanceType } from '@/lib/maintenance'
+import { fetchActiveInternalTrips, internalTripPurposeLabel } from '@/lib/vehicles/internalTrips'
 
 // Statuts considérés « immobilisés » — identique au filtre de /vehicles, mais
 // cette page explique POURQUOI chaque véhicule l'est (sinistre en cours,
@@ -35,11 +36,29 @@ export default async function ImmobilisesPage() {
     .eq('is_active', true)
     .in('status', IMMOBILISES_STATUSES)
 
+  // Un déplacement interne en cours immobilise le véhicule SANS changer son statut
+  // (cf. lib/vehicles/internalTrips.ts) : sans cette seconde requête, le compteur
+  // « Immobilisés » du tableau de bord les compte mais cette page ne les montre pas.
+  const activeTrips = await fetchActiveInternalTrips(supabase)
+  const tripIds = [...activeTrips.keys()]
+  const { data: tripVehiclesRaw } = tripIds.length
+    ? await supabase
+        .from('vehicles')
+        .select('id, plate, brand, model, status')
+        .eq('is_active', true)
+        .in('id', tripIds)
+        .not('status', 'in', '("loue","mis_a_disposition")')
+    : { data: [] }
+
   // Exclut les véhicules partenaires temporaires (inter-agences), comme sur le
   // dashboard — requête séparée tolérante à l'absence de la colonne avant 035.
   const { data: externalRows } = await supabase.from('vehicles').select('id').eq('is_external', true)
   const externalIds = new Set((externalRows ?? []).map(v => v.id))
-  const vehicles = (vehiclesRaw ?? []).filter(v => !externalIds.has(v.id))
+  const byId = new Map<string, { id: string; plate: string; brand: string; model: string; status: string }>()
+  for (const v of [...(vehiclesRaw ?? []), ...(tripVehiclesRaw ?? [])]) {
+    if (!externalIds.has(v.id)) byId.set(v.id, v)
+  }
+  const vehicles = [...byId.values()]
   const vehicleIds = vehicles.map(v => v.id)
 
   // Sinistre en cours (non clôturé) par véhicule
@@ -97,6 +116,16 @@ export default async function ImmobilisesPage() {
             // accident / atelier ci-dessous prime s'il existe malgré tout).
             if (v.status === 'deplacement_pro') reasonIcon = <Briefcase className="w-4 h-4 text-indigo-500" />
             else if (v.status === 'fourriere' || v.status === 'non_restitue') reasonIcon = <AlertTriangle className="w-4 h-4 text-rose-500" />
+
+            // Déplacement interne réel : c'est LUI la raison de l'immobilisation
+            // quand le statut, lui, n'a rien d'immobilisant (véhicule « disponible »).
+            const trip = activeTrips.get(v.id)
+            if (trip && !IMMOBILISES_STATUSES.includes(v.status)) {
+              href = '/internal-trips'
+              reasonIcon = <Briefcase className="w-4 h-4 text-indigo-500" />
+              reasonText = `Déplacement — ${internalTripPurposeLabel(trip.purpose, trip.purposeNotes)}`
+              reasonSub = trip.endAt ? `retour prévu le ${formatDate(trip.endAt, "dd/MM 'à' HH:mm")}` : 'en cours'
+            }
 
             if (accident) {
               href = `/incidents/sinistres/${accident.id}`

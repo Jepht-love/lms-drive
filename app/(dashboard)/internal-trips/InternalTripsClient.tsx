@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { startTrip, endTrip, planTrip, startPlannedTrip, assignTrip, deleteTrip } from '@/lib/actions/internal-trips'
 import { useToast } from '@/components/Toast'
 import { formatDateTime, formatPrice } from '@/lib/utils'
+import { internalTripPurposeLabel } from '@/lib/vehicles/internalTrips'
 import { Plus, Navigation, Clock, CheckCircle2, CalendarClock, UserPlus, Play, Trash2, User, Search } from 'lucide-react'
 import Drawer from '@/components/Drawer'
 import DateTimeField from '@/components/ui/DateTimeField'
@@ -51,6 +52,12 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [search, setSearch] = useState('')
+  // Début saisi dans le formulaire de planification : borne basse du champ « Fin ».
+  const [planStart, setPlanStart] = useState('')
+  // Motif de chaque formulaire : « autre » fait apparaître un champ de précision
+  // obligatoire (le mot « autre » seul ne dit rien au reste de l'équipe).
+  const [planPurpose, setPlanPurpose] = useState('livraison')
+  const [startPurpose, setStartPurpose] = useState('livraison')
 
   // Filtre local : pas d'URL par trajet (gérés en drawer), donc recherche en mémoire.
   const q = search.trim().toLowerCase()
@@ -64,11 +71,23 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
 
   const vehicleById = (id: string) => vehicles.find(v => v.id === id) ?? null
   const canManageTrip = (t: Trip) => isManager || t.user_id === currentUserId
+  const tripLabel = (t: Trip) => internalTripPurposeLabel(t.purpose, t.purpose_notes)
+
+  /** Créneau planifié : « 12/08 09:00 → 17:30 » (même jour) ou les deux dates. */
+  function tripWindow(t: Trip) {
+    if (!t.end_datetime) return formatDateTime(t.start_datetime)
+    // Comparaison sur les dates FORMATÉES (heure locale) — comparer les ISO
+    // reviendrait à comparer des jours UTC, faux pour un créneau qui passe minuit.
+    const startTxt = formatDateTime(t.start_datetime)
+    const endTxt = formatDateTime(t.end_datetime)
+    return `${startTxt} → ${startTxt.slice(0, 10) === endTxt.slice(0, 10) ? endTxt.slice(11) : endTxt}`
+  }
 
   function reset() {
     setShowStartForm(false); setShowPlanForm(false)
     setEndingTrip(null); setStartingPlanned(null); setAssigningTrip(null); setDeletingTrip(null)
     setSelectedVehicle(null); setError(null); setLoading(false)
+    setPlanStart(''); setPlanPurpose('livraison'); setStartPurpose('livraison')
   }
 
   async function run(fn: () => Promise<{ error?: string; success?: boolean } | undefined>, okMsg: string) {
@@ -141,12 +160,12 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
                     <p className="font-bold text-gray-900">{t.vehicle?.plate}</p>
                     <p className="text-xs text-gray-500">{t.vehicle?.brand} {t.vehicle?.model}</p>
                   </div>
-                  <span className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded-full font-medium capitalize">
-                    {t.purpose}
+                  <span className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded-full font-medium max-w-[55%] truncate">
+                    {tripLabel(t)}
                   </span>
                 </div>
                 <p className="text-xs text-gray-500 flex items-center gap-1">
-                  <CalendarClock className="w-3.5 h-3.5" /> {formatDateTime(t.start_datetime)}
+                  <CalendarClock className="w-3.5 h-3.5 flex-shrink-0" /> {tripWindow(t)}
                 </p>
                 <p className="text-xs mt-1 flex items-center gap-1">
                   <User className="w-3.5 h-3.5 text-gray-400" />
@@ -154,7 +173,8 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
                     ? <span className="text-gray-600">{t.user.full_name}</span>
                     : <span className="text-amber-600 font-medium">Non assigné</span>}
                 </p>
-                {t.purpose_notes && <p className="text-xs text-gray-400 mt-1">{t.purpose_notes}</p>}
+                {/* Motif « autre » : la précision EST déjà le libellé du badge → pas de doublon. */}
+                {t.purpose_notes && t.purpose !== 'autre' && <p className="text-xs text-gray-400 mt-1">{t.purpose_notes}</p>}
 
                 <div className="mt-3 flex gap-2">
                   {!t.user_id && isManager && (
@@ -203,11 +223,14 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
                     <p className="font-bold text-gray-900">{t.vehicle?.plate}</p>
                     <p className="text-xs text-gray-500">{t.vehicle?.brand} {t.vehicle?.model}</p>
                   </div>
-                  <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium capitalize">
-                    {t.purpose}
+                  <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium max-w-[55%] truncate">
+                    {tripLabel(t)}
                   </span>
                 </div>
                 <p className="text-xs text-gray-400">Depuis {formatDateTime(t.start_datetime)}</p>
+                {t.end_datetime && t.end_datetime > t.start_datetime && (
+                  <p className="text-xs text-gray-400">Retour prévu : {formatDateTime(t.end_datetime)}</p>
+                )}
                 {t.km_start != null && <p className="text-xs text-gray-400">KM départ : {t.km_start.toLocaleString('fr-FR')}</p>}
                 {t.user?.full_name && <p className="text-xs text-gray-400">Conducteur : {t.user.full_name}</p>}
                 {canManageTrip(t) && (
@@ -251,7 +274,7 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="font-semibold text-gray-900 text-sm">{t.vehicle?.plate}</p>
-                      <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full capitalize">{t.purpose}</span>
+                      <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full truncate max-w-[50%]">{tripLabel(t)}</span>
                     </div>
                     <p className="text-xs text-gray-500">
                       {t.user?.full_name} · {formatDateTime(t.start_datetime)}
@@ -292,14 +315,38 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
             </select>
           </div>
           <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Date et heure *</label>
-            <DateTimeField name="start_datetime" required className="px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white" />
+            <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Début *</label>
+            <DateTimeField name="start_datetime" required onChange={setPlanStart} className="px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white" />
+          </div>
+          <div>
+            <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Fin *</label>
+            <DateTimeField name="end_datetime" required min={planStart || undefined} className="px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white" />
+            <p className="text-[11px] text-gray-400 mt-1">Le véhicule est indisponible sur ce créneau (flotte, calendrier, réservations).</p>
           </div>
           <div>
             <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Motif *</label>
-            <select name="purpose" required className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white">
+            <select
+              name="purpose"
+              required
+              value={planPurpose}
+              onChange={e => setPlanPurpose(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white"
+            >
               {PURPOSES.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
             </select>
+          </div>
+          <div>
+            <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">
+              {planPurpose === 'autre' ? 'Préciser le motif *' : 'Notes'}
+            </label>
+            <input
+              type="text"
+              name="purpose_notes"
+              required={planPurpose === 'autre'}
+              placeholder={planPurpose === 'autre' ? 'Ex. campagne de pub, usage particulier…' : 'Détails...'}
+              enterKeyHint="done"
+              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm"
+            />
           </div>
           {isManager ? (
             <div>
@@ -313,10 +360,6 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
           ) : (
             <p className="text-xs text-gray-500 bg-gray-50 rounded-xl px-3 py-2">Ce déplacement vous sera assigné.</p>
           )}
-          <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Notes</label>
-            <input type="text" name="purpose_notes" placeholder="Détails..." enterKeyHint="done" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm" />
-          </div>
           {error && <div className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{error}</div>}
           <p className="text-[11px] text-gray-400">* Champ obligatoire</p>
           <button type="submit" disabled={loading} className="w-full py-3 bg-[#111111] text-white rounded-xl font-semibold disabled:opacity-50 transition-colors active:scale-[.97]">
@@ -381,9 +424,28 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
           </div>
           <div>
             <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Motif *</label>
-            <select name="purpose" required className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white">
+            <select
+              name="purpose"
+              required
+              value={startPurpose}
+              onChange={e => setStartPurpose(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white"
+            >
               {PURPOSES.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
             </select>
+          </div>
+          <div>
+            <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">
+              {startPurpose === 'autre' ? 'Préciser le motif *' : 'Notes'}
+            </label>
+            <input
+              type="text"
+              name="purpose_notes"
+              required={startPurpose === 'autre'}
+              placeholder={startPurpose === 'autre' ? 'Ex. campagne de pub, usage particulier…' : 'Détails...'}
+              enterKeyHint="done"
+              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm"
+            />
           </div>
           {isManager && (
             <div>
@@ -410,10 +472,6 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
           <div>
             <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Autonomie carburant (km)</label>
             <input type="number" name="fuel_start" min="0" placeholder="Autonomie en km" inputMode="numeric" enterKeyHint="next" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm" />
-          </div>
-          <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Notes</label>
-            <input type="text" name="purpose_notes" placeholder="Détails..." enterKeyHint="done" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm" />
           </div>
           {error && <div className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{error}</div>}
           <p className="text-[11px] text-gray-400">* Champ obligatoire</p>

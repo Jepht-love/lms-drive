@@ -1,9 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
-
-const PURPOSE_LABELS: Record<string, string> = {
-  livraison: 'Livraison', recuperation: 'Récupération', garage: 'Garage',
-  preparation: 'Préparation', personnel: 'Personnel', autre: 'Autre',
-}
+import { internalTripPurposeLabel } from '@/lib/vehicles/internalTrips'
 
 // Statut du déplacement → statut de l'événement calendrier (enum calendar_events).
 const STATUS_MAP: Record<string, 'a_faire' | 'en_cours' | 'termine' | 'annule'> = {
@@ -23,22 +19,31 @@ const FALLBACK_DURATION_MINUTES = 60
  */
 export async function syncTripToCalendar(tripId: string): Promise<void> {
   const admin = createAdminClient()
-  const { data: trip } = await admin
+  const { data: trip, error: readError } = await admin
     .from('internal_trips')
-    .select('id, vehicle_id, user_id, start_datetime, end_datetime, purpose, status, vehicle:vehicles(brand, model)')
+    .select('id, vehicle_id, user_id, start_datetime, end_datetime, purpose, purpose_notes, status, vehicle:vehicles(brand, model)')
     .eq('id', tripId)
     .single()
 
+  // Sans ces logs, un échec ici laissait le déplacement absent du calendrier
+  // sans la moindre trace (constaté le 25/07 : trip créé, aucun événement).
+  if (readError) {
+    console.error('syncTripToCalendar — lecture du déplacement échouée:', readError.message)
+    return
+  }
   if (!trip) return
 
   const vehicle = Array.isArray(trip.vehicle) ? trip.vehicle[0] : trip.vehicle
   const vehicleLabel = vehicle ? `${vehicle.brand} ${vehicle.model}` : ''
-  const purposeLabel = PURPOSE_LABELS[trip.purpose] ?? trip.purpose
+  const purposeLabel = internalTripPurposeLabel(trip.purpose, trip.purpose_notes)
   const title = `Déplacement — ${purposeLabel}${vehicleLabel ? ` (${vehicleLabel})` : ''}`
 
   const startAt = trip.start_datetime
-  const endAt = trip.end_datetime
-    ?? new Date(new Date(startAt).getTime() + FALLBACK_DURATION_MINUTES * 60_000).toISOString()
+  const fallbackEnd = new Date(new Date(startAt).getTime() + FALLBACK_DURATION_MINUTES * 60_000).toISOString()
+  // Un déplacement planifié puis démarré EN RETARD garde sa fin prévue alors que
+  // son début est recalé sur l'heure réelle (startPlannedTrip) → fin <= début.
+  // Sans ce garde-fou, le calendrier reçoit un bloc de durée négative.
+  const endAt = trip.end_datetime && trip.end_datetime > startAt ? trip.end_datetime : fallbackEnd
 
   const sourceKey = `trip-${trip.id}`
   const payload = {
@@ -58,9 +63,11 @@ export async function syncTripToCalendar(tripId: string): Promise<void> {
     .eq('source_key', sourceKey)
     .maybeSingle()
 
-  if (existing) {
-    await admin.from('calendar_events').update(payload).eq('id', existing.id)
-  } else {
-    await admin.from('calendar_events').insert(payload)
+  const { error: writeError } = existing
+    ? await admin.from('calendar_events').update(payload).eq('id', existing.id)
+    : await admin.from('calendar_events').insert(payload)
+
+  if (writeError) {
+    console.error('syncTripToCalendar — écriture de l’événement échouée:', writeError.message)
   }
 }

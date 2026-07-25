@@ -16,12 +16,16 @@ export async function startTrip(formData: FormData) {
   const assigneeRaw = formData.get('user_id') as string | null
   const assignee = isManager && assigneeRaw ? assigneeRaw : user.id
 
+  const purpose = formData.get('purpose') as string
+  const purposeNotes = ((formData.get('purpose_notes') as string) || '').trim()
+  if (purpose === 'autre' && !purposeNotes) return { error: 'Précisez le motif du déplacement' }
+
   const payload = {
     vehicle_id: formData.get('vehicle_id') as string,
     user_id: assignee,
     start_datetime: new Date().toISOString(),
-    purpose: formData.get('purpose') as string,
-    purpose_notes: formData.get('purpose_notes') as string || null,
+    purpose,
+    purpose_notes: purposeNotes || null,
     status: 'en_cours' as const,
     km_start: Number(formData.get('km_start')),
     fuel_start: formData.get('fuel_start') ? Number(formData.get('fuel_start')) : null,
@@ -151,8 +155,20 @@ export async function planTrip(formData: FormData) {
   const vehicleId = formData.get('vehicle_id') as string
   const purpose = formData.get('purpose') as string
   const startRaw = formData.get('start_datetime') as string
+  const endRaw = formData.get('end_datetime') as string
+  const purposeNotes = ((formData.get('purpose_notes') as string) || '').trim()
   if (!vehicleId || !purpose) return { error: 'Véhicule et motif requis' }
-  if (!startRaw) return { error: 'Date du déplacement requise' }
+  if (!startRaw) return { error: 'Date de début requise' }
+  // Fin obligatoire à la planification : c'est elle qui borne l'indisponibilité du
+  // véhicule (calendrier, compteurs flotte, blocage de réservation). Sans fin, le
+  // véhicule resterait bloqué jusqu'à une clôture manuelle.
+  if (!endRaw) return { error: 'Date de fin requise' }
+  // Motif « autre » : le mot ne dit rien, la précision est donc obligatoire.
+  if (purpose === 'autre' && !purposeNotes) return { error: 'Précisez le motif du déplacement' }
+
+  const startIso = new Date(startRaw).toISOString()
+  const endIso = new Date(endRaw).toISOString()
+  if (endIso <= startIso) return { error: 'La fin doit être après le début' }
 
   // Employé : forcé sur lui-même. Manager : valeur du select ('' ou 'none' = non assigné).
   const assigneeRaw = (formData.get('user_id') as string | null) ?? ''
@@ -163,9 +179,10 @@ export async function planTrip(formData: FormData) {
   const payload = {
     vehicle_id: vehicleId,
     user_id: assignee,
-    start_datetime: new Date(startRaw).toISOString(),
+    start_datetime: startIso,
+    end_datetime: endIso,
     purpose,
-    purpose_notes: (formData.get('purpose_notes') as string) || null,
+    purpose_notes: purposeNotes || null,
     status: 'planifie' as const,
     notes: (formData.get('notes') as string) || null,
   }

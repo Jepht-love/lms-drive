@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { fetchAllAlerts } from '@/lib/utils/alerts'
+import { fetchActiveInternalTrips } from '@/lib/vehicles/internalTrips'
 import Link from 'next/link'
 import {
   differenceInDays, format, isSameDay,
@@ -171,19 +172,27 @@ export default async function DashboardPage() {
     .lte('start_datetime', now.toISOString())
   const engagedVehicleIds = new Set((startedRes ?? []).map(r => r.vehicle_id as string))
 
+  // Véhicules pris par un DÉPLACEMENT INTERNE en ce moment (en cours, ou planifié
+  // dont le créneau court) : pas louables, et pas « en location » non plus — ils
+  // rejoignent les immobilisés. Le statut du véhicule n'est pas modifié.
+  const activeTrips = await fetchActiveInternalTrips(supabase, now.toISOString())
+  const tripVehicleIds = new Set(activeTrips.keys())
+
   const total          = vehicles?.length ?? 0
   // « Disponible » = louable tout de suite : garé (statut disponible) OU réservé
   // dont le départ est ENCORE À VENIR. Dès que l'heure de départ est passée, le
   // véhicule est engagé → il bascule en « En location » (cf. engagedVehicleIds).
-  const disponibles    = vehicles?.filter(v => ['disponible', 'reserve'].includes(v.status) && !engagedVehicleIds.has(v.id)).length ?? 0
+  const disponibles    = vehicles?.filter(v => ['disponible', 'reserve'].includes(v.status) && !engagedVehicleIds.has(v.id) && !tripVehicleIds.has(v.id)).length ?? 0
   // « En location » = réellement engagé : loué / mis à disposition, OU réservé dont
   // le départ est déjà passé (client parti ou à récupérer). C'est le taux d'occupation.
   const enLocation     = vehicles?.filter(v => ['loue', 'mis_a_disposition'].includes(v.status) || (['disponible', 'reserve'].includes(v.status) && engagedVehicleIds.has(v.id))).length ?? 0
   // « mis_a_disposition » exclu : chez partenaire ≠ immobilisé (aligné avec la
-  // page Flotte, où il a sa propre pastille « Chez partenaire »).
+  // page Flotte, où il a sa propre pastille « Chez partenaire »). Un déplacement
+  // interne en cours compte ici : le véhicule n'est ni louable ni en location.
   const immobilises    = vehicles?.filter(v =>
     ['maintenance', 'hors_service', 'en_verification', 'immobilise', 'a_reparer',
      'fourriere', 'non_restitue', 'deplacement_pro'].includes(v.status)
+    || (tripVehicleIds.has(v.id) && !['loue', 'mis_a_disposition'].includes(v.status))
   ).length ?? 0
   const tauxOccupation = total > 0 ? Math.round((enLocation / total) * 100) : 0
 

@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { assertPeriodOpen } from '@/lib/accounting/period-lock'
+import { findBlockingInternalTrip } from '@/lib/vehicles/internalTrips'
 import { Resend } from 'resend'
 import { RESEND_FROM, resendTo } from '@/lib/email/config'
 
@@ -357,19 +358,8 @@ export async function createReservation(formData: FormData) {
   }
 
   // Indisponibilité DÉPLACEMENT INTERNE : un trajet interne qui chevauche le créneau
-  // (ou un trajet en cours, sans date de fin) bloque la location. Même logique de
-  // chevauchement réel : début existant < fin nouvelle ET (fin existante nulle OU
-  // fin existante > début nouvelle).
-  const { data: tripConflicts } = await supabase
-    .from('internal_trips')
-    .select('id')
-    .eq('vehicle_id', vehicleId)
-    .neq('status', 'annule')
-    .lt('start_datetime', endDatetime)
-    .or(`end_datetime.is.null,end_datetime.gt."${startDatetime}"`)
-    .limit(1)
-
-  if (tripConflicts && tripConflicts.length > 0) {
+  // (ou un trajet en cours au retour inconnu) bloque la location.
+  if (await findBlockingInternalTrip(supabase, vehicleId, startDatetime, endDatetime)) {
     return { error: 'Ce véhicule est utilisé pour un déplacement interne sur cette période.' }
   }
 
@@ -785,15 +775,7 @@ export async function prolongReservation(
     return { error: 'Ce véhicule a un rendez-vous garage sur cette période — prolongation impossible.' }
   }
 
-  const { data: tripConflicts } = await supabase
-    .from('internal_trips')
-    .select('id')
-    .eq('vehicle_id', reservation.vehicle_id)
-    .neq('status', 'annule')
-    .lt('start_datetime', newEnd)
-    .or(`end_datetime.is.null,end_datetime.gt."${reservation.end_datetime}"`)
-    .limit(1)
-  if (tripConflicts && tripConflicts.length > 0) {
+  if (await findBlockingInternalTrip(supabase, reservation.vehicle_id, reservation.end_datetime, newEnd)) {
     return { error: 'Ce véhicule est utilisé pour un déplacement interne sur cette période — prolongation impossible.' }
   }
 

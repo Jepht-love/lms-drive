@@ -102,7 +102,11 @@ export async function POST(request: NextRequest) {
       vehicle_id: vehicle_ids[0],
       user_id: assigned_to,
       start_datetime: start_at,
-      end_datetime: status === 'termine' ? end_at : null,
+      // La fin de l'événement EST la fin prévue du déplacement : sans elle, le
+      // véhicule serait porté indisponible sans limite (compteurs flotte et
+      // blocage de réservation lisent cette fenêtre).
+      end_datetime: end_at ?? null,
+      status: status === 'termine' ? 'termine' : status === 'en_cours' ? 'en_cours' : 'planifie',
       purpose: 'autre',
       purpose_notes: notes ?? title,
       km_start: vehicle?.current_km ?? 0,
