@@ -56,47 +56,57 @@ export default function ImportTriageClient({
 
   // ── Tri / assignation ──
   const [selected, setSelected] = useState<Set<string>>(new Set())
-  const [query, setQuery] = useState('')
   const [client, setClient] = useState<ClientLite | null>(null)
-  // Type de pièce : deux bascules indépendantes CNI / Permis (activables ENSEMBLE
-  // pour une photo qui contient les deux → type combiné « cni_permis »). Un type
-  // « Autre… » (otherSub) prend le dessus pour les cas rares et coupe les bascules.
+  // Type de pièce : bascules CNI / Séjour / Permis. CNI et Séjour sont des pièces
+  // d'identité alternatives → mutuellement exclusives. Permis est indépendant et
+  // se combine avec l'une ou l'autre (photo contenant identité + permis) → types
+  // combinés « cni_permis » / « sejour_permis ». « Autre… » (otherSub) prend le
+  // dessus pour les cas rares (justif domicile, passeport…) et coupe les bascules.
   const [quickCni, setQuickCni] = useState(true)
+  const [quickSejour, setQuickSejour] = useState(false)
   const [quickPermis, setQuickPermis] = useState(false)
   const [otherSub, setOtherSub] = useState<string | null>(null)
+  const idPart = quickCni ? 'cni' : quickSejour ? 'sejour' : ''
   const subcategory =
     otherSub ??
-    (quickCni && quickPermis ? 'cni_permis' : quickCni ? 'cni' : quickPermis ? 'permis' : '')
+    (idPart === 'cni'
+      ? (quickPermis ? 'cni_permis' : 'cni')
+      : idPart === 'sejour'
+        ? (quickPermis ? 'sejour_permis' : 'titre_sejour')
+        : quickPermis ? 'permis' : '')
+
+  function pickType(kind: 'cni' | 'sejour' | 'permis') {
+    setOtherSub(null)
+    setShowMoreTypes(false)
+    if (kind === 'cni') { setQuickSejour(false); setQuickCni(v => !v) }
+    else if (kind === 'sejour') { setQuickCni(false); setQuickSejour(v => !v) }
+    else { setQuickPermis(v => !v) }
+  }
   const [assigning, setAssigning] = useState(false)
   const [assignError, setAssignError] = useState<string | null>(null)
 
   const [lightbox, setLightbox] = useState<StagedDoc | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
-  const filteredClients = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    if (!q) return clientList.slice(0, 8)
-    return clientList
-      .filter(c => c.name.toLowerCase().includes(q) || (c.phone ?? '').includes(q))
-      .slice(0, 8)
-  }, [clientList, query])
+  // Sélectionne un client (barre du bas OU zoom). Depuis le zoom (docId fourni),
+  // on ajoute la photo à la sélection et on referme le zoom → la barre du bas
+  // apparaît prête (type + Assigner).
+  function pickClient(c: ClientLite, docId?: string) {
+    if (docId) setSelected(prev => new Set(prev).add(docId))
+    setClient(c)
+    if (docId) setLightbox(null)
+  }
 
-  // Pas de client existant portant EXACTEMENT ce nom → on propose de le créer.
-  const trimmedQuery = query.trim()
-  const hasExactMatch = clientList.some(c => c.name.toLowerCase() === trimmedQuery.toLowerCase())
-  const canCreate = trimmedQuery.length >= 2 && !hasExactMatch
-
-  async function handleCreateClient() {
-    if (!canCreate) return
+  // Crée une fiche à la volée puis l'utilise aussitôt (barre ou zoom).
+  async function createClientAndUse(name: string, docId?: string) {
     setAssignError(null)
     setCreating(true)
-    const res = await createClientQuick(trimmedQuery)
+    const res = await createClientQuick(name)
     setCreating(false)
     if (res?.error || !res?.client) { setAssignError(res?.error ?? 'Création impossible'); return }
-    // Ajoute la fiche à la liste locale et la sélectionne aussitôt pour l'assignation.
-    setClientList(prev => [{ id: res.client.id, name: res.client.name, phone: null }, ...prev])
-    setClient({ id: res.client.id, name: res.client.name, phone: null })
-    setQuery('')
+    const c: ClientLite = { id: res.client.id, name: res.client.name, phone: null }
+    setClientList(prev => [c, ...prev])
+    pickClient(c, docId)
     router.refresh()
   }
 
@@ -149,8 +159,8 @@ export default function ImportTriageClient({
   function clearSelection() {
     setSelected(new Set())
     setClient(null)
-    setQuery('')
     setQuickCni(true)
+    setQuickSejour(false)
     setQuickPermis(false)
     setOtherSub(null)
     setShowMoreTypes(false)
@@ -341,49 +351,13 @@ export default function ImportTriageClient({
 
             {/* Recherche client */}
             {!client ? (
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                  autoFocus
-                  type="search"
-                  value={query}
-                  onChange={e => setQuery(e.target.value)}
-                  placeholder="Rechercher un client (nom ou téléphone)…"
-                  className="w-full pl-9 pr-4 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-[13px] text-gray-800 placeholder-gray-400 outline-none focus:border-gray-400"
-                />
-                {(query.trim() !== '' || filteredClients.length > 0) && (
-                  <div className="mt-1.5 max-h-52 overflow-y-auto rounded-xl border border-gray-200 divide-y divide-gray-100 bg-white">
-                    {filteredClients.map(c => (
-                      <button
-                        key={c.id}
-                        onClick={() => { setClient(c); setQuery('') }}
-                        className="w-full text-left px-3 py-2.5 hover:bg-gray-50"
-                      >
-                        <span className="text-[13px] font-semibold text-gray-900">{c.name}</span>
-                        {c.phone && <span className="text-[11px] text-gray-400 ml-2">{c.phone}</span>}
-                      </button>
-                    ))}
-                    {filteredClients.length === 0 && !canCreate && (
-                      <p className="text-[12px] text-gray-400 px-3 py-2.5">Tapez un nom pour rechercher ou créer</p>
-                    )}
-                    {/* Client absent de la base → création express de la fiche */}
-                    {canCreate && (
-                      <button
-                        onClick={handleCreateClient}
-                        disabled={creating}
-                        className="w-full text-left px-3 py-2.5 bg-emerald-50 hover:bg-emerald-100 flex items-center gap-2 disabled:opacity-60"
-                      >
-                        {creating
-                          ? <Loader2 className="w-4 h-4 text-emerald-600 animate-spin flex-shrink-0" />
-                          : <UserPlus className="w-4 h-4 text-emerald-600 flex-shrink-0" />}
-                        <span className="text-[13px] font-semibold text-emerald-700">
-                          Créer le client « {trimmedQuery} »
-                        </span>
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
+              <ClientSearch
+                clients={clientList}
+                creating={creating}
+                autoFocus
+                onPick={c => pickClient(c)}
+                onCreate={name => createClientAndUse(name)}
+              />
             ) : (
               <button
                 onClick={() => setClient(null)}
@@ -394,52 +368,49 @@ export default function ImportTriageClient({
               </button>
             )}
 
-            {/* Type de pièce : CNI et Permis sont deux bascules INDÉPENDANTES —
-                activer les deux = photo contenant CNI + permis. « Autre… » pour les
-                cas rares (justif domicile, passeport…), qui coupe les bascules. */}
+            {/* Type de pièce : CNI / Séjour (identité, exclusives) + Permis
+                (indépendant, combinable). « Autre… » pour les cas rares. */}
             <div className="space-y-2">
-              <div className="flex gap-2">
-                <button
-                  onClick={() => { setOtherSub(null); setShowMoreTypes(false); setQuickCni(v => !v) }}
-                  className={`flex-1 py-2.5 rounded-xl text-sm font-bold border transition-colors ${
-                    !otherSub && quickCni
-                      ? 'bg-[#111111] text-white border-[#111111]'
-                      : 'bg-gray-50 text-gray-600 border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  CNI
-                </button>
-                <button
-                  onClick={() => { setOtherSub(null); setShowMoreTypes(false); setQuickPermis(v => !v) }}
-                  className={`flex-1 py-2.5 rounded-xl text-sm font-bold border transition-colors ${
-                    !otherSub && quickPermis
-                      ? 'bg-[#111111] text-white border-[#111111]'
-                      : 'bg-gray-50 text-gray-600 border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  Permis
-                </button>
-                <button
-                  onClick={() => setShowMoreTypes(v => !v)}
-                  className={`px-3 rounded-xl text-sm font-semibold border transition-colors ${
-                    otherSub
-                      ? 'bg-gray-900 text-white border-gray-900'
-                      : 'bg-gray-50 text-gray-500 border-gray-200'
-                  }`}
-                >
-                  Autre…
-                </button>
+              <div className="grid grid-cols-3 gap-2">
+                {([
+                  { kind: 'cni' as const, label: 'CNI', on: !otherSub && quickCni },
+                  { kind: 'sejour' as const, label: 'Séjour', on: !otherSub && quickSejour },
+                  { kind: 'permis' as const, label: 'Permis', on: !otherSub && quickPermis },
+                ]).map(t => (
+                  <button
+                    key={t.kind}
+                    onClick={() => pickType(t.kind)}
+                    className={`py-2.5 rounded-xl text-sm font-bold border transition-colors ${
+                      t.on
+                        ? 'bg-[#111111] text-white border-[#111111]'
+                        : 'bg-gray-50 text-gray-600 border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                ))}
               </div>
+
+              <button
+                onClick={() => setShowMoreTypes(v => !v)}
+                className={`w-full py-2 rounded-xl text-[13px] font-semibold border transition-colors ${
+                  otherSub
+                    ? 'bg-gray-900 text-white border-gray-900'
+                    : 'bg-gray-50 text-gray-500 border-gray-200'
+                }`}
+              >
+                Autre type…
+              </button>
 
               {showMoreTypes && (
                 <select
                   value={otherSub ?? ''}
-                  onChange={e => { setOtherSub(e.target.value || null); setQuickCni(false); setQuickPermis(false) }}
+                  onChange={e => { setOtherSub(e.target.value || null); setQuickCni(false); setQuickSejour(false); setQuickPermis(false) }}
                   className="w-full text-[13px] font-medium text-gray-700 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 outline-none focus:border-gray-400"
                 >
                   <option value="">Choisir un type…</option>
                   {CLIENT_SUBCATS
-                    .filter(sc => !['cni', 'permis', 'cni_permis'].includes(sc.id))
+                    .filter(sc => !['cni', 'titre_sejour', 'permis', 'cni_permis', 'sejour_permis'].includes(sc.id))
                     .map(sc => (
                       <option key={sc.id} value={sc.id}>{sc.label}</option>
                     ))}
@@ -463,35 +434,142 @@ export default function ImportTriageClient({
         </div>
       )}
 
-      {/* Lightbox */}
+      {/* Lightbox : photo agrandie pour lire le nom + champ pour l'écrire aussitôt */}
       {lightbox && (
         <div
-          className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 bg-black/85 flex flex-col p-4"
           onClick={() => setLightbox(null)}
         >
           <button
-            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/15 flex items-center justify-center text-white"
+            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/15 flex items-center justify-center text-white z-10"
             aria-label="Fermer"
           >
             <X className="w-5 h-5" />
           </button>
-          {isImage(lightbox.fileType) && lightbox.url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={lightbox.url} alt={lightbox.name} className="max-w-full max-h-full object-contain rounded-lg" />
-          ) : lightbox.url ? (
-            <div className="bg-white rounded-2xl p-6 text-center" onClick={e => e.stopPropagation()}>
-              <FileText className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-              <p className="text-sm font-semibold text-gray-700 mb-3">{lightbox.name}</p>
-              <a
-                href={lightbox.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#111111] text-white text-sm font-semibold"
-              >
-                Ouvrir le document
-              </a>
-            </div>
-          ) : null}
+
+          {/* Média */}
+          <div className="flex-1 min-h-0 flex items-center justify-center">
+            {isImage(lightbox.fileType) && lightbox.url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={lightbox.url}
+                alt={lightbox.name}
+                onClick={e => e.stopPropagation()}
+                className="max-w-full max-h-full object-contain rounded-lg"
+              />
+            ) : lightbox.url ? (
+              <div className="bg-white rounded-2xl p-6 text-center" onClick={e => e.stopPropagation()}>
+                <FileText className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                <p className="text-sm font-semibold text-gray-700 mb-3">{lightbox.name}</p>
+                <a
+                  href={lightbox.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#111111] text-white text-sm font-semibold"
+                >
+                  Ouvrir le document
+                </a>
+              </div>
+            ) : null}
+          </div>
+
+          {/* Panneau : écrire le nom du client lu sur la pièce */}
+          <div
+            className="mt-3 bg-white rounded-2xl p-3 w-full max-w-lg mx-auto space-y-2"
+            onClick={e => e.stopPropagation()}
+          >
+            <p className="text-[11px] font-bold uppercase tracking-wide text-gray-400">
+              Client sur cette pièce
+            </p>
+            <ClientSearch
+              clients={clientList}
+              creating={creating}
+              autoFocus
+              onPick={c => pickClient(c, lightbox.id)}
+              onCreate={name => createClientAndUse(name, lightbox.id)}
+            />
+            <p className="text-[11px] text-gray-400">
+              Choisir/créer le client sélectionne cette photo et ferme le zoom → choisissez le type et « Assigner ».
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Champ de recherche + création de client, réutilisé dans la barre d'assignation
+ * ET dans le zoom (pour écrire le nom lu sur la pièce). Gère sa propre saisie ;
+ * remonte la sélection (onPick) ou la création (onCreate) au parent.
+ */
+function ClientSearch({
+  clients,
+  creating,
+  autoFocus,
+  onPick,
+  onCreate,
+}: {
+  clients: ClientLite[]
+  creating: boolean
+  autoFocus?: boolean
+  onPick: (c: ClientLite) => void
+  onCreate: (name: string) => void
+}) {
+  const [q, setQ] = useState('')
+
+  const filtered = useMemo(() => {
+    const s = q.trim().toLowerCase()
+    if (!s) return clients.slice(0, 8)
+    return clients
+      .filter(c => c.name.toLowerCase().includes(s) || (c.phone ?? '').includes(s))
+      .slice(0, 8)
+  }, [clients, q])
+
+  const trimmed = q.trim()
+  const hasExact = clients.some(c => c.name.toLowerCase() === trimmed.toLowerCase())
+  const canCreate = trimmed.length >= 2 && !hasExact
+
+  return (
+    <div className="relative">
+      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+      <input
+        autoFocus={autoFocus}
+        type="search"
+        value={q}
+        onChange={e => setQ(e.target.value)}
+        placeholder="Nom du client (ou téléphone)…"
+        className="w-full pl-9 pr-4 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-[13px] text-gray-800 placeholder-gray-400 outline-none focus:border-gray-400"
+      />
+      {(trimmed !== '' || filtered.length > 0) && (
+        <div className="mt-1.5 max-h-52 overflow-y-auto rounded-xl border border-gray-200 divide-y divide-gray-100 bg-white">
+          {filtered.map(c => (
+            <button
+              key={c.id}
+              onClick={() => { onPick(c); setQ('') }}
+              className="w-full text-left px-3 py-2.5 hover:bg-gray-50"
+            >
+              <span className="text-[13px] font-semibold text-gray-900">{c.name}</span>
+              {c.phone && <span className="text-[11px] text-gray-400 ml-2">{c.phone}</span>}
+            </button>
+          ))}
+          {filtered.length === 0 && !canCreate && (
+            <p className="text-[12px] text-gray-400 px-3 py-2.5">Tapez un nom pour rechercher ou créer</p>
+          )}
+          {canCreate && (
+            <button
+              onClick={() => { onCreate(trimmed); setQ('') }}
+              disabled={creating}
+              className="w-full text-left px-3 py-2.5 bg-emerald-50 hover:bg-emerald-100 flex items-center gap-2 disabled:opacity-60"
+            >
+              {creating
+                ? <Loader2 className="w-4 h-4 text-emerald-600 animate-spin flex-shrink-0" />
+                : <UserPlus className="w-4 h-4 text-emerald-600 flex-shrink-0" />}
+              <span className="text-[13px] font-semibold text-emerald-700">
+                Créer le client « {trimmed} »
+              </span>
+            </button>
+          )}
         </div>
       )}
     </div>
