@@ -59,7 +59,7 @@ export async function uploadDocument(formData: FormData) {
  */
 export async function bulkCreateClientDocuments(
   clientId: string,
-  docs: { name: string; subcategory: string; file_url: string; file_type?: string | null; file_size?: number | null }[],
+  docs: { name: string; subcategory: string; file_url: string; file_type?: string | null; file_size?: number | null; side?: string | null }[],
 ) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -78,6 +78,9 @@ export async function bulkCreateClientDocuments(
       file_url: d.file_url,
       file_type: d.file_type || null,
       file_size: typeof d.file_size === 'number' ? d.file_size : null,
+      // Face de la pièce (recto/verso) stockée en tag — évite d'infler l'enum des
+      // sous-catégories. Ignorée si la valeur n'est pas recto/verso.
+      tags: d.side === 'recto' || d.side === 'verso' ? [d.side] : null,
       entity_id: clientId,
       entity_type: 'client' as const,
       is_auto_generated: false,

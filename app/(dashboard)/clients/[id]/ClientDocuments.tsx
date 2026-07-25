@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  FileText, Image as ImageIcon, UploadCloud, X, Loader2, Check, Trash2, Plus,
+  FileText, Image as ImageIcon, UploadCloud, X, Loader2, Check, Trash2, Plus, Camera,
 } from 'lucide-react'
 import { uploadFileToSupabase } from '@/lib/upload'
 import { bulkCreateClientDocuments, deleteClientDocument } from '@/lib/actions/documents'
@@ -15,12 +15,16 @@ export interface ClientDoc {
   subcategory: string
   url: string | null
   fileType: string | null
+  side: 'recto' | 'verso' | null
   createdAt: string
 }
+
+type Side = 'recto' | 'verso' | ''
 
 interface Staged {
   file: File
   subcategory: string
+  side: Side
 }
 
 const CLIENT_SUBCATS = DOCUMENT_SUBCATEGORIES.client
@@ -39,6 +43,7 @@ export default function ClientDocuments({
 }) {
   const router = useRouter()
   const inputRef = useRef<HTMLInputElement>(null)
+  const cameraRef = useRef<HTMLInputElement>(null)
   const [staged, setStaged] = useState<Staged[]>([])
   const [dragOver, setDragOver] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -49,14 +54,17 @@ export default function ClientDocuments({
 
   function addFiles(list: FileList | null) {
     if (!list || list.length === 0) return
-    // Type par défaut « Autres » — le gérant précise le type de chaque pièce avant import.
-    const next = Array.from(list).map(file => ({ file, subcategory: 'autres' }))
+    // Type par défaut « CNI », face non précisée — ajustables par fichier avant import.
+    const next: Staged[] = Array.from(list).map(file => ({ file, subcategory: 'cni', side: '' }))
     setStaged(prev => [...prev, ...next])
     setError(null)
   }
 
   function updateType(i: number, subcategory: string) {
     setStaged(prev => prev.map((s, idx) => (idx === i ? { ...s, subcategory } : s)))
+  }
+  function updateSide(i: number, side: Side) {
+    setStaged(prev => prev.map((s, idx) => (idx === i ? { ...s, side: s.side === side ? '' : side } : s)))
   }
   function removeStaged(i: number) {
     setStaged(prev => prev.filter((_, idx) => idx !== i))
@@ -69,12 +77,12 @@ export default function ClientDocuments({
     setProgress({ done: 0, total: staged.length })
 
     const uploaded: {
-      name: string; subcategory: string; file_url: string; file_type: string; file_size: number
+      name: string; subcategory: string; file_url: string; file_type: string; file_size: number; side: Side
     }[] = []
     const failed: string[] = []
 
     for (let i = 0; i < staged.length; i++) {
-      const { file, subcategory } = staged[i]
+      const { file, subcategory, side } = staged[i]
       // Upload navigateur direct vers le bucket `documents` (contourne la limite
       // de payload Vercel) — on n'envoie ensuite que les chemins au serveur.
       const path = await uploadFileToSupabase(file, `client/${subcategory}`, 'documents')
@@ -85,6 +93,7 @@ export default function ClientDocuments({
           file_url: path,
           file_type: file.type || 'application/octet-stream',
           file_size: file.size,
+          side,
         })
       } else {
         failed.push(file.name)
@@ -147,6 +156,12 @@ export default function ClientDocuments({
                     <FileText className="w-8 h-8 text-gray-300" />
                   </span>
                 )}
+                {/* Face (recto/verso) */}
+                {d.side && (
+                  <span className="absolute top-1.5 left-1.5 text-[9px] font-bold uppercase tracking-wide bg-black/70 text-white px-1.5 py-0.5 rounded">
+                    {d.side}
+                  </span>
+                )}
               </button>
 
               {/* Supprimer */}
@@ -170,32 +185,54 @@ export default function ClientDocuments({
         </div>
       )}
 
-      {/* ── Zone d'import ── */}
-      <div
-        onDragOver={e => { e.preventDefault(); setDragOver(true) }}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={e => {
-          e.preventDefault()
-          setDragOver(false)
-          addFiles(e.dataTransfer.files)
-        }}
-        onClick={() => inputRef.current?.click()}
-        className={`rounded-xl border-2 border-dashed px-4 py-6 text-center cursor-pointer transition-colors ${
-          dragOver ? 'border-gray-900 bg-gray-50' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-        }`}
-      >
-        <UploadCloud className="w-6 h-6 text-gray-400 mx-auto mb-2" />
-        <p className="text-sm font-semibold text-gray-700">
-          Glissez vos documents ici ou cliquez pour choisir
-        </p>
-        <p className="text-[11px] text-gray-400 mt-0.5">
-          Plusieurs fichiers à la fois · PDF, images (JPG, PNG, HEIC…)
-        </p>
+      {/* ── Zone d'import : télécharger un fichier OU prendre une photo ── */}
+      <div className="space-y-2">
+        <div
+          onDragOver={e => { e.preventDefault(); setDragOver(true) }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={e => {
+            e.preventDefault()
+            setDragOver(false)
+            addFiles(e.dataTransfer.files)
+          }}
+          onClick={() => inputRef.current?.click()}
+          className={`rounded-xl border-2 border-dashed px-4 py-6 text-center cursor-pointer transition-colors ${
+            dragOver ? 'border-gray-900 bg-gray-50' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+          }`}
+        >
+          <UploadCloud className="w-6 h-6 text-gray-400 mx-auto mb-2" />
+          <p className="text-sm font-semibold text-gray-700">
+            Glissez vos documents ici ou cliquez pour choisir
+          </p>
+          <p className="text-[11px] text-gray-400 mt-0.5">
+            Plusieurs fichiers à la fois · PDF, images (JPG, PNG, HEIC…)
+          </p>
+        </div>
+
+        {/* Prendre une photo directement (appareil photo sur mobile) */}
+        <button
+          type="button"
+          onClick={() => cameraRef.current?.click()}
+          className="w-full inline-flex items-center justify-center gap-2 h-11 rounded-xl bg-white border border-gray-200 text-gray-700 text-sm font-semibold hover:bg-gray-50 transition-colors"
+        >
+          <Camera className="w-4 h-4 text-gray-500" />
+          Prendre une photo
+        </button>
+
         <input
           ref={inputRef}
           type="file"
           accept={ACCEPT}
           multiple
+          className="hidden"
+          onChange={e => { addFiles(e.target.files); e.target.value = '' }}
+        />
+        {/* capture="environment" → ouvre l'appareil photo arrière sur mobile */}
+        <input
+          ref={cameraRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
           className="hidden"
           onChange={e => { addFiles(e.target.files); e.target.value = '' }}
         />
@@ -222,10 +259,27 @@ export default function ClientDocuments({
                     <option key={sc.id} value={sc.id}>{sc.label}</option>
                   ))}
                 </select>
+                {/* Face de la pièce (facultatif) */}
+                <div className="mt-1 flex gap-1">
+                  {(['recto', 'verso'] as const).map(f => (
+                    <button
+                      key={f}
+                      type="button"
+                      onClick={() => updateSide(i, f)}
+                      className={`flex-1 text-[11px] font-semibold py-1 rounded-lg border transition-colors ${
+                        s.side === f
+                          ? 'bg-[#111111] text-white border-[#111111]'
+                          : 'bg-gray-50 text-gray-500 border-gray-200'
+                      }`}
+                    >
+                      {f === 'recto' ? 'Recto' : 'Verso'}
+                    </button>
+                  ))}
+                </div>
               </div>
               <button
                 onClick={() => removeStaged(i)}
-                className="p-1.5 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors flex-shrink-0"
+                className="p-1.5 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors flex-shrink-0 self-start"
                 aria-label="Retirer ce fichier"
               >
                 <X className="w-4 h-4" />

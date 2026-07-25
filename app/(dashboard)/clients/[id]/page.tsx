@@ -123,7 +123,7 @@ export default async function ClientPage({
   // documents auto-générés (contrats/factures) qui vivent dans leur propre onglet.
   const { data: docRows } = await supabase
     .from('documents')
-    .select('id, name, subcategory, file_url, file_type, created_at')
+    .select('id, name, subcategory, file_url, file_type, tags, created_at')
     .eq('entity_id', id)
     .eq('entity_type', 'client')
     .eq('is_auto_generated', false)
@@ -147,6 +147,7 @@ export default async function ClientPage({
       subcategory: d.subcategory,
       url: await getDocSignedUrl(d.file_url),
       fileType: d.file_type ?? null,
+      side: Array.isArray(d.tags) ? (d.tags.find((t: string) => t === 'recto' || t === 'verso') ?? null) : null,
       createdAt: d.created_at,
     })),
   )
