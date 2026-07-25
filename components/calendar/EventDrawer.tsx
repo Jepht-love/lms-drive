@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { format } from 'date-fns'
-import { ExternalLink, ClipboardCheck, User, Car, Lock } from 'lucide-react'
+import { ExternalLink, ClipboardCheck, User, Car, Lock, Check } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import DateTimeField from '@/components/ui/DateTimeField'
 import type { CalendarEvent, CalendarResource, EventStatus, EventType } from '@/types/calendar'
@@ -94,6 +94,7 @@ function assigneeValue(e: CalendarEvent | null): string {
 export default function EventDrawer({ open, event, slotContext, resources, presetType, prefill, onClose, onSave, onDelete }: EventDrawerProps) {
   const isEdit = !!event
   const links = eventLinks(event)
+  const reservationLink = links.find(l => l.label === 'Ouvrir la réservation')
   const sync = syncInfo(event)
   const locked = !!sync
 
@@ -112,11 +113,20 @@ export default function EventDrawer({ open, event, slotContext, resources, prese
   const [saving, setSaving] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Après un enregistrement réussi, on NE ferme PAS le tiroir : l'utilisateur
+  // veut pouvoir enchaîner sur « Ouvrir la réservation ». `justSaved` affiche la
+  // confirmation ; il retombe à false dès qu'un champ est modifié.
+  const [justSaved, setJustSaved] = useState(false)
+  // Id de l'événement créé au 1er enregistrement (mode création) : les
+  // enregistrements suivants deviennent des mises à jour → aucun doublon.
+  const [savedId, setSavedId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!open) return
     setError(null)
     setConfirmingDelete(false)
+    setJustSaved(false)
+    setSavedId(null)
 
     if (event) {
       setTitle(event.title)
@@ -175,6 +185,12 @@ export default function EventDrawer({ open, event, slotContext, resources, prese
       .then(({ data }) => setClients(data ?? []))
   }, [open])
 
+  // Toute modification d'un champ annule l'état « enregistré » (réactive le
+  // bouton). Ne se déclenche pas juste après un save (aucun champ n'a changé).
+  useEffect(() => {
+    setJustSaved(false)
+  }, [title, eventType, status, startAt, endAt, assignee, vehicleIds, clientId, notes])
+
   if (!open) return null
 
   const handleSave = async () => {
@@ -200,11 +216,15 @@ export default function EventDrawer({ open, event, slotContext, resources, prese
       notes: notes || null,
     }
 
+    // Cible : l'événement existant (édition) OU celui déjà créé lors d'un
+    // premier enregistrement (évite un doublon si on ré-enregistre).
+    const targetId = event?.id ?? savedId
+
     try {
       const res = await fetch(
-        isEdit ? `/api/calendar/events/${event!.id}` : '/api/calendar/events',
+        targetId ? `/api/calendar/events/${targetId}` : '/api/calendar/events',
         {
-          method: isEdit ? 'PATCH' : 'POST',
+          method: targetId ? 'PATCH' : 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         }
@@ -213,8 +233,15 @@ export default function EventDrawer({ open, event, slotContext, resources, prese
         const body = await res.json().catch(() => ({}))
         throw new Error(body.error ?? "Erreur lors de l'enregistrement")
       }
+      // En création, récupère l'id renvoyé → les saves suivants seront des PATCH.
+      if (!targetId) {
+        const created = await res.json().catch(() => null)
+        if (created?.id) setSavedId(created.id)
+      }
+      // Rafraîchit le calendrier derrière, MAIS ne ferme pas le tiroir : on
+      // laisse l'utilisateur enchaîner sur « Ouvrir la réservation ».
       onSave()
-      onClose()
+      setJustSaved(true)
     } catch (e: any) {
       setError(e.message ?? "Erreur lors de l'enregistrement")
     } finally {
@@ -444,14 +471,40 @@ export default function EventDrawer({ open, event, slotContext, resources, prese
           className="shrink-0 px-4 pt-3 pb-4 border-t border-gray-100 flex flex-col gap-2 bg-white"
           style={{ paddingBottom: 'calc(76px + env(safe-area-inset-bottom))' }}
         >
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={saving}
-            className="w-full h-10 rounded-xl bg-[#111111] text-white text-[13px] font-medium disabled:opacity-50"
-          >
-            {saving ? 'Enregistrement…' : 'Enregistrer'}
-          </button>
+          {justSaved ? (
+            <>
+              <div className="rounded-xl bg-green-50 border border-green-100 px-3 py-2.5 flex items-center gap-2">
+                <Check className="w-4 h-4 text-green-600 flex-shrink-0" />
+                <span className="text-[12px] font-semibold text-green-700">Enregistré</span>
+              </div>
+              {/* CTA principal : on enchaîne sur la réservation (EDL, encaissement…). */}
+              {reservationLink && (
+                <Link
+                  href={reservationLink.href}
+                  onClick={onClose}
+                  className="w-full h-10 rounded-xl bg-[#111111] text-white text-[13px] font-semibold flex items-center justify-center gap-2 active:scale-[.99] transition"
+                >
+                  <ExternalLink className="w-4 h-4" /> Ouvrir la réservation
+                </Link>
+              )}
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-full h-10 rounded-xl border border-gray-200 text-gray-700 text-[13px] font-medium"
+              >
+                Fermer
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving}
+              className="w-full h-10 rounded-xl bg-[#111111] text-white text-[13px] font-medium disabled:opacity-50"
+            >
+              {saving ? 'Enregistrement…' : 'Enregistrer'}
+            </button>
+          )}
 
           {isEdit && !locked && (
             confirmingDelete ? (
