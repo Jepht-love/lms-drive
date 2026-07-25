@@ -14,7 +14,6 @@ import ClientDocuments, { type ClientDoc } from './ClientDocuments'
 import ClientNotesEditor from './ClientNotesEditor'
 import ClientStatusActions from './ClientStatusActions'
 import BackButton from '@/components/ui/BackButton'
-import { getMissingClientFields } from '@/lib/clients/completeness'
 
 // ─── Helpers visuels ──────────────────────────────────────────────────────────
 
@@ -152,6 +151,22 @@ export default async function ClientPage({
     })),
   )
 
+  // ── Pièces d'identité manquantes ──
+  // Un dossier « complet » = une pièce d'identité (CNI / carte de séjour / passeport)
+  // ET un permis. On regarde les deux systèmes : les documents importés (Système A,
+  // sous-catégories, y compris les combinés cni_permis / sejour_permis), les 5 slots
+  // historiques (Système B) et les champs texte de la fiche.
+  const docSubs = new Set(clientDocs.map(d => d.subcategory))
+  const hasIdentity =
+    ['cni', 'titre_sejour', 'passeport', 'cni_permis', 'sejour_permis'].some(s => docSubs.has(s)) ||
+    !!idFrontUrl || !!client.id_doc_type
+  const hasPermis =
+    ['permis', 'cni_permis', 'sejour_permis'].some(s => docSubs.has(s)) ||
+    !!licFrontUrl || !!client.license_number
+  const missingDocs: string[] = []
+  if (!hasIdentity) missingDocs.push("pièce d'identité")
+  if (!hasPermis) missingDocs.push('permis')
+
   // ── Indicateurs financiers ──
   const completed  = reservations?.filter(r => r.status === 'terminee') ?? []
   const active     = reservations?.filter(r => ['en_cours', 'confirmee', 'option', 'en_retard'].includes(r.status)) ?? []
@@ -206,16 +221,22 @@ export default async function ClientPage({
 
       <BackButton fallbackHref="/clients" />
 
-      {/* ─── Dossier incomplet ─── */}
+      {/* ─── Dossier incomplet (pièces d'identité comprises, imports pris en compte) ─── */}
       {(() => {
-        const missing = getMissingClientFields(client)
+        // Version « pièces » : tient compte des documents importés (Système A),
+        // contrairement à getMissingClientFields (basé sur les 5 slots historiques).
+        const missing: string[] = []
+        if (!client.first_name || !client.last_name) missing.push('Nom complet')
+        if (!client.address) missing.push('Adresse')
+        if (!hasIdentity) missing.push("Pièce d'identité")
+        if (!hasPermis) missing.push('Permis')
         if (missing.length === 0) return null
         return (
           <div className="flex items-start gap-3 bg-orange-50 border border-orange-200 rounded-2xl px-4 py-3">
             <AlertTriangle className="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5" />
             <div>
               <p className="text-sm font-bold text-orange-800">Dossier incomplet — impossibilité de louer</p>
-              <p className="text-xs text-orange-600 mt-0.5">Manquant : {missing.join(', ')}</p>
+              <p className="text-xs text-orange-600 mt-0.5">Manque : {missing.join(' · ')}</p>
             </div>
           </div>
         )
@@ -513,9 +534,29 @@ export default async function ClientPage({
         </div>
       </div>
 
-      {/* ─── Documents ─── */}
+      {/* ─── Documents d'identité (infos + pièces importées) ─── */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-        <SectionLabel>Documents d&apos;identité</SectionLabel>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <SectionLabel>Documents d&apos;identité</SectionLabel>
+            {clientDocs.length > 0 && (
+              <span className="text-[10px] font-black bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
+                {clientDocs.length}
+              </span>
+            )}
+          </div>
+          {/* Indicateur de pièces manquantes */}
+          {missingDocs.length > 0 ? (
+            <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-orange-50 text-orange-600 border border-orange-200 px-2 py-0.5 rounded-full">
+              <AlertTriangle className="w-3 h-3" />
+              Manque : {missingDocs.join(' + ')}
+            </span>
+          ) : (
+            <span className="text-[10px] font-bold bg-green-50 text-green-600 border border-green-200 px-2 py-0.5 rounded-full">
+              Pièces complètes
+            </span>
+          )}
+        </div>
         <div>
           {client.id_doc_type && (
             <InfoRow label="Pièce d'identité">
@@ -552,19 +593,10 @@ export default async function ClientPage({
             />
           </div>
         )}
-      </div>
-
-      {/* ─── Autres documents (import en masse) ─── */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-        <div className="flex items-center justify-between mb-3">
-          <SectionLabel>Autres documents</SectionLabel>
-          {clientDocs.length > 0 && (
-            <span className="text-[10px] font-black bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
-              {clientDocs.length}
-            </span>
-          )}
+        {/* Pièces importées (import en masse / photo) — vignettes */}
+        <div className="mt-3">
+          <ClientDocuments clientId={id} docs={clientDocs} />
         </div>
-        <ClientDocuments clientId={id} docs={clientDocs} />
       </div>
 
       {/* ─── Infos commerciales ─── */}

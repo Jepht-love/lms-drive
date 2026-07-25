@@ -192,9 +192,13 @@ export default function ClientForm({ action, client: c }: ClientFormProps) {
       {/* Identité */}
       <Section title="Identité">
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Field label="Prénom *" name="first_name" defaultValue={c?.first_name} required autoComplete="given-name" enterKeyHint="next" />
-          <Field label="Nom *" name="last_name" defaultValue={c?.last_name} required autoComplete="family-name" enterKeyHint="next" />
-          <Field label="Téléphone *" name="phone" type="tel" defaultValue={c?.phone} required placeholder="+33 6 12 34 56 78" inputMode="tel" autoComplete="tel" enterKeyHint="next" />
+          {/* Obligatoires à la CRÉATION seulement. En édition on n'impose rien : les
+              fiches créées à la volée (nom seul, téléphone vide) doivent rester
+              enregistrables pour être complétées — sinon la validation HTML5 bloque
+              silencieusement le bouton « Mettre à jour ». */}
+          <Field label={c ? 'Prénom' : 'Prénom *'} name="first_name" defaultValue={c?.first_name} required={!c} autoComplete="given-name" enterKeyHint="next" />
+          <Field label={c ? 'Nom' : 'Nom *'} name="last_name" defaultValue={c?.last_name} required={!c} autoComplete="family-name" enterKeyHint="next" />
+          <Field label={c ? 'Téléphone' : 'Téléphone *'} name="phone" type="tel" defaultValue={c?.phone} required={!c} placeholder="+33 6 12 34 56 78" inputMode="tel" autoComplete="tel" enterKeyHint="next" />
           <Field label="Email" name="email" type="email" defaultValue={c?.email ?? ''} inputMode="email" autoComplete="email" autoCapitalize="off" enterKeyHint="next" />
           <Field label="Date de naissance" name="birth_date" type="date" defaultValue={c?.birth_date ?? ''} enterKeyHint="next" />
         </div>
