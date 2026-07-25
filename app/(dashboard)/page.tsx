@@ -9,6 +9,7 @@ import { getColumnWindow, businessNow } from '@/lib/calendar/dateUtils'
 import { taskActionHref } from '@/lib/utils'
 import { CALENDAR_START_HOUR } from '@/lib/calendar/constants'
 import { fr } from 'date-fns/locale'
+import DashboardCalendar from '@/components/dashboard/DashboardCalendar'
 import {
   ChevronRight, AlertTriangle, CheckCircle2, Plus,
   Wrench, Clock, FileText, ArrowLeftRight, UserRound, type LucideIcon,
@@ -91,19 +92,6 @@ const TASK_TYPE_LABELS: Record<string, string> = {
   document_manquant:    'Document',
   marketing:            'Marketing',
   autre:                'Tâche',
-}
-
-// Prochaines 6h : style de pastille par type d'action (départ/retour/tâche/RDV…).
-const NEXT6H_TYPE_STYLE: Record<string, { badge: string; label: string }> = {
-  depart:       { badge: 'bg-black text-white',           label: 'Départ' },
-  apreparer:    { badge: 'bg-amber-500 text-white',       label: 'À préparer' },
-  retour:       { badge: 'bg-blue-100 text-blue-700',     label: 'Retour' },
-  tache:        { badge: 'bg-violet-100 text-violet-700', label: 'Tâche' },
-  rdv_client:   { badge: 'bg-pink-100 text-pink-700',     label: 'RDV client' },
-  rdv_garage:   { badge: 'bg-cyan-100 text-cyan-700',     label: 'RDV garage' },
-  rdv_autre:    { badge: 'bg-pink-100 text-pink-700',     label: 'RDV' },
-  livraison:    { badge: 'bg-lime-100 text-lime-700',     label: 'Livraison' },
-  recuperation: { badge: 'bg-orange-100 text-orange-700', label: 'Récupération' },
 }
 
 // Ligne « qui s'en charge » sur une carte du tableau de bord (départ, retour).
@@ -391,9 +379,11 @@ export default async function DashboardPage() {
   // la liste Semaine, sans changer le modèle de données.
   const departAssigneeByRes = new Map<string, string>()
   const retourAssigneeByRes = new Map<string, string>()
-  // Id de l'événement calendrier RETOUR par réservation — pour ouvrir directement
-  // son tiroir d'assignation (/calendrier?event=<id>) quand la carte retour affiche
-  // « À assigner ». (Les départs mènent désormais à la fiche réservation.)
+  // Id de l'événement calendrier DÉPART / RETOUR par réservation — pour ouvrir
+  // directement son tiroir d'assignation (/calendrier?event=<id>) quand la carte
+  // affiche « À assigner ». Depuis le tiroir, on peut attribuer PUIS ouvrir la
+  // réservation (« Ouvrir la réservation » / « Faire l'EDL de départ »).
+  const departEventByRes = new Map<string, string>()
   const retourEventByRes = new Map<string, string>()
   if (weekResIds.length) {
     const { data: resEvents } = await supabase
@@ -403,6 +393,7 @@ export default async function DashboardPage() {
       .in('event_type', ['depart_vehicule', 'retour_vehicule'])
     for (const ev of resEvents ?? []) {
       if (!ev.reservation_id) continue
+      if (ev.event_type === 'depart_vehicule') departEventByRes.set(ev.reservation_id, ev.id)
       if (ev.event_type === 'retour_vehicule') retourEventByRes.set(ev.reservation_id, ev.id)
       const assignee = Array.isArray(ev.assignee) ? ev.assignee[0] : ev.assignee
       const team     = Array.isArray(ev.team) ? ev.team[0] : ev.team
@@ -470,77 +461,9 @@ export default async function DashboardPage() {
     return assignee?.full_name ?? team?.name ?? null
   }
 
-  // ── Événements de la semaine, listés jour par jour ────────────────────────
-  // Chaque événement des 7 prochains jours est explicitement listé sous le
-  // mini-calendrier : départs (ou « à préparer »), retours et tâches/RDV du
-  // calendrier — avec heure, type, intitulé, véhicule et qui s'en charge.
-  type WeekEvent = {
-    key: string
-    time: Date
-    kind: keyof typeof NEXT6H_TYPE_STYLE
-    title: string
-    subtitle?: string
-    assignee: string | null
-    needsAssignee: boolean
-    href: string
-  }
-  const weekEvents: WeekEvent[] = []
-  for (const r of reservations ?? []) {
-    const v = getVehicle(r); const c = getClient(r)
-    const clientName = c ? `${c.first_name} ${c.last_name}` : 'Client'
-    const vehLabel   = v ? `${v.brand} ${v.model} · ${v.plate}` : undefined
-    if (isDepart(r.status)) {
-      const a = departAssigneeByRes.get(r.id) ?? null
-      weekEvents.push({
-        key: `wdep-${r.id}`, time: new Date(r.start_datetime),
-        kind: isToPrepare(r.id) ? 'apreparer' : 'depart',
-        title: clientName, subtitle: vehLabel,
-        assignee: a, needsAssignee: !a, href: `/reservations/${r.id}?from=accueil`,
-      })
-    }
-    if (r.status === 'en_cours' || r.status === 'en_retard') {
-      const a = retourAssigneeByRes.get(r.id) ?? null
-      weekEvents.push({
-        key: `wret-${r.id}`, time: new Date(r.end_datetime), kind: 'retour',
-        title: clientName, subtitle: vehLabel,
-        assignee: a, needsAssignee: !a, href: `/reservations/${r.id}?from=accueil`,
-      })
-    }
-  }
-  for (const t of weekCalendarTasks) {
-    const kind = (['tache', 'rdv_client', 'rdv_garage', 'rdv_autre', 'livraison', 'recuperation']
-      .includes(t.event_type ?? '') ? t.event_type : 'tache') as WeekEvent['kind']
-    const taskVehicles = (t.vehicle_ids ?? []).map((id: string) => vehicleById.get(id)).filter(Boolean)
-    const subtitle = taskVehicles.length
-      ? taskVehicles.map((tv: any) => `${tv.brand} ${tv.model}`).join(', ')
-      : undefined
-    const assignee = assigneeLabel(t)
-    weekEvents.push({
-      key: `wcal-${t.id}`, time: new Date(t.start_at), kind,
-      title: t.title, subtitle,
-      assignee, needsAssignee: !assignee, href: `/calendrier?event=${t.id}`,
-    })
-  }
-  // Tâches legacy (table `tasks`) — créées depuis le calendrier, sans miroir
-  // dans calendar_events : on les liste aussi jour par jour.
-  for (const task of weekTasks ?? []) {
-    const tv       = Array.isArray((task as any).vehicles) ? (task as any).vehicles[0] : (task as any).vehicles
-    const assignee = Array.isArray((task as any).profiles) ? (task as any).profiles[0] : (task as any).profiles
-    weekEvents.push({
-      key: `wtask-${task.id}`, time: new Date(task.due_datetime), kind: 'tache',
-      title: task.title, subtitle: tv ? (tv as any).plate : undefined,
-      assignee: assignee ? (assignee as any).full_name : null,
-      needsAssignee: !assignee, href: taskActionHref(task),
-    })
-  }
-  const weekEventsByDay = Array.from({ length: 7 }, (_, i) => addDays(todayStart, i))
-    .map(day => ({
-      day,
-      items: weekEvents
-        .filter(e => isSameDay(e.time, day))
-        .sort((a, b) => a.time.getTime() - b.time.getTime()),
-    }))
-    .filter(({ items }) => items.length > 0)
+  // La liste « Semaine » (jour par jour) est désormais rendue par le widget
+  // client interactif <DashboardCalendar /> (bande de dates défilante + détail
+  // du jour), qui s'alimente lui-même via GET /api/calendar/events.
 
   // ── Alertes ───────────────────────────────────────────────────────────────
   const alerts = await fetchAllAlerts(supabase)
@@ -969,11 +892,15 @@ export default async function DashboardPage() {
             {departsAujourdhui.map(r => {
               const v = getVehicle(r); const c = getClient(r)
               const isQuickTurnaround = v?.id && quickTurnaroundVehicleIds.has(v.id)
-              // Le clic mène TOUJOURS à la fiche réservation : c'est là qu'on lance
-              // le départ + l'état des lieux (demande gérant). Auparavant, une résa
-              // « à assigner » ouvrait le calendrier → on n'arrivait jamais au départ.
-              // L'assignation reste possible depuis la fiche et depuis le calendrier.
-              const departHref = `/reservations/${r.id}?from=accueil`
+              // « À assigner » → tiroir de l'événement départ sur le calendrier, pour
+              // l'attribuer à un membre ; depuis ce tiroir on ouvre ensuite la
+              // réservation (« Ouvrir la réservation » / « Faire l'EDL de départ »).
+              // Déjà assigné → directement la fiche réservation (départ + EDL).
+              const departAssignee = departAssigneeByRes.get(r.id) ?? null
+              const departEventId  = departEventByRes.get(r.id)
+              const departHref = departAssignee || !departEventId
+                ? `/reservations/${r.id}?from=accueil`
+                : `/calendrier?event=${departEventId}`
               return (
                 <Link key={r.id} href={departHref}>
                   <div className={`flex items-center gap-4 px-4 py-4 transition-colors ${
@@ -1195,139 +1122,7 @@ export default async function DashboardPage() {
           </Link>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-          <div className="grid grid-cols-7 gap-1">
-            {Array.from({ length: 7 }, (_, i) => addDays(todayStart, i)).map((day, i) => {
-              const isToday     = i === 0
-              const isTomorrow  = i === 1
-              const dayDeparts  = reservations?.filter(r =>
-                isSameDay(new Date(r.start_datetime), day) && isDepart(r.status)
-              ) ?? []
-              const dayReturns  = reservations?.filter(r =>
-                isSameDay(new Date(r.end_datetime), day) &&
-                (r.status === 'en_cours' || r.status === 'en_retard')
-              ) ?? []
-              const dayToPrepare = dayDeparts.filter(r => isToPrepare(r.id))
-              const dayItems     = weekEvents.filter(e => isSameDay(e.time, day))
-              const dayRdv       = dayItems.filter(e => e.kind === 'rdv_client' || e.kind === 'rdv_garage')
-              const dayInterventions = dayItems.filter(e =>
-                e.kind === 'tache' || e.kind === 'livraison' || e.kind === 'recuperation'
-              )
-
-              return (
-                <div key={day.toISOString()} className="flex flex-col items-center gap-1.5">
-                  <span className="text-[9px] font-bold uppercase text-gray-400 capitalize">
-                    {format(day, 'EEE', { locale: fr })}
-                  </span>
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center ${
-                    isToday ? 'bg-black text-white' : 'text-gray-900'
-                  }`}>
-                    <span className="text-xs font-black">{format(day, 'd')}</span>
-                  </div>
-                  {isTomorrow && !isToday && (
-                    <span className="text-[8px] text-gray-300 font-medium -mt-0.5">demain</span>
-                  )}
-                  <div className="flex flex-col items-center gap-0.5 min-h-[12px]">
-                    {dayDeparts.length > 0 && (
-                      <span className="flex items-center gap-0.5 text-[9px] font-bold text-gray-700">
-                        <span className="w-1.5 h-1.5 rounded-full bg-black" />{dayDeparts.length}
-                      </span>
-                    )}
-                    {dayReturns.length > 0 && (
-                      <span className="flex items-center gap-0.5 text-[9px] font-bold text-blue-500">
-                        <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />{dayReturns.length}
-                      </span>
-                    )}
-                    {dayToPrepare.length > 0 && (
-                      <span className="flex items-center gap-0.5 text-[9px] font-bold text-amber-600">
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />{dayToPrepare.length}
-                      </span>
-                    )}
-                    {dayRdv.length > 0 && (
-                      <span className="flex items-center gap-0.5 text-[9px] font-bold text-pink-500">
-                        <span className="w-1.5 h-1.5 rounded-full bg-pink-400" />{dayRdv.length}
-                      </span>
-                    )}
-                    {dayInterventions.length > 0 && (
-                      <span className="flex items-center gap-0.5 text-[9px] font-bold text-purple-600">
-                        <span className="w-1.5 h-1.5 rounded-full bg-purple-400" />{dayInterventions.length}
-                      </span>
-                    )}
-                    {dayDeparts.length === 0 && dayReturns.length === 0 &&
-                     dayRdv.length === 0 && dayInterventions.length === 0 && (
-                      <span className="text-[8px] text-gray-200">—</span>
-                    )}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-
-          {/* Légende */}
-          <div className="flex items-center flex-wrap gap-x-4 gap-y-2 mt-3 pt-3 border-t border-gray-50">
-            <div className="flex items-center gap-1.5">
-              <div className="w-1.5 h-1.5 rounded-full bg-black" />
-              <span className="text-[10px] text-gray-400">Départ</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-              <span className="text-[10px] text-gray-400">Retour</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-              <span className="text-[10px] text-gray-400">À préparer</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-1.5 h-1.5 rounded-full bg-pink-400" />
-              <span className="text-[10px] text-gray-400">RDV</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-1.5 h-1.5 rounded-full bg-purple-400" />
-              <span className="text-[10px] text-gray-400">Intervention</span>
-            </div>
-          </div>
-
-          {/* Détail de la semaine — chaque événement des 7 prochains jours,
-              listé jour par jour : départs (ou « à préparer »), retours et
-              tâches/RDV du calendrier, avec heure, type, intitulé et assigné. */}
-          {weekEventsByDay.length > 0 && (
-            <div className="mt-4 pt-3 border-t border-gray-50 space-y-3">
-              {weekEventsByDay.map(({ day, items }) => (
-                <div key={day.toISOString()}>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1.5">
-                    {isSameDay(day, todayStart) ? "Aujourd'hui" : format(day, 'EEEE d MMM', { locale: fr })}
-                  </p>
-                  <div className="space-y-1">
-                    {items.map(e => {
-                      const st = NEXT6H_TYPE_STYLE[e.kind] ?? NEXT6H_TYPE_STYLE.tache
-                      return (
-                        <Link key={e.key} href={e.href} className="flex items-center gap-2 py-1">
-                          <span className="w-10 text-[11px] font-mono font-bold text-gray-500 flex-shrink-0">
-                            {format(e.time, 'HH:mm')}
-                          </span>
-                          <span className={`text-[9px] font-black uppercase px-2 py-1 rounded-full flex-shrink-0 inline-flex items-center justify-center min-w-[84px] ${st.badge}`}>
-                            {st.label}
-                          </span>
-                          <div className="flex-1 min-w-0">
-                            <span className="text-xs text-gray-800 font-semibold block truncate">{e.title}</span>
-                            {e.subtitle && (
-                              <span className="text-[10px] text-gray-400 block truncate">{e.subtitle}</span>
-                            )}
-                          </div>
-                          {e.assignee
-                            ? <span className="text-[10px] text-gray-400 flex-shrink-0 max-w-[64px] truncate">{e.assignee}</span>
-                            : e.needsAssignee
-                              ? <span className="text-[10px] font-semibold text-amber-600 flex-shrink-0">À assigner</span>
-                              : null}
-                        </Link>
-                      )
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        <DashboardCalendar />
       </section>
 
       {/* État vide global */}

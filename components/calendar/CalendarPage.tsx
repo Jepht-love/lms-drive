@@ -127,6 +127,11 @@ export default function CalendarPage() {
       .then(r => r.json())
       .then((body: { me: { id: string; role: UserRole } | null; resources: any[] }) => {
         setMyRole(body.me?.role ?? null)
+        // Chacun arrive sur SON propre calendrier (sa colonne visible par défaut).
+        // Le compte admin (technique) n'a pas de colonne dans les ressources →
+        // repli : il voit tout le monde (vue d'ensemble). Mobile : tout visible.
+        const meId = body.me?.id ?? null
+        const meInResources = body.resources.some(r => r.id === meId)
         const unassigned: CalendarResource = {
           id: UNASSIGNED_RESOURCE_ID,
           full_name: 'Non assigné',
@@ -143,8 +148,7 @@ export default function CalendarPage() {
             role: r.role,
             type: r.type,
             color: r.color ?? RESOURCE_PALETTE[i % RESOURCE_PALETTE.length],
-            // Mobile : tous visibles par défaut. Desktop : seulement le gérant.
-            visible: mobile ? true : r.role === 'gerant',
+            visible: mobile ? true : (meInResources ? r.id === meId : true),
           })),
         ])
       })
