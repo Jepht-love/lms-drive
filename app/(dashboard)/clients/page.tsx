@@ -35,6 +35,23 @@ export default async function ClientsPage({
   let clients = clientsRaw ?? []
   if (status === 'note_interne') clients = clients.filter(hasNote)
 
+  // Pièces raccrochées via l'import (Système A) : map clientId → sous-catégories.
+  // Complète le Système B (colonnes fixes) pour le badge de complétude du dossier.
+  const importedSubsByClient: Record<string, string[]> = {}
+  const clientIds = clients.map(c => c.id)
+  if (clientIds.length > 0) {
+    const { data: importedDocs } = await supabase
+      .from('documents')
+      .select('entity_id, subcategory')
+      .eq('category', 'client')
+      .eq('entity_type', 'client')
+      .in('entity_id', clientIds)
+    for (const d of importedDocs ?? []) {
+      if (!d.entity_id) continue
+      ;(importedSubsByClient[d.entity_id] ??= []).push(d.subcategory)
+    }
+  }
+
   // Compteurs par statut / segment (sur l'ensemble, indépendamment de la recherche)
   const { data: allClients } = await supabase.from('clients').select('id, status, internal_notes, first_name, last_name, phone')
   const counts = {
@@ -110,7 +127,7 @@ export default async function ClientsPage({
           )}
         </div>
       ) : (
-        <ClientsListSwipeable clients={clients} showNotes={status === 'note_interne'} />
+        <ClientsListSwipeable clients={clients} showNotes={status === 'note_interne'} importedSubsByClient={importedSubsByClient} />
       )}
     </div>
   )

@@ -242,18 +242,36 @@ export default async function ClientPage({
         )
       })()}
 
+      {/* Coordonnées manquantes (tél / email) — bandeau bleu distinct : n'empêche
+          pas de louer, mais utile pour joindre le client / envoyer les liens. */}
+      {(() => {
+        const missing: string[] = []
+        if (!client.phone || client.phone.trim() === '') missing.push('téléphone')
+        if (!client.email || client.email.trim() === '') missing.push('email')
+        if (missing.length === 0) return null
+        return (
+          <div className="flex items-start gap-3 bg-sky-50 border border-sky-200 rounded-2xl px-4 py-3">
+            <AlertTriangle className="w-4 h-4 text-sky-500 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-bold text-sky-800">Coordonnées manquantes</p>
+              <p className="text-xs text-sky-600 mt-0.5">Manque : {missing.join(' · ')}</p>
+            </div>
+          </div>
+        )
+      })()}
+
       {/* ─── Hero client ─── */}
       <div className={`rounded-2xl p-5 ${
         isBlackliste ? 'bg-red-600' : isVip ? 'bg-[#111111]' : 'bg-[#111111]'
       }`}>
         <div className="flex items-start justify-between gap-4">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 min-w-0">
             {/* Avatar */}
             <div className="w-14 h-14 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center flex-shrink-0">
               <span className="text-white text-xl font-black">{initials}</span>
             </div>
             {/* Nom + statut */}
-            <div>
+            <div className="min-w-0">
               <h1 className="text-white text-xl font-extrabold leading-tight">
                 {client.first_name} {client.last_name}
               </h1>
@@ -293,7 +311,7 @@ export default async function ClientPage({
               onConfirm={deleteClient.bind(null, id)}
               label="Supprimer le client"
               confirmMessage={`Supprimer ${client.first_name} ${client.last_name} ?`}
-              variant="text"
+              className="w-9 h-9 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center text-white hover:bg-red-500/80 hover:border-red-400/50 transition-colors flex-shrink-0"
             />
           </div>
         </div>

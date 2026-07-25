@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Phone, Mail, Star, StickyNote, CheckCircle2, AlertCircle } from 'lucide-react'
 import SwipeableRow from '@/components/SwipeableRow'
 import { AnimatedList, AnimatedListItem } from '@/components/AnimatedList'
-import { isDossierComplet } from '@/lib/clients'
+import { dossierMissing } from '@/lib/clients'
 import type { Client } from '@/types/database'
 
 function StatusBadge({ status }: { status: string }) {
@@ -28,17 +28,38 @@ function StarRating({ rating }: { rating: number | null }) {
 }
 
 // Badge complétude du dossier (pièce d'identité + permis) directement dans la liste.
-function DossierBadge({ client }: { client: Client }) {
-  if (isDossierComplet(client)) {
+// `importedSubs` = sous-catégories rattachées via l'import (Système A), pour ne
+// pas signaler « manquant » une pièce déjà importée.
+function DossierBadge({ client, importedSubs }: { client: Client; importedSubs: string[] }) {
+  const missing = dossierMissing(client, importedSubs)
+  if (missing.length === 0) {
     return (
       <span title="Dossier complet" className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-green-50 text-green-700">
         <CheckCircle2 className="w-3 h-3" /> Dossier
       </span>
     )
   }
+  // Nomme la/les pièce(s) manquante(s) : « Manque permis », « Manque CNI + permis ».
+  const label = missing
+    .map(m => (m === "Pièce d'identité" ? 'CNI' : m.toLowerCase()))
+    .join(' + ')
   return (
-    <span title="Dossier incomplet" className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-amber-50 text-amber-700">
-      <AlertCircle className="w-3 h-3" /> Incomplet
+    <span title={`Manquant : ${missing.join(', ')}`} className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-amber-50 text-amber-700">
+      <AlertCircle className="w-3 h-3" /> Manque {label}
+    </span>
+  )
+}
+
+// Badge coordonnées manquantes (téléphone / email) — couleur distincte (bleu)
+// de l'ambre des pièces, pour ne pas confondre « dossier incomplet » et « contact ».
+function ContactBadge({ client }: { client: Client }) {
+  const missing: string[] = []
+  if (!client.phone || client.phone.trim() === '') missing.push('N°')
+  if (!client.email || client.email.trim() === '') missing.push('email')
+  if (missing.length === 0) return null
+  return (
+    <span title={`Coordonnées manquantes : ${missing.join(', ')}`} className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-sky-50 text-sky-700">
+      <AlertCircle className="w-3 h-3" /> Manque {missing.join(' + ')}
     </span>
   )
 }
@@ -56,10 +77,13 @@ function NoteIndicator({ notes }: { notes: string | null | undefined }) {
 export default function ClientsListSwipeable({
   clients,
   showNotes = false,
+  importedSubsByClient = {},
 }: {
   clients: Client[]
   /** Vue « Note interne » : affiche le texte de la note sous chaque client. */
   showNotes?: boolean
+  /** Sous-catégories rattachées par client (import Système A) pour le badge dossier. */
+  importedSubsByClient?: Record<string, string[]>
 }) {
   const router = useRouter()
 
@@ -98,7 +122,8 @@ export default function ClientsListSwipeable({
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-bold text-gray-900 text-sm">{c.first_name} {c.last_name}</span>
                     <StatusBadge status={c.status} />
-                    <DossierBadge client={c} />
+                    <DossierBadge client={c} importedSubs={importedSubsByClient[c.id] ?? []} />
+                    <ContactBadge client={c} />
                     <StarRating rating={c.rating} />
                     <NoteIndicator notes={c.internal_notes} />
                   </div>

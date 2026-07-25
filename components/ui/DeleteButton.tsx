@@ -8,9 +8,11 @@ interface DeleteButtonProps {
   label?: string
   confirmMessage?: string
   variant?: 'icon' | 'text'
+  /** Style sur mesure du déclencheur (ex. hero sombre) → rendu icône seule, sans texte. */
+  className?: string
 }
 
-export default function DeleteButton({ onConfirm, label = 'Supprimer', confirmMessage = 'Cette action est irréversible.', variant = 'icon' }: DeleteButtonProps) {
+export default function DeleteButton({ onConfirm, label = 'Supprimer', confirmMessage = 'Cette action est irréversible.', variant = 'icon', className }: DeleteButtonProps) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
@@ -31,14 +33,15 @@ export default function DeleteButton({ onConfirm, label = 'Supprimer', confirmMe
     <>
       <button
         onClick={() => setOpen(true)}
-        className={variant === 'icon'
+        className={className ?? (variant === 'icon'
           ? 'p-2 rounded-xl text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all opacity-40 group-hover:opacity-100'
-          : 'flex items-center gap-2 px-4 py-2.5 text-red-600 hover:bg-red-50 rounded-xl text-sm font-medium transition-colors w-full'
+          : 'flex items-center gap-2 px-4 py-2.5 text-red-600 hover:bg-red-50 rounded-xl text-sm font-medium transition-colors w-full')
         }
         title={label}
+        aria-label={label}
       >
         <Trash2 className="w-4 h-4" />
-        {variant === 'text' && <span>{label}</span>}
+        {variant === 'text' && !className && <span>{label}</span>}
       </button>
 
       {open && (
