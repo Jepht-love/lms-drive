@@ -45,6 +45,7 @@ export default function ClientDocuments({
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [lightbox, setLightbox] = useState<ClientDoc | null>(null)
 
   function addFiles(list: FileList | null) {
     if (!list || list.length === 0) return
@@ -124,46 +125,46 @@ export default function ClientDocuments({
 
   return (
     <div className="space-y-4">
-      {/* ── Documents déjà importés ── */}
+      {/* ── Pièces du client : grille de vignettes (aperçu visible sur la fiche) ── */}
       {docs.length > 0 && (
-        <div className="space-y-2">
+        <div className="grid grid-cols-3 gap-2.5">
           {docs.map(d => (
             <div
               key={d.id}
-              className="flex items-center gap-3 p-2.5 rounded-xl bg-gray-50 border border-gray-100"
+              className="relative rounded-xl border border-gray-200 overflow-hidden bg-white"
             >
-              <div className="w-9 h-9 rounded-lg bg-white border border-gray-100 flex items-center justify-center flex-shrink-0">
-                {isImage(d.fileType)
-                  ? <ImageIcon className="w-4 h-4 text-gray-400" />
-                  : <FileText className="w-4 h-4 text-gray-400" />}
-              </div>
-              <div className="flex-1 min-w-0">
-                {d.url ? (
-                  <a
-                    href={d.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm font-semibold text-gray-900 truncate block hover:underline"
-                  >
-                    {d.name}
-                  </a>
+              {/* Aperçu (clic = agrandir) */}
+              <button
+                onClick={() => d.url && setLightbox(d)}
+                className="block w-full aspect-square bg-gray-50"
+                aria-label="Agrandir la pièce"
+              >
+                {isImage(d.fileType) && d.url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={d.url} alt={d.name} className="w-full h-full object-cover" />
                 ) : (
-                  <p className="text-sm font-semibold text-gray-900 truncate">{d.name}</p>
+                  <span className="w-full h-full flex items-center justify-center">
+                    <FileText className="w-8 h-8 text-gray-300" />
+                  </span>
                 )}
-                <p className="text-[11px] text-gray-400 mt-0.5">
-                  {getSubcategoryLabel('client', d.subcategory)}
-                </p>
-              </div>
+              </button>
+
+              {/* Supprimer */}
               <button
                 onClick={() => handleDelete(d.id)}
                 disabled={deletingId === d.id}
-                className="p-2 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors flex-shrink-0 disabled:opacity-50"
+                className="absolute top-1.5 right-1.5 w-6 h-6 rounded-md bg-white/85 border border-gray-200 flex items-center justify-center text-gray-400 hover:text-red-500 disabled:opacity-50"
                 aria-label="Supprimer le document"
               >
                 {deletingId === d.id
-                  ? <Loader2 className="w-4 h-4 animate-spin" />
-                  : <Trash2 className="w-4 h-4" />}
+                  ? <Loader2 className="w-3 h-3 animate-spin" />
+                  : <Trash2 className="w-3 h-3" />}
               </button>
+
+              {/* Type de pièce */}
+              <p className="text-[10px] font-medium text-gray-500 truncate px-1.5 py-1">
+                {getSubcategoryLabel('client', d.subcategory)}
+              </p>
             </div>
           ))}
         </div>
@@ -260,6 +261,48 @@ export default function ClientDocuments({
         <p className="text-[11px] text-gray-400 flex items-center gap-1.5">
           <Check className="w-3 h-3" /> Idéal pour importer d&apos;un coup un lot de pièces (permis, CNI, justificatifs…).
         </p>
+      )}
+
+      {/* Lightbox : pièce agrandie */}
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-50 bg-black/85 flex flex-col p-4"
+          onClick={() => setLightbox(null)}
+        >
+          <button
+            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/15 flex items-center justify-center text-white z-10"
+            aria-label="Fermer"
+          >
+            <X className="w-5 h-5" />
+          </button>
+          <div className="flex-1 min-h-0 flex items-center justify-center">
+            {isImage(lightbox.fileType) && lightbox.url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={lightbox.url}
+                alt={lightbox.name}
+                onClick={e => e.stopPropagation()}
+                className="max-w-full max-h-full object-contain rounded-lg"
+              />
+            ) : lightbox.url ? (
+              <div className="bg-white rounded-2xl p-6 text-center" onClick={e => e.stopPropagation()}>
+                <FileText className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                <p className="text-sm font-semibold text-gray-700 mb-3">{lightbox.name}</p>
+                <a
+                  href={lightbox.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#111111] text-white text-sm font-semibold"
+                >
+                  Ouvrir le document
+                </a>
+              </div>
+            ) : null}
+          </div>
+          <p className="text-center text-white/70 text-[12px] mt-2">
+            {getSubcategoryLabel('client', lightbox.subcategory)}
+          </p>
+        </div>
       )}
     </div>
   )
