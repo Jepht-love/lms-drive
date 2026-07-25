@@ -2,19 +2,19 @@
 
 /**
  * Calendrier du tableau de bord — façon « semaine » iOS.
- * On fait défiler les semaines au doigt (drag horizontal) ou avec les flèches ;
- * un clic sur un jour affiche, en dessous, les tâches de ce jour (à faire /
- * à assigner). Chaque tâche ouvre le tiroir de l'événement sur le calendrier
- * (/calendrier?event=<id>) où l'on peut l'attribuer PUIS ouvrir la réservation.
+ * Vrai carrousel : trois panneaux (semaine précédente / courante / suivante)
+ * glissent sous le doigt ; au relâcher, on s'aligne (spring) sur la semaine la
+ * plus proche. Flèches ‹ › aussi. Un clic sur un jour affiche, en dessous, les
+ * tâches de ce jour (à faire / à assigner). Chaque tâche ouvre le tiroir de
+ * l'événement (/calendrier?event=<id>) : attribuer un membre PUIS ouvrir la résa.
  *
- * Auto-alimenté : charge les événements de la semaine visible via
- * GET /api/calendar/events?start&end (même source que la page Calendrier),
- * donc on peut remonter/descendre sur n'importe quelle semaine.
+ * Auto-alimenté : charge une fenêtre de 3 semaines via
+ * GET /api/calendar/events?start&end (même source que la page Calendrier).
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
-import { motion } from 'framer-motion'
+import { motion, useMotionValue, animate } from 'framer-motion'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import {
   addDays, addWeeks, startOfWeek, isSameDay, isToday, format,
@@ -22,26 +22,26 @@ import {
 import { fr } from 'date-fns/locale'
 import type { CalendarEvent, EventType } from '@/types/calendar'
 
-// Types d'événements réellement « à faire / à assigner » (surface le travail).
 const ASSIGNABLE: EventType[] = [
   'depart_vehicule', 'retour_vehicule', 'tache',
   'rdv_client', 'rdv_garage', 'rdv_autre', 'livraison', 'recuperation',
 ]
 
-// Libellé + pastille par type (charte dashboard existante).
-const TYPE_META: Record<string, { label: string; dot: string; badge: string }> = {
-  depart_vehicule: { label: 'Départ',       dot: 'bg-gray-900',   badge: 'bg-gray-900 text-white' },
-  retour_vehicule: { label: 'Retour',       dot: 'bg-blue-500',   badge: 'bg-blue-500 text-white' },
-  reservation:     { label: 'Réservation',  dot: 'bg-gray-900',   badge: 'bg-gray-900 text-white' },
-  rdv_client:      { label: 'RDV',          dot: 'bg-pink-500',   badge: 'bg-pink-500 text-white' },
-  rdv_garage:      { label: 'RDV garage',   dot: 'bg-pink-500',   badge: 'bg-pink-500 text-white' },
-  rdv_autre:       { label: 'RDV',          dot: 'bg-pink-500',   badge: 'bg-pink-500 text-white' },
-  livraison:       { label: 'Livraison',    dot: 'bg-purple-500', badge: 'bg-purple-500 text-white' },
-  recuperation:    { label: 'Récupération', dot: 'bg-purple-500', badge: 'bg-purple-500 text-white' },
-  tache:           { label: 'Tâche',        dot: 'bg-purple-500', badge: 'bg-purple-500 text-white' },
+const TYPE_META: Record<string, { label: string; badge: string }> = {
+  depart_vehicule: { label: 'Départ',       badge: 'bg-gray-900 text-white' },
+  retour_vehicule: { label: 'Retour',       badge: 'bg-blue-500 text-white' },
+  reservation:     { label: 'Réservation',  badge: 'bg-gray-900 text-white' },
+  rdv_client:      { label: 'RDV',          badge: 'bg-pink-500 text-white' },
+  rdv_garage:      { label: 'RDV garage',   badge: 'bg-pink-500 text-white' },
+  rdv_autre:       { label: 'RDV',          badge: 'bg-pink-500 text-white' },
+  livraison:       { label: 'Livraison',    badge: 'bg-purple-500 text-white' },
+  recuperation:    { label: 'Récupération', badge: 'bg-purple-500 text-white' },
+  tache:           { label: 'Tâche',        badge: 'bg-purple-500 text-white' },
 }
-const DEFAULT_META = { label: 'Tâche', dot: 'bg-gray-400', badge: 'bg-gray-500 text-white' }
+const DEFAULT_META = { label: 'Tâche', badge: 'bg-gray-500 text-white' }
 const metaFor = (t: string) => TYPE_META[t] ?? DEFAULT_META
+
+const dayKey = (d: Date) => format(d, 'yyyy-MM-dd')
 
 function assigneeName(e: CalendarEvent): string | null {
   return e.assigned_profile?.full_name ?? e.team?.name ?? null
@@ -55,40 +55,62 @@ function eventTitle(e: CalendarEvent): string {
 }
 function eventSubtitle(e: CalendarEvent): string | null {
   const v = e.vehicles?.[0]
-  if (v) return `${v.brand} ${v.model} · ${v.plate}`
-  return null
+  return v ? `${v.brand} ${v.model} · ${v.plate}` : null
 }
 
 export default function DashboardCalendar() {
-  // Ancrage : lundi de la semaine courante. weekOffset = décalage en semaines.
   const baseMonday = useMemo(() => startOfWeek(new Date(), { weekStartsOn: 1 }), [])
   const [weekOffset, setWeekOffset] = useState(0)
-  const [slideDir, setSlideDir] = useState(0)
   const [selected, setSelected] = useState<Date>(() => new Date())
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [loading, setLoading] = useState(true)
 
-  const weekStart = useMemo(() => addWeeks(baseMonday, weekOffset), [baseMonday, weekOffset])
-  const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart])
+  // Carrousel : largeur mesurée du conteneur + position (px) de la piste 3×.
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [w, setW] = useState(0)
+  const x = useMotionValue(0)
 
-  // La sélection reste toujours dans la semaine visible → le détail est cohérent
-  // et les données de la sélection sont toujours chargées.
-  const paginate = useCallback((dir: number) => {
-    setSlideDir(dir)
-    setWeekOffset(o => o + dir)
-    setSelected(s => addDays(s, dir * 7))
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const update = () => setW(el.offsetWidth)
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => ro.disconnect()
   }, [])
 
+  // Position de repos : panneau du milieu centré → x = -w.
+  useEffect(() => { x.set(-w) }, [w, x])
+
+  const weekStart = useMemo(() => addWeeks(baseMonday, weekOffset), [baseMonday, weekOffset])
+
+  // Aligne la piste sur la semaine voisine (spring), puis bascule les données
+  // du milieu sans saut visuel (le panneau cible == nouveau panneau central).
+  const commit = useCallback((dir: number) => {
+    if (!w) return
+    const target = dir > 0 ? -2 * w : 0
+    animate(x, target, {
+      type: 'spring', stiffness: 550, damping: 45,
+      onComplete: () => {
+        setWeekOffset(o => o + dir)
+        setSelected(s => addDays(s, dir * 7))
+        x.set(-w)
+      },
+    })
+  }, [w, x])
+
   const goToday = useCallback(() => {
-    setSlideDir(weekOffset > 0 ? -1 : 1)
     setWeekOffset(0)
     setSelected(new Date())
-  }, [weekOffset])
+    x.set(-w)
+  }, [w, x])
 
-  // Charge les événements de la semaine visible.
+  // Fenêtre chargée : 3 semaines (panneau précédent → suivant), pour que les
+  // pastilles des semaines voisines soient déjà là pendant le glissement.
   useEffect(() => {
-    const start = weekStart
-    const end = addDays(weekStart, 7)
+    const start = addDays(weekStart, -7)
+    const end = addDays(weekStart, 14)
     let cancelled = false
     setLoading(true)
     fetch(`/api/calendar/events?start=${start.toISOString()}&end=${end.toISOString()}`)
@@ -102,14 +124,15 @@ export default function DashboardCalendar() {
   const eventsByDay = useMemo(() => {
     const map = new Map<string, CalendarEvent[]>()
     for (const e of events) {
-      const key = format(new Date(e.start_at), 'yyyy-MM-dd')
-      ;(map.get(key) ?? map.set(key, []).get(key)!).push(e)
+      const key = dayKey(new Date(e.start_at))
+      const arr = map.get(key)
+      if (arr) arr.push(e); else map.set(key, [e])
     }
     return map
   }, [events])
 
   const dayEvents = useCallback(
-    (d: Date) => (eventsByDay.get(format(d, 'yyyy-MM-dd')) ?? [])
+    (d: Date) => (eventsByDay.get(dayKey(d)) ?? [])
       .slice()
       .sort((a, b) => a.start_at.localeCompare(b.start_at)),
     [eventsByDay],
@@ -119,13 +142,46 @@ export default function DashboardCalendar() {
   const monthLabel = format(weekStart, 'MMMM yyyy', { locale: fr })
   const isThisWeek = weekOffset === 0
 
+  const renderDay = (day: Date) => {
+    const evs = dayEvents(day)
+    const hasUnassigned = evs.some(needsAssignee)
+    const selectedDay = isSameDay(day, selected)
+    const today = isToday(day)
+    return (
+      <button
+        key={day.toISOString()}
+        type="button"
+        onClick={() => setSelected(day)}
+        className="flex flex-col items-center gap-1 py-1 select-none"
+      >
+        <span className={`text-[9px] font-bold uppercase capitalize ${selectedDay ? 'text-gray-900' : 'text-gray-400'}`}>
+          {format(day, 'EEE', { locale: fr })}
+        </span>
+        <span
+          className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black transition-colors ${
+            selectedDay ? 'bg-black text-white'
+            : today ? 'bg-gray-100 text-gray-900 ring-1 ring-gray-900/20'
+            : 'text-gray-900'
+          }`}
+        >
+          {format(day, 'd')}
+        </span>
+        <span className="h-1.5 flex items-center">
+          {evs.length > 0 && (
+            <span className={`w-1.5 h-1.5 rounded-full ${hasUnassigned ? 'bg-amber-500' : selectedDay ? 'bg-gray-900' : 'bg-gray-300'}`} />
+          )}
+        </span>
+      </button>
+    )
+  }
+
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
       {/* En-tête : mois + navigation */}
       <div className="flex items-center justify-between mb-3">
         <button
           type="button"
-          onClick={() => paginate(-1)}
+          onClick={() => commit(-1)}
           className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-50 hover:text-gray-700 transition-colors"
           aria-label="Semaine précédente"
         >
@@ -145,7 +201,7 @@ export default function DashboardCalendar() {
         </div>
         <button
           type="button"
-          onClick={() => paginate(1)}
+          onClick={() => commit(1)}
           className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-50 hover:text-gray-700 transition-colors"
           aria-label="Semaine suivante"
         >
@@ -153,58 +209,33 @@ export default function DashboardCalendar() {
         </button>
       </div>
 
-      {/* Bande de jours — glisser à gauche/droite pour changer de semaine */}
-      <div className="overflow-hidden touch-pan-y">
+      {/* Carrousel : 3 panneaux (préc./courant/suivant) glissent sous le doigt */}
+      <div ref={containerRef} className="overflow-hidden">
         <motion.div
-          drag="x"
-          dragConstraints={{ left: 0, right: 0 }}
-          dragElastic={0.15}
+          className="flex"
+          style={{ x, width: w * 3 }}
+          drag={w > 0 ? 'x' : false}
+          dragConstraints={{ left: -2 * w, right: 0 }}
+          dragElastic={0.08}
           onDragEnd={(_, info) => {
-            if (info.offset.x < -50) paginate(1)
-            else if (info.offset.x > 50) paginate(-1)
+            const cur = x.get()
+            const thresh = w * 0.28
+            if (cur <= -w - thresh || info.velocity.x < -450) commit(1)
+            else if (cur >= -w + thresh || info.velocity.x > 450) commit(-1)
+            else animate(x, -w, { type: 'spring', stiffness: 550, damping: 45 })
           }}
         >
-          <motion.div
-            key={weekOffset}
-            initial={{ x: slideDir * 36, opacity: 0.5 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ duration: 0.18 }}
-            className="grid grid-cols-7 gap-1"
-          >
-            {days.map(day => {
-              const evs = dayEvents(day)
-              const hasUnassigned = evs.some(needsAssignee)
-              const selectedDay = isSameDay(day, selected)
-              const today = isToday(day)
-              return (
-                <button
-                  key={day.toISOString()}
-                  type="button"
-                  onClick={() => setSelected(day)}
-                  className="flex flex-col items-center gap-1 py-1 select-none"
-                >
-                  <span className={`text-[9px] font-bold uppercase capitalize ${selectedDay ? 'text-gray-900' : 'text-gray-400'}`}>
-                    {format(day, 'EEE', { locale: fr })}
-                  </span>
-                  <span
-                    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black transition-colors ${
-                      selectedDay ? 'bg-black text-white'
-                      : today ? 'bg-gray-100 text-gray-900 ring-1 ring-gray-900/20'
-                      : 'text-gray-900 hover:bg-gray-50'
-                    }`}
-                  >
-                    {format(day, 'd')}
-                  </span>
-                  {/* Pastille de charge : ambre si au moins une tâche à assigner */}
-                  <span className="h-1.5 flex items-center">
-                    {evs.length > 0 && (
-                      <span className={`w-1.5 h-1.5 rounded-full ${hasUnassigned ? 'bg-amber-500' : selectedDay ? 'bg-gray-900' : 'bg-gray-300'}`} />
-                    )}
-                  </span>
-                </button>
-              )
-            })}
-          </motion.div>
+          {[-1, 0, 1].map(panelOffset => {
+            const start = addWeeks(baseMonday, weekOffset + panelOffset)
+            const wdays = Array.from({ length: 7 }, (_, i) => addDays(start, i))
+            return (
+              <div key={panelOffset} style={{ width: w }} className="shrink-0">
+                <div className="grid grid-cols-7 gap-1">
+                  {wdays.map(renderDay)}
+                </div>
+              </div>
+            )
+          })}
         </motion.div>
       </div>
 
