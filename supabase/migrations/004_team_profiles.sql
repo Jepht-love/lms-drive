@@ -12,5 +12,9 @@ ALTER TABLE profiles ADD COLUMN IF NOT EXISTS color     TEXT    DEFAULT '#6366f1
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS hire_date DATE;
 
 -- Trigger updated_at pour profiles
-CREATE TRIGGER IF NOT EXISTS set_updated_at BEFORE UPDATE ON profiles
+-- NB : `CREATE TRIGGER IF NOT EXISTS` n'existe dans aucune version de PostgreSQL.
+-- La ligne d'origine échouait donc systématiquement (SQLSTATE 42601) et ce trigger
+-- n'a jamais été créé, y compris en production. Idiome idempotent : voir 024_calendar.sql.
+DROP TRIGGER IF EXISTS set_updated_at ON profiles;
+CREATE TRIGGER set_updated_at BEFORE UPDATE ON profiles
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
