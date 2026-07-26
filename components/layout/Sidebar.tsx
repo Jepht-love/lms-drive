@@ -104,7 +104,7 @@ export default function Sidebar({ profile, unreadCount = 0 }: SidebarProps) {
         <Link
           href="/notifications"
           onClick={() => setMobileOpen(false)}
-          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-white hover:bg-white/8 transition-all min-h-[44px]"
+          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-white hover:bg-white/8 transition-colors min-h-[44px]"
         >
           <Bell size={17} className="text-white flex-shrink-0" />
           <span>Notifications</span>
@@ -128,7 +128,7 @@ export default function Sidebar({ profile, unreadCount = 0 }: SidebarProps) {
           </div>
         </div>
         <form action={logout}>
-          <button type="submit" className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-white/70 hover:text-white hover:bg-white/8 transition-all min-h-[44px]">
+          <button type="submit" className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-white/70 hover:text-white hover:bg-white/8 transition-colors min-h-[44px]">
             <LogOut size={16} />
             <span>Déconnexion</span>
           </button>
@@ -158,7 +158,7 @@ export default function Sidebar({ profile, unreadCount = 0 }: SidebarProps) {
               </span>
             </Link>
           )}
-          <button onClick={() => setMobileOpen(true)} className="p-2 text-white/70 hover:text-white">
+          <button type="button" aria-label="Ouvrir le menu" onClick={() => setMobileOpen(true)} className="p-2 text-white/70 hover:text-white">
             <Menu size={22} />
           </button>
         </div>
@@ -169,7 +169,7 @@ export default function Sidebar({ profile, unreadCount = 0 }: SidebarProps) {
         <div className="lg:hidden fixed inset-0 z-50 flex">
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
           <aside className="relative w-64 h-full flex flex-col shadow-2xl" style={{ background: '#0A0A0A' }}>
-            <button onClick={() => setMobileOpen(false)} className="absolute top-4 right-4 p-2 text-white/40 hover:text-white/80">
+            <button type="button" aria-label="Fermer le menu" onClick={() => setMobileOpen(false)} className="absolute top-4 right-4 p-2 text-white/40 hover:text-white/80">
               <X size={18} />
           </button>
             {sidebarContent}

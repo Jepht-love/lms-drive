@@ -7,6 +7,7 @@ import { fr } from 'date-fns/locale'
 import { Bell, X } from 'lucide-react'
 import type { CalendarAlert } from '@/types/calendar'
 import { ALERT_RULES } from '@/lib/calendar/constants'
+import LoadErrorBanner from '@/components/ui/LoadErrorBanner'
 
 // Chaque alerte pointe vers l'action qui la résout (EDL, caution, documents…)
 // plutôt que d'ouvrir un événement vide : le calendrier devient actionnable.
@@ -55,13 +56,20 @@ interface AlertPanelProps {
 export default function AlertPanel({ open, onClose, onOpenEvent, onDismissed }: AlertPanelProps) {
   const [alerts, setAlerts] = useState<CalendarAlert[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadFailed, setLoadFailed] = useState(false)
 
   const load = () => {
     setLoading(true)
+    setLoadFailed(false)
     fetch('/api/calendar/alerts?pending=true')
-      .then(r => r.json())
+      .then(r => {
+        if (!r.ok) throw new Error(String(r.status))
+        return r.json()
+      })
       .then(data => setAlerts(Array.isArray(data) ? data : []))
-      .catch(() => setAlerts([]))
+      // « Aucune alerte » est une bonne nouvelle : ne pas l'annoncer alors qu'on
+      // n'a simplement pas pu interroger le serveur.
+      .catch(() => setLoadFailed(true))
       .finally(() => setLoading(false))
   }
 
@@ -85,11 +93,14 @@ export default function AlertPanel({ open, onClose, onOpenEvent, onDismissed }: 
           <span className="flex items-center gap-1.5 text-[13px] font-semibold">
             <Bell size={14} /> Alertes
           </span>
-          <button type="button" onClick={onClose}><X size={14} className="text-gray-400" /></button>
+          <button type="button" aria-label="Fermer les alertes" onClick={onClose}><X size={14} className="text-gray-400" /></button>
         </div>
 
         {loading && <p className="text-[12px] text-gray-400 px-1 py-2">Chargement…</p>}
-        {!loading && alerts.length === 0 && (
+        {!loading && loadFailed && (
+          <LoadErrorBanner className="my-1" message="Alertes non chargées." onRetry={load} />
+        )}
+        {!loading && !loadFailed && alerts.length === 0 && (
           <p className="text-[12px] text-gray-400 px-1 py-2">Aucune alerte en attente.</p>
         )}
 

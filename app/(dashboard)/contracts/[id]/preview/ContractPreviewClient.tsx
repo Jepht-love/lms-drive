@@ -214,7 +214,7 @@ export default function ContractPreviewClient({ contract, reservation, vehicle, 
           </p>
           <div className="divide-y divide-gray-100">
             {fees.rows.map((row, i) => (
-              <div key={i} className={`flex items-center justify-between py-2.5 ${
+              <div key={row.label} className={`flex items-center justify-between py-2.5 ${
                 i < 2 ? (isSport ? 'bg-red-50 -mx-2 px-2 rounded-lg' : 'bg-blue-50 -mx-2 px-2 rounded-lg') : ''
               }`}>
                 <span className="text-sm text-gray-700">{row.label}</span>
@@ -235,8 +235,8 @@ export default function ContractPreviewClient({ contract, reservation, vehicle, 
             Conditions générales de location
           </h2>
           <div className="space-y-5">
-            {articles.map((art, i) => (
-              <div key={i}>
+            {articles.map(art => (
+              <div key={art.title}>
                 <h3 className="text-xs font-bold text-gray-800 mb-1.5">Art. {art.title}</h3>
                 <p className="text-xs text-gray-600 leading-relaxed whitespace-pre-line">{art.body}</p>
               </div>
@@ -296,8 +296,8 @@ export default function ContractPreviewClient({ contract, reservation, vehicle, 
                   previousZones={[]}
                 />
                 <div className="space-y-1.5">
-                  {departInspection.damagedZones.map((z: any, i: number) => (
-                    <div key={i} className="flex items-center gap-2 text-sm">
+                  {departInspection.damagedZones.map((z: any) => (
+                    <div key={z.id} className="flex items-center gap-2 text-sm">
                       <span className="text-[11px] px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 font-semibold flex-shrink-0">
                         {graviteLabel((z.severity ?? 'dommage') as DamageSeverity)}
                       </span>
@@ -316,10 +316,10 @@ export default function ContractPreviewClient({ contract, reservation, vehicle, 
             {/* Photos de l'état des lieux */}
             {departInspection.photos.length > 0 && (
               <div className="flex gap-2 flex-wrap">
-                {departInspection.photos.map((p, i) => (
+                {departInspection.photos.map(p => (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    key={i}
+                    key={p.url}
                     src={p.url}
                     alt={p.label}
                     className="w-20 h-20 object-cover rounded-lg border border-gray-200"

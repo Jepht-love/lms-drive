@@ -39,7 +39,7 @@ export default function OperationActions({ id, status }: { id: string; status: s
 
   const btn = 'flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-sm transition-colors active:scale-[.99] disabled:opacity-40 w-full'
   const deleteBtn = (
-    <button onClick={onDelete} disabled={pending}
+    <button type="button" onClick={onDelete} disabled={pending}
       className="flex items-center justify-center gap-2 py-2.5 rounded-2xl font-semibold text-sm text-red-600 border border-red-100 hover:bg-red-50 transition-colors disabled:opacity-40 w-full">
       <Trash2 className="w-4 h-4" /> Supprimer l'opération
     </button>
@@ -54,7 +54,7 @@ export default function OperationActions({ id, status }: { id: string; status: s
       ) : (
         <>
           {(status === 'planifie' || status === 'en_cours') && !showReturn && (
-            <button onClick={() => setShowReturn(true)} className={`${btn} bg-[#111111] text-white hover:bg-gray-800 active:scale-[.97]`}>
+            <button type="button" onClick={() => setShowReturn(true)} className={`${btn} bg-[#111111] text-white hover:bg-gray-800 active:scale-[.97]`}>
               <RotateCcw className="w-4 h-4" /> Enregistrer le retour
             </button>
           )}
@@ -79,7 +79,7 @@ export default function OperationActions({ id, status }: { id: string; status: s
           )}
 
           {status === 'termine' && (
-            <button onClick={() => run(() => updateOperationStatus(id, 'cloture'), 'Clôturé ✓')} disabled={pending}
+            <button type="button" onClick={() => run(() => updateOperationStatus(id, 'cloture'), 'Clôturé ✓')} disabled={pending}
               className={`${btn} bg-green-600 text-white hover:bg-green-700`}>
               <Lock className="w-4 h-4" /> Clôturer l'opération
             </button>

@@ -19,20 +19,25 @@ export default function VehicleStatusButton({ vehicleId, currentStatus }: {
     if (newStatus === status) return
     setLoading(true)
     setErrorMsg(null)
-    const result = await updateVehicleStatus(vehicleId, newStatus)
-    setLoading(false)
-    if (result?.error) {
-      setErrorMsg(result.error)
-      return
+    try {
+      const result = await updateVehicleStatus(vehicleId, newStatus)
+      if (result?.error) {
+        setErrorMsg(result.error)
+        return
+      }
+      setStatus(newStatus)
+    } catch {
+      setErrorMsg('Erreur réseau : le statut n’a pas été enregistré. Réessayez.')
+    } finally {
+      setLoading(false)
     }
-    setStatus(newStatus)
   }
 
   return (
     <div className="space-y-2">
       <p className="text-xs text-gray-500 mb-2">Changer le statut manuellement :</p>
       {STATUSES.map(s => (
-        <button
+        <button type="button"
           key={s}
           onClick={() => handleChange(s)}
           disabled={loading || s === status}

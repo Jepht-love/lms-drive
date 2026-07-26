@@ -76,9 +76,11 @@ export default function CalendarSidebar({
         <div className="border border-gray-100 rounded-lg p-2 mb-2">
           <div className="flex items-center justify-between mb-1.5">
             <span className="text-[11px] font-semibold">Nouvelle équipe</span>
-            <button type="button" onClick={() => setAddingTeam(false)}><X size={12} className="text-gray-400" /></button>
+            <button type="button" aria-label="Annuler" onClick={() => setAddingTeam(false)}><X size={12} className="text-gray-400" /></button>
           </div>
+          <label htmlFor="new-team-name" className="sr-only">Nom de l&apos;équipe</label>
           <input
+            id="new-team-name"
             type="text"
             value={teamName}
             onChange={e => setTeamName(e.target.value)}
@@ -90,6 +92,8 @@ export default function CalendarSidebar({
               <button
                 key={c}
                 type="button"
+                aria-label={`Couleur ${c}`}
+                aria-pressed={teamColor === c}
                 onClick={() => setTeamColor(c)}
                 className="w-4 h-4 rounded-full flex-shrink-0"
                 style={{ backgroundColor: c, boxShadow: teamColor === c ? `0 0 0 2px white, 0 0 0 3px ${c}` : 'none' }}

@@ -32,14 +32,19 @@ export default function ReservationStatusButtons({
   async function handleChange(newStatus: ReservationStatus) {
     setLoading(true)
     setErrorMsg(null)
-    const result = await updateReservationStatus(reservationId, newStatus)
-    if (result?.error) {
-      setErrorMsg(result.error)
-    } else {
-      setStatus(newStatus)
-      router.refresh()
+    try {
+      const result = await updateReservationStatus(reservationId, newStatus)
+      if (result?.error) {
+        setErrorMsg(result.error)
+      } else {
+        setStatus(newStatus)
+        router.refresh()
+      }
+    } catch {
+      setErrorMsg('Erreur réseau : le statut n’a pas été enregistré. Réessayez.')
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   async function handleConfirmerWithAcompte(skipAcompte = false) {
@@ -48,28 +53,32 @@ export default function ReservationStatusButtons({
     setShowAcompteModal(false)
 
     const amount = skipAcompte ? 0 : Number(acompteAmount)
-    const result = await updateReservationStatus(reservationId, 'confirmee')
-    if (result?.error) {
-      setErrorMsg(result.error)
+    try {
+      const result = await updateReservationStatus(reservationId, 'confirmee')
+      if (result?.error) {
+        setErrorMsg(result.error)
+        return
+      }
+
+      if (amount > 0) {
+        const payStatus = totalPrice && amount >= totalPrice ? 'paye' : 'partiel'
+        await updatePaymentInfo(reservationId, {
+          payment_status: payStatus,
+          payment_method: null,
+          payment_amount: amount,
+          payment_ref: null,
+          payment_date: new Date().toISOString(),
+        })
+      }
+
+      setStatus('confirmee')
+      setAcompteAmount('')
+      router.refresh()
+    } catch {
+      setErrorMsg('Erreur réseau : la confirmation n’a pas abouti. Réessayez.')
+    } finally {
       setLoading(false)
-      return
     }
-
-    if (amount > 0) {
-      const payStatus = totalPrice && amount >= totalPrice ? 'paye' : 'partiel'
-      await updatePaymentInfo(reservationId, {
-        payment_status: payStatus,
-        payment_method: null,
-        payment_amount: amount,
-        payment_ref: null,
-        payment_date: new Date().toISOString(),
-      })
-    }
-
-    setStatus('confirmee')
-    setAcompteAmount('')
-    router.refresh()
-    setLoading(false)
   }
 
   return (
@@ -85,24 +94,24 @@ export default function ReservationStatusButtons({
       {/* Option → confirmer ou démarrer */}
       {status === 'option' && (
         <>
-          <button
+          <button type="button"
             onClick={() => setShowAcompteModal(true)}
             disabled={loading}
-            className="w-full py-2.5 px-3 rounded-xl text-sm font-medium border border-blue-200 text-blue-700 hover:bg-blue-50 transition-all disabled:opacity-50"
+            className="w-full py-2.5 px-3 rounded-xl text-sm font-medium border border-blue-200 text-blue-700 hover:bg-blue-50 transition-[background-color,opacity] disabled:opacity-50"
           >
             {loading ? '…' : 'Confirmer la réservation'}
           </button>
-          <button
+          <button type="button"
             onClick={() => router.push(`/inspections/departure/${reservationId}`)}
-            className="w-full py-2.5 px-3 rounded-xl text-sm font-semibold bg-green-600 text-white hover:bg-green-700 flex items-center justify-center gap-2 transition-all"
+            className="w-full py-2.5 px-3 rounded-xl text-sm font-semibold bg-green-600 text-white hover:bg-green-700 flex items-center justify-center gap-2 transition-colors"
           >
             <ClipboardList className="w-4 h-4" />
             Démarrer + état des lieux départ
           </button>
-          <button
+          <button type="button"
             onClick={() => handleChange('annulee')}
             disabled={loading}
-            className="w-full py-2.5 px-3 rounded-xl text-sm font-medium border border-red-200 text-red-600 hover:bg-red-50 transition-all disabled:opacity-50"
+            className="w-full py-2.5 px-3 rounded-xl text-sm font-medium border border-red-200 text-red-600 hover:bg-red-50 transition-[background-color,opacity] disabled:opacity-50"
           >
             {loading ? '…' : 'Annuler'}
           </button>
@@ -112,17 +121,17 @@ export default function ReservationStatusButtons({
       {/* Confirmée → démarrer via EDL départ */}
       {status === 'confirmee' && (
         <>
-          <button
+          <button type="button"
             onClick={() => router.push(`/inspections/departure/${reservationId}`)}
-            className="w-full py-2.5 px-3 rounded-xl text-sm font-semibold bg-green-600 text-white hover:bg-green-700 flex items-center justify-center gap-2 transition-all"
+            className="w-full py-2.5 px-3 rounded-xl text-sm font-semibold bg-green-600 text-white hover:bg-green-700 flex items-center justify-center gap-2 transition-colors"
           >
             <ClipboardList className="w-4 h-4" />
             Démarrer + état des lieux départ
           </button>
-          <button
+          <button type="button"
             onClick={() => handleChange('annulee')}
             disabled={loading}
-            className="w-full py-2.5 px-3 rounded-xl text-sm font-medium border border-red-200 text-red-600 hover:bg-red-50 transition-all disabled:opacity-50"
+            className="w-full py-2.5 px-3 rounded-xl text-sm font-medium border border-red-200 text-red-600 hover:bg-red-50 transition-[background-color,opacity] disabled:opacity-50"
           >
             {loading ? '…' : 'Annuler'}
           </button>
@@ -131,9 +140,9 @@ export default function ReservationStatusButtons({
 
       {/* En cours → EDL retour obligatoire */}
       {status === 'en_cours' && contractId && (
-        <button
+        <button type="button"
           onClick={() => router.push(`/inspections/arrival/${contractId}`)}
-          className="w-full py-2.5 px-3 rounded-xl text-sm font-semibold bg-[#111111] text-white hover:bg-gray-900 flex items-center justify-center gap-2 transition-all"
+          className="w-full py-2.5 px-3 rounded-xl text-sm font-semibold bg-[#111111] text-white hover:bg-gray-900 flex items-center justify-center gap-2 transition-colors"
         >
           <ClipboardList className="w-4 h-4" />
           État des lieux retour — rendre le véhicule
@@ -147,9 +156,9 @@ export default function ReservationStatusButtons({
             <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
             <p className="text-xs">Retard constaté. Faites l'état des lieux de retour dès que le véhicule est rendu.</p>
           </div>
-          <button
+          <button type="button"
             onClick={() => router.push(`/inspections/arrival/${contractId}`)}
-            className="w-full py-2.5 px-3 rounded-xl text-sm font-semibold bg-[#111111] text-white hover:bg-gray-900 flex items-center justify-center gap-2 transition-all"
+            className="w-full py-2.5 px-3 rounded-xl text-sm font-semibold bg-[#111111] text-white hover:bg-gray-900 flex items-center justify-center gap-2 transition-colors"
           >
             <ClipboardList className="w-4 h-4" />
             État des lieux retour — rendre le véhicule
@@ -188,13 +197,14 @@ export default function ReservationStatusButtons({
           <div className="bg-white rounded-2xl p-6 w-full max-w-sm space-y-4" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between">
               <h3 className="font-bold text-gray-900">Acompte à encaisser</h3>
-              <button onClick={() => setShowAcompteModal(false)} className="p-1 rounded-lg hover:bg-gray-100">
+              <button type="button" aria-label="Fermer" onClick={() => setShowAcompteModal(false)} className="p-1 rounded-lg hover:bg-gray-100">
                 <X className="w-4 h-4 text-gray-400" />
               </button>
             </div>
             <div>
-              <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wide block mb-1.5">Montant (€)</label>
+              <label htmlFor="acompte-amount" className="text-[11px] font-bold text-gray-400 uppercase tracking-wide block mb-1.5">Montant (€)</label>
               <input
+                id="acompte-amount"
                 type="number"
                 value={acompteAmount}
                 onChange={e => setAcompteAmount(e.target.value)}
@@ -223,14 +233,14 @@ export default function ReservationStatusButtons({
               )}
             </div>
             <div className="flex gap-2">
-              <button
+              <button type="button"
                 onClick={() => handleConfirmerWithAcompte(true)}
                 disabled={loading}
                 className="flex-1 py-2.5 text-sm font-medium text-gray-500 hover:bg-gray-100 rounded-xl disabled:opacity-50"
               >
                 Passer
               </button>
-              <button
+              <button type="button"
                 onClick={() => handleConfirmerWithAcompte(false)}
                 disabled={loading}
                 className="flex-1 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl disabled:opacity-50"

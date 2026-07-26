@@ -22,7 +22,7 @@ export default function SwipeableRow({ children, actions }: SwipeableRowProps) {
     <div className="relative overflow-hidden rounded-2xl">
       <div className="absolute right-0 top-0 h-full flex">
         {actions.map(action => (
-          <button
+          <button type="button"
             key={action.label}
             onClick={() => { action.onClick(); setOpen(false) }}
             style={{ width: 72, backgroundColor: action.color }}

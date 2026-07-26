@@ -26,7 +26,7 @@ export default function ReopenClosingButton({ mode, month, year }: {
 
   return (
     <div className="space-y-2">
-      <button onClick={onReopen} disabled={pending}
+      <button type="button" onClick={onReopen} disabled={pending}
         className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl text-sm font-semibold border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40">
         <Unlock className="w-4 h-4" /> {pending ? '…' : 'Rouvrir la clôture'}
       </button>

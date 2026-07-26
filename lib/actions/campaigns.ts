@@ -44,6 +44,9 @@ export async function deleteCampaign(id: string) {
 
 export async function updateCampaignStatus(id: string, status: string) {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié' }
+
   const { error } = await supabase.from('campaigns').update({ status }).eq('id', id)
   if (error) return { error: error.message }
   revalidatePath('/marketing')
@@ -53,6 +56,9 @@ export async function updateCampaignStatus(id: string, status: string) {
 
 export async function closeCampaign(id: string, formData: FormData) {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié' }
+
   const { error } = await supabase.from('campaigns').update({
     status:              'terminee',
     prospects_count:     parseInt(formData.get('prospects_count') as string) || 0,

@@ -30,16 +30,17 @@ interface RecentMaintenance { id: string; vehicle_id: string; type: string; date
 export default async function ImmobilisesPage() {
   const supabase = await createClient()
 
-  const { data: vehiclesRaw } = await supabase
-    .from('vehicles')
-    .select('id, plate, brand, model, status')
-    .eq('is_active', true)
-    .in('status', IMMOBILISES_STATUSES)
-
-  // Un déplacement interne en cours immobilise le véhicule SANS changer son statut
-  // (cf. lib/vehicles/internalTrips.ts) : sans cette seconde requête, le compteur
-  // « Immobilisés » du tableau de bord les compte mais cette page ne les montre pas.
-  const activeTrips = await fetchActiveInternalTrips(supabase)
+  const [{ data: vehiclesRaw }, activeTrips] = await Promise.all([
+    supabase
+      .from('vehicles')
+      .select('id, plate, brand, model, status')
+      .eq('is_active', true)
+      .in('status', IMMOBILISES_STATUSES),
+    // Un déplacement interne en cours immobilise le véhicule SANS changer son statut
+    // (cf. lib/vehicles/internalTrips.ts) : sans cette seconde requête, le compteur
+    // « Immobilisés » du tableau de bord les compte mais cette page ne les montre pas.
+    fetchActiveInternalTrips(supabase),
+  ])
   const tripIds = [...activeTrips.keys()]
   const { data: tripVehiclesRaw } = tripIds.length
     ? await supabase

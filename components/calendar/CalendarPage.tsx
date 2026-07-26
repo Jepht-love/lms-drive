@@ -16,6 +16,7 @@ import EventDrawer, { type CreatePrefill } from './EventDrawer'
 import AlertPanel from './AlertPanel'
 import CalendarBottomBar from './CalendarBottomBar'
 import CreateMenu from './CreateMenu'
+import LoadErrorBanner from '@/components/ui/LoadErrorBanner'
 
 interface SlotContext {
   resource: CalendarResource
@@ -59,6 +60,7 @@ export default function CalendarPage() {
   const [myRole, setMyRole] = useState<UserRole | null>(null)
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadFailed, setLoadFailed] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
 
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -124,7 +126,10 @@ export default function CalendarPage() {
   const loadResources = useCallback(() => {
     const mobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches
     fetch('/api/calendar/resources')
-      .then(r => r.json())
+      .then(r => {
+        if (!r.ok) throw new Error(String(r.status))
+        return r.json()
+      })
       .then((body: { me: { id: string; role: UserRole } | null; resources: any[] }) => {
         setMyRole(body.me?.role ?? null)
         // Chacun arrive sur SON propre calendrier (sa colonne visible par défaut).
@@ -152,7 +157,9 @@ export default function CalendarPage() {
           })),
         ])
       })
-      .catch(() => setResources([]))
+      // Sans les colonnes de l'équipe, le calendrier ne peut rien placer : on le
+      // signale au lieu d'afficher une grille vide (même bandeau que les événements).
+      .catch(() => { setResources([]); setLoadFailed(true) })
   }, [])
 
   useEffect(() => { loadResources() }, [loadResources])
@@ -160,10 +167,17 @@ export default function CalendarPage() {
   const loadEvents = useCallback(() => {
     const [start, end] = rangeFor(view, currentDate)
     setLoading(true)
+    setLoadFailed(false)
     fetch(`/api/calendar/events?start=${start.toISOString()}&end=${end.toISOString()}`)
-      .then(r => r.json())
+      .then(r => {
+        if (!r.ok) throw new Error(String(r.status))
+        return r.json()
+      })
       .then(data => setEvents(Array.isArray(data) ? data : []))
-      .catch(() => setEvents([]))
+      // Un planning vide et un planning qu'on n'a pas pu charger se ressemblent à
+      // l'écran. On garde les événements déjà affichés et on le dit franchement,
+      // plutôt que de laisser croire que la journée est libre.
+      .catch(() => setLoadFailed(true))
       .finally(() => setLoading(false))
   }, [view, currentDate])
 
@@ -208,9 +222,11 @@ export default function CalendarPage() {
   }, [pendingEventId, events])
 
   const loadAlertCount = useCallback(() => {
+    // Serveur en échec → on conserve le dernier nombre connu. Retomber à zéro
+    // annoncerait « aucune alerte » alors qu'on n'en sait rien.
     fetch('/api/calendar/alerts?count=true&pending=true')
-      .then(r => r.json())
-      .then(d => setAlertCount(d.count ?? 0))
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setAlertCount(d.count ?? 0) })
       .catch(() => {})
   }, [])
 
@@ -331,6 +347,13 @@ export default function CalendarPage() {
       )}
 
       <div className="flex flex-col flex-1 overflow-hidden">
+        {loadFailed && (
+          <LoadErrorBanner
+            className="flex-shrink-0 mx-3 mt-3 mb-1"
+            message="Planning non chargé — ce qui est affiché peut être incomplet."
+            onRetry={() => { loadResources(); loadEvents(); loadAlertCount() }}
+          />
+        )}
         {isMobile ? (
           <MobileCalendar
             currentDate={currentDate}

@@ -11,13 +11,14 @@ import ConventionPreviewClient from './ConventionPreviewClient'
 export default async function ConventionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  const { data: op } = await supabase
-    .from('inter_agency_rentals')
-    .select('*, partner_agencies(name, contact_name, phone, email, address, siret), vehicles(*)')
-    .eq('id', id)
-    .single()
+  const [{ data: { user } }, { data: op }] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase
+      .from('inter_agency_rentals')
+      .select('*, partner_agencies(name, contact_name, phone, email, address, siret), vehicles(*)')
+      .eq('id', id)
+      .single(),
+  ])
 
   if (!op || op.direction !== 'out') notFound()
 

@@ -18,6 +18,8 @@ const plate = (t: Tx) => {
   return v?.plate ?? ''
 }
 
+const sum = (list: Tx[]) => list.reduce((s, t) => s + (t.amount ?? 0), 0)
+
 export async function GET(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -55,7 +57,6 @@ export async function GET(req: NextRequest) {
   const all = (txs ?? []) as Tx[]
   const rev = all.filter(t => t.type === 'recette')
   const exp = all.filter(t => t.type === 'depense')
-  const sum = (list: Tx[]) => list.reduce((s, t) => s + (t.amount ?? 0), 0)
   const totalRev = sum(rev)
   const expFixe = exp.filter(t => expenseNature(t.category) === 'fixe')
   const expVar = exp.filter(t => expenseNature(t.category) === 'variable')

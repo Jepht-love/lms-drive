@@ -25,6 +25,11 @@ function overlapDays(aStart: number, aEnd: number, bStart: number, bEnd: number)
   return end <= start ? 0 : (end - start) / DAY
 }
 
+const periodPill = (active: boolean) =>
+  `px-3.5 py-2 rounded-xl text-sm font-semibold whitespace-nowrap flex-shrink-0 transition-colors ${
+    active ? 'bg-[#111111] text-white' : 'bg-white border border-gray-100 text-gray-600 hover:bg-gray-50 shadow-sm'
+  }`
+
 export default async function VehicleKpiPage({
   searchParams,
 }: {
@@ -139,11 +144,6 @@ export default async function VehicleKpiPage({
       return totalKm > 0 ? totalCost / totalKm : null
     })(),
   }
-
-  const periodPill = (active: boolean) =>
-    `px-3.5 py-2 rounded-xl text-sm font-semibold whitespace-nowrap flex-shrink-0 transition-colors ${
-      active ? 'bg-[#111111] text-white' : 'bg-white border border-gray-100 text-gray-600 hover:bg-gray-50 shadow-sm'
-    }`
 
   const Stat = ({ label, value, accent }: { label: string; value: string; accent?: string }) => (
     <div>

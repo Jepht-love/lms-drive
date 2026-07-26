@@ -36,7 +36,7 @@ export default function AccountingCustomPeriod({
         <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Au</p>
         <DatePickerField value={t} onChange={setT} min={f} className={inp} />
       </div>
-      <button
+      <button type="button"
         onClick={apply}
         disabled={!f || !t}
         className="px-4 py-2 bg-[#111111] text-white rounded-xl text-sm font-semibold disabled:opacity-40 flex-shrink-0"

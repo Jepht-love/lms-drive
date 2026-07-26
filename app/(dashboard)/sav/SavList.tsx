@@ -56,7 +56,7 @@ export default function SavList({ tickets }: { tickets: Ticket[] }) {
       {/* Filtres */}
       <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
         {FILTERS.map(f => (
-          <button
+          <button type="button"
             key={f.key}
             onClick={() => setFilter(f.key)}
             className={`px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${
@@ -112,7 +112,7 @@ export default function SavList({ tickets }: { tickets: Ticket[] }) {
                 {/* Changement de statut */}
                 <div className="flex gap-2 mt-3 pt-3 border-t border-gray-50">
                   {(['nouveau', 'en_cours', 'resolu'] as SavStatus[]).map(st => (
-                    <button
+                    <button type="button"
                       key={st}
                       disabled={pending || t.status === st}
                       onClick={() => setStatus(t.id, st)}

@@ -76,8 +76,9 @@ export default function AccountingTransactions({ transactions }: { transactions:
 
   const byDate = new Map<string, Tx[]>()
   for (const t of filtered) {
-    if (!byDate.has(t.date)) byDate.set(t.date, [])
-    byDate.get(t.date)!.push(t)
+    const bucket = byDate.get(t.date)
+    if (bucket) bucket.push(t)
+    else byDate.set(t.date, [t])
   }
 
   const visible = filtered.filter(t => !t.is_transparent)
@@ -108,8 +109,10 @@ export default function AccountingTransactions({ transactions }: { transactions:
     <div className="space-y-3">
       {/* Recherche — filtre la liste de la période affichée */}
       <div className="relative">
+        <label htmlFor="tx-search" className="sr-only">Rechercher une transaction</label>
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300 pointer-events-none" />
         <input
+          id="tx-search"
           type="text"
           inputMode="search"
           value={query}
@@ -118,7 +121,7 @@ export default function AccountingTransactions({ transactions }: { transactions:
           className="w-full bg-white border border-gray-100 shadow-sm rounded-xl pl-9 pr-9 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900/10"
         />
         {query && (
-          <button
+          <button type="button"
             onClick={() => setQuery('')}
             className="absolute right-2.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100"
             title="Effacer la recherche"
@@ -128,7 +131,7 @@ export default function AccountingTransactions({ transactions }: { transactions:
         )}
       </div>
 
-      <button onClick={() => setExportMode(!exportMode)}
+      <button type="button" onClick={() => setExportMode(!exportMode)}
         className={`flex items-center gap-2 text-xs font-semibold px-3 py-2 rounded-xl transition-colors ${
           exportMode ? 'bg-[#111111] text-white' : 'bg-white border border-gray-100 text-gray-600 shadow-sm'
         }`}>
@@ -150,7 +153,7 @@ export default function AccountingTransactions({ transactions }: { transactions:
       {filtered.length === 0 ? (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center">
           <p className="text-gray-400 font-medium text-sm">Aucun résultat pour « {query.trim()} »</p>
-          <button onClick={() => setQuery('')} className="mt-2 text-xs font-semibold text-gray-500 underline">Effacer la recherche</button>
+          <button type="button" onClick={() => setQuery('')} className="mt-2 text-xs font-semibold text-gray-500 underline">Effacer la recherche</button>
         </div>
       ) : (
         <AnimatedList className="space-y-3">
@@ -186,7 +189,7 @@ export default function AccountingTransactions({ transactions }: { transactions:
                         {isRev ? '+' : '−'}{formatPrice(t.amount)}
                       </p>
                       {exportMode && (
-                        <button onClick={() => onToggle(t)} disabled={pending}
+                        <button type="button" onClick={() => onToggle(t)} disabled={pending}
                           className={`w-8 h-8 rounded-xl flex-shrink-0 flex items-center justify-center border ${t.is_transparent ? 'bg-gray-100 border-gray-200 text-gray-400' : 'bg-white border-gray-200 text-gray-500 hover:border-gray-400'}`}
                           title={t.is_transparent ? "Inclure dans l'export" : "Exclure de l'export"}>
                           {t.is_transparent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}

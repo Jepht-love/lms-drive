@@ -15,14 +15,14 @@ export default function DeleteAgencyButton({ agencyId }: { agencyId: string }) {
   if (confirm) {
     return (
       <div className="flex items-center gap-1.5 flex-shrink-0">
-        <button
+        <button type="button"
           onClick={() => setConfirm(false)}
           disabled={pending}
           className="px-2.5 py-1 rounded-lg text-xs font-semibold border border-gray-200 text-gray-600 disabled:opacity-40"
         >
           Annuler
         </button>
-        <button
+        <button type="button"
           onClick={() => startTransition(async () => {
             const r = await deleteAgency(agencyId)
             if (r?.error) { show(r.error, 'error'); setConfirm(false) }
@@ -38,7 +38,7 @@ export default function DeleteAgencyButton({ agencyId }: { agencyId: string }) {
   }
 
   return (
-    <button
+    <button type="button"
       onClick={() => setConfirm(true)}
       className="p-1.5 text-gray-300 rounded-lg hover:bg-red-50 hover:text-red-500 transition-colors flex-shrink-0"
       title="Supprimer l'agence"

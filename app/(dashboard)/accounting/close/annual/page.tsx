@@ -10,6 +10,9 @@ import AccountingTransactions from '../../AccountingTransactions'
 
 const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre']
 
+const pill = (active: boolean) =>
+  `px-3.5 py-2 rounded-xl text-sm font-semibold transition-colors ${active ? 'bg-[#111111] text-white' : 'bg-white border border-gray-100 text-gray-600 shadow-sm'}`
+
 export default async function AnnualClosingPage({
   searchParams,
 }: {
@@ -58,8 +61,6 @@ export default async function AnnualClosingPage({
   const byMonth = new Map((months ?? []).map(m => [m.month, m]))
 
   const years = [cur, cur - 1, cur - 2]
-  const pill = (active: boolean) =>
-    `px-3.5 py-2 rounded-xl text-sm font-semibold transition-colors ${active ? 'bg-[#111111] text-white' : 'bg-white border border-gray-100 text-gray-600 shadow-sm'}`
 
   return (
     <div className="space-y-4">
@@ -109,7 +110,7 @@ export default async function AnnualClosingPage({
           const exp = v?.exp ?? 0
           const net = rev - exp
           return (
-            <Link key={i} href="/accounting/close/monthly" className="flex items-center gap-3 px-4 py-3 border-b border-gray-50 last:border-0 hover:bg-gray-50">
+            <Link key={label} href="/accounting/close/monthly" className="flex items-center gap-3 px-4 py-3 border-b border-gray-50 last:border-0 hover:bg-gray-50">
               <span className="w-20 text-[13px] font-medium text-gray-900">{label}</span>
               <div className="flex-1 flex items-center gap-3 text-[11px]">
                 <span className="text-green-600">+{formatPrice(rev)}</span>

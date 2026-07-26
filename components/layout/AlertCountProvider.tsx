@@ -41,9 +41,12 @@ export default function AlertCountProvider({ children }: { children: React.React
   const aliveRef = useRef(true)
 
   const load = useCallback(() => {
+    // Si le serveur refuse, on garde le dernier nombre connu au lieu de retomber à
+    // zéro : une pastille vide voudrait dire « aucune alerte », ce qui est faux et
+    // pousse à ne pas aller voir.
     return fetch('/api/alerts/count')
-      .then(r => r.json())
-      .then(d => { if (aliveRef.current) setCount(d.count ?? 0) })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d && aliveRef.current) setCount(d.count ?? 0) })
       .catch(() => {})
   }, [])
 

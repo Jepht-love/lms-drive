@@ -30,13 +30,13 @@ export default function DashboardError({
             : 'Une erreur inattendue s\'est produite. Nos équipes en sont informées.'}
         </p>
         <div className="flex gap-3">
-          <button
+          <button type="button"
             onClick={() => router.push('/')}
             className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
           >
             Accueil
           </button>
-          <button
+          <button type="button"
             onClick={reset}
             className="flex-1 py-2.5 rounded-xl bg-[#111111] text-white text-sm font-semibold hover:bg-gray-800 transition-colors"
           >

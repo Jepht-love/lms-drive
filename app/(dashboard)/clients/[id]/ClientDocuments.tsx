@@ -22,6 +22,9 @@ export interface ClientDoc {
 type Side = 'recto' | 'verso' | ''
 
 interface Staged {
+  /** Identité de la ligne, stable tant qu'elle existe : sans elle, retirer un
+   *  fichier de la file ferait glisser le type et la face choisis pour les suivants. */
+  id: number
   file: File
   subcategory: string
   side: Side
@@ -44,6 +47,7 @@ export default function ClientDocuments({
   const router = useRouter()
   const inputRef = useRef<HTMLInputElement>(null)
   const cameraRef = useRef<HTMLInputElement>(null)
+  const nextStagedId = useRef(0)
   const [staged, setStaged] = useState<Staged[]>([])
   const [dragOver, setDragOver] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -55,7 +59,7 @@ export default function ClientDocuments({
   function addFiles(list: FileList | null) {
     if (!list || list.length === 0) return
     // Type par défaut « CNI », face non précisée — ajustables par fichier avant import.
-    const next: Staged[] = Array.from(list).map(file => ({ file, subcategory: 'cni', side: '' }))
+    const next: Staged[] = Array.from(list).map(file => ({ id: nextStagedId.current++, file, subcategory: 'cni', side: '' }))
     setStaged(prev => [...prev, ...next])
     setError(null)
   }
@@ -81,47 +85,54 @@ export default function ClientDocuments({
     }[] = []
     const failed: string[] = []
 
-    for (let i = 0; i < staged.length; i++) {
-      const { file, subcategory, side } = staged[i]
-      // Upload navigateur direct vers le bucket `documents` (contourne la limite
-      // de payload Vercel) — on n'envoie ensuite que les chemins au serveur.
-      const path = await uploadFileToSupabase(file, `client/${subcategory}`, 'documents')
-      if (path) {
-        uploaded.push({
-          name: file.name,
-          subcategory,
-          file_url: path,
-          file_type: file.type || 'application/octet-stream',
-          file_size: file.size,
-          side,
-        })
-      } else {
-        failed.push(file.name)
+    // `finally` : un rejet en cours d'upload laisserait sinon la barre de
+    // progression figée et le bouton d'import définitivement désactivé.
+    try {
+      for (let i = 0; i < staged.length; i++) {
+        const { file, subcategory, side } = staged[i]
+        // Upload navigateur direct vers le bucket `documents` (contourne la limite
+        // de payload Vercel) — on n'envoie ensuite que les chemins au serveur.
+        const sent = await uploadFileToSupabase(file, `client/${subcategory}`, 'documents')
+        if (sent) {
+          uploaded.push({
+            name: file.name,
+            subcategory,
+            // Poids et type de ce qui est RÉELLEMENT stocké : une photo est réduite
+            // avant l'envoi, garder les valeurs du fichier choisi afficherait un
+            // poids faux dans la liste des pièces.
+            file_url: sent.path,
+            file_type: sent.type,
+            file_size: sent.size,
+            side,
+          })
+        } else {
+          failed.push(file.name)
+        }
+        setProgress({ done: i + 1, total: staged.length })
       }
-      setProgress({ done: i + 1, total: staged.length })
-    }
 
-    if (uploaded.length === 0) {
+      if (uploaded.length === 0) {
+        setError('Le téléversement a échoué. Réessayez.')
+        return
+      }
+
+      const res = await bulkCreateClientDocuments(clientId, uploaded)
+      if (res?.error) {
+        setError(res.error)
+        return
+      }
+
+      setStaged([])
+      if (failed.length > 0) {
+        setError(`${failed.length} fichier(s) non téléversé(s) : ${failed.join(', ')}`)
+      }
+      router.refresh()
+    } catch {
+      setError('Le téléversement a échoué. Vérifiez votre connexion puis réessayez.')
+    } finally {
       setUploading(false)
       setProgress(null)
-      setError('Le téléversement a échoué. Réessayez.')
-      return
     }
-
-    const res = await bulkCreateClientDocuments(clientId, uploaded)
-    setUploading(false)
-    setProgress(null)
-
-    if (res?.error) {
-      setError(res.error)
-      return
-    }
-
-    setStaged([])
-    if (failed.length > 0) {
-      setError(`${failed.length} fichier(s) non téléversé(s) : ${failed.join(', ')}`)
-    }
-    router.refresh()
   }
 
   async function handleDelete(id: string) {
@@ -143,7 +154,7 @@ export default function ClientDocuments({
               className="relative rounded-xl border border-gray-200 overflow-hidden bg-white"
             >
               {/* Aperçu (clic = agrandir) */}
-              <button
+              <button type="button"
                 onClick={() => d.url && setLightbox(d)}
                 className="block w-full aspect-square bg-gray-50"
                 aria-label="Agrandir la pièce"
@@ -165,7 +176,7 @@ export default function ClientDocuments({
               </button>
 
               {/* Supprimer */}
-              <button
+              <button type="button"
                 onClick={() => handleDelete(d.id)}
                 disabled={deletingId === d.id}
                 className="absolute top-1.5 right-1.5 w-6 h-6 rounded-md bg-white/85 border border-gray-200 flex items-center justify-center text-gray-400 hover:text-red-500 disabled:opacity-50"
@@ -242,7 +253,7 @@ export default function ClientDocuments({
       {staged.length > 0 && (
         <div className="space-y-2">
           {staged.map((s, i) => (
-            <div key={i} className="flex items-center gap-2.5 p-2.5 rounded-xl bg-white border border-gray-200">
+            <div key={s.id} className="flex items-center gap-2.5 p-2.5 rounded-xl bg-white border border-gray-200">
               <div className="w-9 h-9 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center flex-shrink-0">
                 {s.file.type.startsWith('image/')
                   ? <ImageIcon className="w-4 h-4 text-gray-400" />
@@ -251,6 +262,7 @@ export default function ClientDocuments({
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-gray-900 truncate">{s.file.name}</p>
                 <select
+                  aria-label="Type de pièce"
                   value={s.subcategory}
                   onChange={e => updateType(i, e.target.value)}
                   className="mt-1 w-full text-xs font-medium text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-2 py-1 outline-none focus:border-gray-400"
@@ -277,7 +289,7 @@ export default function ClientDocuments({
                   ))}
                 </div>
               </div>
-              <button
+              <button type="button"
                 onClick={() => removeStaged(i)}
                 className="p-1.5 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors flex-shrink-0 self-start"
                 aria-label="Retirer ce fichier"
@@ -287,7 +299,7 @@ export default function ClientDocuments({
             </div>
           ))}
 
-          <button
+          <button type="button"
             onClick={handleImport}
             disabled={uploading}
             className="w-full inline-flex items-center justify-center gap-2 h-11 rounded-xl bg-[#111111] text-white text-sm font-bold hover:bg-black transition-colors disabled:opacity-60"
@@ -323,7 +335,7 @@ export default function ClientDocuments({
           className="fixed inset-0 z-50 bg-black/85 flex flex-col p-4"
           onClick={() => setLightbox(null)}
         >
-          <button
+          <button type="button"
             className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/15 flex items-center justify-center text-white z-10"
             aria-label="Fermer"
           >

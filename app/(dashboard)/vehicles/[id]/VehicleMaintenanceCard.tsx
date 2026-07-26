@@ -77,7 +77,7 @@ export default function VehicleMaintenanceCard({
       )}
 
       {/* Bascule manuelle de la catégorie « À réparer » */}
-      <button
+      <button type="button"
         onClick={toggleRepair}
         disabled={pending}
         className={`mt-3 w-full py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-colors disabled:opacity-40 ${

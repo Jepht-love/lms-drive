@@ -77,17 +77,16 @@ export default async function ClientPage({
 
   if (!client) notFound()
 
-  const { data: reservations } = await supabase
-    .from('reservations')
-    .select(
-      'id, reservation_number, status, start_datetime, end_datetime, total_price, daily_price, payment_status, deposit_amount, deposit_status, deposit_deducted, late_minutes, vehicle:vehicles(plate, brand, model, weekly_price)'
-    )
-    .eq('client_id', id)
-    .order('start_datetime', { ascending: false })
-
-  // ── Historique & incidents (amendes + sinistres) ──
-  // Tables en RLS gérant/associé → un employé verra simplement des listes vides.
-  const [{ data: infractions }, { data: accidents }] = await Promise.all([
+  const [{ data: reservations }, { data: infractions }, { data: accidents }] = await Promise.all([
+    supabase
+      .from('reservations')
+      .select(
+        'id, reservation_number, status, start_datetime, end_datetime, total_price, daily_price, payment_status, deposit_amount, deposit_status, deposit_deducted, late_minutes, vehicle:vehicles(plate, brand, model, weekly_price)'
+      )
+      .eq('client_id', id)
+      .order('start_datetime', { ascending: false }),
+    // ── Historique & incidents (amendes + sinistres) ──
+    // Tables en RLS gérant/associé → un employé verra simplement des listes vides.
     supabase
       .from('infractions')
       .select('id, infraction_date, type, amount, status, vehicle:vehicles(plate, brand, model)')
@@ -109,24 +108,23 @@ export default async function ClientPage({
     return data?.signedUrl ?? null
   }
 
-  const [idFrontUrl, idBackUrl, licFrontUrl, licBackUrl, addressUrl] = await Promise.all([
+  const [idFrontUrl, idBackUrl, licFrontUrl, licBackUrl, addressUrl, { data: docRows }] = await Promise.all([
     getSignedUrl(client.id_doc_front_path),
     getSignedUrl(client.id_doc_back_path),
     getSignedUrl(client.license_front_path),
     getSignedUrl(client.license_back_path),
     getSignedUrl(client.proof_of_address_path),
+    // ── Documents importés (Système A : table `documents`, bucket `documents`) ──
+    // Pièces déposées en masse depuis la fiche (lot Telegram…). On exclut les
+    // documents auto-générés (contrats/factures) qui vivent dans leur propre onglet.
+    supabase
+      .from('documents')
+      .select('id, name, subcategory, file_url, file_type, tags, created_at')
+      .eq('entity_id', id)
+      .eq('entity_type', 'client')
+      .eq('is_auto_generated', false)
+      .order('created_at', { ascending: false }),
   ])
-
-  // ── Documents importés (Système A : table `documents`, bucket `documents`) ──
-  // Pièces déposées en masse depuis la fiche (lot Telegram…). On exclut les
-  // documents auto-générés (contrats/factures) qui vivent dans leur propre onglet.
-  const { data: docRows } = await supabase
-    .from('documents')
-    .select('id, name, subcategory, file_url, file_type, tags, created_at')
-    .eq('entity_id', id)
-    .eq('entity_type', 'client')
-    .eq('is_auto_generated', false)
-    .order('created_at', { ascending: false })
 
   async function getDocSignedUrl(path: string | null | undefined): Promise<string | null> {
     if (!path) return null
@@ -510,7 +508,7 @@ export default async function ClientPage({
       {/* ─── Action principale ─── */}
       <Link
         href={`/reservations/new?client=${id}`}
-        className="flex items-center justify-center gap-2 w-full py-3.5 bg-[#111111] text-white rounded-2xl font-bold text-sm hover:bg-gray-800 transition-all active:scale-[.97]"
+        className="flex items-center justify-center gap-2 w-full py-3.5 bg-[#111111] text-white rounded-2xl font-bold text-sm hover:bg-gray-800 transition-[background-color,scale] active:scale-[.97]"
       >
         <Plus className="w-4 h-4" /> Nouvelle réservation
       </Link>

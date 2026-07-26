@@ -21,6 +21,7 @@ import {
 } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import type { CalendarEvent, EventType } from '@/types/calendar'
+import LoadErrorBanner from '@/components/ui/LoadErrorBanner'
 
 const ASSIGNABLE: EventType[] = [
   'depart_vehicule', 'retour_vehicule', 'tache',
@@ -64,6 +65,9 @@ export default function DashboardCalendar() {
   const [selected, setSelected] = useState<Date>(() => new Date())
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadFailed, setLoadFailed] = useState(false)
+  // Incrémenté par « Réessayer » : relance le chargement de la semaine affichée.
+  const [reloadKey, setReloadKey] = useState(0)
 
   // Carrousel : largeur mesurée du conteneur + position (px) de la piste 3×.
   const containerRef = useRef<HTMLDivElement>(null)
@@ -113,13 +117,19 @@ export default function DashboardCalendar() {
     const end = addDays(weekStart, 14)
     let cancelled = false
     setLoading(true)
+    setLoadFailed(false)
     fetch(`/api/calendar/events?start=${start.toISOString()}&end=${end.toISOString()}`)
-      .then(r => r.json())
+      .then(r => {
+        if (!r.ok) throw new Error(String(r.status))
+        return r.json()
+      })
       .then(data => { if (!cancelled) setEvents(Array.isArray(data) ? data : []) })
-      .catch(() => { if (!cancelled) setEvents([]) })
+      // Une semaine vide et une semaine non chargée se ressemblent : on le dit,
+      // sinon le tableau de bord laisse croire qu'il n'y a rien de prévu.
+      .catch(() => { if (!cancelled) setLoadFailed(true) })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
-  }, [weekStart])
+  }, [weekStart, reloadKey])
 
   const eventsByDay = useMemo(() => {
     const map = new Map<string, CalendarEvent[]>()
@@ -177,6 +187,13 @@ export default function DashboardCalendar() {
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+      {loadFailed && (
+        <LoadErrorBanner
+          className="mb-3"
+          message="Semaine non chargée — les pastilles peuvent manquer."
+          onRetry={() => setReloadKey(k => k + 1)}
+        />
+      )}
       {/* En-tête : mois + navigation */}
       <div className="flex items-center justify-between mb-3">
         <button

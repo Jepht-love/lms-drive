@@ -63,28 +63,33 @@ export default function TeamList({ active, inactive, taskCount, isManager, curre
     const failed: string[] = []
     const all = [...active, ...inactive]
 
-    for (const id of selected) {
-      try {
-        const res = await fetch(`/api/team/${id}`, { method: 'DELETE' })
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}))
-          const name = all.find(m => m.id === id)?.full_name ?? 'Membre'
-          failed.push(data.error ?? `${name} : suppression impossible`)
+    // `finally` : garantit la réactivation du bouton même si un imprévu
+    // (rejet de `router.refresh()`, erreur inattendue) interrompt la boucle.
+    try {
+      for (const id of selected) {
+        try {
+          const res = await fetch(`/api/team/${id}`, { method: 'DELETE' })
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}))
+            const name = all.find(m => m.id === id)?.full_name ?? 'Membre'
+            failed.push(data.error ?? `${name} : suppression impossible`)
+          }
+        } catch {
+          failed.push('Erreur réseau')
         }
-      } catch {
-        failed.push('Erreur réseau')
       }
-    }
 
-    setDeleting(false)
-    if (failed.length > 0) {
-      setErrors(failed)
-      setConfirming(false)
-      setSelected(new Set())
-      router.refresh()
-    } else {
-      exitSelection()
-      router.refresh()
+      if (failed.length > 0) {
+        setErrors(failed)
+        setConfirming(false)
+        setSelected(new Set())
+        router.refresh()
+      } else {
+        exitSelection()
+        router.refresh()
+      }
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -105,7 +110,7 @@ export default function TeamList({ active, inactive, taskCount, isManager, curre
         </div>
         {isManager && !selecting && (
           <div className="flex items-center gap-2">
-            <button
+            <button type="button"
               onClick={() => setSelecting(true)}
               aria-label="Sélectionner des profils à supprimer"
               className="w-10 h-10 bg-white rounded-2xl border border-gray-100 shadow-sm flex items-center justify-center text-gray-400 hover:text-red-500 hover:border-red-100 transition-colors"
@@ -120,7 +125,7 @@ export default function TeamList({ active, inactive, taskCount, isManager, curre
           </div>
         )}
         {selecting && (
-          <button
+          <button type="button"
             onClick={exitSelection}
             className="flex items-center gap-1.5 bg-white text-gray-600 text-xs font-bold px-4 py-2.5 rounded-2xl border border-gray-100 shadow-sm"
           >
@@ -178,7 +183,7 @@ export default function TeamList({ active, inactive, taskCount, isManager, curre
       {/* Barre d'action flottante en mode sélection */}
       {selecting && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-[calc(100%-2rem)] max-w-md">
-          <button
+          <button type="button"
             onClick={() => setConfirming(true)}
             disabled={selected.size === 0 || deleting}
             className="w-full bg-red-500 text-white font-black text-sm py-4 rounded-2xl shadow-lg flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
@@ -205,13 +210,13 @@ export default function TeamList({ active, inactive, taskCount, isManager, curre
               </p>
             </div>
             <div className="flex gap-2">
-              <button
+              <button type="button"
                 onClick={() => setConfirming(false)} disabled={deleting}
                 className="flex-1 bg-gray-100 text-gray-700 font-bold text-sm py-3.5 rounded-2xl"
               >
                 Annuler
               </button>
-              <button
+              <button type="button"
                 onClick={handleDelete} disabled={deleting}
                 className="flex-1 bg-red-500 text-white font-black text-sm py-3.5 rounded-2xl disabled:opacity-60"
               >

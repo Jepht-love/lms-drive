@@ -26,20 +26,25 @@ export default function KpiEditor({ campaignId, prospects, reservations, revenue
 
   async function save() {
     setLoading(true)
-    await supabase.from('campaigns').update({
-      prospects_count:    parseInt(p, 10) || 0,
-      reservations_count: parseInt(r, 10) || 0,
-      revenue_generated:  parseFloat(rev.replace(',', '.')) || 0,
-      observations:       obs.trim() || null,
-    }).eq('id', campaignId)
-    setLoading(false)
-    setEditing(false)
-    router.refresh()
+    // `finally` : sans lui, un rejet réseau laisse le bouton « Enregistrer »
+    // désactivé et le formulaire ouvert, sans issue possible.
+    try {
+      await supabase.from('campaigns').update({
+        prospects_count:    parseInt(p, 10) || 0,
+        reservations_count: parseInt(r, 10) || 0,
+        revenue_generated:  parseFloat(rev.replace(',', '.')) || 0,
+        observations:       obs.trim() || null,
+      }).eq('id', campaignId)
+      setEditing(false)
+      router.refresh()
+    } finally {
+      setLoading(false)
+    }
   }
 
   if (!editing) {
     return (
-      <button
+      <button type="button"
         onClick={() => setEditing(true)}
         className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-gray-200 text-gray-700 text-sm font-semibold hover:bg-gray-50 transition-colors"
       >
@@ -59,8 +64,9 @@ export default function KpiEditor({ campaignId, prospects, reservations, revenue
         <Field label="CA généré (€)" value={rev} onChange={setRev} />
       </div>
       <div>
-        <label className="block text-[10px] text-gray-400 font-bold uppercase tracking-wide mb-1">Observations</label>
+        <label htmlFor="kpi-observations" className="block text-[10px] text-gray-400 font-bold uppercase tracking-wide mb-1">Observations</label>
         <textarea
+          id="kpi-observations"
           value={obs}
           onChange={e => setObs(e.target.value)}
           rows={2}
@@ -69,14 +75,14 @@ export default function KpiEditor({ campaignId, prospects, reservations, revenue
         />
       </div>
       <div className="flex gap-2">
-        <button
+        <button type="button"
           onClick={save}
           disabled={loading}
           className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#111111] text-white text-sm font-semibold hover:bg-gray-800 disabled:opacity-50 transition-colors"
         >
           {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />} Enregistrer
         </button>
-        <button
+        <button type="button"
           onClick={() => { setP(String(prospects ?? 0)); setR(String(reservations ?? 0)); setRev(String(revenue ?? 0)); setObs(observations ?? ''); setEditing(false) }}
           className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors"
         >
@@ -90,8 +96,8 @@ export default function KpiEditor({ campaignId, prospects, reservations, revenue
 function Field({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   return (
     <div>
-      <label className="block text-[10px] text-gray-400 font-bold uppercase tracking-wide mb-1">{label}</label>
-      <input
+      <label htmlFor="kpieditor-99" className="block text-[10px] text-gray-400 font-bold uppercase tracking-wide mb-1">{label}</label>
+      <input id="kpieditor-99"
         type="number"
         inputMode="decimal"
         value={value}

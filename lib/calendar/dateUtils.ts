@@ -24,8 +24,11 @@ export function businessNow(now: Date = new Date()): Date {
     year: 'numeric', month: '2-digit', day: '2-digit',
     hour: '2-digit', minute: '2-digit', second: '2-digit',
   }).formatToParts(now)
-  const g = (t: string) => Number(parts.find(p => p.type === t)!.value)
-  return new Date(g('year'), g('month') - 1, g('day'), g('hour'), g('minute'), g('second'))
+  // Indexé une fois par type plutôt que six recherches successives dans le tableau.
+  // Les six composants lus ci-dessous sont exactement ceux demandés à Intl juste
+  // au-dessus : ils sont toujours présents, aucune absence n'est possible.
+  const p: Record<string, string> = Object.fromEntries(parts.map(x => [x.type, x.value]))
+  return new Date(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second)
 }
 
 export function getWeekDates(date: Date, mode: 'week_5d' | 'week_7d'): Date[] {

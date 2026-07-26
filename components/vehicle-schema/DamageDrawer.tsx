@@ -52,7 +52,7 @@ export default function DamageDrawer({ open, zone, existingDamages, onAdd, onRem
                     <p className="text-xs text-gray-500 mt-1 leading-snug">{entry.comment}</p>
                   )}
                 </div>
-                <button
+                <button type="button" aria-label="Supprimer ce dommage"
                   onClick={() => onRemove(i)}
                   className="ml-2 p-1.5 hover:bg-red-50 rounded-lg flex-shrink-0"
                 >
@@ -84,8 +84,9 @@ export default function DamageDrawer({ open, zone, existingDamages, onAdd, onRem
           </div>
 
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2">Commentaire</p>
+            <label htmlFor="damage-comment" className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2">Commentaire</label>
             <textarea
+              id="damage-comment"
               value={comment}
               onChange={e => setComment(e.target.value)}
               rows={2}
@@ -95,13 +96,13 @@ export default function DamageDrawer({ open, zone, existingDamages, onAdd, onRem
           </div>
 
           <div className="flex gap-3 pt-1">
-            <button
+            <button type="button"
               onClick={onClose}
               className="flex-1 py-3 border border-gray-200 text-gray-600 rounded-2xl text-sm font-medium"
             >
               Fermer
             </button>
-            <button
+            <button type="button"
               onClick={handleAdd}
               className="flex-1 py-3 bg-[#111111] text-white rounded-2xl text-sm font-semibold"
             >

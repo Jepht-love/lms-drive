@@ -337,7 +337,13 @@ export async function sendDocumentByEmail(
   })
 }
 
-/** Appelé automatiquement après génération d'un PDF de contrat */
+/**
+ * Appelé automatiquement après génération d'un PDF de contrat.
+ * NB : plus aucun appelant aujourd'hui — l'archivage se fait en ligne dans
+ * `app/api/contracts/generate-pdf/route.ts`. Conservé au cas où, mais gardé
+ * derrière un contrôle d'authentification : une action serveur exportée est
+ * appelable directement, y compris sans session.
+ */
 export async function archiveContractDocument(opts: {
   contractNumber: string
   reservationId: string
@@ -346,6 +352,9 @@ export async function archiveContractDocument(opts: {
   fileUrl: string
 }) {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié' }
+
   await supabase.from('documents').insert({
     category: 'client',
     subcategory: 'contrat_location',
@@ -359,7 +368,11 @@ export async function archiveContractDocument(opts: {
   })
 }
 
-/** Appelé après création d'une infraction avec document */
+/**
+ * Appelé après création d'une infraction avec document.
+ * NB : plus aucun appelant aujourd'hui (voir `lib/actions/incidents.ts`, qui
+ * insère directement). Même garde d'authentification que ci-dessus.
+ */
 export async function archiveInfractionDocument(opts: {
   vehicleId: string
   vehiclePlate: string
@@ -367,6 +380,9 @@ export async function archiveInfractionDocument(opts: {
   documentUrl: string
 }) {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié' }
+
   await supabase.from('documents').insert({
     category: 'vehicule',
     subcategory: 'autres',

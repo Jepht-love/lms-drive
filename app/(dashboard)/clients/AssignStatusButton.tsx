@@ -49,7 +49,7 @@ export default function AssignStatusButton({ clients }: { clients: MiniClient[] 
 
   return (
     <>
-      <button
+      <button type="button"
         onClick={() => setOpen(true)}
         className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-sm font-semibold bg-white border border-gray-100 text-gray-600 hover:bg-gray-50 shadow-sm min-h-[44px]"
       >
@@ -68,15 +68,17 @@ export default function AssignStatusButton({ clients }: { clients: MiniClient[] 
               <h3 className="font-bold text-gray-900 text-base">
                 {selected ? `${selected.first_name} ${selected.last_name}` : 'Attribuer un statut'}
               </h3>
-              <button onClick={close} className="p-1.5 text-gray-400 hover:bg-gray-100 rounded-lg"><X className="w-4 h-4" /></button>
+              <button type="button" aria-label="Fermer" onClick={close} className="p-1.5 text-gray-400 hover:bg-gray-100 rounded-lg"><X className="w-4 h-4" /></button>
             </div>
 
             {!selected ? (
               <>
                 <div className="px-4 pb-2">
                   <div className="flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-200 bg-gray-50">
+                    <label htmlFor="assign-status-search" className="sr-only">Rechercher un client</label>
                     <Search className="w-4 h-4 text-gray-400" />
                     <input
+                      id="assign-status-search"
                       autoFocus
                       value={q}
                       onChange={e => setQ(e.target.value)}
@@ -89,7 +91,7 @@ export default function AssignStatusButton({ clients }: { clients: MiniClient[] 
                   {results.length === 0 ? (
                     <p className="text-sm text-gray-400 text-center py-6">Aucun client</p>
                   ) : results.map(c => (
-                    <button
+                    <button type="button"
                       key={c.id}
                       onClick={() => setSelected(c)}
                       className="w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl hover:bg-gray-50 text-left"
@@ -109,14 +111,14 @@ export default function AssignStatusButton({ clients }: { clients: MiniClient[] 
               </>
             ) : (
               <div className="px-4 pb-4 space-y-2 overflow-y-auto">
-                <button
+                <button type="button"
                   disabled={pending}
                   onClick={() => assign('vip')}
                   className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-40"
                 >
                   <Star className="w-4 h-4" /> Marquer VIP
                 </button>
-                <button
+                <button type="button"
                   disabled={pending}
                   onClick={() => assign('standard')}
                   className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-40"
@@ -124,15 +126,16 @@ export default function AssignStatusButton({ clients }: { clients: MiniClient[] 
                   <RotateCcw className="w-4 h-4" /> Retirer le statut
                 </button>
                 <div className="rounded-xl border border-red-100 bg-red-50 p-3 space-y-2">
-                  <label className="block text-xs font-bold text-red-700 uppercase tracking-wide">Blacklister</label>
+                  <label htmlFor="blacklist-reason" className="block text-xs font-bold text-red-700 uppercase tracking-wide">Blacklister</label>
                   <textarea
+                    id="blacklist-reason"
                     value={reason}
                     onChange={e => setReason(e.target.value)}
                     rows={2}
                     placeholder="Motif (impayé, dégradation…)"
                     className="w-full px-3 py-2 rounded-lg border border-red-200 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
                   />
-                  <button
+                  <button type="button"
                     disabled={pending || !reason.trim()}
                     onClick={() => assign('blackliste', reason.trim())}
                     className="w-full py-2 rounded-lg text-sm font-bold text-white bg-red-600 hover:bg-red-700 disabled:opacity-40 flex items-center justify-center gap-1.5"
@@ -140,7 +143,7 @@ export default function AssignStatusButton({ clients }: { clients: MiniClient[] 
                     <Ban className="w-4 h-4" /> Confirmer le blacklistage
                   </button>
                 </div>
-                <button onClick={() => setSelected(null)} className="w-full py-2 text-xs font-medium text-gray-500 hover:bg-gray-100 rounded-lg">
+                <button type="button" onClick={() => setSelected(null)} className="w-full py-2 text-xs font-medium text-gray-500 hover:bg-gray-100 rounded-lg">
                   ← Choisir un autre client
                 </button>
               </div>

@@ -19,6 +19,7 @@ export default function VehicleFilter({ vehicles }: { vehicles: Vehicle[] }) {
 
   return (
     <select
+      aria-label="Filtrer par véhicule"
       value={current}
       onChange={onChange}
       className="text-sm border border-gray-200 rounded-xl px-3 py-2 text-gray-700 bg-white focus:outline-none focus:border-gray-400"

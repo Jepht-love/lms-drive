@@ -2,6 +2,12 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import DocumentsClient, { type ReservationDoc } from './DocumentsClient'
 
+// Pièces client importées en masse mais pas encore rattachées à un client
+// (entity_id vide) : elles ne vivent QUE dans l'écran d'import & tri, pas dans
+// la bibliothèque. On les compte pour le badge d'entrée « Import ».
+const isUntriagedClientDoc = (d: any) =>
+  d.category === 'client' && d.entity_type === 'client' && !d.entity_id && !d.is_auto_generated
+
 export default async function DocumentsPage() {
   const supabase = await createClient()
 
@@ -76,8 +82,8 @@ export default async function DocumentsPage() {
   // Signed URLs pour les PDFs (managers uniquement, bucket privé)
   let reservationDocs: ReservationDoc[] = []
   if (isManager) {
-    const contractPaths = (allContracts ?? []).filter(c => c.pdf_storage_path).map(c => c.pdf_storage_path as string)
-    const invoicePaths  = (allInvoices ?? []).filter(i => i.pdf_storage_path).map(i => i.pdf_storage_path as string)
+    const contractPaths = (allContracts ?? []).flatMap(c => c.pdf_storage_path ? [c.pdf_storage_path] : [])
+    const invoicePaths  = (allInvoices ?? []).flatMap(i => i.pdf_storage_path ? [i.pdf_storage_path] : [])
 
     const [{ data: cSigned }, { data: iSigned }] = await Promise.all([
       contractPaths.length > 0
@@ -146,16 +152,10 @@ export default async function DocumentsPage() {
       .sort((a, b) => (b.start_datetime ?? '').localeCompare(a.start_datetime ?? ''))
   }
 
-  // Pièces client importées en masse mais pas encore rattachées à un client
-  // (entity_id vide) : elles ne vivent QUE dans l'écran d'import & tri, pas dans
-  // la bibliothèque. On les compte pour le badge d'entrée « Import ».
-  const isUntriagedClientDoc = (d: any) =>
-    d.category === 'client' && d.entity_type === 'client' && !d.entity_id && !d.is_auto_generated
-  const untriagedCount = (documents ?? []).filter(isUntriagedClientDoc).length
+  const untriagedCount =(documents ?? []).filter(isUntriagedClientDoc).length
 
   const visibleDocuments = (documents ?? [])
-    .filter(d => visibleCategories.includes(d.category))
-    .filter(d => !isUntriagedClientDoc(d))
+    .filter(d => visibleCategories.includes(d.category) && !isUntriagedClientDoc(d))
 
   // URLs signées pour chaque document archivé. Deux formats coexistent :
   // - Ancien : URL publique complète (ex-getPublicUrl) → regex extrait bucket+path

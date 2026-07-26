@@ -220,7 +220,7 @@ export default async function ReservationPage({
               startDatetime={reservation.start_datetime}
               endDatetime={reservation.end_datetime}
               dailyPrice={reservation.daily_price}
-              weeklyPrice={(reservation.vehicle as any)?.weekly_price ?? null}
+              vehicle={(reservation.vehicle as any) ?? null}
               currentTotal={reservation.total_price}
               kmIncludedDaily={reservation.km_included}
               reservationStatus={reservation.status}
@@ -231,7 +231,7 @@ export default async function ReservationPage({
             startDatetime={reservation.start_datetime}
             endDatetime={reservation.end_datetime}
             dailyPrice={reservation.daily_price}
-            weeklyPrice={(reservation.vehicle as any)?.weekly_price ?? null}
+            vehicle={(reservation.vehicle as any) ?? null}
             currentTotal={reservation.total_price}
             reservationStatus={reservation.status}
             variant="hero"

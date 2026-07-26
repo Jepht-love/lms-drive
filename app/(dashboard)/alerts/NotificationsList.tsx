@@ -78,7 +78,7 @@ export default function NotificationsList({ initialNotifications }: { initialNot
   return (
     <div className="space-y-3">
       {hasUnread && (
-        <button
+        <button type="button"
           onClick={markAllRead}
           className="flex items-center gap-2 text-sm text-blue-600 hover:underline ml-auto"
         >

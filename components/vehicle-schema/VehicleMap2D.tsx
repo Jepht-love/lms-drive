@@ -401,10 +401,10 @@ export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, onD
                   <p className="text-[10px] font-bold uppercase tracking-wide text-orange-600 mb-1.5">Départ</p>
                   {prevPhotos.length > 0 ? (
                     <div className="flex flex-col gap-2">
-                      {prevPhotos.map((p, i) => (
+                      {prevPhotos.map(p => (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
-                          key={i}
+                          key={p}
                           src={p}
                           alt="État de l'élément au départ"
                           onClick={() => setLightboxSrc(p)}
@@ -423,7 +423,7 @@ export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, onD
                   <p className="text-[10px] font-bold uppercase tracking-wide text-red-600 mb-1.5">Retour</p>
                   <div className="flex flex-col gap-2">
                     {curPhotos.map((p, i) => (
-                      <div key={i} className="relative">
+                      <div key={p} className="relative">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={p}
@@ -434,6 +434,7 @@ export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, onD
                         {onZonePhotoRemove && (
                           <button
                             type="button"
+                            aria-label="Supprimer cette photo"
                             onClick={() => onZonePhotoRemove(selId!, i)}
                             className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-gray-900/80 text-white flex items-center justify-center"
                           >
@@ -458,7 +459,7 @@ export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, onD
             ) : (
               <div className="flex flex-wrap gap-2">
                 {curPhotos.map((p, i) => (
-                  <div key={i} className="relative">
+                  <div key={p} className="relative">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={p}
@@ -469,6 +470,7 @@ export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, onD
                     {onZonePhotoRemove && (
                       <button
                         type="button"
+                        aria-label="Supprimer cette photo"
                         onClick={() => onZonePhotoRemove(selId!, i)}
                         className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-gray-900 text-white flex items-center justify-center"
                       >
@@ -480,6 +482,7 @@ export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, onD
                 {onZonePhotoAdd && (
                   <button
                     type="button"
+                    aria-label="Ajouter une photo de cette zone"
                     onClick={() => zoneFileRef.current?.click()}
                     className="w-20 h-20 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 hover:border-gray-400"
                   >
@@ -534,7 +537,7 @@ export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, onD
                         </div>
                       )}
                     </button>
-                    <button onClick={() => removeExisting(i)} className="p-1.5 hover:bg-red-50 rounded-lg flex-shrink-0">
+                    <button type="button" aria-label="Supprimer cette photo" onClick={() => removeExisting(i)} className="p-1.5 hover:bg-red-50 rounded-lg flex-shrink-0">
                       <X className="w-4 h-4 text-gray-400 hover:text-red-500" />
                     </button>
                   </div>
@@ -591,11 +594,12 @@ export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, onD
               <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Photos</p>
               <div className="flex items-center gap-2 flex-wrap">
                 {pending.map((p, i) => (
-                  <div key={i} className="relative">
+                  <div key={p} className="relative">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={p} alt="" className="w-14 h-14 rounded-xl object-cover border border-gray-200" />
                     <button
                       type="button"
+                      aria-label="Retirer cette photo"
                       onClick={() => setPending(arr => arr.filter((_, j) => j !== i))}
                       className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-gray-900 text-white flex items-center justify-center"
                     >
@@ -605,6 +609,7 @@ export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, onD
                 ))}
                 <button
                   type="button"
+                  aria-label="Ajouter une photo"
                   onClick={() => fileRef.current?.click()}
                   className="w-14 h-14 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center text-gray-400 hover:border-gray-400"
                 >
@@ -615,8 +620,9 @@ export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, onD
             </div>
 
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Commentaire</p>
+              <label htmlFor="vehicle-map-damage-comment" className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Commentaire</label>
               <textarea
+                id="vehicle-map-damage-comment"
                 value={comment}
                 onChange={e => setComment(e.target.value)}
                 rows={2}
@@ -625,7 +631,7 @@ export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, onD
               />
             </div>
 
-            <button
+            <button type="button"
               onClick={saveDamage}
               className="w-full py-3 bg-[#111111] text-white rounded-2xl text-sm font-bold flex items-center justify-center gap-2 active:scale-[.99]"
             >

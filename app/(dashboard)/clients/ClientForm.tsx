@@ -25,7 +25,7 @@ function DiscountField({ defaultValue }: { defaultValue?: number | null }) {
   const current = value === '' ? null : Number(value)
   return (
     <div>
-      <label className="block text-xs font-medium text-gray-600 mb-1.5 uppercase tracking-wide">Remise fidélité (%)</label>
+      <label htmlFor="discount_percent" className="block text-xs font-medium text-gray-600 mb-1.5 uppercase tracking-wide">Remise fidélité (%)</label>
       <div className="flex flex-wrap gap-1.5 mb-2">
         {DISCOUNT_PRESETS.map(p => {
           const active = current === p
@@ -44,6 +44,7 @@ function DiscountField({ defaultValue }: { defaultValue?: number | null }) {
         })}
       </div>
       <input
+        id="discount_percent"
         type="number"
         name="discount_percent"
         value={value}
@@ -80,13 +81,14 @@ function PhotoUpload({ label, name, existingUrl }: { label: string; name: string
   return (
     <div>
       <div className="min-h-[2.5rem] flex items-end mb-1.5">
-        <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">{label}</label>
+        <label htmlFor={`${name}-picker`} className="text-xs font-medium text-gray-600 uppercase tracking-wide">{label}</label>
       </div>
       {/* Pas de `capture` : laisse iOS proposer Photothèque / Prendre une photo /
           Choisir un fichier (sinon la caméra s'ouvre de force, import fichier impossible). */}
       <input ref={inputRef} type="file" name={name} accept="image/*,application/pdf" className="hidden" onChange={handleChange} />
       {cleared && existingUrl && <input type="hidden" name={`${name}_clear`} value="1" readOnly />}
       <button
+        id={`${name}-picker`}
         type="button"
         onClick={() => inputRef.current?.click()}
         className={`w-full h-28 rounded-xl border-2 border-dashed transition-all flex flex-col items-center justify-center gap-2 ${
@@ -142,9 +144,9 @@ export default function ClientForm({ action, client: c }: ClientFormProps) {
       for (const [key, value] of raw.entries()) {
         // Fix TypeScript: ensure key is string and check against PHOTO_SLOTS
         if (value instanceof File && value.size > 0 && typeof key === 'string' && PHOTO_SLOTS.includes(key as PhotoSlot)) {
-          const filePath = await uploadFileToSupabase(value, key as PhotoSlot)
-          if (filePath) {
-            uploadedPaths[`${key}_path`] = filePath
+          const sent = await uploadFileToSupabase(value, key as PhotoSlot)
+          if (sent) {
+            uploadedPaths[`${key}_path`] = sent.path
           }
         }
       }
@@ -262,8 +264,9 @@ export default function ClientForm({ action, client: c }: ClientFormProps) {
         <div className="mt-4 grid sm:grid-cols-2 gap-4">
           <DiscountField defaultValue={c?.discount_percent ?? null} />
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1.5 uppercase tracking-wide">Avantages ciblés</label>
+            <label htmlFor="commercial_perks" className="block text-xs font-medium text-gray-600 mb-1.5 uppercase tracking-wide">Avantages ciblés</label>
             <textarea
+              id="commercial_perks"
               name="commercial_perks"
               defaultValue={c?.commercial_perks ?? ''}
               rows={3}
@@ -275,8 +278,9 @@ export default function ClientForm({ action, client: c }: ClientFormProps) {
         </div>
 
         <div className="mt-4">
-          <label className="block text-xs font-medium text-gray-600 mb-1.5 uppercase tracking-wide">Notes internes</label>
+          <label htmlFor="internal_notes" className="block text-xs font-medium text-gray-600 mb-1.5 uppercase tracking-wide">Notes internes</label>
           <textarea
+            id="internal_notes"
             name="internal_notes"
             defaultValue={c?.internal_notes ?? ''}
             rows={3}
@@ -289,7 +293,7 @@ export default function ClientForm({ action, client: c }: ClientFormProps) {
       <p className="text-[11px] text-gray-400">* Champ obligatoire</p>
       <button
         type="submit" disabled={pending}
-        className="px-6 py-3 bg-[#111111] hover:bg-gray-800 disabled:opacity-40 text-white font-semibold rounded-xl transition-all active:scale-[.97] text-sm"
+        className="px-6 py-3 bg-[#111111] hover:bg-gray-800 disabled:opacity-40 text-white font-semibold rounded-xl transition-[background-color,scale,opacity] active:scale-[.97] text-sm"
       >
         {pending ? (
           <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Enregistrement…</span>

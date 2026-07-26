@@ -4,7 +4,11 @@ import { createElement, type ReactElement } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { SinistrePDF, type SinistrePDFData } from '@/lib/pdf/sinistre-template'
 
-export async function GET(
+// POST et non GET : la génération archive le rapport dans `documents`. Un GET
+// serait déclenchable par un préchargement de lien ou une requête forgée
+// (CSRF) ; l'unique appelant est un `fetch()` côté client, donc le passage en
+// POST ne change rien pour l'utilisateur.
+export async function POST(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {

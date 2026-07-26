@@ -32,9 +32,12 @@ export default function NotificationSettings() {
   const [saved, setSaved] = useState(false)
 
   useEffect(() => {
+    // En cas de refus du serveur, le corps de la réponse est un message d'erreur :
+    // il ne doit pas être fusionné dans les réglages affichés. On garde les valeurs
+    // par défaut plutôt que d'afficher des cases mélangées à un message technique.
     fetch('/api/settings/notifications')
-      .then(r => r.json())
-      .then(d => setSettings({ ...DEFAULTS, ...d }))
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setSettings({ ...DEFAULTS, ...d }) })
       .catch(() => {})
   }, [])
 
@@ -84,8 +87,8 @@ export default function NotificationSettings() {
         <p className="text-xs text-gray-400 mb-3">Aucune notification ne sera envoyée en dehors de cette plage horaire.</p>
         <div className="flex items-center gap-3">
           <div className="flex-1">
-            <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1">De</label>
-            <select
+            <label htmlFor="notificationsettings-de" className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1">De</label>
+            <select id="notificationsettings-de"
               value={settings.alert_window_start}
               onChange={e => save({ alert_window_start: Number(e.target.value) })}
               className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none"
@@ -96,8 +99,8 @@ export default function NotificationSettings() {
             </select>
           </div>
           <div className="flex-1">
-            <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1">À</label>
-            <select
+            <label htmlFor="notificationsettings-a" className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1">À</label>
+            <select id="notificationsettings-a"
               value={settings.alert_window_end}
               onChange={e => save({ alert_window_end: Number(e.target.value) })}
               className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none"
@@ -117,6 +120,7 @@ export default function NotificationSettings() {
         </h3>
         <p className="text-xs text-gray-400 mb-3">Délai après lequel un retour non effectué déclenche une alerte.</p>
         <select
+          aria-label="Seuil de retour en retard"
           value={settings.late_return_threshold_minutes}
           onChange={e => save({ late_return_threshold_minutes: Number(e.target.value) })}
           className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none"

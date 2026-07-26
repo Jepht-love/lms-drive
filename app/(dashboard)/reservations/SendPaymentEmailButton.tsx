@@ -46,7 +46,7 @@ export default function SendPaymentEmailButton({
 
   return (
     <div className="mt-3 pt-3 border-t border-gray-50">
-      <button
+      <button type="button"
         onClick={handleClick}
         disabled={state === 'loading'}
         className="flex items-center gap-2 w-full py-2.5 px-4 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors active:scale-[.98] disabled:opacity-60"

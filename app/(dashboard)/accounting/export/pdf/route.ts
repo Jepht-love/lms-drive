@@ -8,6 +8,8 @@ import { getCategoryLabel } from '@/lib/accounting/categories'
 
 const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre']
 
+const toCat = (m: Map<string, number>) => [...m.entries()].sort((a, b) => b[1] - a[1]).map(([id, amount]) => ({ label: getCategoryLabel(id), amount }))
+
 export async function GET(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -56,8 +58,6 @@ export async function GET(req: NextRequest) {
     const m = t.type === 'recette' ? revMap : expMap
     m.set(t.category, (m.get(t.category) ?? 0) + (t.amount ?? 0))
   }
-  const toCat = (m: Map<string, number>) => [...m.entries()].sort((a, b) => b[1] - a[1]).map(([id, amount]) => ({ label: getCategoryLabel(id), amount }))
-
   const agency = await getAgencySettings(supabase)
 
   const data: AccountingPdfData = {

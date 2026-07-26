@@ -27,16 +27,16 @@ export default function VehicleSchemaStatic({ damages, box, highlightIds }: {
   return (
     <svg viewBox={`${vb.x} ${vb.y} ${vb.w} ${vb.h}`} className="w-full" style={{ display: 'block' }}>
       <image href={EDL_SRC} x={0} y={0} width={EDL_IMG} height={EDL_IMG} />
-      {EDL_ZONES.map((z, i) => {
+      {EDL_ZONES.map(z => {
         const entries = damages[z.id] ?? []
         if (!entries.length) return null
         const c = SEV[worst(entries)]
         const b = zoneBox(z)
         const isNew = highlightIds?.has(z.id)
         const p = { fill: c.fill, fillOpacity: 0.45, stroke: isNew ? '#2563eb' : c.stroke, strokeWidth: isNew ? 4 : 2 }
-        if (z.points) return <polygon key={`${z.id}-${i}`} points={z.points.map(pt => pt.join(',')).join(' ')} {...p} strokeLinejoin="round" />
-        if (z.shape === 'ellipse') return <ellipse key={`${z.id}-${i}`} cx={b.x + b.w / 2} cy={b.y + b.h / 2} rx={b.w / 2} ry={b.h / 2} {...p} />
-        return <rect key={`${z.id}-${i}`} x={b.x} y={b.y} width={b.w} height={b.h} rx={z.rx ?? 8} {...p} />
+        if (z.points) return <polygon key={z.id} points={z.points.map(pt => pt.join(',')).join(' ')} {...p} strokeLinejoin="round" />
+        if (z.shape === 'ellipse') return <ellipse key={z.id} cx={b.x + b.w / 2} cy={b.y + b.h / 2} rx={b.w / 2} ry={b.h / 2} {...p} />
+        return <rect key={z.id} x={b.x} y={b.y} width={b.w} height={b.h} rx={z.rx ?? 8} {...p} />
       })}
     </svg>
   )

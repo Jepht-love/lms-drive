@@ -33,6 +33,18 @@ const PURPOSES = [
   { value: 'autre', label: 'Autre' },
 ]
 
+const tripLabel = (t: Trip) => internalTripPurposeLabel(t.purpose, t.purpose_notes)
+
+/** Créneau planifié : « 12/08 09:00 → 17:30 » (même jour) ou les deux dates. */
+function tripWindow(t: Trip) {
+  if (!t.end_datetime) return formatDateTime(t.start_datetime)
+  // Comparaison sur les dates FORMATÉES (heure locale) — comparer les ISO
+  // reviendrait à comparer des jours UTC, faux pour un créneau qui passe minuit.
+  const startTxt = formatDateTime(t.start_datetime)
+  const endTxt = formatDateTime(t.end_datetime)
+  return `${startTxt} → ${startTxt.slice(0, 10) === endTxt.slice(0, 10) ? endTxt.slice(11) : endTxt}`
+}
+
 export default function InternalTripsClient({ vehicles, trips, members, isManager, currentUserId }: {
   vehicles: Vehicle[]
   trips: Trip[]
@@ -71,18 +83,6 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
 
   const vehicleById = (id: string) => vehicles.find(v => v.id === id) ?? null
   const canManageTrip = (t: Trip) => isManager || t.user_id === currentUserId
-  const tripLabel = (t: Trip) => internalTripPurposeLabel(t.purpose, t.purpose_notes)
-
-  /** Créneau planifié : « 12/08 09:00 → 17:30 » (même jour) ou les deux dates. */
-  function tripWindow(t: Trip) {
-    if (!t.end_datetime) return formatDateTime(t.start_datetime)
-    // Comparaison sur les dates FORMATÉES (heure locale) — comparer les ISO
-    // reviendrait à comparer des jours UTC, faux pour un créneau qui passe minuit.
-    const startTxt = formatDateTime(t.start_datetime)
-    const endTxt = formatDateTime(t.end_datetime)
-    return `${startTxt} → ${startTxt.slice(0, 10) === endTxt.slice(0, 10) ? endTxt.slice(11) : endTxt}`
-  }
-
   function reset() {
     setShowStartForm(false); setShowPlanForm(false)
     setEndingTrip(null); setStartingPlanned(null); setAssigningTrip(null); setDeletingTrip(null)
@@ -92,9 +92,15 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
 
   async function run(fn: () => Promise<{ error?: string; success?: boolean } | undefined>, okMsg: string) {
     setLoading(true); setError(null)
-    const result = await fn()
-    if (result?.error) { setError(result.error); setLoading(false); return }
-    show(okMsg, 'success'); reset(); router.refresh()
+    try {
+      const result = await fn()
+      if (result?.error) { setError(result.error); return }
+      show(okMsg, 'success'); reset(); router.refresh()
+    } catch {
+      setError('Erreur réseau : l’action n’a pas abouti. Réessayez.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleStart        = (fd: FormData) => { run(() => startTrip(fd), 'Déplacement démarré') }
@@ -117,13 +123,13 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
     <div className="space-y-6">
       {/* Actions */}
       <div className="flex flex-wrap gap-2">
-        <button
+        <button type="button"
           onClick={() => setShowPlanForm(true)}
           className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 text-gray-900 rounded-xl font-medium hover:bg-gray-50 transition-colors text-sm"
         >
           <CalendarClock className="w-4 h-4" /> Planifier un déplacement
         </button>
-        <button
+        <button type="button"
           onClick={() => setShowStartForm(true)}
           className="flex items-center gap-2 px-4 py-2.5 bg-[#111111] text-white rounded-xl font-medium hover:bg-gray-800 transition-colors text-sm"
         >
@@ -134,8 +140,10 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
       {/* Recherche locale */}
       {trips.length > 0 && (
         <div className="relative">
+          <label htmlFor="trips-search" className="sr-only">Rechercher un déplacement</label>
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
           <input
+            id="trips-search"
             type="search"
             value={search}
             onChange={e => setSearch(e.target.value)}
@@ -178,7 +186,7 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
 
                 <div className="mt-3 flex gap-2">
                   {!t.user_id && isManager && (
-                    <button
+                    <button type="button"
                       onClick={() => { setAssigningTrip(t); setError(null) }}
                       className="flex-1 py-2 bg-[#111111] text-white rounded-xl text-sm font-medium hover:bg-gray-900 transition-colors flex items-center justify-center gap-1.5"
                     >
@@ -186,7 +194,7 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
                     </button>
                   )}
                   {t.user_id && canManageTrip(t) && (
-                    <button
+                    <button type="button"
                       onClick={() => { setStartingPlanned(t); setSelectedVehicle(vehicleById(t.vehicle_id)); setError(null) }}
                       className="flex-1 py-2 bg-[#111111] text-white rounded-xl text-sm font-medium hover:bg-gray-900 transition-colors flex items-center justify-center gap-1.5"
                     >
@@ -194,7 +202,7 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
                     </button>
                   )}
                   {canManageTrip(t) && (
-                    <button
+                    <button type="button"
                       onClick={() => { setDeletingTrip(t); setError(null) }}
                       className="px-3 py-2 border border-gray-200 text-gray-500 rounded-xl text-sm font-medium hover:bg-red-50 hover:text-red-600 hover:border-red-100 transition-colors"
                       title="Supprimer"
@@ -235,13 +243,13 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
                 {t.user?.full_name && <p className="text-xs text-gray-400">Conducteur : {t.user.full_name}</p>}
                 {canManageTrip(t) && (
                   <div className="mt-3 flex gap-2">
-                    <button
+                    <button type="button"
                       onClick={() => setEndingTrip(t)}
                       className="flex-1 py-2 bg-[#111111] text-white rounded-xl text-sm font-medium hover:bg-gray-900 transition-colors"
                     >
                       Terminer le déplacement
                     </button>
-                    <button
+                    <button type="button"
                       onClick={() => { setDeletingTrip(t); setError(null) }}
                       className="px-3 py-2 border border-gray-200 text-gray-500 rounded-xl text-sm font-medium hover:bg-red-50 hover:text-red-600 hover:border-red-100 transition-colors"
                       title="Supprimer"
@@ -289,7 +297,7 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
                     )}
                   </div>
                   {canManageTrip(t) && (
-                    <button
+                    <button type="button"
                       onClick={() => { setDeletingTrip(t); setError(null) }}
                       className="flex-shrink-0 p-2 text-gray-300 rounded-lg hover:bg-red-50 hover:text-red-500 transition-colors"
                       title="Supprimer"
@@ -308,24 +316,25 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
       <Drawer open={showPlanForm} onClose={reset} title="Planifier un déplacement">
         <form action={handlePlan} className="space-y-4">
           <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Véhicule *</label>
-            <select name="vehicle_id" required className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white">
+            <label htmlFor="plan-vehicle" className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Véhicule *</label>
+            <select id="plan-vehicle" name="vehicle_id" required className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white">
               <option value="">— Choisir —</option>
               {vehicles.map(v => <option key={v.id} value={v.id}>{v.plate} — {v.brand} {v.model}</option>)}
             </select>
           </div>
           <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Début *</label>
-            <DateTimeField name="start_datetime" required onChange={setPlanStart} className="px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white" />
+            <label htmlFor="plan-start" className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Début *</label>
+            <DateTimeField id="plan-start" name="start_datetime" required onChange={setPlanStart} className="px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white" />
           </div>
           <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Fin *</label>
-            <DateTimeField name="end_datetime" required min={planStart || undefined} className="px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white" />
+            <label htmlFor="plan-end" className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Fin *</label>
+            <DateTimeField id="plan-end" name="end_datetime" required min={planStart || undefined} className="px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white" />
             <p className="text-[11px] text-gray-400 mt-1">Le véhicule est indisponible sur ce créneau (flotte, calendrier, réservations).</p>
           </div>
           <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Motif *</label>
+            <label htmlFor="plan-purpose" className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Motif *</label>
             <select
+              id="plan-purpose"
               name="purpose"
               required
               value={planPurpose}
@@ -336,10 +345,11 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
             </select>
           </div>
           <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">
+            <label htmlFor="plan-notes" className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">
               {planPurpose === 'autre' ? 'Préciser le motif *' : 'Notes'}
             </label>
             <input
+              id="plan-notes"
               type="text"
               name="purpose_notes"
               required={planPurpose === 'autre'}
@@ -350,8 +360,8 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
           </div>
           {isManager ? (
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Conducteur</label>
-              <select name="user_id" defaultValue="none" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white">
+              <label htmlFor="plan-driver" className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Conducteur</label>
+              <select id="plan-driver" name="user_id" defaultValue="none" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white">
                 <option value="none">— Non assigné —</option>
                 {members.map(m => <option key={m.id} value={m.id}>{m.full_name}</option>)}
               </select>
@@ -372,8 +382,8 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
       <Drawer open={!!assigningTrip} onClose={reset} title={`Assigner — ${assigningTrip?.vehicle?.plate ?? ''}`}>
         <form action={handleAssign} className="space-y-4">
           <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Conducteur *</label>
-            <select name="user_id" required defaultValue="" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white">
+            <label htmlFor="assign-driver" className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Conducteur *</label>
+            <select id="assign-driver" name="user_id" required defaultValue="" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white">
               <option value="">— Choisir —</option>
               {members.map(m => <option key={m.id} value={m.id}>{m.full_name}</option>)}
             </select>
@@ -389,14 +399,14 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
       <Drawer open={!!startingPlanned} onClose={reset} title={`Démarrer — ${startingPlanned?.vehicle?.plate ?? ''}`}>
         <form action={handleStartPlanned} className="space-y-4">
           <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">
+            <label htmlFor="startp-km" className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">
               KM départ * {selectedVehicle && <span className="text-gray-400 font-normal">(actuel: {selectedVehicle.current_km?.toLocaleString('fr-FR') ?? '—'})</span>}
             </label>
-            <input type="number" name="km_start" required defaultValue={selectedVehicle?.current_km} inputMode="numeric" enterKeyHint="next" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm" />
+            <input id="startp-km" type="number" name="km_start" required defaultValue={selectedVehicle?.current_km} inputMode="numeric" enterKeyHint="next" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm" />
           </div>
           <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Autonomie carburant (km)</label>
-            <input type="number" name="fuel_start" min="0" placeholder="Autonomie en km" inputMode="numeric" enterKeyHint="done" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm" />
+            <label htmlFor="trip-plan-fuel-start" className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Autonomie carburant (km)</label>
+            <input id="trip-plan-fuel-start" type="number" name="fuel_start" min="0" placeholder="Autonomie en km" inputMode="numeric" enterKeyHint="done" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm" />
           </div>
           {error && <div className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{error}</div>}
           <button type="submit" disabled={loading} className="w-full py-3 bg-[#111111] text-white rounded-xl font-semibold disabled:opacity-50 transition-colors active:scale-[.97]">
@@ -409,8 +419,9 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
       <Drawer open={showStartForm} onClose={reset} title="Démarrer un déplacement">
         <form action={handleStart} className="space-y-4">
           <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Véhicule *</label>
+            <label htmlFor="start-vehicle" className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Véhicule *</label>
             <select
+              id="start-vehicle"
               name="vehicle_id"
               required
               onChange={e => setSelectedVehicle(vehicles.find(v => v.id === e.target.value) ?? null)}
@@ -423,8 +434,9 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
             </select>
           </div>
           <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Motif *</label>
+            <label htmlFor="start-purpose" className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Motif *</label>
             <select
+              id="start-purpose"
               name="purpose"
               required
               value={startPurpose}
@@ -435,10 +447,11 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
             </select>
           </div>
           <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">
+            <label htmlFor="start-notes" className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">
               {startPurpose === 'autre' ? 'Préciser le motif *' : 'Notes'}
             </label>
             <input
+              id="start-notes"
               type="text"
               name="purpose_notes"
               required={startPurpose === 'autre'}
@@ -449,17 +462,18 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
           </div>
           {isManager && (
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Conducteur</label>
-              <select name="user_id" defaultValue={currentUserId} className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white">
+              <label htmlFor="start-driver" className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Conducteur</label>
+              <select id="start-driver" name="user_id" defaultValue={currentUserId} className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white">
                 {members.map(m => <option key={m.id} value={m.id}>{m.full_name}{m.id === currentUserId ? ' (moi)' : ''}</option>)}
               </select>
             </div>
           )}
           <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">
+            <label htmlFor="start-km" className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">
               KM départ * {selectedVehicle && <span className="text-gray-400 font-normal">(actuel: {selectedVehicle.current_km?.toLocaleString('fr-FR') ?? '—'})</span>}
             </label>
             <input
+              id="start-km"
               type="number"
               name="km_start"
               required
@@ -470,8 +484,8 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
             />
           </div>
           <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Autonomie carburant (km)</label>
-            <input type="number" name="fuel_start" min="0" placeholder="Autonomie en km" inputMode="numeric" enterKeyHint="next" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm" />
+            <label htmlFor="trip-start-fuel-start" className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Autonomie carburant (km)</label>
+            <input id="trip-start-fuel-start" type="number" name="fuel_start" min="0" placeholder="Autonomie en km" inputMode="numeric" enterKeyHint="next" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm" />
           </div>
           {error && <div className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{error}</div>}
           <p className="text-[11px] text-gray-400">* Champ obligatoire</p>
@@ -485,23 +499,23 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
       <Drawer open={!!endingTrip} onClose={reset} title={`Terminer — ${endingTrip?.vehicle?.plate ?? ''}`}>
         <form action={handleEnd} className="space-y-4">
           <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">
+            <label htmlFor="end-km" className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">
               KM retour * <span className="text-gray-400 font-normal">(départ: {endingTrip?.km_start?.toLocaleString('fr-FR') ?? '—'})</span>
             </label>
-            <input type="number" name="km_end" required min={endingTrip?.km_start ?? undefined} defaultValue={endingTrip?.km_start ?? undefined} inputMode="numeric" enterKeyHint="next" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm font-bold" />
+            <input id="end-km" type="number" name="km_end" required min={endingTrip?.km_start ?? undefined} defaultValue={endingTrip?.km_start ?? undefined} inputMode="numeric" enterKeyHint="next" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm font-bold" />
           </div>
           <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Autonomie carburant (km)</label>
-            <input type="number" name="fuel_end" min="0" placeholder="Autonomie en km" inputMode="numeric" enterKeyHint="next" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm" />
+            <label htmlFor="trip-end-fuel-end" className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Autonomie carburant (km)</label>
+            <input id="trip-end-fuel-end" type="number" name="fuel_end" min="0" placeholder="Autonomie en km" inputMode="numeric" enterKeyHint="next" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Péages (€)</label>
-              <input type="number" name="tolls_amount" step="0.01" inputMode="decimal" enterKeyHint="next" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm" />
+              <label htmlFor="end-tolls" className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Péages (€)</label>
+              <input id="end-tolls" type="number" name="tolls_amount" step="0.01" inputMode="decimal" enterKeyHint="next" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm" />
             </div>
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Dépenses (€)</label>
-              <input type="number" name="expenses_amount" step="0.01" inputMode="decimal" enterKeyHint="done" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm" />
+              <label htmlFor="end-expenses" className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Dépenses (€)</label>
+              <input id="end-expenses" type="number" name="expenses_amount" step="0.01" inputMode="decimal" enterKeyHint="done" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm" />
             </div>
           </div>
           {error && <div className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{error}</div>}
@@ -521,10 +535,10 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
           </p>
           {error && <div className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{error}</div>}
           <div className="flex gap-2">
-            <button onClick={reset} disabled={loading} className="flex-1 py-3 border border-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50">
+            <button type="button" onClick={reset} disabled={loading} className="flex-1 py-3 border border-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50">
               Annuler
             </button>
-            <button onClick={handleDelete} disabled={loading} className="flex-1 py-3 bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700 transition-colors disabled:opacity-50 active:scale-[.97]">
+            <button type="button" onClick={handleDelete} disabled={loading} className="flex-1 py-3 bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700 transition-colors disabled:opacity-50 active:scale-[.97]">
               {loading ? 'Suppression...' : 'Supprimer'}
             </button>
           </div>

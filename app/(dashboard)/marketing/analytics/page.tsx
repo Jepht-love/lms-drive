@@ -8,7 +8,7 @@ function AgeBar({ range, count, total }: { range: string; count: number; total: 
     <div className="flex items-center gap-3 mb-2">
       <span className="text-[12px] text-gray-500 w-12 flex-shrink-0">{range}</span>
       <div className="flex-1 bg-gray-100 rounded-full h-2">
-        <div className="h-2 bg-[#111111] rounded-full transition-all" style={{ width: `${pct}%` }} />
+        <div className="h-2 bg-[#111111] rounded-full transition-[width]" style={{ width: `${pct}%` }} />
       </div>
       <span className="text-[12px] font-medium text-[#111111] w-8 text-right flex-shrink-0">{count}</span>
     </div>
@@ -204,7 +204,7 @@ export default async function AnalyticsPage() {
         ) : (
           <div className="space-y-2">
             {topVehicles.map((v, i) => (
-              <div key={i} className="flex items-center gap-3">
+              <div key={v.label} className="flex items-center gap-3">
                 <span className="text-[13px] font-black text-gray-300 w-6 flex-shrink-0">{i + 1}</span>
                 <p className="flex-1 text-[13px] font-medium text-[#111111] truncate">{v.label}</p>
                 <span className="text-[13px] font-black text-[#111111]">{v.count}</span>

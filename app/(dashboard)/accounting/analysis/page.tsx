@@ -13,6 +13,11 @@ const PERIODS = [
   { id: 'year',    label: 'Année' },
 ]
 
+const periodPill = (active: boolean) =>
+  `px-3.5 py-2 rounded-xl text-sm font-semibold whitespace-nowrap flex-shrink-0 transition-colors ${
+    active ? 'bg-[#111111] text-white' : 'bg-white border border-gray-100 text-gray-600 hover:bg-gray-50 shadow-sm'
+  }`
+
 export default async function AnalysisPage({
   searchParams,
 }: {
@@ -47,11 +52,6 @@ export default async function AnalysisPage({
 
   const curLabel = dateLabel(cur.from, granularity)
   const prevLabel = dateLabel(prev.from, granularity)
-
-  const periodPill = (active: boolean) =>
-    `px-3.5 py-2 rounded-xl text-sm font-semibold whitespace-nowrap flex-shrink-0 transition-colors ${
-      active ? 'bg-[#111111] text-white' : 'bg-white border border-gray-100 text-gray-600 hover:bg-gray-50 shadow-sm'
-    }`
 
   function DeltaBadge({ value, positiveIsGood = true }: { value: number; positiveIsGood?: boolean }) {
     if (value === 0) return <span className="text-[11px] font-bold text-gray-400 flex items-center gap-0.5"><Minus className="w-3 h-3" /> stable</span>

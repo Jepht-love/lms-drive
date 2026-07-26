@@ -7,6 +7,11 @@ import { AnimatedList, AnimatedListItem } from '@/components/AnimatedList'
 
 type Tab = 'toutes' | 'en_cours' | 'planifiee' | 'terminee'
 
+const tabStyle = (active: boolean) =>
+  `flex-shrink-0 text-[12px] font-medium px-4 py-2.5 min-h-[44px] flex items-center justify-center rounded-2xl transition-colors ${
+    active ? 'bg-[#111111] text-white' : 'bg-white border border-gray-200 text-gray-600'
+  }`
+
 export default async function MarketingPage({
   searchParams,
 }: {
@@ -19,11 +24,6 @@ export default async function MarketingPage({
   let query = supabase.from('campaigns').select('*').order('start_date', { ascending: false })
   if (tab !== 'toutes') query = query.eq('status', tab)
   const { data: campaigns } = await query
-
-  const tabStyle = (active: boolean) =>
-    `flex-shrink-0 text-[12px] font-medium px-4 py-2.5 min-h-[44px] flex items-center justify-center rounded-2xl transition-colors ${
-      active ? 'bg-[#111111] text-white' : 'bg-white border border-gray-200 text-gray-600'
-    }`
 
   return (
     <div className="space-y-4">

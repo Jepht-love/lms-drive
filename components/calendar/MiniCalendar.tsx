@@ -36,6 +36,7 @@ export default function MiniCalendar({ selectedDate, onSelectDate, events }: Min
       <div className="flex items-center justify-between px-1 mb-2">
         <button
           type="button"
+          aria-label="Mois précédent"
           onClick={() => setViewMonth(m => subMonths(m, 1))}
           className="p-1 text-gray-400 hover:text-[#111111]"
         >
@@ -46,6 +47,7 @@ export default function MiniCalendar({ selectedDate, onSelectDate, events }: Min
         </span>
         <button
           type="button"
+          aria-label="Mois suivant"
           onClick={() => setViewMonth(m => addMonths(m, 1))}
           className="p-1 text-gray-400 hover:text-[#111111]"
         >

@@ -151,7 +151,7 @@ export default function MemberTabsEditor({
 
       {error && <p className="text-xs text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
 
-      <button
+      <button type="button"
         onClick={save}
         disabled={saving}
         className={`w-full flex items-center justify-center gap-1.5 py-3 rounded-xl text-sm font-semibold transition-all disabled:opacity-50 ${

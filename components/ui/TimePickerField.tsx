@@ -46,6 +46,12 @@ function parseHm(s?: string): { h: number | null; m: number | null } {
   }
 }
 
+const cellCls = (on: boolean) =>
+  cn(
+    'w-11 py-1.5 rounded-md text-sm text-center transition-colors',
+    on ? 'bg-[#111111] text-white font-semibold' : 'text-gray-700 hover:bg-gray-100',
+  )
+
 export default function TimePickerField({
   value,
   onChange,
@@ -89,11 +95,6 @@ export default function TimePickerField({
   // (« Heures » avec icône, « Minutes ») sont parfaitement alignés.
   const headerCls = 'flex items-center justify-center gap-1 h-4 mb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400'
   const colCls = 'flex flex-col gap-0.5 max-h-[220px] overflow-y-auto py-1 px-1 [scrollbar-width:thin]'
-  const cellCls = (on: boolean) =>
-    cn(
-      'w-11 py-1.5 rounded-md text-sm text-center transition-colors',
-      on ? 'bg-[#111111] text-white font-semibold' : 'text-gray-700 hover:bg-gray-100',
-    )
 
   return (
     <Popover open={open} onOpenChange={setOpen}>

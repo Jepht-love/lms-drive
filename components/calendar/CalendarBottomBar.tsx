@@ -31,10 +31,11 @@ export default function CalendarBottomBar({ events, onCreateNew, onPickEvent }: 
           <button type="button" aria-label="Fermer" onClick={() => setSearchOpen(false)} className="absolute inset-0 bg-black/10" />
           <div className="absolute left-3 right-3 bg-white rounded-2xl border border-gray-100 shadow-sm p-3 max-h-[60vh] overflow-y-auto" style={{ bottom: 'calc(60px + env(safe-area-inset-bottom) + 76px)' }}>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[13px] font-semibold">Rechercher un événement</span>
-              <button type="button" onClick={() => setSearchOpen(false)}><X size={14} className="text-gray-400" /></button>
+              <label htmlFor="calendar-event-search" className="text-[13px] font-semibold">Rechercher un événement</label>
+              <button type="button" aria-label="Fermer la recherche" onClick={() => setSearchOpen(false)}><X size={14} className="text-gray-400" /></button>
             </div>
             <input
+              id="calendar-event-search"
               autoFocus
               type="text"
               value={query}

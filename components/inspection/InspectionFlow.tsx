@@ -61,16 +61,17 @@ const CLEANLINESS_LEVELS = [
 function CleanlinessPicker({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">
+      <p id={`propr-${label}`} className="block text-sm font-medium text-gray-700 mb-2">
         {label} : <strong>{CLEANLINESS_LEVELS.find(l => l.value === value)?.label}</strong>
-      </label>
-      <div className="flex gap-1.5">
+      </p>
+      <div role="group" aria-labelledby={`propr-${label}`} className="flex gap-1.5">
         {CLEANLINESS_LEVELS.map(l => (
           <button
             key={l.value}
             type="button"
             onClick={() => onChange(l.value)}
             aria-label={l.label}
+            aria-pressed={value === l.value}
             className={`flex-1 h-10 rounded-lg transition-all ${l.bg} ${
               value === l.value ? 'ring-2 ring-offset-2 ring-gray-900 scale-105' : 'opacity-35'
             }`}
@@ -108,7 +109,11 @@ export default function InspectionFlow({
   // au lieu de sortir de l'EDL ; depuis la 1re étape, on quitte normalement
   // vers la page d'où l'on venait.
   const stepRef = useRef(step)
-  stepRef.current = step
+  // Écriture dans un effet, pas pendant le rendu : React peut rejouer ou jeter
+  // un rendu, et une mutation faite pendant celui-ci fuiterait depuis une UI
+  // jamais affichée. `onPop` ne lit ce ref qu'après un commit (un popstate suit
+  // toujours un rendu validé), donc la valeur y est toujours à jour.
+  useEffect(() => { stepRef.current = step }, [step])
   useEffect(() => {
     window.history.replaceState({ ...window.history.state, edlStep: 'info' }, '')
     const onPop = (e: PopStateEvent) => {
@@ -689,7 +694,7 @@ export default function InspectionFlow({
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              <button
+              <button type="button"
                 onClick={downloadRestitution}
                 disabled={restitState === 'downloading'}
                 className="py-3 bg-[#111111] text-white rounded-xl font-medium hover:bg-gray-800 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
@@ -703,7 +708,7 @@ export default function InspectionFlow({
                   <CheckCircle2 className="w-4 h-4 flex-shrink-0" /> Envoyé au client
                 </div>
               ) : (
-                <button
+                <button type="button"
                   onClick={finalizeAndEmail}
                   disabled={emailState === 'sending'}
                   className="py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
@@ -720,7 +725,7 @@ export default function InspectionFlow({
           </div>
         )}
 
-        <button
+        <button type="button"
           onClick={() => router.replace(doneHref ?? (reservationId ? `/reservations/${reservationId}` : '/partnerships'))}
           className="w-full py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors"
         >
@@ -782,9 +787,10 @@ export default function InspectionFlow({
               <div className="bg-[#111111] rounded-xl p-3 space-y-2">
                 <div className="flex items-center gap-1.5">
                   <Gauge className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Kilométrage</p>
+                  <label htmlFor="inspection-km" className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Kilométrage</label>
                 </div>
                 <input
+                  id="inspection-km"
                   type="number"
                   inputMode="numeric"
                   value={kmReading === 0 ? '' : kmReading}
@@ -813,9 +819,10 @@ export default function InspectionFlow({
               <div className="bg-[#111111] rounded-xl p-3 space-y-2">
                 <div className="flex items-center gap-1.5">
                   <Fuel className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Autonomie (km)</p>
+                  <label htmlFor="inspection-fuel-range" className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Autonomie (km)</label>
                 </div>
                 <input
+                  id="inspection-fuel-range"
                   type="number"
                   inputMode="numeric"
                   value={fuelRangeKm === 0 ? '' : fuelRangeKm}
@@ -861,7 +868,7 @@ export default function InspectionFlow({
             <CleanlinessPicker label="Propreté intérieure" value={interiorCleanliness} onChange={setInteriorCleanliness} />
           </div>
 
-          <button
+          <button type="button"
             onClick={() => goToStep('schema')}
             className="w-full py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors active:scale-[.97] transition-transform flex items-center justify-center gap-2"
           >
@@ -939,6 +946,7 @@ export default function InspectionFlow({
                         {type === 'arrivee' && (
                           <div className="flex items-center gap-1 flex-shrink-0">
                             <input
+                              aria-label="Coût estimé de la réparation en euros"
                               type="number"
                               min={0}
                               step="0.01"
@@ -952,7 +960,7 @@ export default function InspectionFlow({
                             <span className="text-xs text-gray-400">€</span>
                           </div>
                         )}
-                        <button
+                        <button type="button" aria-label="Retirer ce dommage"
                           onClick={() => setDamages(prev => {
                             const next = { ...prev }
                             delete next[zoneId]
@@ -990,7 +998,7 @@ export default function InspectionFlow({
                   return (
                     <div key={it.id} className="space-y-1.5">
                       <div className="flex items-center justify-between gap-3">
-                        <span className="text-sm text-gray-600 flex-1 min-w-0">{it.label}</span>
+                        <label htmlFor={`interior-charge-${it.id}`} className="text-sm text-gray-600 flex-1 min-w-0">{it.label}</label>
                         <div className="flex items-center gap-2 flex-shrink-0">
                           {/* Bouton photo — obligatoire si le poste est facturé, disponible toujours */}
                           <button
@@ -1006,6 +1014,7 @@ export default function InspectionFlow({
                             <Camera className="w-4 h-4" />
                           </button>
                           <input
+                            id={`interior-charge-${it.id}`}
                             type="number"
                             min={0}
                             step="0.01"
@@ -1030,10 +1039,11 @@ export default function InspectionFlow({
                       {pics.length > 0 && (
                         <div className="flex gap-1.5 flex-wrap pl-1">
                           {pics.map((url, i) => (
-                            <div key={i} className="relative w-14 h-14">
+                            <div key={url} className="relative w-14 h-14">
                               <img src={url} alt="" className="w-full h-full object-cover rounded-lg border border-gray-200" />
                               <button
                                 type="button"
+                                aria-label="Supprimer cette photo"
                                 onClick={() => setInteriorPhotos(prev => ({
                                   ...prev,
                                   [it.id]: (prev[it.id] ?? []).filter((_, j) => j !== i),
@@ -1068,13 +1078,13 @@ export default function InspectionFlow({
           )}
 
           <div className="flex gap-3">
-            <button
+            <button type="button"
               onClick={() => window.history.back()}
               className="px-5 py-3 bg-white border border-gray-200 text-gray-600 rounded-xl font-semibold hover:bg-gray-50 transition-colors active:scale-[.97] transition-transform flex items-center justify-center gap-1.5"
             >
               <ChevronLeft className="w-4 h-4" /> Retour
             </button>
-            <button
+            <button type="button"
               onClick={() => goToStep('photos')}
               className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors active:scale-[.97] transition-transform flex items-center justify-center gap-2"
             >
@@ -1132,13 +1142,13 @@ export default function InspectionFlow({
           )}
 
           <div className="flex gap-3">
-            <button
+            <button type="button"
               onClick={() => window.history.back()}
               className="px-5 py-3 bg-white border border-gray-200 text-gray-600 rounded-xl font-semibold hover:bg-gray-50 transition-colors active:scale-[.97] transition-transform flex items-center justify-center gap-1.5"
             >
               <ChevronLeft className="w-4 h-4" /> Retour
             </button>
-            <button
+            <button type="button"
               onClick={() => goToStep('signatures')}
               disabled={!mandatoryCompleted}
               className="flex-1 py-3 bg-blue-600 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors active:scale-[.97] transition-transform flex items-center justify-center gap-2"

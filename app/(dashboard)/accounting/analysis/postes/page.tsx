@@ -87,7 +87,7 @@ export default async function PostesPage({
                 </div>
                 {/* Barre */}
                 <div className="h-2 bg-gray-100 rounded-full overflow-hidden mb-2">
-                  <div className="h-full bg-[#111111] rounded-full transition-all" style={{ width: `${pctOfMax}%` }} />
+                  <div className="h-full bg-[#111111] rounded-full transition-[width]" style={{ width: `${pctOfMax}%` }} />
                 </div>
                 {/* Comparaison période précédente */}
                 <div className="flex items-center justify-between">

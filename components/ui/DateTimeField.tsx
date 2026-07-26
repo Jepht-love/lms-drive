@@ -39,6 +39,12 @@ interface Props {
   grouped?: boolean
   /** En mode `grouped` : palette claire (défaut) ou sombre (panneaux sur fond foncé). */
   tone?: 'light' | 'dark'
+  /**
+   * Posé sur le déclencheur de DATE — c'est la cible d'un `<label htmlFor>` :
+   * cliquer le libellé ouvre le calendrier, et un lecteur d'écran annonce le
+   * libellé du champ. Le sélecteur d'heure garde son propre nom accessible.
+   */
+  id?: string
 }
 
 export default function DateTimeField({
@@ -52,6 +58,7 @@ export default function DateTimeField({
   className = '',
   grouped = false,
   tone = 'light',
+  id,
 }: Props) {
   const controlled = value !== undefined
   const init = (controlled ? value : defaultValue) ?? ''
@@ -94,6 +101,7 @@ export default function DateTimeField({
     return (
       <div className={`${container} ${disabled ? 'opacity-60' : ''}`}>
         <DatePickerField
+          id={id}
           value={date}
           onChange={d => { setDate(d); emit(d, time) }}
           required={required}
@@ -122,6 +130,7 @@ export default function DateTimeField({
     <div className="flex gap-2">
       <div className="flex-1 min-w-0">
         <DatePickerField
+          id={id}
           value={date}
           onChange={d => { setDate(d); emit(d, time) }}
           required={required}

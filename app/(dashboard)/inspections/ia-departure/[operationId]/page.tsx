@@ -12,13 +12,14 @@ export default async function IaDepartureInspectionPage({ params }: { params: Pr
   const { operationId } = await params
   const supabase = await createClient()
 
-  const { data: { user } } = await supabase.auth.getUser()
-
-  const { data: op } = await supabase
-    .from('inter_agency_rentals')
-    .select('id, direction, vehicle_id, partner_agencies(name), vehicles(*)')
-    .eq('id', operationId)
-    .single()
+  const [{ data: { user } }, { data: op }] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase
+      .from('inter_agency_rentals')
+      .select('id, direction, vehicle_id, partner_agencies(name), vehicles(*)')
+      .eq('id', operationId)
+      .single(),
+  ])
 
   if (!op || op.direction !== 'out' || !op.vehicle_id) notFound()
 

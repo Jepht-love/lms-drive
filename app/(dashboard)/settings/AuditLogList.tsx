@@ -50,6 +50,7 @@ export default function AuditLogList({ logs, profiles }: { logs: AuditLog[]; pro
       {/* Filtres */}
       <div className="flex flex-col sm:flex-row gap-2">
         <select
+          aria-label="Filtrer par utilisateur"
           value={userId}
           onChange={e => setUserId(e.target.value)}
           className="text-sm border border-gray-200 rounded-xl px-3 py-2 text-gray-700 focus:outline-none focus:border-gray-400 bg-white"
@@ -57,7 +58,9 @@ export default function AuditLogList({ logs, profiles }: { logs: AuditLog[]; pro
           <option value="all">Tous les utilisateurs</option>
           {profiles.map(p => <option key={p.id} value={p.id}>{p.full_name}</option>)}
         </select>
+        <label htmlFor="audit-search" className="sr-only">Rechercher dans le journal</label>
         <input
+          id="audit-search"
           type="text"
           value={query}
           onChange={e => setQuery(e.target.value)}

@@ -29,23 +29,23 @@ export default function NewCampaignPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
-        <button onClick={() => router.back()} className="w-9 h-9 rounded-xl bg-white border border-gray-100 shadow-sm flex items-center justify-center text-gray-600">←</button>
+        <button type="button" onClick={() => router.back()} className="w-9 h-9 rounded-xl bg-white border border-gray-100 shadow-sm flex items-center justify-center text-gray-600">←</button>
         <h1 className="text-xl font-black text-gray-900">Nouvelle campagne</h1>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 space-y-4">
           <div>
-            <label className={label}>Nom de la campagne *</label>
-            <input name="name" required placeholder="Ex: Promo été Instagram" className={input} />
+            <label className={label} htmlFor="name">Nom de la campagne *</label>
+            <input id="name" name="name" required placeholder="Ex: Promo été Instagram" className={input} />
           </div>
           <div>
-            <label className={label}>Objectif</label>
-            <textarea name="objective" rows={2} placeholder="Notoriété, acquisition, fidélisation..." className={`${input} resize-none`} />
+            <label className={label} htmlFor="objective">Objectif</label>
+            <textarea id="objective" name="objective" rows={2} placeholder="Notoriété, acquisition, fidélisation..." className={`${input} resize-none`} />
           </div>
           <div>
-            <label className={label}>Canal *</label>
-            <select name="channel" required className={input}
+            <label htmlFor="page-channel" className={label}>Canal *</label>
+            <select id="page-channel" name="channel" required className={input}
               value={channel} onChange={e => setChannel(e.target.value)}>
               <option value="">Sélectionner un canal...</option>
               {MARKETING_CHANNELS.map(c => (
@@ -55,29 +55,29 @@ export default function NewCampaignPage() {
           </div>
           {channel === 'autre' && (
             <div>
-              <label className={label}>Précisez le canal *</label>
-              <textarea name="observations" rows={2} required
+              <label className={label} htmlFor="observations">Précisez le canal *</label>
+              <textarea id="observations" name="observations" rows={2} required
                 placeholder="Quel est ce canal de diffusion ?"
                 className={`${input} resize-none border-amber-200 bg-amber-50`} />
             </div>
           )}
           <div>
-            <label className={label}>Responsable</label>
-            <input name="responsible" placeholder="Prénom Nom" className={input} />
+            <label className={label} htmlFor="responsible">Responsable</label>
+            <input id="responsible" name="responsible" placeholder="Prénom Nom" className={input} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className={label}>Date de lancement *</label>
-              <DatePickerField name="start_date" required className={input} aria-label="Date de lancement" />
+              <label htmlFor="page-start_date" className={label}>Date de lancement *</label>
+              <DatePickerField id="page-start_date" name="start_date" required className={input} aria-label="Date de lancement" />
             </div>
             <div>
-              <label className={label}>Date de fin</label>
-              <DatePickerField name="end_date" className={input} aria-label="Date de fin" />
+              <label htmlFor="page-end_date" className={label}>Date de fin</label>
+              <DatePickerField id="page-end_date" name="end_date" className={input} aria-label="Date de fin" />
             </div>
           </div>
           <div>
-            <label className={label}>Budget engagé (€)</label>
-            <input name="budget" type="number" step="0.01" min="0" defaultValue="0" className={input} />
+            <label htmlFor="page-budget" className={label}>Budget engagé (€)</label>
+            <input id="page-budget" name="budget" type="number" step="0.01" min="0" defaultValue="0" className={input} />
           </div>
         </div>
 

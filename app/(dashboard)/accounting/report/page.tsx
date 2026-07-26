@@ -206,7 +206,7 @@ export default function AccountingReportPage() {
           <p className="text-sm text-gray-400 mt-0.5">Sélectionnez les réservations à inclure</p>
         </div>
         <div className="flex items-center gap-2">
-          <button
+          <button type="button"
             onClick={handleExport}
             disabled={includedRows.length === 0}
             className="flex items-center gap-1.5 px-3 py-2.5 bg-[#111111] text-white rounded-xl font-semibold text-xs hover:bg-gray-800 transition-colors disabled:opacity-40 min-h-[auto] active:scale-[.97]"
@@ -232,7 +232,7 @@ export default function AccountingReportPage() {
       {/* Période */}
       <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
         {PERIODS.map(p => (
-          <button
+          <button type="button"
             key={p.id}
             onClick={() => setPeriod(p.id)}
             className={`px-3.5 py-2 rounded-xl text-sm font-semibold whitespace-nowrap flex-shrink-0 transition-colors min-h-[auto] ${
@@ -284,7 +284,7 @@ export default function AccountingReportPage() {
 
       {/* Barre tout sélectionner */}
       <div className="flex items-center justify-between px-1">
-        <button
+        <button type="button"
           onClick={toggleAll}
           className="flex items-center gap-2 text-sm font-medium text-gray-600 min-h-[auto]"
         >
@@ -316,7 +316,7 @@ export default function AccountingReportPage() {
             const isIncluded = !excluded.has(row.id)
             return (
               <AnimatedListItem key={row.id}>
-                <button
+                <button type="button"
                   onClick={() => toggle(row.id)}
                   className="w-full text-left min-h-[auto]"
                 >

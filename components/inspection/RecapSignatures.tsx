@@ -100,8 +100,8 @@ function GaleriePhotos({ titre, photos }: { titre: string; photos: PhotoJointe[]
         <Camera className="w-3.5 h-3.5" /> {titre} ({photos.length})
       </p>
       <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-        {photos.map((p, i) => (
-          <figure key={i} className="space-y-1">
+        {photos.map(p => (
+          <figure key={p.url} className="space-y-1">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={p.url} alt={p.label} className="w-full aspect-square object-cover rounded-lg border border-gray-100" />
             <figcaption className="text-[9px] text-gray-400 truncate text-center">{p.label}</figcaption>
@@ -442,14 +442,14 @@ export default function RecapSignatures({
       )}
 
       <div className="flex gap-3">
-        <button
+        <button type="button"
           onClick={onBack}
           disabled={saving}
           className="px-5 py-3 bg-white border border-gray-200 text-gray-600 rounded-xl font-semibold hover:bg-gray-50 transition-colors active:scale-[.97] flex items-center justify-center gap-1.5 disabled:opacity-50"
         >
           <ChevronLeft className="w-4 h-4" /> Retour
         </button>
-        <button
+        <button type="button"
           onClick={onSubmit}
           disabled={saving || !ready}
           className="flex-1 py-3.5 bg-green-600 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-xl font-bold hover:bg-green-700 transition-colors active:scale-[.97]"

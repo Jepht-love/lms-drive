@@ -30,14 +30,19 @@ export default function DepositInfoEditor({ reservationId, depositMethod, deposi
   async function handleSave() {
     setLoading(true)
     setErrorMsg(null)
-    const result = await updateDepositInfo(reservationId, method || null, ref || null)
-    setLoading(false)
-    if (result?.error) {
-      setErrorMsg(result.error)
-      return
+    try {
+      const result = await updateDepositInfo(reservationId, method || null, ref || null)
+      if (result?.error) {
+        setErrorMsg(result.error)
+        return
+      }
+      setEditing(false)
+      router.refresh()
+    } catch {
+      setErrorMsg('Erreur réseau : les informations n’ont pas été enregistrées. Réessayez.')
+    } finally {
+      setLoading(false)
     }
-    setEditing(false)
-    router.refresh()
   }
 
   if (!editing) {
@@ -57,9 +62,9 @@ export default function DepositInfoEditor({ reservationId, depositMethod, deposi
             </div>
           )}
         </div>
-        <button
+        <button type="button"
           onClick={() => setEditing(true)}
-          className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-gray-100 transition-all ml-2 flex-shrink-0"
+          className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-gray-100 transition-[opacity,background-color] ml-2 flex-shrink-0"
           title="Modifier"
         >
           <Pencil className="w-3.5 h-3.5 text-gray-400" />
@@ -71,8 +76,8 @@ export default function DepositInfoEditor({ reservationId, depositMethod, deposi
   return (
     <div className="space-y-3 pt-1">
       <div>
-        <label className="block text-xs text-gray-500 font-medium uppercase tracking-wide mb-1">Mode de dépôt</label>
-        <select
+        <label htmlFor="depositinfoeditor-mode-de-depot" className="block text-xs text-gray-500 font-medium uppercase tracking-wide mb-1">Mode de dépôt</label>
+        <select id="depositinfoeditor-mode-de-depot"
           value={method}
           onChange={e => setMethod(e.target.value)}
           className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20 bg-white"
@@ -85,8 +90,9 @@ export default function DepositInfoEditor({ reservationId, depositMethod, deposi
         </select>
       </div>
       <div>
-        <label className="block text-xs text-gray-500 font-medium uppercase tracking-wide mb-1">Référence</label>
+        <label htmlFor="deposit-reference" className="block text-xs text-gray-500 font-medium uppercase tracking-wide mb-1">Référence</label>
         <input
+          id="deposit-reference"
           type="text"
           value={ref}
           onChange={e => setRef(e.target.value)}
@@ -98,7 +104,7 @@ export default function DepositInfoEditor({ reservationId, depositMethod, deposi
         <div className="px-3 py-2 rounded-xl text-sm text-red-600 bg-red-50 border border-red-100">{errorMsg}</div>
       )}
       <div className="flex gap-2">
-        <button
+        <button type="button"
           onClick={handleSave}
           disabled={loading}
           className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#111111] text-white text-sm font-medium hover:bg-gray-800 disabled:opacity-50 transition-colors"
@@ -106,7 +112,7 @@ export default function DepositInfoEditor({ reservationId, depositMethod, deposi
           {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
           Enregistrer
         </button>
-        <button
+        <button type="button"
           onClick={() => { setMethod(depositMethod ?? ''); setRef(depositRef ?? ''); setEditing(false); setErrorMsg(null) }}
           className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors"
         >

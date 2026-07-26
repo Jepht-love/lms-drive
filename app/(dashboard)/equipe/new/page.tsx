@@ -99,8 +99,9 @@ export default function InviteTeamMemberPage() {
           <p className="text-[11px] font-black uppercase tracking-widest text-gray-400">Informations</p>
 
           <div>
-            <label className="text-xs font-bold text-gray-500 block mb-1.5">Nom complet *</label>
+            <label htmlFor="new-member-name" className="text-xs font-bold text-gray-500 block mb-1.5">Nom complet *</label>
             <input
+              id="new-member-name"
               type="text" required value={form.full_name}
               onChange={e => set('full_name', e.target.value)}
               placeholder="Prénom Nom"
@@ -109,8 +110,9 @@ export default function InviteTeamMemberPage() {
           </div>
 
           <div>
-            <label className="text-xs font-bold text-gray-500 block mb-1.5">Email *</label>
+            <label htmlFor="new-member-email" className="text-xs font-bold text-gray-500 block mb-1.5">Email *</label>
             <input
+              id="new-member-email"
               type="email" required value={form.email}
               onChange={e => set('email', e.target.value)}
               placeholder="email@exemple.com"
@@ -119,8 +121,9 @@ export default function InviteTeamMemberPage() {
           </div>
 
           <div>
-            <label className="text-xs font-bold text-gray-500 block mb-1.5">Téléphone</label>
+            <label htmlFor="new-member-phone" className="text-xs font-bold text-gray-500 block mb-1.5">Téléphone</label>
             <input
+              id="new-member-phone"
               type="tel" value={form.phone}
               onChange={e => set('phone', e.target.value)}
               placeholder="+33 6 00 00 00 00"
@@ -129,8 +132,8 @@ export default function InviteTeamMemberPage() {
           </div>
 
           <div>
-            <label className="text-xs font-bold text-gray-500 block mb-1.5">Date d'embauche</label>
-            <DatePickerField
+            <label htmlFor="page-date-d-embauche" className="text-xs font-bold text-gray-500 block mb-1.5">Date d'embauche</label>
+            <DatePickerField id="page-date-d-embauche"
               value={form.hire_date}
               onChange={v => set('hire_date', v)}
               className="w-full bg-gray-50 rounded-xl px-4 py-3 text-sm font-semibold text-gray-900 outline-none focus:ring-2 focus:ring-black/10"
@@ -250,6 +253,8 @@ export default function InviteTeamMemberPage() {
             {COLORS.map(c => (
               <button
                 key={c} type="button"
+                aria-label={`Couleur ${c}`}
+                aria-pressed={form.color === c}
                 onClick={() => set('color', c)}
                 className={`w-9 h-9 rounded-xl transition-transform ${form.color === c ? 'scale-110 ring-2 ring-offset-2 ring-black' : ''}`}
                 style={{ backgroundColor: c }}

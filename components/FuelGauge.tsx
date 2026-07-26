@@ -12,6 +12,8 @@ export default function FuelGauge({ level, onChange }: FuelGaugeProps) {
           <button
             key={i}
             type="button"
+            aria-label={`Niveau de carburant ${i + 1}`}
+            aria-pressed={i < level}
             disabled={!onChange}
             onClick={() => onChange?.(i + 1)}
             className={`w-6 h-8 rounded-md border transition-colors ${

@@ -39,7 +39,7 @@ export function PhotoLightbox({ src, alt, open, onClose }: PhotoLightboxProps) {
         padding: '24px',
       }}
     >
-      <button
+      <button type="button"
         onClick={onClose}
         style={{
           position: 'absolute',

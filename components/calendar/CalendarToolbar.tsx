@@ -40,6 +40,7 @@ export default function CalendarToolbar({ currentDate, view, onViewChange, onNav
       <div className="flex items-center justify-between mb-2">
         <button
           type="button"
+          aria-label="Période précédente"
           onClick={() => onNavigate('prev')}
           className="w-7 h-7 flex items-center justify-center border border-gray-200 rounded-lg text-gray-500"
         >
@@ -48,6 +49,7 @@ export default function CalendarToolbar({ currentDate, view, onViewChange, onNav
         <span className="text-[13px] font-semibold capitalize">{rangeLabel(view, currentDate)}</span>
         <button
           type="button"
+          aria-label="Période suivante"
           onClick={() => onNavigate('next')}
           className="w-7 h-7 flex items-center justify-center border border-gray-200 rounded-lg text-gray-500"
         >

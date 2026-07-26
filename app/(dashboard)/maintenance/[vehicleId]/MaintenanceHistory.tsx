@@ -66,7 +66,7 @@ export default function MaintenanceHistory({ records }: { records: MaintenanceRe
           {byAngle.map(a => {
             const active = filter === `angle:${a.id}`
             return (
-              <button
+              <button type="button"
                 key={a.id}
                 onClick={() => setFilter(active ? 'tous' : `angle:${a.id}`)}
                 className={`text-left rounded-2xl border p-3 transition-colors active:scale-[.99] ${
@@ -86,7 +86,7 @@ export default function MaintenanceHistory({ records }: { records: MaintenanceRe
 
       {/* Filtres par type */}
       <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
-        <button
+        <button type="button"
           onClick={() => setFilter('tous')}
           className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors flex-shrink-0 ${
             filter === 'tous' ? 'bg-[#111111] text-white' : 'bg-white border border-gray-100 text-gray-600 hover:bg-gray-50 shadow-sm'
@@ -97,7 +97,7 @@ export default function MaintenanceHistory({ records }: { records: MaintenanceRe
         {MAINTENANCE_TYPES.filter(t => presentTypes.has(t.key)).map(t => {
           const n = records.filter(r => r.type === t.key).length
           return (
-            <button
+            <button type="button"
               key={t.key}
               onClick={() => setFilter(t.key)}
               className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors flex-shrink-0 flex items-center gap-1.5 ${
@@ -130,7 +130,7 @@ export default function MaintenanceHistory({ records }: { records: MaintenanceRe
                 </div>
                 <div className="flex items-center gap-1.5 flex-shrink-0">
                   <span className="text-sm font-black text-gray-900">{formatPrice(amount)}</span>
-                  <button
+                  <button type="button"
                     onClick={() => setConfirmDel(confirmDel === r.id ? null : r.id)}
                     className="p-1.5 text-gray-300 rounded-lg hover:bg-red-50 hover:text-red-500 transition-colors"
                     title="Supprimer"
@@ -181,7 +181,7 @@ export default function MaintenanceHistory({ records }: { records: MaintenanceRe
                       <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Mode de paiement</p>
                       <div className="flex flex-wrap gap-1.5">
                         {PAYMENT_METHODS.map(m => (
-                          <button
+                          <button type="button"
                             key={m.id}
                             disabled={pending}
                             onClick={() => pay(r.id, m.id)}
@@ -193,7 +193,7 @@ export default function MaintenanceHistory({ records }: { records: MaintenanceRe
                       </div>
                     </div>
                   ) : (
-                    <button
+                    <button type="button"
                       onClick={() => setOpenPay(r.id)}
                       className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-600 border border-gray-200 rounded-lg px-2.5 py-1.5 hover:bg-gray-50"
                     >
@@ -206,8 +206,8 @@ export default function MaintenanceHistory({ records }: { records: MaintenanceRe
               {confirmDel === r.id && (
                 <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-2">
                   <span className="text-xs text-gray-500 flex-1">Supprimer cette intervention ?{r.paid_at ? ' La charge compta liée sera aussi retirée.' : ''}</span>
-                  <button onClick={() => setConfirmDel(null)} disabled={pending} className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-gray-200 text-gray-600 disabled:opacity-40">Annuler</button>
-                  <button onClick={() => del(r.id)} disabled={pending} className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-600 text-white disabled:opacity-40">Supprimer</button>
+                  <button type="button" onClick={() => setConfirmDel(null)} disabled={pending} className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-gray-200 text-gray-600 disabled:opacity-40">Annuler</button>
+                  <button type="button" onClick={() => del(r.id)} disabled={pending} className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-600 text-white disabled:opacity-40">Supprimer</button>
                 </div>
               )}
             </div>

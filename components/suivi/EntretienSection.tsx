@@ -22,24 +22,24 @@ const SEV_ORDER: Record<NeedSeverity, number> = { overdue: 0, urgent: 1, soon: 2
 export default async function EntretienSection() {
   const supabase = await createClient()
 
-  const { data: vehicles } = await supabase
-    .from('vehicles')
-    .select('id, plate, brand, model, status, current_km, next_service_km, next_service_date, ct_date, maintenance_flags')
-    .eq('is_active', true)
-    .order('brand')
-
-  const { data: records } = await supabase
-    .from('maintenance_records')
-    .select('vehicle_id, type, km_at_intervention, date, amount')
-    .order('date', { ascending: false })
-
-  // « Qui s'en charge » : tâches d'entretien ouvertes, assignées à un membre.
-  const { data: entretienTasks } = await supabase
-    .from('tasks')
-    .select('vehicle_id, profiles!tasks_assigned_to_fkey(full_name)')
-    .eq('type', 'entretien')
-    .in('status', ['a_faire', 'en_cours'])
-    .not('vehicle_id', 'is', null)
+  const [{ data: vehicles }, { data: records }, { data: entretienTasks }] = await Promise.all([
+    supabase
+      .from('vehicles')
+      .select('id, plate, brand, model, status, current_km, next_service_km, next_service_date, ct_date, maintenance_flags')
+      .eq('is_active', true)
+      .order('brand'),
+    supabase
+      .from('maintenance_records')
+      .select('vehicle_id, type, km_at_intervention, date, amount')
+      .order('date', { ascending: false }),
+    // « Qui s'en charge » : tâches d'entretien ouvertes, assignées à un membre.
+    supabase
+      .from('tasks')
+      .select('vehicle_id, profiles!tasks_assigned_to_fkey(full_name)')
+      .eq('type', 'entretien')
+      .in('status', ['a_faire', 'en_cours'])
+      .not('vehicle_id', 'is', null),
+  ])
 
   const assigneeByVehicle = new Map<string, string>()
   for (const t of entretienTasks ?? []) {
@@ -111,7 +111,7 @@ export default async function EntretienSection() {
             <Link
               key={v.id}
               href={`/maintenance/${v.id}`}
-              className="block bg-white rounded-2xl border border-gray-100 shadow-sm p-4 hover:shadow-md transition-all active:scale-[.99]"
+              className="block bg-white rounded-2xl border border-gray-100 shadow-sm p-4 hover:shadow-md transition-[box-shadow,scale] active:scale-[.99]"
             >
               <div className="flex items-center gap-3">
                 <div className="flex-1 min-w-0">

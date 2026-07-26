@@ -48,11 +48,16 @@ export default function LateFeeEditor({ reservationId, lateFeeAmount, lateMinute
     }
     const mins = isLate && minutes ? parseInt(minutes, 10) : null
     setLoading(true)
-    const res = await updateLateFee(reservationId, isLate ? amt : 0, mins)
-    setLoading(false)
-    if (res?.error) { setError(res.error); return }
-    setEditing(false)
-    router.refresh()
+    try {
+      const res = await updateLateFee(reservationId, isLate ? amt : 0, mins)
+      if (res?.error) { setError(res.error); return }
+      setEditing(false)
+      router.refresh()
+    } catch {
+      setError('Erreur réseau : le retard n’a pas été enregistré. Réessayez.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   if (!editing) {
@@ -104,8 +109,9 @@ export default function LateFeeEditor({ reservationId, lateFeeAmount, lateMinute
       {isLate && (
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs text-gray-500 font-medium uppercase tracking-wide mb-1">Durée (min, option.)</label>
+            <label htmlFor="late-fee-minutes" className="block text-xs text-gray-500 font-medium uppercase tracking-wide mb-1">Durée (min, option.)</label>
             <input
+              id="late-fee-minutes"
               inputMode="numeric"
               value={minutes}
               onChange={e => setMinutes(e.target.value.replace(/[^\d]/g, ''))}
@@ -114,8 +120,9 @@ export default function LateFeeEditor({ reservationId, lateFeeAmount, lateMinute
             />
           </div>
           <div>
-            <label className="block text-xs text-gray-500 font-medium uppercase tracking-wide mb-1">Montant facturé (€)</label>
+            <label htmlFor="late-fee-amount" className="block text-xs text-gray-500 font-medium uppercase tracking-wide mb-1">Montant facturé (€)</label>
             <input
+              id="late-fee-amount"
               inputMode="decimal"
               value={amount}
               onChange={e => setAmount(e.target.value.replace(/[^\d.,]/g, ''))}
@@ -131,7 +138,7 @@ export default function LateFeeEditor({ reservationId, lateFeeAmount, lateMinute
       )}
 
       <div className="flex gap-2">
-        <button
+        <button type="button"
           onClick={save}
           disabled={loading}
           className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#111111] text-white text-sm font-medium hover:bg-gray-800 disabled:opacity-50 transition-colors"
@@ -139,7 +146,7 @@ export default function LateFeeEditor({ reservationId, lateFeeAmount, lateMinute
           {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
           Enregistrer
         </button>
-        <button
+        <button type="button"
           onClick={reset}
           className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors"
         >

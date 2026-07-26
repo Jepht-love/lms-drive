@@ -118,6 +118,7 @@ export default function SavButton() {
     <>
       {/* Bouton flottant — présent sur toutes les pages */}
       <button
+        type="button"
         onClick={openForm}
         aria-label="Signaler un bug"
         className="fixed z-40 left-3 w-9 h-9 rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform opacity-90 hover:opacity-100"
@@ -143,7 +144,7 @@ export default function SavButton() {
                 <h2 className="text-lg font-black text-[#111111]">Signaler un problème</h2>
                 <p className="text-xs text-gray-400 mt-0.5">Décris le bug, joins une ou plusieurs photos si possible</p>
               </div>
-              <button onClick={() => !submitting && setOpen(false)} className="p-2 text-gray-400 hover:text-gray-700">
+              <button type="button" aria-label="Fermer" onClick={() => !submitting && setOpen(false)} className="p-2 text-gray-400 hover:text-gray-700">
                 <X size={20} />
               </button>
             </div>
@@ -151,8 +152,9 @@ export default function SavButton() {
             <div className="px-5 pb-5 space-y-4">
               {/* Contexte pré-rempli, modifiable */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wide text-gray-400 mb-1.5">Où es-tu ?</label>
+                <label htmlFor="sav-context" className="block text-xs font-bold uppercase tracking-wide text-gray-400 mb-1.5">Où es-tu ?</label>
                 <input
+                  id="sav-context"
                   value={contextLabel}
                   onChange={e => setContextLabel(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm text-[#111111] bg-gray-50 focus:bg-white focus:border-[#C4A35A] focus:outline-none"
@@ -162,8 +164,9 @@ export default function SavButton() {
 
               {/* Description */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wide text-gray-400 mb-1.5">Décris le bug</label>
+                <label htmlFor="sav-description" className="block text-xs font-bold uppercase tracking-wide text-gray-400 mb-1.5">Décris le bug</label>
                 <textarea
+                  id="sav-description"
                   value={description}
                   onChange={e => setDescription(e.target.value)}
                   rows={4}
@@ -175,10 +178,10 @@ export default function SavButton() {
 
               {/* Captures / photos (plusieurs possibles) */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wide text-gray-400 mb-1.5">
+                <label htmlFor="savbutton-photos-optionnel-files" className="block text-xs font-bold uppercase tracking-wide text-gray-400 mb-1.5">
                   Photos (optionnel){files.length > 0 ? ` · ${files.length}/${MAX_PHOTOS}` : ''}
                 </label>
-                <input
+                <input id="savbutton-photos-optionnel-files"
                   ref={fileRef}
                   type="file"
                   accept="image/*"
@@ -227,7 +230,7 @@ export default function SavButton() {
               </div>
 
               {/* Envoyer */}
-              <button
+              <button type="button"
                 onClick={submit}
                 disabled={submitting}
                 className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-[#0A0A0A] disabled:opacity-60 active:scale-[.99] transition-transform"

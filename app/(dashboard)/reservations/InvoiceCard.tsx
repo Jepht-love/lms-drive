@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Receipt, Plus, Trash2, Mail, Check, Loader2, AlertTriangle, Eye, Ban } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
@@ -20,6 +20,10 @@ interface Invoice {
 
 export default function InvoiceCard({ invoice }: { invoice: Invoice }) {
   const router = useRouter()
+  // Identité de ligne, stable tant que la ligne existe : sans elle, supprimer
+  // une ligne ferait glisser le contenu saisi des lignes suivantes.
+  const nextLineId = useRef(invoice.line_items.length)
+  const [lineIds, setLineIds] = useState<number[]>(() => invoice.line_items.map((_, i) => i))
   const [lines, setLines] = useState<InvoiceLineItem[]>(invoice.line_items)
   const [termDays, setTermDays] = useState(invoice.payment_term_days ?? 30)
   const [saving, startSaving] = useTransition()
@@ -52,11 +56,13 @@ export default function InvoiceCard({ invoice }: { invoice: Invoice }) {
   }
 
   function addLine() {
+    setLineIds(prev => [...prev, nextLineId.current++])
     setLines(prev => [...prev, { description: '', quantity: 1, unit_price: 0, total: 0 }])
     setDirty(true)
   }
 
   function removeLine(i: number) {
+    setLineIds(prev => prev.filter((_, idx) => idx !== i))
     setLines(prev => prev.filter((_, idx) => idx !== i))
     setDirty(true)
   }
@@ -116,17 +122,17 @@ export default function InvoiceCard({ invoice }: { invoice: Invoice }) {
 
         {confirmCancel ? (
           <div className="mt-3 flex gap-2">
-            <button onClick={() => setConfirmCancel(false)} disabled={cancelling}
+            <button type="button" onClick={() => setConfirmCancel(false)} disabled={cancelling}
               className="flex-1 py-2 rounded-xl text-sm font-semibold border border-gray-200 text-gray-600 disabled:opacity-40">
               Retour
             </button>
-            <button onClick={onCancel} disabled={cancelling}
+            <button type="button" onClick={onCancel} disabled={cancelling}
               className="flex-1 py-2 rounded-xl text-sm font-semibold bg-red-600 text-white disabled:opacity-40">
               {cancelling ? 'Annulation...' : "Confirmer l'annulation"}
             </button>
           </div>
         ) : (
-          <button onClick={() => setConfirmCancel(true)}
+          <button type="button" onClick={() => setConfirmCancel(true)}
             className="mt-3 w-full py-2 rounded-xl text-sm font-semibold border border-gray-200 text-red-600 hover:bg-red-50 hover:border-red-100 flex items-center justify-center gap-1.5 transition-colors">
             <Ban className="w-4 h-4" /> Annuler la facture
           </button>
@@ -147,21 +153,27 @@ export default function InvoiceCard({ invoice }: { invoice: Invoice }) {
 
       <div className="space-y-2">
         {lines.map((l, i) => (
-          <div key={i} className="flex items-center gap-2">
+          <div key={lineIds[i]} className="flex items-center gap-2">
+            <label htmlFor={`invoice-line-desc-${i}`} className="sr-only">Description — ligne {i + 1}</label>
             <input
+              id={`invoice-line-desc-${i}`}
               value={l.description}
               onChange={e => update(i, { description: e.target.value })}
               placeholder="Description"
               className={`${input} flex-1 min-w-0`}
             />
             {/* `x || ''` : vider le champ le laisse vide (pas de 0 fantôme). */}
+            <label htmlFor={`invoice-line-qty-${i}`} className="sr-only">Quantité — ligne {i + 1}</label>
             <input
+              id={`invoice-line-qty-${i}`}
               type="number" min="0" step="1" value={l.quantity || ''} placeholder="0"
               onChange={e => update(i, { quantity: Number(e.target.value) })}
               className={`${input} w-14 text-center`}
               title="Quantité"
             />
+            <label htmlFor={`invoice-line-price-${i}`} className="sr-only">Prix unitaire (€) — ligne {i + 1}</label>
             <input
+              id={`invoice-line-price-${i}`}
               type="number" min="0" step="0.01" value={l.unit_price || ''} placeholder="0"
               onChange={e => update(i, { unit_price: Number(e.target.value) })}
               className={`${input} w-20 text-center ${l.unit_price <= 0 ? 'border-amber-400 bg-amber-50' : ''}`}
@@ -170,21 +182,22 @@ export default function InvoiceCard({ invoice }: { invoice: Invoice }) {
             <span className="w-20 text-sm font-bold text-gray-900 text-right flex-shrink-0">
               {formatPrice(l.total)}
             </span>
-            <button onClick={() => removeLine(i)} className="text-gray-300 hover:text-red-500 flex-shrink-0">
+            <button type="button" aria-label="Supprimer cette ligne" onClick={() => removeLine(i)} className="text-gray-300 hover:text-red-500 flex-shrink-0">
               <Trash2 className="w-3.5 h-3.5" />
             </button>
           </div>
         ))}
       </div>
 
-      <button onClick={addLine} className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 font-medium">
+      <button type="button" onClick={addLine} className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 font-medium">
         <Plus className="w-3.5 h-3.5" /> Ajouter une ligne (fourrière, lavage, carburant...)
       </button>
 
       <div className="flex items-center justify-between">
-        <span className="text-xs text-gray-500">Délai de règlement accordé au client</span>
+        <label htmlFor="invoice-term-days" className="text-xs text-gray-500">Délai de règlement accordé au client</label>
         <div className="flex items-center gap-1.5">
           <input
+            id="invoice-term-days"
             type="number" min="1" step="1" value={termDays || ''} placeholder="7"
             onChange={e => { setTermDays(Number(e.target.value)); setDirty(true) }}
             className={`${input} w-16 text-center`}
@@ -217,13 +230,13 @@ export default function InvoiceCard({ invoice }: { invoice: Invoice }) {
           <Eye className="w-3.5 h-3.5" /> Prévisualiser
         </a>
         {dirty && (
-          <button onClick={onSave} disabled={saving}
+          <button type="button" onClick={onSave} disabled={saving}
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-50">
             {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
             Enregistrer
           </button>
         )}
-        <button onClick={onSend} disabled={sending || dirty || hasZeroPrice || lines.length === 0}
+        <button type="button" onClick={onSend} disabled={sending || dirty || hasZeroPrice || lines.length === 0}
           className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 transition-colors">
           {sending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Mail className="w-3.5 h-3.5" />}
           Envoyer la facture au client

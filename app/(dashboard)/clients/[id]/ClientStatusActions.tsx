@@ -67,8 +67,9 @@ export default function ClientStatusActions({ clientId, status }: { clientId: st
 
       {showReasonInput && (
         <div className="bg-red-50 border border-red-100 rounded-xl p-3 space-y-2">
-          <label className="block text-xs font-bold text-red-700 uppercase tracking-wide">Motif du blacklistage</label>
+          <label htmlFor="blacklist-reason" className="block text-xs font-bold text-red-700 uppercase tracking-wide">Motif du blacklistage</label>
           <textarea
+            id="blacklist-reason"
             value={reason}
             onChange={e => setReason(e.target.value)}
             rows={2}

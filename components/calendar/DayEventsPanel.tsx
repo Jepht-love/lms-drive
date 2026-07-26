@@ -25,7 +25,7 @@ export default function DayEventsPanel({ currentDate, events, resources, onEvent
     <div className="flex flex-col flex-1 overflow-hidden bg-[#F2F2F7]">
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-100">
-        <button
+        <button type="button" aria-label="Retour"
           onClick={onBack}
           className="p-1.5 rounded-xl hover:bg-gray-100 transition-colors"
         >
@@ -59,6 +59,7 @@ export default function DayEventsPanel({ currentDate, events, resources, onEvent
               <button
                 key={ev.id}
                 type="button"
+                aria-label={`${ev.title} — de ${startTime} à ${endTime}`}
                 onClick={() => onEventClick(ev)}
                 className="w-full text-left bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-shadow active:scale-[.99]"
               >

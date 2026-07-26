@@ -38,7 +38,7 @@ export default function ResendInviteButton({ memberId }: { memberId: string }) {
 
   return (
     <div>
-      <button
+      <button type="button"
         onClick={resend}
         disabled={state === 'sending' || state === 'sent'}
         className="w-full flex items-center gap-3 px-4 py-4 hover:bg-gray-50 transition-colors disabled:opacity-60 text-left"

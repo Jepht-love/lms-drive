@@ -25,6 +25,14 @@ export async function POST(request: NextRequest) {
 // (pas d'hébergement Vercel) avec `Authorization: Bearer CRON_SECRET`.
 // Plus de session utilisateur (un cron n'en a pas) → client admin + notifications
 // en broadcast (user_id: null, visibles de tous).
+const fmtH = (x: string) => new Date(x).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+const one = <T,>(v: T | T[] | null): T | null => (Array.isArray(v) ? v[0] ?? null : v)
+const vehCli = (vRaw: any, cRaw: any) => {
+  const v = one<{ brand: string; model: string }>(vRaw)
+  const c = one<{ first_name: string; last_name: string }>(cRaw)
+  return `${v ? `${v.brand} ${v.model}` : 'Véhicule'}${c ? ` (${c.last_name})` : ''}`
+}
+
 export async function GET(request: NextRequest) {
   const auth = request.headers.get('authorization')
   const querySecret = request.nextUrl.searchParams.get('secret')
@@ -281,13 +289,6 @@ export async function GET(request: NextRequest) {
           .order('start_at'),
       ])
 
-      const fmtH = (x: string) => new Date(x).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
-      const one = <T,>(v: T | T[] | null): T | null => (Array.isArray(v) ? v[0] ?? null : v)
-      const vehCli = (vRaw: any, cRaw: any) => {
-        const v = one<{ brand: string; model: string }>(vRaw)
-        const c = one<{ first_name: string; last_name: string }>(cRaw)
-        return `${v ? `${v.brand} ${v.model}` : 'Véhicule'}${c ? ` (${c.last_name})` : ''}`
-      }
 
       const depLines = (depRows.data ?? []).map((r: any) => `· ${fmtH(r.start_datetime)} — ${vehCli(r.vehicle, r.client)}`)
       const retLines = (retRows.data ?? []).map((r: any) => `· ${fmtH(r.end_datetime)} — ${vehCli(r.vehicle, r.client)}`)

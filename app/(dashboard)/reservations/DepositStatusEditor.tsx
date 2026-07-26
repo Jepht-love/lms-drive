@@ -55,15 +55,20 @@ export default function DepositStatusEditor({ reservationId, currentStatus, cont
     setLoading(true)
     setSaved(false)
     setErrorMsg(null)
-    const result = await updateDepositStatus(reservationId, newStatus)
-    setLoading(false)
-    if (result?.error) {
-      setErrorMsg(result.error)
-      return
+    try {
+      const result = await updateDepositStatus(reservationId, newStatus)
+      if (result?.error) {
+        setErrorMsg(result.error)
+        return
+      }
+      setStatus(newStatus)
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+    } catch {
+      setErrorMsg('Erreur réseau : le statut n’a pas été enregistré. Réessayez.')
+    } finally {
+      setLoading(false)
     }
-    setStatus(newStatus)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
   }
 
   return (
@@ -86,7 +91,7 @@ export default function DepositStatusEditor({ reservationId, currentStatus, cont
         {DEPOSIT_STATUSES.filter(s => s.value !== status).map(s => {
           const isLocked = s.value === 'liberee' && !contractClosed
           return (
-            <button
+            <button type="button"
               key={s.value}
               onClick={() => !isLocked && handleChange(s.value)}
               disabled={loading || isLocked}

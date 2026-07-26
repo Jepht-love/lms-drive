@@ -158,6 +158,54 @@ function StatusBadge({ doc }: { doc: Document }) {
   return <span className={`ml-2 text-[10px] font-semibold px-2 py-0.5 rounded-full ${s.cls}`}>{s.label}</span>
 }
 
+function getSubLabel(sub: string) {
+  for (const cat of Object.values(DOCUMENT_SUBCATEGORIES)) {
+    const found = cat.find(s => s.id === sub)
+    if (found) return found.label
+  }
+  return sub
+}
+
+// Cœur du partage, réutilisé par les documents ET les contrats/factures de
+// l'onglet « Contrats et factures » (leurs anciens liens target=_blank
+// rouvraient le piège du PDF plein écran sans retour sur iOS).
+async function shareFile(url: string, name: string, fileType?: string | null) {
+  try {
+    const nav = navigator as Navigator & { canShare?: (d?: any) => boolean }
+    // 1) Partage du fichier lui-même (l'utilisateur peut l'enregistrer dans Fichiers)
+    if (nav.canShare && typeof nav.share === 'function') {
+      try {
+        const res  = await fetch(url)
+        // Un lien de document expire au bout d'un moment. Dans ce cas le stockage
+        // répond une page d'erreur, et sans ce contrôle on la partageait telle
+        // quelle sous le nom du document : le destinataire recevait un fichier
+        // illisible. On bascule sur le partage du lien (repli déjà prévu ci-dessous).
+        if (!res.ok) throw new Error(`Document indisponible (${res.status})`)
+        const blob = await res.blob()
+        const ext  = ((fileType ?? blob.type)?.split('/')[1] ?? 'pdf').split('+')[0] || 'pdf'
+        const safeName = name.replace(/[^\w.\- ]+/g, '').trim() || 'document'
+        const fileObj = new File([blob], `${safeName}.${ext}`, {
+          type: blob.type || fileType || 'application/octet-stream',
+        })
+        if (nav.canShare({ files: [fileObj] })) {
+          await nav.share({ files: [fileObj], title: name })
+          return
+        }
+      } catch { /* repli sur le partage d'URL ci-dessous */ }
+    }
+    // 2) Partage de l'URL (signée) à défaut du fichier
+    if (typeof navigator.share === 'function') {
+      await navigator.share({ title: name, url })
+      return
+    }
+    // 3) Repli desktop : nouvel onglet
+    window.open(url, '_blank', 'noopener,noreferrer')
+  } catch (e: any) {
+    // L'utilisateur a annulé la feuille de partage → ne rien faire.
+    if (e?.name !== 'AbortError') window.open(url, '_blank', 'noopener,noreferrer')
+  }
+}
+
 export default function DocumentsClient({ documents, vehicles, clients, partners, userRole, visibleCategories, reservationDocs, docSignedUrls, untriagedCount = 0 }: Props) {
   const allCatIds = ['entreprise', 'vehicule', 'client', 'partenaire']
   const visibleCats = visibleCategories ?? allCatIds
@@ -220,8 +268,9 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
   const grouped = useMemo(() => {
     const map = new Map<string, Document[]>()
     for (const doc of filtered) {
-      if (!map.has(doc.subcategory)) map.set(doc.subcategory, [])
-      map.get(doc.subcategory)!.push(doc)
+      const bucket = map.get(doc.subcategory)
+      if (bucket) bucket.push(doc)
+      else map.set(doc.subcategory, [doc])
     }
     return map
   }, [filtered])
@@ -260,14 +309,6 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
     if (!found) return cat
     const count = visible.filter(d => d.category === cat && !isReservationAutoDoc(d)).length
     return `${found.label} (${count})`
-  }
-
-  function getSubLabel(sub: string) {
-    for (const cat of Object.values(DOCUMENT_SUBCATEGORIES)) {
-      const found = cat.find(s => s.id === sub)
-      if (found) return found.label
-    }
-    return sub
   }
 
   // Nom auto d'une pièce client : « <libellé court> <Prénom Nom> » (ex. « CNI
@@ -339,41 +380,6 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
   const [viewDoc, setViewDoc] = useState<Document | null>(null)
   const [sharingId, setSharingId] = useState<string | null>(null)
 
-  // Cœur du partage, réutilisé par les documents ET les contrats/factures de
-  // l'onglet « Contrats et factures » (leurs anciens liens target=_blank
-  // rouvraient le piège du PDF plein écran sans retour sur iOS).
-  async function shareFile(url: string, name: string, fileType?: string | null) {
-    try {
-      const nav = navigator as Navigator & { canShare?: (d?: any) => boolean }
-      // 1) Partage du fichier lui-même (l'utilisateur peut l'enregistrer dans Fichiers)
-      if (nav.canShare && typeof nav.share === 'function') {
-        try {
-          const res  = await fetch(url)
-          const blob = await res.blob()
-          const ext  = ((fileType ?? blob.type)?.split('/')[1] ?? 'pdf').split('+')[0] || 'pdf'
-          const safeName = name.replace(/[^\w.\- ]+/g, '').trim() || 'document'
-          const fileObj = new File([blob], `${safeName}.${ext}`, {
-            type: blob.type || fileType || 'application/octet-stream',
-          })
-          if (nav.canShare({ files: [fileObj] })) {
-            await nav.share({ files: [fileObj], title: name })
-            return
-          }
-        } catch { /* repli sur le partage d'URL ci-dessous */ }
-      }
-      // 2) Partage de l'URL (signée) à défaut du fichier
-      if (typeof navigator.share === 'function') {
-        await navigator.share({ title: name, url })
-        return
-      }
-      // 3) Repli desktop : nouvel onglet
-      window.open(url, '_blank', 'noopener,noreferrer')
-    } catch (e: any) {
-      // L'utilisateur a annulé la feuille de partage → ne rien faire.
-      if (e?.name !== 'AbortError') window.open(url, '_blank', 'noopener,noreferrer')
-    }
-  }
-
   async function handleShare(doc: Document) {
     setSharingId(doc.id)
     try { await shareFile(urlFor(doc), displayDocName(doc), doc.file_type) }
@@ -430,7 +436,7 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
               </span>
             )}
           </a>
-          <button
+          <button type="button"
             onClick={() => setShowUpload(true)}
             className="flex items-center gap-1.5 px-4 py-2.5 bg-[#111111] text-white rounded-xl font-semibold text-sm active:scale-[.97]"
           >
@@ -441,7 +447,7 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
 
       <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
         {categoryTabs.map(cat => (
-          <button
+          <button type="button"
             key={cat}
             onClick={() => setCategory(cat)}
             className={`flex-shrink-0 text-[12px] font-medium px-4 py-2.5 min-h-[44px] flex items-center justify-center rounded-2xl transition-colors ${
@@ -456,8 +462,10 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
       </div>
 
       <div className="relative">
+        <label htmlFor="documents-search" className="sr-only">Rechercher un document</label>
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
         <input
+          id="documents-search"
           type="search"
           placeholder="Rechercher un document, une réservation, un client..."
           className="w-full pl-9 pr-4 py-3 bg-white rounded-2xl border border-gray-200 text-[13px] text-gray-700 placeholder-gray-400"
@@ -570,11 +578,11 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
                             </p>
                           </div>
                           <div className="flex items-center gap-1 flex-shrink-0">
-                            <button onClick={() => setViewDoc(doc)}
+                            <button type="button" onClick={() => setViewDoc(doc)}
                               className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100" title="Visualiser">
                               <Eye className="w-4 h-4 text-gray-400" />
                             </button>
-                            <button onClick={() => handleShare(doc)} disabled={sharingId === doc.id}
+                            <button type="button" onClick={() => handleShare(doc)} disabled={sharingId === doc.id}
                               className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 disabled:opacity-40" title="Partager / Enregistrer dans Fichiers">
                               <Share2 className="w-4 h-4 text-gray-400" />
                             </button>
@@ -583,12 +591,12 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
                               <Printer className="w-4 h-4 text-gray-400" />
                             </a>
                             {!doc.is_auto_generated && (
-                              <button onClick={() => setReplaceTarget(doc)} disabled={isPending}
+                              <button type="button" onClick={() => setReplaceTarget(doc)} disabled={isPending}
                                 className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 disabled:opacity-40" title="Remplacer par une nouvelle version">
                                 <RefreshCw className="w-4 h-4 text-gray-400" />
                               </button>
                             )}
-                            <button onClick={() => handleDelete(doc)} disabled={isPending}
+                            <button type="button" onClick={() => handleDelete(doc)} disabled={isPending}
                               className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 disabled:opacity-40" title="Supprimer">
                               <Trash2 className="w-4 h-4 text-red-400" />
                             </button>
@@ -597,7 +605,7 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
 
                         {history.length > 0 && (
                           <div className="px-4 pb-2">
-                            <button onClick={() => toggleHistory(doc.id)}
+                            <button type="button" onClick={() => toggleHistory(doc.id)}
                               className="flex items-center gap-1.5 text-[11px] font-semibold text-gray-400 hover:text-gray-600">
                               <History className="w-3.5 h-3.5" />
                               {history.length} version{history.length > 1 ? 's' : ''} précédente{history.length > 1 ? 's' : ''}
@@ -609,11 +617,11 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
                                   <div key={h.id} className="flex items-center gap-2">
                                     <span className="text-[10px] font-bold text-gray-400 w-7">v{h.version ?? 1}</span>
                                     <span className="text-[11px] text-gray-400 flex-1 min-w-0 truncate">{formatDate(h.created_at)}</span>
-                                    <button onClick={() => setViewDoc(h)}
+                                    <button type="button" onClick={() => setViewDoc(h)}
                                       className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100" title="Visualiser">
                                       <Eye className="w-3.5 h-3.5 text-gray-400" />
                                     </button>
-                                    <button onClick={() => handleShare(h)} disabled={sharingId === h.id}
+                                    <button type="button" onClick={() => handleShare(h)} disabled={sharingId === h.id}
                                       className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 disabled:opacity-40" title="Partager / Enregistrer dans Fichiers">
                                       <Share2 className="w-3.5 h-3.5 text-gray-400" />
                                     </button>
@@ -636,14 +644,14 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
 
       <Drawer open={showUpload} onClose={resetUpload} title="Ajouter un document">
         <div>
-          <select value={uploadCat} onChange={e => { setUploadCat(e.target.value as DocumentCategory | ''); setUploadSub(''); setEntityId('') }}
+          <select aria-label="Catégorie du document" value={uploadCat} onChange={e => { setUploadCat(e.target.value as DocumentCategory | ''); setUploadSub(''); setEntityId('') }}
             className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px] mb-3">
             <option value="">Catégorie...</option>
             {DOCUMENT_CATEGORIES.filter(c => visibleCats.includes(c.id)).map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
           </select>
 
           {uploadCat && (
-            <select value={uploadSub} onChange={e => {
+            <select aria-label="Sous-catégorie du document" value={uploadSub} onChange={e => {
                 const sub = e.target.value
                 setUploadSub(sub)
                 // Pièce client + client déjà choisi → nom généré automatiquement.
@@ -656,13 +664,13 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
           )}
 
           {uploadCat === 'vehicule' && (
-            <select value={entityId} onChange={e => setEntityId(e.target.value)} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px] mb-3">
+            <select aria-label="Véhicule concerné" value={entityId} onChange={e => setEntityId(e.target.value)} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px] mb-3">
               <option value="">Véhicule concerné (optionnel)...</option>
               {vehicles.map(v => <option key={v.id} value={v.id}>{v.brand} {v.model} · {v.plate}</option>)}
             </select>
           )}
           {uploadCat === 'client' && (
-            <select value={entityId} onChange={e => {
+            <select aria-label="Client concerné" value={entityId} onChange={e => {
                 const cid = e.target.value
                 setEntityId(cid)
                 // Client choisi + sous-catégorie déjà sélectionnée → nom auto.
@@ -673,18 +681,19 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
             </select>
           )}
           {uploadCat === 'partenaire' && (
-            <select value={entityId} onChange={e => setEntityId(e.target.value)} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px] mb-3">
+            <select aria-label="Agence partenaire" value={entityId} onChange={e => setEntityId(e.target.value)} className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px] mb-3">
               <option value="">Agence partenaire (optionnel)...</option>
               {partners.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           )}
 
-          <input type="text" placeholder="Nom du document..." value={docName} onChange={e => setDocName(e.target.value)}
+          <label htmlFor="upload-doc-name" className="block text-[11px] font-medium text-gray-400 uppercase tracking-wide mb-1">Nom du document</label>
+          <input id="upload-doc-name" type="text" placeholder="Nom du document..." value={docName} onChange={e => setDocName(e.target.value)}
             className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px] mb-3" />
 
           <div className="mb-3">
-            <label className="block text-[11px] font-medium text-gray-400 uppercase tracking-wide mb-1">Date d'expiration (optionnel)</label>
-            <DatePickerField value={expiryDate} onChange={setExpiryDate}
+            <label htmlFor="upload-doc-expiry" className="block text-[11px] font-medium text-gray-400 uppercase tracking-wide mb-1">Date d'expiration (optionnel)</label>
+            <DatePickerField id="upload-doc-expiry" value={expiryDate} onChange={setExpiryDate}
               className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px]" aria-label="Date d'expiration" />
           </div>
 
@@ -699,7 +708,7 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
 
           {uploadError && <p className="text-[12px] text-red-500 mb-3">{uploadError}</p>}
 
-          <button onClick={handleUpload} disabled={!file || !docName || !uploadCat || !uploadSub || isPending}
+          <button type="button" onClick={handleUpload} disabled={!file || !docName || !uploadCat || !uploadSub || isPending}
             className="w-full py-4 rounded-2xl bg-[#111111] text-white text-[14px] font-medium disabled:opacity-40 active:scale-[.97]">
             {isPending ? 'Enregistrement...' : 'Enregistrer'}
           </button>
@@ -718,8 +727,8 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
           )}
 
           <div className="mb-3">
-            <label className="block text-[11px] font-medium text-gray-400 uppercase tracking-wide mb-1">Nouvelle date d&apos;expiration (optionnel)</label>
-            <DatePickerField value={replaceExpiry} onChange={setReplaceExpiry}
+            <label htmlFor="replace-doc-expiry" className="block text-[11px] font-medium text-gray-400 uppercase tracking-wide mb-1">Nouvelle date d&apos;expiration (optionnel)</label>
+            <DatePickerField id="replace-doc-expiry" value={replaceExpiry} onChange={setReplaceExpiry}
               className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px]" aria-label="Nouvelle date d'expiration" />
           </div>
 
@@ -734,7 +743,7 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
 
           {replaceError && <p className="text-[12px] text-red-500 mb-3">{replaceError}</p>}
 
-          <button onClick={handleReplace} disabled={!replaceFile || isPending}
+          <button type="button" onClick={handleReplace} disabled={!replaceFile || isPending}
             className="w-full py-4 rounded-2xl bg-[#111111] text-white text-[14px] font-medium disabled:opacity-40 active:scale-[.97]">
             {isPending ? 'Remplacement...' : 'Créer la nouvelle version'}
           </button>
@@ -751,11 +760,11 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
             <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-gray-100 flex-shrink-0">
               <span className="text-[13px] font-bold text-[#111111] truncate">{displayDocName(viewDoc)}</span>
               <div className="flex items-center gap-1 flex-shrink-0">
-                <button onClick={() => handleShare(viewDoc)} disabled={sharingId === viewDoc.id}
+                <button type="button" onClick={() => handleShare(viewDoc)} disabled={sharingId === viewDoc.id}
                   className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 disabled:opacity-40 text-gray-500" title="Partager">
                   <Share2 className="w-[18px] h-[18px]" />
                 </button>
-                <button onClick={() => setViewDoc(null)} aria-label="Fermer la prévisualisation"
+                <button type="button" onClick={() => setViewDoc(null)} aria-label="Fermer la prévisualisation"
                   className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500" title="Fermer">
                   <X className="w-5 h-5" />
                 </button>
@@ -769,7 +778,13 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
                 // n'affichait que la page 1 sur iOS/WebKit.
                 <PdfPages url={urlFor(viewDoc)} />
               ) : (
-                <iframe src={urlFor(viewDoc)} title={viewDoc.name} className="w-full h-full border-0" />
+                // Dernier recours : ni image ni PDF. Le document vient du stockage
+                // et son contenu n'est pas maîtrisé (un fichier HTML déposé dans le
+                // tiroir s'exécuterait ici). `sandbox` le prive de tout : pas de
+                // script, et surtout pas de renvoi de l'application entière vers une
+                // autre adresse. `allow-downloads` reste, sinon un document que le
+                // navigateur ne sait pas afficher ne pourrait plus être récupéré.
+                <iframe src={urlFor(viewDoc)} title={viewDoc.name} sandbox="allow-downloads" className="w-full h-full border-0" />
               )}
             </div>
           </div>

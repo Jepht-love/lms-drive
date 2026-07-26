@@ -69,7 +69,7 @@ export default function PaymentCountdown({ reservationId, deadline }: Props) {
       {/* Barre */}
       <div className="h-2 rounded-full bg-white/20 overflow-hidden mb-3">
         <div
-          className="h-full rounded-full bg-white transition-all duration-1000"
+          className="h-full rounded-full bg-white transition-[width] duration-1000"
           style={{ width: `${pct * 100}%` }}
         />
       </div>

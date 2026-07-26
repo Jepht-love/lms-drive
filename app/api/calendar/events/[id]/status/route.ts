@@ -14,8 +14,10 @@ export async function PATCH(
   const { status } = await request.json()
   if (!status) return NextResponse.json({ error: 'status requis' }, { status: 400 })
 
-  const { data: caller } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  const { data: event } = await supabase.from('calendar_events').select('assigned_to, title').eq('id', id).single()
+  const [{ data: caller }, { data: event }] = await Promise.all([
+    supabase.from('profiles').select('role').eq('id', user.id).single(),
+    supabase.from('calendar_events').select('assigned_to, title').eq('id', id).single(),
+  ])
 
   const isManager = caller?.role === 'gerant' || caller?.role === 'associe'
   const isOwner = event?.assigned_to === user.id

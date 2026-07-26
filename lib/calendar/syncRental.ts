@@ -124,26 +124,27 @@ async function syncWashTask(
   const newStart = new Date(reservation.start_datetime)
   const windowStart = new Date(newStart.getTime() - QUICK_TURNAROUND_HOURS * 3_600_000)
 
-  const { data: previousRental } = await admin
-    .from('reservations')
-    .select('id, end_datetime')
-    .eq('vehicle_id', reservation.vehicle_id)
-    .neq('id', reservation.id)
-    .neq('status', 'annulee')
-    .lte('end_datetime', reservation.start_datetime)
-    .gte('end_datetime', windowStart.toISOString())
-    .order('end_datetime', { ascending: false })
-    .limit(1)
-    .maybeSingle()
-
-  // Besoin de lavage : véhicule jamais lavé ou lavé il y a plus de 2 j avant ce
-  // départ (même critère que l'alerte lavage). Uniquement pour les départs à
-  // venir (a_faire), pas les résas terminées/annulées.
-  const { data: veh } = await admin
-    .from('vehicles')
-    .select('last_wash_date')
-    .eq('id', reservation.vehicle_id)
-    .maybeSingle()
+  const [{ data: previousRental }, { data: veh }] = await Promise.all([
+    admin
+      .from('reservations')
+      .select('id, end_datetime')
+      .eq('vehicle_id', reservation.vehicle_id)
+      .neq('id', reservation.id)
+      .neq('status', 'annulee')
+      .lte('end_datetime', reservation.start_datetime)
+      .gte('end_datetime', windowStart.toISOString())
+      .order('end_datetime', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    // Besoin de lavage : véhicule jamais lavé ou lavé il y a plus de 2 j avant ce
+    // départ (même critère que l'alerte lavage). Uniquement pour les départs à
+    // venir (a_faire), pas les résas terminées/annulées.
+    admin
+      .from('vehicles')
+      .select('last_wash_date')
+      .eq('id', reservation.vehicle_id)
+      .maybeSingle(),
+  ])
   const lastWash = (veh as { last_wash_date?: string | null } | null)?.last_wash_date
   const daysSinceWash = lastWash
     ? Math.floor((newStart.getTime() - new Date(lastWash).getTime()) / 86_400_000)

@@ -111,6 +111,18 @@ function AssigneeLine({ name }: { name: string | null }) {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
+// Une réservation « à partir » (départ) = confirmée OU en option (juste créée)
+const isDepart = (s: string) => s === 'confirmee' || s === 'option'
+
+function assigneeLabel(t: {
+  assignee?: { full_name: string | null } | { full_name: string | null }[] | null
+  team?: { name: string | null } | { name: string | null }[] | null
+}) {
+  const assignee = Array.isArray(t.assignee) ? t.assignee[0] : t.assignee
+  const team = Array.isArray(t.team) ? t.team[0] : t.team
+  return assignee?.full_name ?? team?.name ?? null
+}
+
 export default async function DashboardPage() {
   const supabase   = await createClient()
   // Heure de l'agence (BUSINESS_TZ), pas l'heure serveur UTC : sinon, selon
@@ -148,15 +160,16 @@ export default async function DashboardPage() {
   const showFleet = isManager || canViewFleet === true
 
   // ── Flotte ────────────────────────────────────────────────────────────────
-  const { data: vehiclesRaw } = await supabase
-    .from('vehicles')
-    .select('id, plate, brand, model, status, insurance_expiry, ct_date, next_service_date, next_service_km, current_km')
-    .eq('is_active', true)
-
-  // Exclut les véhicules partenaires temporaires (inter-agences) des KPI flotte.
-  // Requête séparée et tolérante : avant la migration 035 (colonne is_external
-  // absente) elle renvoie une erreur silencieuse → aucun exclu, jamais de crash.
-  const { data: externalRows } = await supabase.from('vehicles').select('id').eq('is_external', true)
+  const [{ data: vehiclesRaw }, { data: externalRows }] = await Promise.all([
+    supabase
+      .from('vehicles')
+      .select('id, plate, brand, model, status, insurance_expiry, ct_date, next_service_date, next_service_km, current_km')
+      .eq('is_active', true),
+    // Exclut les véhicules partenaires temporaires (inter-agences) des KPI flotte.
+    // Requête séparée et tolérante : avant la migration 035 (colonne is_external
+    // absente) elle renvoie une erreur silencieuse → aucun exclu, jamais de crash.
+    supabase.from('vehicles').select('id').eq('is_external', true),
+  ])
   const externalIds = new Set((externalRows ?? []).map(v => v.id))
   const vehicles = (vehiclesRaw ?? []).filter(v => !externalIds.has(v.id))
 
@@ -208,10 +221,7 @@ export default async function DashboardPage() {
     .lte('start_datetime', in7Days.toISOString())
     .order('start_datetime', { ascending: true })
 
-  // Une réservation « à partir » (départ) = confirmée OU en option (juste créée)
-  const isDepart = (s: string) => s === 'confirmee' || s === 'option'
-
-  const departsAujourdhui = reservations?.filter(r =>
+  const departsAujourdhui =reservations?.filter(r =>
     isDepart(r.status) &&
     new Date(r.start_datetime) >= businessDayStart &&
     new Date(r.start_datetime) <= businessDayEnd
@@ -463,12 +473,6 @@ export default async function DashboardPage() {
     new Date(t.start_at) >= businessDayStart && new Date(t.start_at) <= businessDayEnd
   )
   const vehicleById = new Map((vehicles ?? []).map(v => [v.id, v]))
-
-  function assigneeLabel(t: typeof weekCalendarTasks[number]) {
-    const assignee = Array.isArray(t.assignee) ? t.assignee[0] : t.assignee
-    const team = Array.isArray(t.team) ? t.team[0] : t.team
-    return assignee?.full_name ?? team?.name ?? null
-  }
 
   // La liste « Semaine » (jour par jour) est désormais rendue par le widget
   // client interactif <DashboardCalendar /> (bande de dates défilante + détail

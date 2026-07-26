@@ -171,8 +171,9 @@ function BookSlotModal({
         </div>
 
         <div>
-          <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Titre</label>
+          <label htmlFor="availability-title" className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Titre</label>
           <input
+            id="availability-title"
             autoFocus={!isEdit}
             value={title}
             onChange={e => setTitle(e.target.value)}
@@ -182,12 +183,13 @@ function BookSlotModal({
         </div>
 
         <div>
-          <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Type</label>
-          <div className="mt-1 flex flex-wrap gap-1.5">
+          <p id="avail-type-label" className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Type</p>
+          <div role="group" aria-labelledby="avail-type-label" className="mt-1 flex flex-wrap gap-1.5">
             {CREATE_TYPES.map(t => (
               <button
                 key={t}
                 type="button"
+                aria-pressed={eventType === t}
                 onClick={() => setEventType(t)}
                 className={`text-xs font-semibold px-2.5 py-1.5 rounded-lg border transition-colors ${
                   eventType === t ? 'text-white border-transparent' : 'text-gray-600 border-gray-200 bg-white'
@@ -202,14 +204,14 @@ function BookSlotModal({
 
         <div className="flex items-center gap-2">
           <div className="flex-1">
-            <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Début</label>
-            <TimePickerField value={start} onChange={setStart}
+            <label htmlFor="availabilityclient-debut" className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Début</label>
+            <TimePickerField id="availabilityclient-debut" value={start} onChange={setStart}
               className="mt-1 w-full text-sm border border-gray-200 rounded-xl px-3 py-2.5" aria-label="Heure de début" />
           </div>
           <span className="text-gray-300 mt-5">→</span>
           <div className="flex-1">
-            <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Fin</label>
-            <TimePickerField value={end} onChange={setEnd}
+            <label htmlFor="availabilityclient-fin" className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Fin</label>
+            <TimePickerField id="availabilityclient-fin" value={end} onChange={setEnd}
               className="mt-1 w-full text-sm border border-gray-200 rounded-xl px-3 py-2.5" aria-label="Heure de fin" />
           </div>
         </div>
@@ -357,7 +359,7 @@ function AvailabilityScheduler({ profiles }: { profiles: Profile[] }) {
           const isToday = isSameDay(day, today)
           return (
             <button
-              key={i}
+              key={day.toISOString()}
               type="button"
               onClick={() => setSelectedDayIdx(i)}
               className={`flex flex-col items-center py-1.5 rounded-lg transition-colors ${

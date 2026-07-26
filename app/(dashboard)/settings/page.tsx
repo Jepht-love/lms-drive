@@ -21,12 +21,11 @@ export default async function SettingsPage() {
   // Gerant only
   if (profile?.role !== 'gerant') redirect('/')
 
-  const [{ data: profiles }, { data: auditLogs }] = await Promise.all([
+  const [{ data: profiles }, { data: auditLogs }, agency] = await Promise.all([
     supabase.from('profiles').select('*').order('created_at'),
     supabase.from('audit_logs').select('*, user:profiles(full_name)').order('created_at', { ascending: false }).limit(100),
+    getAgencySettings(supabase),
   ])
-
-  const agency = await getAgencySettings(supabase)
 
   return (
     <div className="space-y-6">

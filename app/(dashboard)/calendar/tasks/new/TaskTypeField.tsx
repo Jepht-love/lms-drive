@@ -25,18 +25,18 @@ export default function TaskTypeField({ inputClassName, labelClassName }: { inpu
   return (
     <>
       <div>
-        <label className={labelClassName}>Type</label>
-        <select name="type" className={inputClassName} value={type} onChange={e => setType(e.target.value)}>
+        <label htmlFor="tasktypefield-type" className={labelClassName}>Type</label>
+        <select id="tasktypefield-type" name="type" className={inputClassName} value={type} onChange={e => setType(e.target.value)}>
           <option value="">— Sélectionner —</option>
           {TYPES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
         </select>
       </div>
 
       <div>
-        <label className={labelClassName}>
+        <label htmlFor="tasktypefield-description" className={labelClassName}>
           {type === 'autre' ? "Précisez le type de tâche *" : 'Description'}
         </label>
-        <textarea name="description" rows={3} required={type === 'autre'}
+        <textarea id="tasktypefield-description" name="description" rows={3} required={type === 'autre'}
           placeholder={type === 'autre' ? 'Quel est ce type de tâche ?' : 'Détails...'}
           className={`${inputClassName} resize-none ${type === 'autre' ? 'border-amber-200 bg-amber-50' : ''}`} />
       </div>

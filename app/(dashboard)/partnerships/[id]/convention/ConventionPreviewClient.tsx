@@ -118,7 +118,7 @@ export default function ConventionPreviewClient({ operationId, contract, operati
           <h1 className="font-bold text-gray-900 truncate">{contract.contract_number}</h1>
           <p className="text-xs text-gray-500">Convention de mise à disposition</p>
         </div>
-        <button
+        <button type="button"
           onClick={downloadPdf}
           disabled={downloading}
           className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-xl bg-gray-900 text-white hover:bg-gray-800 disabled:bg-gray-300 transition-colors"
@@ -204,8 +204,8 @@ export default function ConventionPreviewClient({ operationId, contract, operati
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
           <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-5">Conditions de la mise à disposition</h2>
           <div className="space-y-5">
-            {clauses.map((art, i) => (
-              <div key={i}>
+            {clauses.map(art => (
+              <div key={art.title}>
                 <h3 className="text-xs font-bold text-gray-800 mb-1.5">Art. {art.title}</h3>
                 <p className="text-xs text-gray-600 leading-relaxed whitespace-pre-line">{art.body}</p>
               </div>
@@ -247,7 +247,7 @@ export default function ConventionPreviewClient({ operationId, contract, operati
               </div>
             )}
 
-            <button
+            <button type="button"
               onClick={sign}
               disabled={signing || !sig}
               className="mt-5 w-full py-4 bg-green-600 hover:bg-green-700 disabled:bg-gray-200 disabled:text-gray-400 text-white font-bold rounded-xl transition-colors text-sm flex items-center justify-center gap-2"

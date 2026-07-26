@@ -11,6 +11,8 @@ import AccountingTransactions from '../../AccountingTransactions'
 
 const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre']
 
+const fmtDelta = (n: number) => `${n >= 0 ? '+' : '−'}${formatPrice(Math.abs(n))}`
+
 export default async function MonthlyClosingPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -97,7 +99,6 @@ export default async function MonthlyClosingPage() {
     .filter(d => Math.abs(d.delta) > 0.01)
     .sort((a, b) => b.delta - a.delta)
   const hasPrev = pv.length > 0
-  const fmtDelta = (n: number) => `${n >= 0 ? '+' : '−'}${formatPrice(Math.abs(n))}`
 
   return (
     <div className="space-y-4">
@@ -222,10 +223,10 @@ export default async function MonthlyClosingPage() {
       {byVeh.size > 0 && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
           <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 p-4 border-b border-gray-100">Rentabilité par véhicule</p>
-          {[...byVeh.values()].map((v, i) => {
+          {[...byVeh.values()].map(v => {
             const profit = v.revenue - v.expenses
             return (
-              <div key={i} className="flex items-center gap-3 px-4 py-3 border-b border-gray-50 last:border-0">
+              <div key={v.plate} className="flex items-center gap-3 px-4 py-3 border-b border-gray-50 last:border-0">
                 <div className="flex-1">
                   <p className="text-[13px] font-medium text-gray-900">{v.name}</p>
                   <p className="text-[11px] text-gray-400">{v.plate}</p>

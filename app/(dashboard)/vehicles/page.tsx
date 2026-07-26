@@ -132,7 +132,7 @@ export default async function VehiclesPage({
     //    lieu) → passé à « loué ». C'est ce cas qui donnait « 8 véhicules dont 6 loués
     //    mais tous marqués disponibles ».
     // Même dérivation que recomputeVehicleStatus ; idempotent : n'écrit qu'en cas d'écart.
-    const toPersist: string[] = []
+    const toPersist: { id: string; status: string }[] = []
     for (const v of allVehicles) {
       if (!['disponible', 'loue', 'reserve'].includes(v.status)) continue
       const statuses = activeStatusesByVehicle.get(v.id) ?? []
@@ -141,13 +141,13 @@ export default async function VehiclesPage({
       const next = hasOngoing ? 'loue' : hasUpcoming ? 'reserve' : 'disponible'
       if (next !== v.status) {
         v.status = next
-        toPersist.push(v.id)
+        toPersist.push({ id: v.id, status: next })
       }
     }
     if (toPersist.length > 0) {
       await Promise.all(
-        toPersist.map(id =>
-          supabase.from('vehicles').update({ status: allVehicles.find(x => x.id === id)!.status }).eq('id', id),
+        toPersist.map(({ id, status }) =>
+          supabase.from('vehicles').update({ status }).eq('id', id),
         ),
       )
     }

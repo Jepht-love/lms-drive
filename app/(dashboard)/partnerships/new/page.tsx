@@ -111,9 +111,18 @@ export default function NewOperationPage() {
             </div>
             {newClient ? (
               <div className="grid grid-cols-2 gap-3">
-                <input name="new_client_first_name" placeholder="Prénom" required className={input} />
-                <input name="new_client_last_name" placeholder="Nom" required className={input} />
-                <input name="new_client_phone" type="tel" placeholder="Téléphone" required className={`${input} col-span-2`} />
+                <div>
+                  <label className={label} htmlFor="new_client_first_name">Prénom</label>
+                  <input id="new_client_first_name" name="new_client_first_name" placeholder="Prénom" required className={input} />
+                </div>
+                <div>
+                  <label className={label} htmlFor="new_client_last_name">Nom</label>
+                  <input id="new_client_last_name" name="new_client_last_name" placeholder="Nom" required className={input} />
+                </div>
+                <div className="col-span-2">
+                  <label className={label} htmlFor="new_client_phone">Téléphone</label>
+                  <input id="new_client_phone" name="new_client_phone" type="tel" placeholder="Téléphone" required className={input} />
+                </div>
               </div>
             ) : (
               <select id="client_id" name="client_id" className={input}>
@@ -134,12 +143,12 @@ export default function NewOperationPage() {
 
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2">
-              <label className={label}>Départ</label>
-              <DateTimeField name="start_date" required className={input} />
+              <label htmlFor="page-start_date" className={label}>Départ</label>
+              <DateTimeField id="page-start_date" name="start_date" required className={input} />
             </div>
             <div className="col-span-2">
-              <label className={label}>Retour prévu</label>
-              <DateTimeField name="end_date_expected" required className={input} />
+              <label htmlFor="page-end_date_expected" className={label}>Retour prévu</label>
+              <DateTimeField id="page-end_date_expected" name="end_date_expected" required className={input} />
             </div>
             <div>
               <label className={label} htmlFor="departure_km">Km départ</label>

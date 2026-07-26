@@ -148,8 +148,8 @@ export default function DatePickerField({
 
           {/* En-têtes des jours (lundi en premier) */}
           <div className="grid grid-cols-7 mb-1">
-            {WEEKDAYS.map((d, i) => (
-              <div key={i} className="text-center text-[11px] font-medium text-gray-400 py-1">
+            {WEEKDAYS.map(d => (
+              <div key={d} className="text-center text-[11px] font-medium text-gray-400 py-1">
                 {d}
               </div>
             ))}

@@ -57,7 +57,7 @@ export default function EmailsList({ logs }: { logs: EmailLog[] }) {
         const open = openId === log.id
         return (
           <div key={log.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-            <button
+            <button type="button"
               onClick={() => setOpenId(open ? null : log.id)}
               className="w-full text-left p-4 hover:bg-gray-50 transition-colors"
             >

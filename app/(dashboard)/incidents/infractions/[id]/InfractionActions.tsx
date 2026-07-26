@@ -40,17 +40,17 @@ export default function InfractionActions({
 
   const deleteBlock = confirmDel ? (
     <div className="flex gap-2">
-      <button onClick={() => setConfirmDel(false)} disabled={pending}
+      <button type="button" onClick={() => setConfirmDel(false)} disabled={pending}
         className="flex-1 py-2.5 rounded-xl bg-white border border-gray-200 text-[13px] font-semibold text-gray-600 disabled:opacity-40">
         Annuler
       </button>
-      <button onClick={doDelete} disabled={pending}
+      <button type="button" onClick={doDelete} disabled={pending}
         className="flex-1 py-2.5 rounded-xl bg-red-600 text-white text-[13px] font-semibold disabled:opacity-40">
         {pending ? 'Suppression...' : 'Confirmer la suppression'}
       </button>
     </div>
   ) : (
-    <button onClick={() => setConfirmDel(true)}
+    <button type="button" onClick={() => setConfirmDel(true)}
       className="w-full py-2.5 rounded-xl bg-white border border-gray-200 text-[13px] font-semibold text-red-600 flex items-center justify-center gap-1.5 hover:bg-red-50 hover:border-red-100 transition-colors">
       <Trash2 className="w-4 h-4" /> Supprimer l&apos;infraction
     </button>
@@ -77,24 +77,24 @@ export default function InfractionActions({
     <div className="space-y-2">
       <div className="grid grid-cols-1 gap-2">
         {canTransmit && (
-          <button onClick={() => run(() => transmitInfractionToClient(id), 'Transmis au client ✓')} disabled={pending}
+          <button type="button" onClick={() => run(() => transmitInfractionToClient(id), 'Transmis au client ✓')} disabled={pending}
             className={`${btn} bg-blue-600 text-white hover:bg-blue-700`}>
             <Send className="w-4 h-4" /> Transmettre au client (email)
           </button>
         )}
         {canPay && (
           <div className="grid grid-cols-2 gap-2">
-            <button onClick={() => run(() => markInfractionPaid(id, 'client'), 'Réglé par le client ✓')} disabled={pending}
+            <button type="button" onClick={() => run(() => markInfractionPaid(id, 'client'), 'Réglé par le client ✓')} disabled={pending}
               className={`${btn} bg-green-600 text-white hover:bg-green-700`}>
               <CheckCircle2 className="w-4 h-4" /> Réglé (client)
             </button>
-            <button onClick={() => run(() => markInfractionPaid(id, 'agence'), 'Réglé par l\'agence ✓')} disabled={pending}
+            <button type="button" onClick={() => run(() => markInfractionPaid(id, 'agence'), 'Réglé par l\'agence ✓')} disabled={pending}
               className={`${btn} bg-green-700 text-white hover:bg-green-800`}>
               <CheckCircle2 className="w-4 h-4" /> Réglé (agence)
             </button>
           </div>
         )}
-        <button onClick={() => run(() => closeInfraction(id), 'Clôturé ✓')} disabled={pending}
+        <button type="button" onClick={() => run(() => closeInfraction(id), 'Clôturé ✓')} disabled={pending}
           className={`${btn} w-full bg-white border border-gray-200 text-gray-600 hover:bg-gray-50`}>
           <Lock className="w-4 h-4" /> Clôturer
         </button>
@@ -106,13 +106,13 @@ export default function InfractionActions({
           <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Recouvrement client</p>
 
           {rebilled ? (
-            <button onClick={() => run(() => setInfractionRebilled(id, false), 'Refacturation annulée')} disabled={pending}
+            <button type="button" onClick={() => run(() => setInfractionRebilled(id, false), 'Refacturation annulée')} disabled={pending}
               className="w-full flex items-center justify-between gap-2 py-2 px-3 rounded-xl bg-blue-50 border border-blue-100 text-[13px] font-semibold text-blue-700 disabled:opacity-40">
               <span className="inline-flex items-center gap-1.5"><Receipt className="w-4 h-4" /> Refacturée au client</span>
               <span className="text-xs text-blue-400">Annuler</span>
             </button>
           ) : (
-            <button onClick={() => run(() => setInfractionRebilled(id, true), 'Refacturée au client ✓')} disabled={pending}
+            <button type="button" onClick={() => run(() => setInfractionRebilled(id, true), 'Refacturée au client ✓')} disabled={pending}
               className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-white border border-gray-200 text-[13px] font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-40">
               <Receipt className="w-4 h-4" /> Refacturer au client
             </button>
@@ -120,7 +120,9 @@ export default function InfractionActions({
 
           <div className="flex gap-2">
             <div className="relative flex-1">
+              <label htmlFor="infraction-recovery-amount" className="sr-only">Montant récupéré (€)</label>
               <input
+                id="infraction-recovery-amount"
                 type="number" inputMode="decimal" min="0" value={recAmount}
                 onChange={e => setRecAmount(e.target.value)}
                 className="w-full py-2.5 pl-3 pr-7 rounded-xl border border-gray-200 text-sm font-semibold text-gray-900 focus:outline-none focus:border-gray-400"
@@ -128,7 +130,7 @@ export default function InfractionActions({
               />
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">€</span>
             </div>
-            <button
+            <button type="button"
               onClick={() => run(() => recordInfractionRecovery(id, parseFloat(recAmount.replace(',', '.')) || 0), 'Recouvrement enregistré ✓')}
               disabled={pending}
               className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-green-600 text-white text-[13px] font-bold hover:bg-green-700 disabled:opacity-40">

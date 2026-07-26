@@ -19,6 +19,12 @@ export default function BienvenueForm({ prenom, fullName }: { prenom: string | n
   const [confirm, setConfirm] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  // Deux états distincts : `loading` = requête en cours (toujours remis à zéro
+  // dans le `finally`, même sur rejet), `navigating` = onboarding terminé, on
+  // quitte la page. Le bouton reste en attente jusqu'à l'entrée dans l'app,
+  // sans jamais rester bloqué si le réseau lâche.
+  const [navigating, setNavigating] = useState(false)
+  const busy = loading || navigating
   const router = useRouter()
   const supabase = createClient()
 
@@ -40,21 +46,26 @@ export default function BienvenueForm({ prenom, fullName }: { prenom: string | n
     }
 
     setLoading(true)
-    const { error } = await supabase.auth.updateUser({ password })
-    if (error) {
-      setError("Impossible d'enregistrer le mot de passe. Réessayez ou demandez une nouvelle invitation.")
+    try {
+      const { error } = await supabase.auth.updateUser({ password })
+      if (error) {
+        setError("Impossible d'enregistrer le mot de passe. Réessayez ou demandez une nouvelle invitation.")
+        return
+      }
+      // Enregistre le nom visible et garantit le profil (sinon l'app boucle sur « Chargement… »).
+      const res = await completeOnboarding(nom)
+      if (res?.error) {
+        setError(res.error)
+        return
+      }
+      setNavigating(true)
+      router.push('/')
+      router.refresh()
+    } catch {
+      setError('Enregistrement impossible. Vérifiez votre connexion internet puis réessayez.')
+    } finally {
       setLoading(false)
-      return
     }
-    // Enregistre le nom visible et garantit le profil (sinon l'app boucle sur « Chargement… »).
-    const res = await completeOnboarding(nom)
-    if (res?.error) {
-      setError(res.error)
-      setLoading(false)
-      return
-    }
-    router.push('/')
-    router.refresh()
   }
 
   return (
@@ -91,7 +102,7 @@ export default function BienvenueForm({ prenom, fullName }: { prenom: string | n
               onChange={e => setNom(e.target.value)} required
               autoComplete="name"
               placeholder="Prénom Nom"
-              className="w-full px-4 py-3.5 rounded-xl text-white placeholder-white/20 text-sm transition-all outline-none"
+              className="w-full px-4 py-3.5 rounded-xl text-white placeholder-white/20 text-sm transition-colors outline-none"
               style={{ background: '#1A1A1A', border: '1px solid #2A2A2A', color: '#fff' }}
               onFocus={e => e.target.style.borderColor = '#C4A35A'}
               onBlur={e => e.target.style.borderColor = '#2A2A2A'}
@@ -107,7 +118,7 @@ export default function BienvenueForm({ prenom, fullName }: { prenom: string | n
               onChange={e => setPassword(e.target.value)} required
               minLength={8} autoComplete="new-password"
               placeholder="8 caractères minimum"
-              className="w-full px-4 py-3.5 rounded-xl text-white placeholder-white/20 text-sm transition-all outline-none"
+              className="w-full px-4 py-3.5 rounded-xl text-white placeholder-white/20 text-sm transition-colors outline-none"
               style={{ background: '#1A1A1A', border: '1px solid #2A2A2A', color: '#fff' }}
               onFocus={e => e.target.style.borderColor = '#C4A35A'}
               onBlur={e => e.target.style.borderColor = '#2A2A2A'}
@@ -123,7 +134,7 @@ export default function BienvenueForm({ prenom, fullName }: { prenom: string | n
               onChange={e => setConfirm(e.target.value)} required
               minLength={8} autoComplete="new-password"
               placeholder="••••••••"
-              className="w-full px-4 py-3.5 rounded-xl text-white placeholder-white/20 text-sm transition-all outline-none"
+              className="w-full px-4 py-3.5 rounded-xl text-white placeholder-white/20 text-sm transition-colors outline-none"
               style={{ background: '#1A1A1A', border: '1px solid #2A2A2A', color: '#fff' }}
               onFocus={e => e.target.style.borderColor = '#C4A35A'}
               onBlur={e => e.target.style.borderColor = '#2A2A2A'}
@@ -137,11 +148,11 @@ export default function BienvenueForm({ prenom, fullName }: { prenom: string | n
           )}
 
           <button
-            type="submit" disabled={loading}
-            className="w-full py-3.5 rounded-xl text-sm font-semibold tracking-wide transition-all duration-200 disabled:opacity-50 mt-2"
+            type="submit" disabled={busy}
+            className="w-full py-3.5 rounded-xl text-sm font-semibold tracking-wide transition-opacity duration-200 disabled:opacity-50 mt-2"
             style={{ background: 'linear-gradient(135deg, #C4A35A, #D4B870)', color: '#0A0A0A' }}
           >
-            {loading ? 'Enregistrement…' : 'Accéder à mon espace'}
+            {busy ? 'Enregistrement…' : 'Accéder à mon espace'}
           </button>
         </form>
       </div>

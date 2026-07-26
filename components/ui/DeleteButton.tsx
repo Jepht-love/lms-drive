@@ -20,18 +20,23 @@ export default function DeleteButton({ onConfirm, label = 'Supprimer', confirmMe
   async function handleConfirm() {
     setLoading(true)
     setErrorMsg(null)
-    const result = await onConfirm()
-    setLoading(false)
-    if (result && 'error' in result) {
-      setErrorMsg(result.error)
-    } else {
-      setOpen(false)
+    try {
+      const result = await onConfirm()
+      if (result && 'error' in result) {
+        setErrorMsg(result.error)
+      } else {
+        setOpen(false)
+      }
+    } catch {
+      setErrorMsg('Erreur réseau : la suppression n’a pas abouti. Réessayez.')
+    } finally {
+      setLoading(false)
     }
   }
 
   return (
     <>
-      <button
+      <button type="button"
         onClick={() => setOpen(true)}
         className={className ?? (variant === 'icon'
           ? 'p-2 rounded-xl text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all opacity-40 group-hover:opacity-100'
@@ -62,10 +67,10 @@ export default function DeleteButton({ onConfirm, label = 'Supprimer', confirmMe
               </div>
             )}
             <div className="flex gap-3 mt-5">
-              <button onClick={() => { setOpen(false); setErrorMsg(null) }} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50">
+              <button type="button" onClick={() => { setOpen(false); setErrorMsg(null) }} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50">
                 Annuler
               </button>
-              <button onClick={handleConfirm} disabled={loading} className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-semibold disabled:opacity-50">
+              <button type="button" onClick={handleConfirm} disabled={loading} className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-semibold disabled:opacity-50">
                 {loading ? 'Suppression…' : 'Confirmer'}
               </button>
             </div>

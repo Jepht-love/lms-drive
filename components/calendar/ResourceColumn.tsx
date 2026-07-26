@@ -33,7 +33,7 @@ export default function ResourceColumn({ resource, events, dates, onEventClick, 
   return (
     <div className="flex flex-col flex-1 border-r border-gray-100" style={{ minWidth: `${panelMinWidth}px` }}>
       <div className="h-[36px] flex items-center justify-between px-2 bg-gray-100 border-b border-gray-200 flex-shrink-0">
-        <button type="button" onClick={() => window.print()} className="text-gray-400 hover:text-gray-600">
+        <button type="button" aria-label="Imprimer" onClick={() => window.print()} className="text-gray-400 hover:text-gray-600">
           <Printer size={13} />
         </button>
         <span
@@ -42,7 +42,7 @@ export default function ResourceColumn({ resource, events, dates, onEventClick, 
         >
           {resource.full_name}
         </span>
-        <button type="button" onClick={() => onClose(resource)} className="text-gray-400 hover:text-gray-600">
+        <button type="button" aria-label="Fermer cette colonne" onClick={() => onClose(resource)} className="text-gray-400 hover:text-gray-600">
           <X size={13} />
         </button>
       </div>
@@ -86,12 +86,14 @@ export default function ResourceColumn({ resource, events, dates, onEventClick, 
                     <div key={hour} style={{ height: `${HOUR_HEIGHT_PX}px` }}>
                       <button
                         type="button"
+                        aria-label={`Créer un événement à ${hour}h`}
                         onClick={() => onSlotClick(resource, date, hour)}
                         className="w-full block"
                         style={{ height: `${HOUR_HEIGHT_PX / 2}px`, borderBottom: '1px dashed #F1F5F9' }}
                       />
                       <button
                         type="button"
+                        aria-label={`Créer un événement à ${hour}h`}
                         onClick={() => onSlotClick(resource, date, hour)}
                         className="w-full block"
                         style={{ height: `${HOUR_HEIGHT_PX / 2}px`, borderBottom: '1px solid #F1F5F9' }}

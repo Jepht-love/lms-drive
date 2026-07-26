@@ -74,14 +74,14 @@ export default function PushPermissionBanner() {
           <p className="text-xs text-white/60 mt-0.5 leading-snug">
             Recevez les alertes d'échéances, retours tardifs et départs imminents.
           </p>
-          <button
+          <button type="button"
             onClick={handleEnable}
             className="mt-2.5 text-xs font-semibold bg-white text-[#111111] rounded-lg px-3 py-1.5 hover:bg-white/90 transition-colors"
           >
             Activer
           </button>
         </div>
-        <button
+        <button type="button"
           onClick={() => setVisible(false)}
           className="shrink-0 text-white/40 hover:text-white/80 transition-colors mt-0.5"
           aria-label="Fermer"

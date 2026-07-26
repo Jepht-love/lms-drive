@@ -10,6 +10,11 @@ import VehicleFilter from '@/components/incidents/VehicleFilter'
  * Onglet « Infractions » de la page /suivi (ancienne page /incidents/infractions).
  * Réservé aux managers (le filtrage de rôle est fait en amont dans /suivi).
  */
+const pill = (active: boolean) =>
+  `px-3.5 py-2 min-h-[44px] flex items-center rounded-xl text-sm font-semibold whitespace-nowrap flex-shrink-0 transition-colors ${
+    active ? 'bg-[#111111] text-white' : 'bg-white border border-gray-100 text-gray-600 hover:bg-gray-50 shadow-sm'
+  }`
+
 export default async function InfractionsSection({
   status,
   vehicle,
@@ -32,10 +37,6 @@ export default async function InfractionsSection({
   ])
 
   const vQ = vehicle ? `&vehicle=${vehicle}` : ''
-  const pill = (active: boolean) =>
-    `px-3.5 py-2 min-h-[44px] flex items-center rounded-xl text-sm font-semibold whitespace-nowrap flex-shrink-0 transition-colors ${
-      active ? 'bg-[#111111] text-white' : 'bg-white border border-gray-100 text-gray-600 hover:bg-gray-50 shadow-sm'
-    }`
 
   return (
     <div className="space-y-4">
@@ -80,7 +81,7 @@ export default async function InfractionsSection({
             const fullyRecovered = advanced && (inf.recovered_amount ?? 0) >= totalDue && totalDue > 0
             return (
               <Link key={inf.id} href={`/incidents/infractions/${inf.id}`} className="block">
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 hover:shadow-md transition-all active:scale-[.99]">
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 hover:shadow-md transition-[box-shadow,scale] active:scale-[.99]">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">

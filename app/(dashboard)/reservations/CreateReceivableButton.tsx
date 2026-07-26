@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { HandCoins, Check, X, Loader2, Plus, Trash2 } from 'lucide-react'
 import { createReceivable } from '@/lib/actions/dueDates'
 import { formatPrice } from '@/lib/utils'
@@ -15,6 +15,9 @@ interface Props {
 }
 
 interface Echeance {
+  /** Identité de la ligne, stable tant qu'elle existe : sans elle, supprimer
+   *  une échéance ferait glisser le contenu saisi des lignes suivantes. */
+  id: number
   amount: string
   dueDate: string
 }
@@ -23,8 +26,9 @@ export default function CreateReceivableButton({ reservationId, remaining, defau
   const [open, setOpen] = useState(false)
   // Une créance peut être découpée en plusieurs échéances (paiement échelonné).
   // On démarre avec une seule ligne pré-remplie au reste dû.
+  const nextEcheanceId = useRef(1)
   const [echeances, setEcheances] = useState<Echeance[]>([
-    { amount: remaining > 0 ? String(remaining) : '', dueDate: defaultDueDate },
+    { id: 0, amount: remaining > 0 ? String(remaining) : '', dueDate: defaultDueDate },
   ])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -37,7 +41,7 @@ export default function CreateReceivableButton({ reservationId, remaining, defau
     setEcheances(prev => prev.map((e, idx) => (idx === i ? { ...e, ...patch } : e)))
   }
   function addEcheance() {
-    setEcheances(prev => [...prev, { amount: '', dueDate: defaultDueDate }])
+    setEcheances(prev => [...prev, { id: nextEcheanceId.current++, amount: '', dueDate: defaultDueDate }])
   }
   function removeEcheance(i: number) {
     setEcheances(prev => prev.filter((_, idx) => idx !== i))
@@ -51,11 +55,16 @@ export default function CreateReceivableButton({ reservationId, remaining, defau
     fd.set('echeances', JSON.stringify(
       echeances.map(e => ({ amount: Number(e.amount), due_date: e.dueDate }))
     ))
-    const res = await createReceivable(fd)
-    setLoading(false)
-    if (res?.error) { setError(res.error); return }
-    setSaved(true)
-    setTimeout(() => { setSaved(false); setOpen(false) }, 1400)
+    try {
+      const res = await createReceivable(fd)
+      if (res?.error) { setError(res.error); return }
+      setSaved(true)
+      setTimeout(() => { setSaved(false); setOpen(false) }, 1400)
+    } catch {
+      setError('Erreur réseau : la créance n’a pas été créée. Réessayez.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   // Même langage visuel que « Modifier les dates & tarif » (EditDatesPanel) :
@@ -68,7 +77,7 @@ export default function CreateReceivableButton({ reservationId, remaining, defau
 
   if (!open) {
     return (
-      <button
+      <button type="button"
         onClick={() => setOpen(true)}
         className="mt-3 w-full inline-flex items-center justify-center gap-2 h-11 rounded-xl bg-[#111111] text-white text-sm font-semibold hover:bg-black transition-colors"
       >
@@ -86,7 +95,7 @@ export default function CreateReceivableButton({ reservationId, remaining, defau
       <div className="flex items-center gap-2">
         <HandCoins className="w-4 h-4 text-white/60 flex-shrink-0" />
         <p className="text-sm font-bold text-white">Créance client</p>
-        <button
+        <button type="button"
           onClick={() => setOpen(false)}
           className="ml-auto p-1.5 rounded-lg text-white/50 hover:bg-white/10 transition-colors"
           aria-label="Fermer"
@@ -103,11 +112,14 @@ export default function CreateReceivableButton({ reservationId, remaining, defau
 
       <div className="space-y-3">
         {echeances.map((e, i) => (
-          <div key={i} className="grid grid-cols-2 gap-3">
+          <div key={e.id} className="grid grid-cols-2 gap-3">
             <div>
-              {i === 0 && <label className={labelCls}>Montant dû</label>}
+              {i === 0
+                ? <label className={labelCls} htmlFor={`echeance-amount-${i}`}>Montant dû</label>
+                : <label className="sr-only" htmlFor={`echeance-amount-${i}`}>Montant dû — échéance {i + 1}</label>}
               <div className={fieldCls}>
                 <input
+                  id={`echeance-amount-${i}`}
                   type="number" min="0" step="0.01" inputMode="decimal" placeholder="0"
                   value={e.amount} onChange={ev => updateEcheance(i, { amount: ev.target.value })}
                   className={numCls}
@@ -116,10 +128,13 @@ export default function CreateReceivableButton({ reservationId, remaining, defau
               </div>
             </div>
             <div>
-              {i === 0 && <label className={labelCls}>Échéance</label>}
+              {/* En-tête de colonne, pas un libellé de champ : chaque ligne a son propre
+                  sélecteur de date, nommé juste en dessous. */}
+              {i === 0 && <p className={labelCls}>Échéance</p>}
               <div className="flex items-center gap-1.5">
                 <div className={`${fieldCls} flex-1`}>
                   <DatePickerField
+                    aria-label={`Échéance ${i + 1}`}
                     value={e.dueDate}
                     onChange={v => updateEcheance(i, { dueDate: v })}
                     tone="dark"
@@ -127,7 +142,7 @@ export default function CreateReceivableButton({ reservationId, remaining, defau
                   />
                 </div>
                 {multi && (
-                  <button
+                  <button type="button"
                     onClick={() => removeEcheance(i)}
                     className="p-2 rounded-lg text-white/40 hover:text-red-300 hover:bg-white/10 transition-colors flex-shrink-0"
                     aria-label="Retirer cette échéance"
@@ -142,7 +157,7 @@ export default function CreateReceivableButton({ reservationId, remaining, defau
       </div>
 
       <div className="flex items-center justify-between">
-        <button
+        <button type="button"
           onClick={addEcheance}
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-300 hover:text-emerald-200 transition-colors"
         >
@@ -160,7 +175,7 @@ export default function CreateReceivableButton({ reservationId, remaining, defau
       )}
 
       <div className="flex gap-2">
-        <button
+        <button type="button"
           onClick={handleSave}
           disabled={loading || !valid || !(total > 0)}
           className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all disabled:opacity-50 ${
@@ -172,7 +187,7 @@ export default function CreateReceivableButton({ reservationId, remaining, defau
             ? multi ? 'Créances créées ✓' : 'Créance créée ✓'
             : multi ? `Créer ${echeances.length} échéances · ${formatPrice(total)}` : `Créer · ${formatPrice(total)}`}
         </button>
-        <button
+        <button type="button"
           onClick={() => setOpen(false)}
           className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium border border-white/20 text-white hover:bg-white/10 transition-colors"
         >

@@ -18,6 +18,16 @@ const PERIODS = [
   { id: 'year',         label: 'Année' },
 ]
 
+const periodPill = (active: boolean) =>
+  `px-3.5 py-2 rounded-xl text-sm font-semibold whitespace-nowrap flex-shrink-0 transition-colors ${
+    active ? 'bg-[#111111] text-white' : 'bg-white border border-gray-100 text-gray-600 hover:bg-gray-50 shadow-sm'
+  }`
+
+const typePill = (active: boolean, extra = '') =>
+  `px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
+    active ? `${extra} text-white` : 'bg-white border border-gray-100 text-gray-600 shadow-sm'
+  }`
+
 export default async function AccountingPage({
   searchParams,
 }: {
@@ -59,15 +69,6 @@ export default async function AccountingPage({
 
   const byType = type === 'recette' || type === 'depense' ? all.filter(t => t.type === type) : all
   const list = category ? byType.filter(t => t.category === category) : byType
-
-  const periodPill = (active: boolean) =>
-    `px-3.5 py-2 rounded-xl text-sm font-semibold whitespace-nowrap flex-shrink-0 transition-colors ${
-      active ? 'bg-[#111111] text-white' : 'bg-white border border-gray-100 text-gray-600 hover:bg-gray-50 shadow-sm'
-    }`
-  const typePill = (active: boolean, extra = '') =>
-    `px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
-      active ? `${extra} text-white` : 'bg-white border border-gray-100 text-gray-600 shadow-sm'
-    }`
 
   return (
     <div className="space-y-4">

@@ -81,20 +81,20 @@ export default async function NewTaskPage({
         <form action={createTask} className="space-y-4">
 
           <div>
-            <label className={label}>Titre *</label>
-            <input name="title" type="text" required placeholder="Ex : Lavage Peugeot 208..." className={input} autoFocus />
+            <label className={label} htmlFor="title">Titre *</label>
+            <input id="title" name="title" type="text" required placeholder="Ex : Lavage Peugeot 208..." className={input} autoFocus />
           </div>
 
           <TaskTypeField inputClassName={input} labelClassName={label} />
 
           <div>
-            <label className={label}>Date & heure *</label>
-            <DateTimeField name="due_datetime" required defaultValue={defaultDatetime} className={input} />
+            <label htmlFor="page-due_datetime" className={label}>Date & heure *</label>
+            <DateTimeField id="page-due_datetime" name="due_datetime" required defaultValue={defaultDatetime} className={input} />
           </div>
 
           <div>
-            <label className={label}>Véhicule concerné</label>
-            <select name="vehicle_id" className={input}>
+            <label htmlFor="page-vehicle_id" className={label}>Véhicule concerné</label>
+            <select id="page-vehicle_id" name="vehicle_id" className={input}>
               <option value="">— Aucun —</option>
               {vehicles?.map(v => (
                 <option key={v.id} value={v.id}>{v.brand} {v.model} · {v.plate}</option>
@@ -103,8 +103,8 @@ export default async function NewTaskPage({
           </div>
 
           <div>
-            <label className={label}>Assigné à</label>
-            <select name="assigned_to" className={input}>
+            <label htmlFor="page-assigned_to" className={label}>Assigné à</label>
+            <select id="page-assigned_to" name="assigned_to" className={input}>
               <option value="">— Non assigné —</option>
               {profiles?.map(p => (
                 <option key={p.id} value={p.id}>{p.full_name}</option>
@@ -113,8 +113,8 @@ export default async function NewTaskPage({
           </div>
 
           <div>
-            <label className={label}>Notes internes</label>
-            <textarea name="notes" rows={2} placeholder="Notes..." className={`${input} resize-none`} />
+            <label className={label} htmlFor="notes">Notes internes</label>
+            <textarea id="notes" name="notes" rows={2} placeholder="Notes..." className={`${input} resize-none`} />
           </div>
 
           <button type="submit" className="w-full py-3.5 bg-[#111111] text-white rounded-xl font-semibold text-sm active:scale-[.97] transition-transform">

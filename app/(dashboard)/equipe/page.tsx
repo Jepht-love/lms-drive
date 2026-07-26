@@ -14,16 +14,17 @@ export default async function EquipePage() {
 
   const isManager = myProfile?.role === 'gerant'
 
-  const { data: members } = await supabase
-    .from('profiles')
-    .select('id, full_name, role, phone, color, is_active, hire_date, is_admin')
-    .order('full_name')
-
-  const { data: taskRows } = await supabase
-    .from('tasks')
-    .select('assigned_to')
-    .in('status', ['a_faire', 'en_cours'])
-    .not('assigned_to', 'is', null)
+  const [{ data: members }, { data: taskRows }] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('id, full_name, role, phone, color, is_active, hire_date, is_admin')
+      .order('full_name'),
+    supabase
+      .from('tasks')
+      .select('assigned_to')
+      .in('status', ['a_faire', 'en_cours'])
+      .not('assigned_to', 'is', null),
+  ])
 
   const taskCount: Record<string, number> = {}
   taskRows?.forEach(t => {

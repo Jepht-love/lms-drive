@@ -25,7 +25,7 @@ export default function CloseForm({ campaignId, endDate }: { campaignId: string;
 
   if (!open) {
     return (
-      <button
+      <button type="button"
         onClick={() => setOpen(true)}
         className="w-full py-4 rounded-2xl bg-[#111111] text-white text-[14px] font-semibold active:scale-[.97]"
       >
@@ -40,28 +40,28 @@ export default function CloseForm({ campaignId, endDate }: { campaignId: string;
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className={label}>Prospects générés</label>
-          <input name="prospects_count" type="number" min="0" defaultValue="0" className={input} />
+          <label htmlFor="closeform-prospects_count" className={label}>Prospects générés</label>
+          <input id="closeform-prospects_count" name="prospects_count" type="number" min="0" defaultValue="0" className={input} />
         </div>
         <div>
-          <label className={label}>Réservations obtenues</label>
-          <input name="reservations_count" type="number" min="0" defaultValue="0" className={input} />
+          <label htmlFor="closeform-reservations_count" className={label}>Réservations obtenues</label>
+          <input id="closeform-reservations_count" name="reservations_count" type="number" min="0" defaultValue="0" className={input} />
         </div>
       </div>
 
       <div>
-        <label className={label}>CA généré (€)</label>
-        <input name="revenue_generated" type="number" step="0.01" min="0" defaultValue="0" className={input} />
+        <label htmlFor="closeform-revenue_generated" className={label}>CA généré (€)</label>
+        <input id="closeform-revenue_generated" name="revenue_generated" type="number" step="0.01" min="0" defaultValue="0" className={input} />
       </div>
 
       <div>
-        <label className={label}>Date de fin</label>
-        <DatePickerField name="end_date" defaultValue={endDate ?? ''} className={input} aria-label="Date de fin" />
+        <label htmlFor="closeform-end_date" className={label}>Date de fin</label>
+        <DatePickerField id="closeform-end_date" name="end_date" defaultValue={endDate ?? ''} className={input} aria-label="Date de fin" />
       </div>
 
       <div>
-        <label className={label}>Observations & conclusions</label>
-        <textarea name="observations" rows={3} className={`${input} resize-none`} placeholder="Bilan, enseignements, recommandations..." />
+        <label className={label} htmlFor="observations">Observations & conclusions</label>
+        <textarea id="observations" name="observations" rows={3} className={`${input} resize-none`} placeholder="Bilan, enseignements, recommandations..." />
       </div>
 
       {error && <p className="text-[12px] text-red-500">{error}</p>}

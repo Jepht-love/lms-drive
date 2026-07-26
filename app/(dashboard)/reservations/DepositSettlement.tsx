@@ -34,15 +34,20 @@ export default function DepositSettlement({ reservationId, depositAmount, deposi
   async function save() {
     setLoading(true)
     setErrorMsg(null)
-    const result = await updateDepositDeducted(reservationId, retenu)
-    setLoading(false)
-    if (result && 'error' in result && result.error) {
-      setErrorMsg(result.error)
-      return
+    try {
+      const result = await updateDepositDeducted(reservationId, retenu)
+      if (result && 'error' in result && result.error) {
+        setErrorMsg(result.error)
+        return
+      }
+      setSaved(true)
+      router.refresh()
+      setTimeout(() => setSaved(false), 2000)
+    } catch {
+      setErrorMsg('Erreur réseau : la retenue n’a pas été enregistrée. Réessayez.')
+    } finally {
+      setLoading(false)
     }
-    setSaved(true)
-    router.refresh()
-    setTimeout(() => setSaved(false), 2000)
   }
 
   return (
@@ -51,8 +56,8 @@ export default function DepositSettlement({ reservationId, depositAmount, deposi
 
       {!locked && (
         <div>
-          <label className="block text-[10px] text-gray-400 font-bold uppercase tracking-wide mb-1">Montant retenu (€)</label>
-          <input
+          <label htmlFor="depositsettlement-montant-retenu" className="block text-[10px] text-gray-400 font-bold uppercase tracking-wide mb-1">Montant retenu (€)</label>
+          <input id="depositsettlement-montant-retenu"
             type="number"
             value={amount}
             onChange={e => setAmount(e.target.value)}
@@ -78,7 +83,7 @@ export default function DepositSettlement({ reservationId, depositAmount, deposi
         <div className="px-3 py-2 rounded-xl text-sm text-red-600 bg-red-50 border border-red-100">{errorMsg}</div>
       )}
 
-      <button
+      <button type="button"
         onClick={save}
         disabled={loading}
         className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-[#111111] text-white text-sm font-semibold hover:bg-gray-800 disabled:opacity-50 transition-colors"

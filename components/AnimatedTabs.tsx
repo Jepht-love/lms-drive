@@ -15,7 +15,7 @@ export default function AnimatedTabs({ tabs, active, onChange, layoutId }: Anima
   return (
     <div className="flex gap-1 bg-gray-100 rounded-2xl p-1 mb-4">
       {tabs.map(tab => (
-        <button
+        <button type="button"
           key={tab.id}
           onClick={() => onChange(tab.id)}
           className="relative flex-1 text-[12px] font-medium py-2 rounded-xl"

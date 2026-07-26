@@ -38,7 +38,7 @@ export default function DamageComparison({ departureDamages, returnDamages }: Da
       {/* Sélecteur de vue avec indicateur de nouveaux dommages */}
       <div className="flex gap-1 bg-gray-100 rounded-2xl p-1 mb-3 overflow-x-auto">
         {(Object.keys(VIEW_LABELS) as VehicleView[]).map(view => (
-          <button
+          <button type="button"
             key={view}
             onClick={() => setSelectedView(view)}
             className={`relative flex-shrink-0 text-[12px] font-medium px-3 py-2 rounded-xl transition-colors ${

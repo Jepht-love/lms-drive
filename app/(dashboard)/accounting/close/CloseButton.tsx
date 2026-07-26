@@ -34,7 +34,7 @@ export default function CloseButton({
 
   return (
     <div className="space-y-2">
-      <button onClick={onClose} disabled={pending}
+      <button type="button" onClick={onClose} disabled={pending}
         className="w-full flex items-center justify-center gap-2 py-3.5 bg-[#111111] text-white rounded-2xl font-bold text-sm hover:bg-gray-800 transition-colors active:scale-[.99] disabled:opacity-40">
         <Lock className="w-4 h-4" /> {pending ? 'Clôture…' : labels[mode]}
       </button>

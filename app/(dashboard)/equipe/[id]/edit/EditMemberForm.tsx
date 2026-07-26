@@ -82,16 +82,17 @@ export default function EditMemberForm({ member }: { member: Member }) {
         <p className="text-[11px] font-black uppercase tracking-widest text-gray-400">Informations</p>
 
         <div>
-          <label className="text-xs font-bold text-gray-500 block mb-1.5">Nom complet *</label>
-          <input
+          <label htmlFor="editmemberform-nom-complet" className="text-xs font-bold text-gray-500 block mb-1.5">Nom complet *</label>
+          <input id="editmemberform-nom-complet"
             type="text" required value={form.full_name}
             onChange={e => set('full_name', e.target.value)}
             className="w-full bg-gray-50 rounded-xl px-4 py-3 text-sm font-semibold text-gray-900 outline-none focus:ring-2 focus:ring-black/10"
           />
         </div>
         <div>
-          <label className="text-xs font-bold text-gray-500 block mb-1.5">Téléphone</label>
+          <label htmlFor="member-phone" className="text-xs font-bold text-gray-500 block mb-1.5">Téléphone</label>
           <input
+            id="member-phone"
             type="tel" value={form.phone}
             onChange={e => set('phone', e.target.value)}
             placeholder="+33 6 00 00 00 00"
@@ -99,8 +100,8 @@ export default function EditMemberForm({ member }: { member: Member }) {
           />
         </div>
         <div>
-          <label className="text-xs font-bold text-gray-500 block mb-1.5">Date d&apos;embauche</label>
-          <DatePickerField
+          <label htmlFor="editmemberform-date-dembauche" className="text-xs font-bold text-gray-500 block mb-1.5">Date d&apos;embauche</label>
+          <DatePickerField id="editmemberform-date-dembauche"
             value={form.hire_date}
             onChange={v => set('hire_date', v)}
             className="w-full bg-gray-50 rounded-xl px-4 py-3 text-sm font-semibold text-gray-900 outline-none focus:ring-2 focus:ring-black/10"
@@ -145,6 +146,8 @@ export default function EditMemberForm({ member }: { member: Member }) {
           {COLORS.map(c => (
             <button
               key={c} type="button"
+              aria-label={`Couleur ${c}`}
+              aria-pressed={form.color === c}
               onClick={() => set('color', c)}
               className={`w-9 h-9 rounded-xl transition-transform ${form.color === c ? 'scale-110 ring-2 ring-offset-2 ring-black' : ''}`}
               style={{ backgroundColor: c }}

@@ -84,27 +84,27 @@ export default async function MemberProfilePage({
   const today    = startOfDay(now)
   const in14Days = addDays(today, 14)
 
-  // Tâches à venir (14 jours)
-  const { data: upcomingTasks } = await supabase
-    .from('tasks')
-    .select(`
-      id, title, type, status, due_datetime, reservation_id,
-      vehicles ( plate, brand, model )
-    `)
-    .eq('assigned_to', id)
-    .in('status', ['a_faire', 'en_cours'])
-    .gte('due_datetime', today.toISOString())
-    .lte('due_datetime', in14Days.toISOString())
-    .order('due_datetime')
-
-  // Compteurs globaux
-  const { count: pendingCount } = await supabase
-    .from('tasks').select('*', { count: 'exact', head: true })
-    .eq('assigned_to', id).in('status', ['a_faire', 'en_cours'])
-
-  const { count: doneCount } = await supabase
-    .from('tasks').select('*', { count: 'exact', head: true })
-    .eq('assigned_to', id).eq('status', 'termine')
+  const [{ data: upcomingTasks }, { count: pendingCount }, { count: doneCount }] = await Promise.all([
+    // Tâches à venir (14 jours)
+    supabase
+      .from('tasks')
+      .select(`
+        id, title, type, status, due_datetime, reservation_id,
+        vehicles ( plate, brand, model )
+      `)
+      .eq('assigned_to', id)
+      .in('status', ['a_faire', 'en_cours'])
+      .gte('due_datetime', today.toISOString())
+      .lte('due_datetime', in14Days.toISOString())
+      .order('due_datetime'),
+    // Compteurs globaux
+    supabase
+      .from('tasks').select('*', { count: 'exact', head: true })
+      .eq('assigned_to', id).in('status', ['a_faire', 'en_cours']),
+    supabase
+      .from('tasks').select('*', { count: 'exact', head: true })
+      .eq('assigned_to', id).eq('status', 'termine'),
+  ])
 
   // Mini calendrier semaine
   const weekStart = startOfWeek(today, { weekStartsOn: 1 })

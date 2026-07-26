@@ -78,7 +78,7 @@ export default function SortantConventionFlow({
       <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-4">Convention & états des lieux</p>
       <div className="space-y-3">
         {steps.map((step, i) => (
-          <div key={i} className="flex gap-3">
+          <div key={step.label} className="flex gap-3">
             <div className="flex flex-col items-center">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
                 step.done ? 'bg-emerald-100 text-emerald-600'

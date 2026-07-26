@@ -6,6 +6,11 @@ import { formatPrice, formatDate } from '@/lib/utils'
 import { OPERATION_STATUS } from '@/lib/partnerships'
 import { differenceInCalendarDays } from 'date-fns'
 
+const tab = (active: boolean) =>
+  `flex-1 text-sm font-semibold py-2.5 min-h-[44px] flex items-center justify-center rounded-xl transition-colors ${
+    active ? 'bg-[#111111] text-white' : 'bg-white border border-gray-100 text-gray-600 hover:bg-gray-50 shadow-sm'
+  }`
+
 export default async function PartnershipsPage({
   searchParams,
 }: {
@@ -20,11 +25,6 @@ export default async function PartnershipsPage({
     .select('*, partner_agencies(name), vehicles(plate, brand, model, daily_price)')
     .eq('direction', direction)
     .order('start_date', { ascending: false })
-
-  const tab = (active: boolean) =>
-    `flex-1 text-sm font-semibold py-2.5 min-h-[44px] flex items-center justify-center rounded-xl transition-colors ${
-      active ? 'bg-[#111111] text-white' : 'bg-white border border-gray-100 text-gray-600 hover:bg-gray-50 shadow-sm'
-    }`
 
   return (
     <div className="space-y-4">
@@ -65,7 +65,7 @@ export default async function PartnershipsPage({
             const vehicleName = v ? `${v.plate} · ${v.brand} ${v.model}` : op.external_vehicle_description || '—'
             return (
               <Link key={op.id} href={`/partnerships/${op.id}`} className="block">
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 hover:shadow-md transition-all active:scale-[.99]">
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 hover:shadow-md transition-[box-shadow,scale] active:scale-[.99]">
                   <div className="flex items-start justify-between gap-3 mb-2">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">

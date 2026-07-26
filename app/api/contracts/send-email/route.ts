@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
     // L'email (contrat + éventuelle facture) est parti : on fige maintenant l'état
     // « envoyée » de la facture (archive, échéance, audit) — jamais avant.
     if ('attachment' in invoiceResult) {
-      await markRestitutionInvoiceSent(invoiceResult.invoiceId, invoiceResult.attachment.content, user.id)
+      await markRestitutionInvoiceSent(invoiceResult.invoiceId, invoiceResult.attachment.content)
     }
 
     await supabase.from('contracts').update({ email_sent_at: new Date().toISOString() }).eq('id', contractId)

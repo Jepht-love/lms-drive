@@ -19,6 +19,10 @@ export default function ContractSigningPanel({ contract, reservation, vehicle, c
   const { show } = useToast()
   const [generating, setGenerating] = useState(false)
   const [sending, setSending] = useState(false)
+  // `sending` = requête en cours (toujours remise à zéro dans le `finally`),
+  // `navigating` = email parti, on quitte la fiche. Le bouton reste donc inerte
+  // jusqu'au changement de page, sans jamais rester bloqué sur une erreur.
+  const [navigating, setNavigating] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -28,28 +32,32 @@ export default function ContractSigningPanel({ contract, reservation, vehicle, c
     setGenerating(true)
     setError(null)
 
-    const res = await fetch('/api/contracts/generate-pdf', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contractId: contract.id }),
-    })
+    try {
+      const res = await fetch('/api/contracts/generate-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contractId: contract.id }),
+      })
 
-    if (!res.ok) {
-      const data = await res.json()
-      setError(data.error ?? 'Erreur génération PDF')
+      if (!res.ok) {
+        const data = await res.json()
+        setError(data.error ?? 'Erreur génération PDF')
+        return
+      }
+
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${contract.contract_number}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+      setMessage('PDF téléchargé !')
+    } catch {
+      setError('Génération impossible. Vérifiez votre connexion puis réessayez.')
+    } finally {
       setGenerating(false)
-      return
     }
-
-    const blob = await res.blob()
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${contract.contract_number}.pdf`
-    a.click()
-    URL.revokeObjectURL(url)
-    setMessage('PDF téléchargé !')
-    setGenerating(false)
   }
 
   async function sendEmail() {
@@ -57,21 +65,31 @@ export default function ContractSigningPanel({ contract, reservation, vehicle, c
     setSending(true)
     setError(null)
 
-    const res = await fetch('/api/contracts/send-email', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contractId: contract.id }),
-    })
+    try {
+      const res = await fetch('/api/contracts/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contractId: contract.id }),
+      })
 
-    const data = await res.json()
-    if (data.error) {
-      setError(data.error)
-      setSending(false)
-    } else {
+      // Même garde que les six autres appels à cette route : un envoi refusé se
+      // reconnaît au code de retour, pas seulement au contenu. Sans `res.ok`, une
+      // panne qui ne renvoie pas de message d'erreur passerait pour un succès et le
+      // gérant serait renvoyé à la liste en croyant l'email parti.
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || data?.error) {
+        setError(data?.error ?? "Échec de l'envoi")
+        return
+      }
       show('Email envoyé au client', 'success')
+      setNavigating(true)
       // Retour naturel à la liste des réservations. `replace` (et non `push`)
       // pour que le bouton « retour » ne rouvre pas le contrat qu'on vient d'envoyer.
       router.replace(reservation?.id ? `/reservations/${reservation.id}` : '/reservations')
+    } catch {
+      setError('Envoi impossible. Vérifiez votre connexion puis réessayez.')
+    } finally {
+      setSending(false)
     }
   }
 
@@ -148,7 +166,7 @@ export default function ContractSigningPanel({ contract, reservation, vehicle, c
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
         <h3 className="font-semibold text-gray-800 mb-4">Actions</h3>
         <div className="space-y-3">
-          <button
+          <button type="button"
             onClick={generatePDF}
             disabled={generating}
             className="w-full flex items-center justify-center gap-2 py-3 border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-xl text-sm font-medium transition-colors disabled:opacity-50"
@@ -157,13 +175,13 @@ export default function ContractSigningPanel({ contract, reservation, vehicle, c
             {generating ? 'Génération...' : 'Télécharger le PDF'}
           </button>
 
-          <button
+          <button type="button"
             onClick={sendEmail}
-            disabled={sending || !client?.email}
+            disabled={sending || navigating || !client?.email}
             className="w-full flex items-center justify-center gap-2 py-3 bg-[#111111] hover:bg-gray-800 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-xl text-sm font-medium transition-colors"
           >
             <Send className="w-4 h-4" />
-            {sending ? 'Envoi...' : `Envoyer par email${client?.email ? '' : " (pas d'email)"}`}
+            {sending || navigating ? 'Envoi...' : `Envoyer par email${client?.email ? '' : " (pas d'email)"}`}
           </button>
 
           {contract.email_sent_at && (

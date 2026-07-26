@@ -10,6 +10,12 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  // Deux états distincts : `loading` = requête en cours (toujours remis à zéro
+  // dans le `finally`, même sur rejet), `navigating` = connexion réussie, on
+  // quitte la page. Le bouton reste donc en attente jusqu'à l'arrivée sur le
+  // tableau de bord, sans jamais rester bloqué en cas d'erreur.
+  const [navigating, setNavigating] = useState(false)
+  const busy = loading || navigating
   const router = useRouter()
   const supabase = createClient()
 
@@ -25,14 +31,20 @@ export default function LoginPage() {
     e.preventDefault()
     setError(null)
     setLoading(true)
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) {
-      setError('Email ou mot de passe incorrect')
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) {
+        setError('Email ou mot de passe incorrect')
+        return
+      }
+      setNavigating(true)
+      router.push('/')
+      router.refresh()
+    } catch {
+      setError('Connexion impossible. Vérifiez votre connexion internet puis réessayez.')
+    } finally {
       setLoading(false)
-      return
     }
-    router.push('/')
-    router.refresh()
   }
 
   return (
@@ -93,7 +105,7 @@ export default function LoginPage() {
                 id="email" type="email" value={email}
                 onChange={e => setEmail(e.target.value)} required
                 placeholder="votre@email.com"
-                className="w-full px-4 py-3.5 rounded-xl text-white placeholder-white/20 text-sm transition-all outline-none"
+                className="w-full px-4 py-3.5 rounded-xl text-white placeholder-white/20 text-sm transition-colors outline-none"
                 style={{ background: '#1A1A1A', border: '1px solid #2A2A2A', color: '#fff' }}
                 onFocus={e => e.target.style.borderColor = '#C4A35A'}
                 onBlur={e => e.target.style.borderColor = '#2A2A2A'}
@@ -108,7 +120,7 @@ export default function LoginPage() {
                 id="password" type="password" value={password}
                 onChange={e => setPassword(e.target.value)} required
                 placeholder="••••••••"
-                className="w-full px-4 py-3.5 rounded-xl text-white placeholder-white/20 text-sm transition-all outline-none"
+                className="w-full px-4 py-3.5 rounded-xl text-white placeholder-white/20 text-sm transition-colors outline-none"
                 style={{ background: '#1A1A1A', border: '1px solid #2A2A2A', color: '#fff' }}
                 onFocus={e => e.target.style.borderColor = '#C4A35A'}
                 onBlur={e => e.target.style.borderColor = '#2A2A2A'}
@@ -122,11 +134,11 @@ export default function LoginPage() {
             )}
 
             <button
-              type="submit" disabled={loading}
-              className="w-full py-3.5 rounded-xl text-sm font-semibold tracking-wide transition-all duration-200 disabled:opacity-50 mt-2"
+              type="submit" disabled={busy}
+              className="w-full py-3.5 rounded-xl text-sm font-semibold tracking-wide transition-opacity duration-200 disabled:opacity-50 mt-2"
               style={{ background: 'linear-gradient(135deg, #C4A35A, #D4B870)', color: '#0A0A0A' }}
             >
-              {loading ? 'Connexion…' : 'Se connecter'}
+              {busy ? 'Connexion…' : 'Se connecter'}
             </button>
           </form>
         </div>

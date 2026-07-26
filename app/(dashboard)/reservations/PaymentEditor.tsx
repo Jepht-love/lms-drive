@@ -48,20 +48,25 @@ export default function PaymentEditor({ reservationId, totalPrice, currentStatus
     setLoading(true)
     setSaved(false)
     setErrorMsg(null)
-    const result = await updatePaymentInfo(reservationId, {
-      payment_status: status,
-      payment_method: method || null,
-      payment_amount: amount ? Number(amount) : null,
-      payment_ref: ref || null,
-      payment_date: status === 'paye' || status === 'partiel' ? new Date().toISOString() : null,
-    })
-    setLoading(false)
-    if (result?.error) {
-      setErrorMsg(result.error)
-      return
+    try {
+      const result = await updatePaymentInfo(reservationId, {
+        payment_status: status,
+        payment_method: method || null,
+        payment_amount: amount ? Number(amount) : null,
+        payment_ref: ref || null,
+        payment_date: status === 'paye' || status === 'partiel' ? new Date().toISOString() : null,
+      })
+      if (result?.error) {
+        setErrorMsg(result.error)
+        return
+      }
+      setSaved(true)
+      setTimeout(() => { setSaved(false); router.refresh() }, 1500)
+    } catch {
+      setErrorMsg('Erreur réseau : le paiement n’a pas été enregistré. Réessayez.')
+    } finally {
+      setLoading(false)
     }
-    setSaved(true)
-    setTimeout(() => { setSaved(false); router.refresh() }, 1500)
   }
 
   return (
@@ -80,7 +85,7 @@ export default function PaymentEditor({ reservationId, totalPrice, currentStatus
         <p className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-2">Statut paiement</p>
         <div className="grid grid-cols-2 gap-1.5">
           {PAYMENT_STATUSES.map(s => (
-            <button
+            <button type="button"
               key={s.value}
               onClick={() => setStatus(s.value as PaymentStatus)}
               className={`px-3 py-2 rounded-xl text-xs font-medium border transition-all flex items-center gap-1.5 ${
@@ -101,7 +106,7 @@ export default function PaymentEditor({ reservationId, totalPrice, currentStatus
         <p className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-2">Mode de paiement</p>
         <div className="grid grid-cols-4 gap-1.5">
           {PAYMENT_METHODS.map(m => (
-            <button
+            <button type="button"
               key={m.value}
               onClick={() => setMethod(m.value)}
               className={`flex flex-col items-center gap-1 py-2 px-1 rounded-xl text-xs font-medium border transition-all ${
@@ -120,8 +125,8 @@ export default function PaymentEditor({ reservationId, totalPrice, currentStatus
       {/* Montant + référence */}
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <label className="block text-xs text-gray-400 font-medium uppercase tracking-wide mb-1">Montant reçu</label>
-          <input
+          <label htmlFor="paymenteditor-montant-recu" className="block text-xs text-gray-400 font-medium uppercase tracking-wide mb-1">Montant reçu</label>
+          <input id="paymenteditor-montant-recu"
             type="number"
             value={amount}
             onChange={e => setAmount(e.target.value)}
@@ -130,8 +135,9 @@ export default function PaymentEditor({ reservationId, totalPrice, currentStatus
           />
         </div>
         <div>
-          <label className="block text-xs text-gray-400 font-medium uppercase tracking-wide mb-1">Référence</label>
+          <label htmlFor="payment-reference" className="block text-xs text-gray-400 font-medium uppercase tracking-wide mb-1">Référence</label>
           <input
+            id="payment-reference"
             type="text"
             value={ref}
             onChange={e => setRef(e.target.value)}
@@ -152,7 +158,7 @@ export default function PaymentEditor({ reservationId, totalPrice, currentStatus
       {errorMsg && (
         <div className="px-3 py-2 rounded-xl text-sm text-red-600 bg-red-50 border border-red-100">{errorMsg}</div>
       )}
-      <button
+      <button type="button"
         onClick={handleSave}
         disabled={loading}
         className={`w-full py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 ${

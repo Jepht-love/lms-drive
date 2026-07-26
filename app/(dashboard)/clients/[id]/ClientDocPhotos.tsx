@@ -53,7 +53,7 @@ export default function ClientDocPhotos({ idFrontUrl, idBackUrl, licFrontUrl, li
             </div>
           )
           return (
-            <button
+            <button type="button"
               key={doc.key}
               onClick={() => setLightbox({ url, label: doc.label })}
               className="group relative rounded-xl overflow-hidden border border-gray-200 aspect-[3/2] bg-gray-50 hover:border-blue-400 transition-colors"
@@ -88,7 +88,7 @@ export default function ClientDocPhotos({ idFrontUrl, idBackUrl, licFrontUrl, li
           >
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
               <span className="text-sm font-medium text-gray-700">{lightbox.label}</span>
-              <button
+              <button type="button" aria-label="Fermer l'aperçu"
                 onClick={() => setLightbox(null)}
                 className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
               >

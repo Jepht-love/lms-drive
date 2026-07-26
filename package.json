@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "edl:editor": "node scripts/edl-editor/generate.mjs",
-    "edl:editor:open": "node scripts/edl-editor/generate.mjs --open"
+    "edl:editor:open": "node scripts/edl-editor/generate.mjs --open",
+    "doctor": "npx react-doctor@latest"
   },
   "dependencies": {
     "@capacitor/cli": "^8.4.1",

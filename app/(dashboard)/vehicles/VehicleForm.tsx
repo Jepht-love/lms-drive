@@ -79,7 +79,9 @@ export default function VehicleForm({ action, vehicle }: VehicleFormProps) {
 
       {/* Notes */}
       <Section title="Notes internes">
+        <label htmlFor="vehicle-notes" className="sr-only">Notes internes</label>
         <textarea
+          id="vehicle-notes"
           name="notes"
           defaultValue={v?.notes ?? ''}
           rows={3}
@@ -94,7 +96,7 @@ export default function VehicleForm({ action, vehicle }: VehicleFormProps) {
         <button
           type="submit"
           disabled={pending}
-          className="px-6 py-3 bg-[#111111] hover:bg-gray-800 disabled:opacity-40 text-white font-semibold rounded-xl transition-all active:scale-[.97] text-sm"
+          className="px-6 py-3 bg-[#111111] hover:bg-gray-800 disabled:opacity-40 text-white font-semibold rounded-xl transition-[background-color,scale,opacity] active:scale-[.97] text-sm"
         >
           {pending ? 'Enregistrement...' : (vehicle ? 'Mettre à jour' : 'Créer le véhicule')}
         </button>

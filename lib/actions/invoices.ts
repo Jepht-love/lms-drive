@@ -333,7 +333,17 @@ export async function renderContractInvoiceAttachment(contractId: string): Promi
  * parti. Mêmes effets de bord que sendInvoice, sans réenvoyer d'email (l'email a
  * déjà été envoyé par la route du contrat avec la facture en pièce jointe).
  */
-export async function markRestitutionInvoiceSent(invoiceId: string, buffer: Buffer, sentBy: string) {
+export async function markRestitutionInvoiceSent(invoiceId: string, buffer: Buffer) {
+  // Action serveur exportée qui travaille avec le client ADMIN (contourne le
+  // RLS) : sans cette garde, n'importe qui pourrait figer une facture, écrire
+  // une échéance financière et un log d'audit. L'auteur (`sentBy`) est dérivé
+  // de la session et non fourni par l'appelant, pour interdire d'attribuer
+  // l'action à un autre utilisateur.
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+  const sentBy = user.id
+
   const admin = createAdminClient()
   const { data: invoice } = await admin
     .from('invoices')

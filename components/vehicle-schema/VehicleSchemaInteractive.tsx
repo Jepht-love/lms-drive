@@ -145,7 +145,7 @@ export default function VehicleSchemaInteractive({ damagedZones, onZoneClick }: 
         onClick={() => onZoneClick({ id: 'interieur', label: 'Intérieur général' })}
         onMouseEnter={() => setHovered('interieur')}
         onMouseLeave={() => setHovered(null)}
-        className="w-full flex items-center justify-between px-4 py-3 rounded-xl border-2 transition-all"
+        className="w-full flex items-center justify-between px-4 py-3 rounded-xl border-2 transition-colors"
         style={{
           backgroundColor: intHov ? '#dbeafe' : intState.fill,
           borderColor: intHov ? '#3b82f6' : intState.stroke,

@@ -10,13 +10,14 @@ export default async function DepartureInspectionPage({ params }: { params: Prom
   const { reservationId } = await params
   const supabase = await createClient()
 
-  const { data: { user } } = await supabase.auth.getUser()
-
-  const { data: reservation } = await supabase
-    .from('reservations')
-    .select('*, vehicle:vehicles(*), client:clients(first_name, last_name, phone, address)')
-    .eq('id', reservationId)
-    .single()
+  const [{ data: { user } }, { data: reservation }] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase
+      .from('reservations')
+      .select('*, vehicle:vehicles(*), client:clients(first_name, last_name, phone, address)')
+      .eq('id', reservationId)
+      .single(),
+  ])
 
   if (!reservation) notFound()
 

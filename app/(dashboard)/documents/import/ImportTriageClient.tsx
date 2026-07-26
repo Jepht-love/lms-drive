@@ -120,32 +120,40 @@ export default function ImportTriageClient({
     const uploaded: { name: string; file_url: string; file_type: string; file_size: number }[] = []
     const failed: string[] = []
 
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i]
-      const path = await uploadFileToSupabase(file, 'client/a-trier', 'documents')
-      if (path) {
-        uploaded.push({
-          name: file.name,
-          file_url: path,
-          file_type: file.type || 'application/octet-stream',
-          file_size: file.size,
-        })
-      } else {
-        failed.push(file.name)
+    // `finally` : un rejet en cours d'upload laisserait sinon la progression
+    // figée et la zone de dépôt bloquée en état « téléversement ».
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i]
+        const sent = await uploadFileToSupabase(file, 'client/a-trier', 'documents')
+        if (sent) {
+          uploaded.push({
+            name: file.name,
+            // Valeurs de ce qui est réellement stocké (une photo est réduite avant envoi).
+            file_url: sent.path,
+            file_type: sent.type,
+            file_size: sent.size,
+          })
+        } else {
+          failed.push(file.name)
+        }
+        setProgress({ done: i + 1, total: files.length })
       }
-      setProgress({ done: i + 1, total: files.length })
-    }
 
-    if (uploaded.length > 0) {
-      const res = await stageClientDocuments(uploaded)
-      if (res?.error) setUploadError(res.error)
+      if (uploaded.length > 0) {
+        const res = await stageClientDocuments(uploaded)
+        if (res?.error) setUploadError(res.error)
+      }
+      if (failed.length > 0) {
+        setUploadError(`${failed.length} fichier(s) non téléversé(s) : ${failed.slice(0, 5).join(', ')}${failed.length > 5 ? '…' : ''}`)
+      }
+      router.refresh()
+    } catch {
+      setUploadError('Le téléversement a échoué. Vérifiez votre connexion puis réessayez.')
+    } finally {
+      setUploading(false)
+      setProgress(null)
     }
-    setUploading(false)
-    setProgress(null)
-    if (failed.length > 0) {
-      setUploadError(`${failed.length} fichier(s) non téléversé(s) : ${failed.slice(0, 5).join(', ')}${failed.length > 5 ? '…' : ''}`)
-    }
-    router.refresh()
   }
 
   function toggle(id: string) {
@@ -267,7 +275,7 @@ export default function ImportTriageClient({
               À trier · {staged.length}
             </p>
             {selected.size > 0 && (
-              <button onClick={clearSelection} className="text-[12px] font-semibold text-gray-500 hover:text-gray-700">
+              <button type="button" onClick={clearSelection} className="text-[12px] font-semibold text-gray-500 hover:text-gray-700">
                 Désélectionner ({selected.size})
               </button>
             )}
@@ -284,7 +292,7 @@ export default function ImportTriageClient({
                   }`}
                 >
                   {/* Aperçu (clic = sélection) */}
-                  <button
+                  <button type="button"
                     onClick={() => toggle(d.id)}
                     className="block w-full aspect-square bg-gray-50 relative"
                   >
@@ -307,7 +315,7 @@ export default function ImportTriageClient({
                   {/* Actions : agrandir + supprimer */}
                   <div className="absolute top-1.5 right-1.5 flex flex-col gap-1">
                     {d.url && (
-                      <button
+                      <button type="button"
                         onClick={() => setLightbox(d)}
                         className="w-6 h-6 rounded-md bg-white/85 border border-gray-200 flex items-center justify-center text-gray-500 hover:text-gray-900"
                         aria-label="Agrandir"
@@ -315,7 +323,7 @@ export default function ImportTriageClient({
                         <Search className="w-3 h-3" />
                       </button>
                     )}
-                    <button
+                    <button type="button"
                       onClick={() => handleDelete(d.id)}
                       disabled={deletingId === d.id}
                       className="w-6 h-6 rounded-md bg-white/85 border border-gray-200 flex items-center justify-center text-gray-400 hover:text-red-500 disabled:opacity-50"
@@ -359,7 +367,7 @@ export default function ImportTriageClient({
                 onCreate={name => createClientAndUse(name)}
               />
             ) : (
-              <button
+              <button type="button"
                 onClick={() => setClient(null)}
                 className="w-full flex items-center justify-between px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-200"
               >
@@ -377,7 +385,7 @@ export default function ImportTriageClient({
                   { kind: 'sejour' as const, label: 'Séjour', on: !otherSub && quickSejour },
                   { kind: 'permis' as const, label: 'Permis', on: !otherSub && quickPermis },
                 ]).map(t => (
-                  <button
+                  <button type="button"
                     key={t.kind}
                     onClick={() => pickType(t.kind)}
                     className={`py-2.5 rounded-xl text-sm font-bold border transition-colors ${
@@ -391,7 +399,7 @@ export default function ImportTriageClient({
                 ))}
               </div>
 
-              <button
+              <button type="button"
                 onClick={() => setShowMoreTypes(v => !v)}
                 className={`w-full py-2 rounded-xl text-[13px] font-semibold border transition-colors ${
                   otherSub
@@ -404,6 +412,7 @@ export default function ImportTriageClient({
 
               {showMoreTypes && (
                 <select
+                  aria-label="Type de document"
                   value={otherSub ?? ''}
                   onChange={e => { setOtherSub(e.target.value || null); setQuickCni(false); setQuickSejour(false); setQuickPermis(false) }}
                   className="w-full text-[13px] font-medium text-gray-700 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 outline-none focus:border-gray-400"
@@ -417,7 +426,7 @@ export default function ImportTriageClient({
                 </select>
               )}
 
-              <button
+              <button type="button"
                 onClick={handleAssign}
                 disabled={!client || assigning || !subcategory}
                 className="w-full inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-[#111111] text-white text-sm font-bold hover:bg-black transition-colors disabled:opacity-50"
@@ -440,7 +449,7 @@ export default function ImportTriageClient({
           className="fixed inset-0 z-50 bg-black/85 flex flex-col p-4"
           onClick={() => setLightbox(null)}
         >
-          <button
+          <button type="button"
             className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/15 flex items-center justify-center text-white z-10"
             aria-label="Fermer"
           >
@@ -532,8 +541,10 @@ function ClientSearch({
 
   return (
     <div className="relative">
+      <label htmlFor="triage-client-search" className="sr-only">Rechercher un client</label>
       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
       <input
+        id="triage-client-search"
         autoFocus={autoFocus}
         type="search"
         value={q}
@@ -544,7 +555,7 @@ function ClientSearch({
       {(trimmed !== '' || filtered.length > 0) && (
         <div className="mt-1.5 max-h-52 overflow-y-auto rounded-xl border border-gray-200 divide-y divide-gray-100 bg-white">
           {filtered.map(c => (
-            <button
+            <button type="button"
               key={c.id}
               onClick={() => { onPick(c); setQ('') }}
               className="w-full text-left px-3 py-2.5 hover:bg-gray-50"
@@ -557,7 +568,7 @@ function ClientSearch({
             <p className="text-[12px] text-gray-400 px-3 py-2.5">Tapez un nom pour rechercher ou créer</p>
           )}
           {canCreate && (
-            <button
+            <button type="button"
               onClick={() => { onCreate(trimmed); setQ('') }}
               disabled={creating}
               className="w-full text-left px-3 py-2.5 bg-emerald-50 hover:bg-emerald-100 flex items-center gap-2 disabled:opacity-60"

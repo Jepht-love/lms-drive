@@ -5,6 +5,10 @@ import ClientsListSwipeable from './ClientsListSwipeable'
 import SmartSearch from '@/components/ui/SmartSearch'
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
+// Note interne : le gérant / l'équipe a saisi une note sur la fiche client.
+const hasNote = (c: { internal_notes?: string | null }) =>
+  !!c.internal_notes && c.internal_notes.trim() !== ''
+
 export default async function ClientsPage({
   searchParams,
 }: {
@@ -27,10 +31,6 @@ export default async function ClientsPage({
   if (status && !isSegment) query = query.eq('status', status)
 
   const { data: clientsRaw } = await query
-
-  // Note interne : le gérant / l'équipe a saisi une note sur la fiche client.
-  const hasNote = (c: { internal_notes?: string | null }) =>
-    !!c.internal_notes && c.internal_notes.trim() !== ''
 
   let clients = clientsRaw ?? []
   if (status === 'note_interne') clients = clients.filter(hasNote)

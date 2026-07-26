@@ -11,6 +11,27 @@ interface SignatureCanvasProps {
   existingSig?: string | null
 }
 
+const applyStyle = (ctx: CanvasRenderingContext2D) => {
+  ctx.strokeStyle = '#1e293b'
+  ctx.lineWidth = 2.5
+  ctx.lineCap = 'round'
+  ctx.lineJoin = 'round'
+}
+
+// Le contexte est mis à l'échelle du devicePixelRatio (voir resize) : on
+// dessine donc en pixels CSS, pas en pixels du buffer.
+const getPoint = (e: PointerEvent | MouseEvent | TouchEvent, canvas: HTMLCanvasElement) => {
+  const rect = canvas.getBoundingClientRect()
+  if ('touches' in e) {
+    const t = e.touches[0]
+    return { x: t.clientX - rect.left, y: t.clientY - rect.top }
+  }
+  return {
+    x: (e as MouseEvent).clientX - rect.left,
+    y: (e as MouseEvent).clientY - rect.top,
+  }
+}
+
 export default function SignatureCanvas({
   onSign,
   onClear,
@@ -22,26 +43,6 @@ export default function SignatureCanvas({
   const isDrawing = useRef(false)
   const hasDrawn = useRef(false)
 
-  const applyStyle = (ctx: CanvasRenderingContext2D) => {
-    ctx.strokeStyle = '#1e293b'
-    ctx.lineWidth = 2.5
-    ctx.lineCap = 'round'
-    ctx.lineJoin = 'round'
-  }
-
-  // Le contexte est mis à l'échelle du devicePixelRatio (voir resize) : on
-  // dessine donc en pixels CSS, pas en pixels du buffer.
-  const getPoint = (e: PointerEvent | MouseEvent | TouchEvent, canvas: HTMLCanvasElement) => {
-    const rect = canvas.getBoundingClientRect()
-    if ('touches' in e) {
-      const t = e.touches[0]
-      return { x: t.clientX - rect.left, y: t.clientY - rect.top }
-    }
-    return {
-      x: (e as MouseEvent).clientX - rect.left,
-      y: (e as MouseEvent).clientY - rect.top,
-    }
-  }
 
   // Cale le buffer du canevas sur sa taille AFFICHÉE × densité d'écran. Sans ça,
   // un buffer étroit étiré sur grand écran (ordi, iPad paysage) déforme la
@@ -131,7 +132,7 @@ export default function SignatureCanvas({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <label className="text-sm font-medium text-gray-700">{label}</label>
+        <p className="text-sm font-medium text-gray-700">{label}</p>
         <button
           type="button"
           onClick={clear}

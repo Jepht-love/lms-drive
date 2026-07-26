@@ -23,7 +23,7 @@ export default function StatusActions({ campaignId, currentStatus }: { campaignI
       {actions.length > 0 && (
         <div className="flex gap-2">
           {actions.map(a => (
-            <button
+            <button type="button"
               key={a.next}
               disabled={isPending}
               onClick={() => { startTransition(() => { void updateCampaignStatus(campaignId, a.next) }) }}
@@ -37,14 +37,14 @@ export default function StatusActions({ campaignId, currentStatus }: { campaignI
 
       {confirmDelete ? (
         <div className="flex gap-2">
-          <button
+          <button type="button"
             onClick={() => setConfirmDelete(false)}
             disabled={isPending}
             className="flex-1 py-2.5 rounded-xl bg-white border border-gray-200 text-[13px] font-semibold text-gray-700 disabled:opacity-40"
           >
             Annuler
           </button>
-          <button
+          <button type="button"
             onClick={() => startTransition(async () => { const r = await deleteCampaign(campaignId); if (!r?.error) router.push('/marketing') })}
             disabled={isPending}
             className="flex-1 py-2.5 rounded-xl bg-red-600 text-white text-[13px] font-semibold disabled:opacity-40 active:scale-[.98]"
@@ -53,7 +53,7 @@ export default function StatusActions({ campaignId, currentStatus }: { campaignI
           </button>
         </div>
       ) : (
-        <button
+        <button type="button"
           onClick={() => setConfirmDelete(true)}
           className="w-full py-2.5 rounded-xl bg-white border border-gray-200 text-[13px] font-semibold text-red-600 flex items-center justify-center gap-1.5 hover:bg-red-50 hover:border-red-100 transition-colors"
         >

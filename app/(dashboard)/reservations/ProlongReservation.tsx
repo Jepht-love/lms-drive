@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import { CalendarPlus, Check, X, Loader2, AlertTriangle, Clock, Mail } from 'lucide-react'
 import { prolongReservation } from '@/lib/actions/reservations'
-import { formatPrice, formatDateTime, calculateRentalDays, calculateRentalPrice } from '@/lib/utils'
+import { formatPrice, formatDateTime, calculateRentalDays, calculateRentalPrice, ratesFor } from '@/lib/utils'
+import type { VehicleRates } from './EditDatesPanel'
 
 interface Props {
   reservationId: string
@@ -11,7 +12,7 @@ interface Props {
   startDatetime: string
   endDatetime: string
   dailyPrice: number
-  weeklyPrice: number | null
+  vehicle: VehicleRates | null
   currentTotal: number
   kmIncludedDaily: number | null
   reservationStatus: string
@@ -25,7 +26,7 @@ export default function ProlongReservation({
   startDatetime,
   endDatetime,
   dailyPrice,
-  weeklyPrice,
+  vehicle,
   currentTotal,
   kmIncludedDaily,
   reservationStatus,
@@ -45,7 +46,9 @@ export default function ProlongReservation({
   const endMs = new Date(endDatetime).getTime()
   const newEnd = new Date(endMs + days * 24 * 3600 * 1000).toISOString()
   const totalDays = days > 0 ? calculateRentalDays(startDatetime, newEnd) : 0
-  const newTotal = totalDays > 0 ? calculateRentalPrice(price, weeklyPrice, totalDays) : 0
+  const newTotal = totalDays > 0
+    ? calculateRentalPrice(ratesFor(price, vehicle), startDatetime, totalDays)
+    : 0
   const added = newTotal - currentTotal
   const addedKm = (kmIncludedDaily ?? 0) * days
   // Garde-fou 12 h (indicatif — le serveur fait foi)
@@ -54,12 +57,17 @@ export default function ProlongReservation({
   async function handleSave() {
     setError(null)
     setLoading(true)
-    const result = await prolongReservation(reservationId, days, price)
-    setLoading(false)
-    if (result?.error) {
-      setError(result.error)
-    } else {
-      setSaved(true)
+    try {
+      const result = await prolongReservation(reservationId, days, price)
+      if (result?.error) {
+        setError(result.error)
+      } else {
+        setSaved(true)
+      }
+    } catch {
+      setError('Erreur réseau : la prolongation n’a pas été enregistrée. Réessayez.')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -85,7 +93,7 @@ export default function ProlongReservation({
 
   if (!open) {
     return (
-      <button
+      <button type="button"
         onClick={() => setOpen(true)}
         className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-white/10 hover:bg-white/20 border border-white/15 text-xs text-white font-semibold transition-colors"
       >
@@ -109,7 +117,7 @@ export default function ProlongReservation({
       <div className="flex items-center gap-2">
         <CalendarPlus className="w-4 h-4 text-white/60 flex-shrink-0" />
         <p className="text-sm font-bold text-white">Prolonger la location</p>
-        <button onClick={() => { setOpen(false); setError(null) }} className="ml-auto p-1.5 rounded-lg text-white/50 hover:bg-white/10 transition-colors" aria-label="Fermer">
+        <button type="button" onClick={() => { setOpen(false); setError(null) }} className="ml-auto p-1.5 rounded-lg text-white/50 hover:bg-white/10 transition-colors" aria-label="Fermer">
           <X className="w-4 h-4" />
         </button>
       </div>
@@ -126,16 +134,18 @@ export default function ProlongReservation({
         <>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className={labelCls}>Jours en plus</label>
+              <label className={labelCls} htmlFor="prolong-days">Jours en plus</label>
               <input
+                id="prolong-days"
                 type="number" min="1" step="1" inputMode="numeric" placeholder="1" value={daysStr}
                 onChange={e => setDaysStr(e.target.value)}
                 className={inputCls}
               />
             </div>
             <div>
-              <label className={labelCls}>Prix / jour (€)</label>
+              <label className={labelCls} htmlFor="prolong-daily-price">Prix / jour (€)</label>
               <input
+                id="prolong-daily-price"
                 type="number" min="0" step="0.01" inputMode="decimal" placeholder="0" value={priceStr}
                 onChange={e => setPriceStr(e.target.value)}
                 className={inputCls}
@@ -182,7 +192,7 @@ export default function ProlongReservation({
           </div>
           <div className="flex gap-2">
             {contractId && (
-              <button
+              <button type="button"
                 onClick={handleResend}
                 disabled={resending || resent}
                 className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all disabled:opacity-60 ${
@@ -193,7 +203,7 @@ export default function ProlongReservation({
                 {resent ? 'Contrat renvoyé ✓' : 'Renvoyer le contrat au client'}
               </button>
             )}
-            <button
+            <button type="button"
               onClick={() => { setOpen(false); setSaved(false); setResent(false); setError(null) }}
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium border border-white/20 text-white hover:bg-white/10 transition-colors"
             >
@@ -204,16 +214,16 @@ export default function ProlongReservation({
       ) : (
         <div className="flex gap-2">
           {!deadlinePassed && (
-            <button
+            <button type="button"
               onClick={handleSave}
               disabled={loading || days < 1 || price <= 0}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all disabled:opacity-50 bg-white text-[#111111] hover:bg-white/90"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-[background-color,opacity] disabled:opacity-50 bg-white text-[#111111] hover:bg-white/90"
             >
               {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
               Confirmer la prolongation
             </button>
           )}
-          <button
+          <button type="button"
             onClick={() => { setOpen(false); setError(null) }}
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium border border-white/20 text-white hover:bg-white/10 transition-colors"
           >

@@ -213,6 +213,7 @@ export default function MobileCalendar({
         <div className="flex items-center gap-0.5">
           <button
             type="button"
+            aria-label="Période précédente"
             onClick={() => handleHeaderNav(-1)}
             className="w-8 h-8 flex items-center justify-center text-gray-400"
           >
@@ -225,6 +226,7 @@ export default function MobileCalendar({
           </span>
           <button
             type="button"
+            aria-label="Période suivante"
             onClick={() => handleHeaderNav(1)}
             className="w-8 h-8 flex items-center justify-center text-gray-400"
           >
@@ -256,6 +258,7 @@ export default function MobileCalendar({
           </button>
           <button
             type="button"
+            aria-label="Nouvel événement"
             onClick={onCreateNew}
             className="w-8 h-8 bg-[#111111] rounded-full flex items-center justify-center"
           >

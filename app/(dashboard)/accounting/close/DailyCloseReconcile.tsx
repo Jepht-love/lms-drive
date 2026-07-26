@@ -7,6 +7,15 @@ import { closeDailyAccounting, reopenDailyClosing } from '@/lib/actions/accounti
 import { paymentMethodLabel } from '@/lib/accounting/categories'
 import { formatPrice } from '@/lib/utils'
 
+// Replie l'ancien bucket « non précisé » sur Carte bancaire (mode par défaut).
+const foldLegacy = (src: Record<string, number>): Record<string, number> => {
+  const out = { ...src }
+  if (out.non_precise != null) { out.carte = (out.carte ?? 0) + out.non_precise; delete out.non_precise }
+  return out
+}
+
+const parse = (s: string) => { const n = parseFloat((s || '').replace(',', '.')); return Number.isFinite(n) ? n : 0 }
+
 export default function DailyCloseReconcile({
   date, softwareByMethod, softwareRevenue, isClosed, countedByMethod, variance,
 }: {
@@ -21,12 +30,6 @@ export default function DailyCloseReconcile({
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
 
-  // Replie l'ancien bucket « non précisé » sur Carte bancaire (mode par défaut).
-  const foldLegacy = (src: Record<string, number>): Record<string, number> => {
-    const out = { ...src }
-    if (out.non_precise != null) { out.carte = (out.carte ?? 0) + out.non_precise; delete out.non_precise }
-    return out
-  }
   const software = foldLegacy(softwareByMethod)
   const counted0 = foldLegacy(countedByMethod)
 
@@ -37,7 +40,6 @@ export default function DailyCloseReconcile({
     Object.fromEntries(methods.map(m => [m, String(software[m] ?? 0)])),
   )
 
-  const parse = (s: string) => { const n = parseFloat((s || '').replace(',', '.')); return Number.isFinite(n) ? n : 0 }
   const liveCounted = methods.reduce((s, m) => s + parse(counted[m]), 0)
   const liveVariance = liveCounted - softwareRevenue
 
@@ -82,7 +84,7 @@ export default function DailyCloseReconcile({
             ? (<><CheckCircle2 className="w-4 h-4" /> Aucun écart de saisie — caisse juste</>)
             : (<><AlertTriangle className="w-4 h-4" /> Écart de saisie : {v > 0 ? '+' : ''}{formatPrice(v)} {v > 0 ? '(réel supérieur au saisi : recette à enregistrer ?)' : '(réel inférieur au saisi : sortie non comptée ?)'}</>)}
         </div>
-        <button onClick={onReopen} disabled={pending}
+        <button type="button" onClick={onReopen} disabled={pending}
           className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl text-sm font-semibold border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40">
           <Unlock className="w-4 h-4" /> {pending ? '…' : 'Rouvrir la clôture'}
         </button>
@@ -105,6 +107,7 @@ export default function DailyCloseReconcile({
                 <span className="text-xs text-gray-400 w-20 text-right">{formatPrice(software[m] ?? 0)}</span>
                 <div className="relative">
                   <input
+                    aria-label={`Montant compté — ${paymentMethodLabel(m)}`}
                     inputMode="decimal"
                     value={counted[m] ?? ''}
                     onChange={e => setCounted(c => ({ ...c, [m]: e.target.value }))}
@@ -123,7 +126,7 @@ export default function DailyCloseReconcile({
           </span>
         </div>
       </div>
-      <button onClick={onClose} disabled={pending}
+      <button type="button" onClick={onClose} disabled={pending}
         className="w-full flex items-center justify-center gap-2 py-3.5 bg-[#111111] text-white rounded-2xl font-bold text-sm hover:bg-gray-800 transition-colors active:scale-[.99] disabled:opacity-40">
         <Lock className="w-4 h-4" /> {pending ? 'Clôture…' : 'Clôturer la journée'}
       </button>

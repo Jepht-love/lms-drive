@@ -18,7 +18,9 @@ export default function SinistreActions({ id, status }: { id: string; status: st
   async function downloadPdf() {
     setPdfPending(true)
     try {
-      const res = await fetch(`/api/sinistres/${id}/pdf`)
+      // POST : la route archive le rapport dans Documents. Un GET serait
+      // déclenchable par un préchargement ou une requête forgée (CSRF).
+      const res = await fetch(`/api/sinistres/${id}/pdf`, { method: 'POST' })
       if (!res.ok) throw new Error('Erreur génération PDF')
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
@@ -50,7 +52,7 @@ export default function SinistreActions({ id, status }: { id: string; status: st
   return (
     <div className="space-y-2">
       {next ? (
-        <button onClick={() => run(() => updateAccidentStatus(id, next), 'Statut avancé ✓')} disabled={pending}
+        <button type="button" onClick={() => run(() => updateAccidentStatus(id, next), 'Statut avancé ✓')} disabled={pending}
           className={`${btn} bg-[#111111] text-white hover:bg-gray-800 w-full active:scale-[.97]`}>
           <ArrowRight className="w-4 h-4" /> Étape suivante : {SINISTRE_STATUS[next].label}
         </button>
@@ -60,23 +62,23 @@ export default function SinistreActions({ id, status }: { id: string; status: st
         </div>
       )}
 
-      <button onClick={() => run(() => addAccidentToVehicle(id), 'Ajouté au suivi entretien ✓')} disabled={pending}
+      <button type="button" onClick={() => run(() => addAccidentToVehicle(id), 'Ajouté au suivi entretien ✓')} disabled={pending}
         className={`${btn} bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 w-full`}>
         <Wrench className="w-4 h-4" /> Ajouter au suivi véhicule (réparation)
       </button>
 
-      <button onClick={downloadPdf} disabled={pdfPending}
+      <button type="button" onClick={downloadPdf} disabled={pdfPending}
         className={`${btn} bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 w-full`}>
         <FileDown className="w-4 h-4" /> {pdfPending ? 'Génération…' : 'Télécharger le rapport PDF'}
       </button>
 
       {confirmDel ? (
         <div className="flex gap-2">
-          <button onClick={() => setConfirmDel(false)} disabled={pending}
+          <button type="button" onClick={() => setConfirmDel(false)} disabled={pending}
             className="flex-1 py-2.5 rounded-xl bg-white border border-gray-200 text-[13px] font-semibold text-gray-600 disabled:opacity-40">
             Annuler
           </button>
-          <button
+          <button type="button"
             onClick={() => { setError(null); startTransition(async () => { const r = await deleteAccident(id); if (r?.error) setError(r.error); else { show('Sinistre supprimé', 'success'); router.push('/suivi?tab=sinistres') } }) }}
             disabled={pending}
             className="flex-1 py-2.5 rounded-xl bg-red-600 text-white text-[13px] font-semibold disabled:opacity-40">
@@ -84,7 +86,7 @@ export default function SinistreActions({ id, status }: { id: string; status: st
           </button>
         </div>
       ) : (
-        <button onClick={() => setConfirmDel(true)}
+        <button type="button" onClick={() => setConfirmDel(true)}
           className={`${btn} bg-white border border-gray-200 text-red-600 hover:bg-red-50 hover:border-red-100 w-full`}>
           <Trash2 className="w-4 h-4" /> Supprimer le sinistre
         </button>

@@ -31,10 +31,16 @@ export default function IncidentsClient({ incidents, vehicles }: { incidents: In
 
   async function handleCreate(formData: FormData) {
     setLoading(true); setError(null)
-    const result = await createIncident(formData)
-    if (result?.error) { setError(result.error); setLoading(false); return }
-    setShowForm(false); setLoading(false)
-    router.refresh()
+    try {
+      const result = await createIncident(formData)
+      if (result?.error) { setError(result.error); return }
+      setShowForm(false)
+      router.refresh()
+    } catch {
+      setError('Erreur réseau : l’incident n’a pas été créé. Réessayez.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   async function handleStatusChange(id: string, status: string) {
@@ -44,7 +50,7 @@ export default function IncidentsClient({ incidents, vehicles }: { incidents: In
 
   return (
     <div className="space-y-6">
-      <button
+      <button type="button"
         onClick={() => setShowForm(true)}
         className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors text-sm"
       >
@@ -70,6 +76,7 @@ export default function IncidentsClient({ incidents, vehicles }: { incidents: In
                   <p className="text-xs text-gray-400 mt-1.5">{formatDate(i.created_at)}</p>
                 </div>
                 <select
+                  aria-label="Statut de l'incident"
                   value={i.status}
                   onChange={e => handleStatusChange(i.id, e.target.value)}
                   className={`text-xs font-medium px-2.5 py-1.5 rounded-lg border-0 cursor-pointer ${STATUS_COLORS[i.status]}`}
@@ -85,15 +92,15 @@ export default function IncidentsClient({ incidents, vehicles }: { incidents: In
       <Drawer open={showForm} onClose={() => setShowForm(false)} title="Signaler un incident">
         <form action={handleCreate} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Véhicule *</label>
-            <select name="vehicle_id" required className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white">
+            <label htmlFor="incidentsclient-vehicle_id" className="block text-sm font-medium text-gray-700 mb-1.5">Véhicule *</label>
+            <select id="incidentsclient-vehicle_id" name="vehicle_id" required className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white">
               <option value="">— Choisir —</option>
               {vehicles.map(v => <option key={v.id} value={v.id}>{v.brand} {v.model} — {v.plate}</option>)}
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Description *</label>
-            <textarea name="description" required rows={4} placeholder="Décrivez l'incident..." className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm resize-none" />
+            <label htmlFor="incident-description" className="block text-sm font-medium text-gray-700 mb-1.5">Description *</label>
+            <textarea id="incident-description" name="description" required rows={4} placeholder="Décrivez l'incident..." className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm resize-none" />
           </div>
           {error && <div className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{error}</div>}
           <button type="submit" disabled={loading} className="w-full py-3 bg-[#111111] text-white rounded-xl font-semibold disabled:opacity-50 transition-colors active:scale-[.97]">

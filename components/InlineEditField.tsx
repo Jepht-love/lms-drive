@@ -24,13 +24,18 @@ export default function InlineEditField({ value, onSave, multiline, placeholder,
     if (draft === value) { setEditing(false); return }
     setSaving(true)
     setErrorMsg(null)
-    const result = await onSave(draft)
-    setSaving(false)
-    if (result && 'error' in result && result.error) {
-      setErrorMsg(result.error)
-      return
+    try {
+      const result = await onSave(draft)
+      if (result && 'error' in result && result.error) {
+        setErrorMsg(result.error)
+        return
+      }
+      setEditing(false)
+    } catch {
+      setErrorMsg('Erreur réseau : la modification n’a pas été enregistrée. Réessayez.')
+    } finally {
+      setSaving(false)
     }
-    setEditing(false)
   }
 
   if (editing) {
@@ -52,7 +57,7 @@ export default function InlineEditField({ value, onSave, multiline, placeholder,
   }
 
   return (
-    <button onClick={() => { setEditing(true); setErrorMsg(null) }} className={`text-left w-full min-h-[auto] ${displayClassName ?? 'text-[13px] text-gray-700'}`}>
+    <button type="button" onClick={() => { setEditing(true); setErrorMsg(null) }} className={`text-left w-full min-h-[auto] ${displayClassName ?? 'text-[13px] text-gray-700'}`}>
       <AnimatePresence mode="wait">
         <motion.span key={saving ? 'saving' : 'idle'} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
           {saving ? 'Enregistrement...' : value || <span className="text-gray-400">{placeholder ?? 'Cliquer pour éditer'}</span>}

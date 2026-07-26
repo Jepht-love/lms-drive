@@ -20,44 +20,63 @@ export default function ServiceWorkerRegistration() {
       return
     }
 
+    // Toutes les ressources allouées ici (1 timer + 4 écouteurs) sont libérées
+    // par le cleanup en fin d'effet. Sans lui, un remontage du composant (Fast
+    // Refresh, StrictMode, changement de groupe de routes) empile les
+    // `setInterval` et les écouteurs : plusieurs `registration.update()` en
+    // parallèle et des rechargements de page en double.
+    // Les écouteurs sont posés au niveau de l'effet — et non dans le `.then()` —
+    // pour que le cleanup puisse les retirer directement, `registration` étant
+    // simplement mémorisé dans `reg` quand l'enregistrement aboutit.
+    let cancelled = false
+    let reg: ServiceWorkerRegistration | undefined
+    let updateTimer: ReturnType<typeof setInterval> | undefined
+
     // Recharge la page dès que le nouveau SW prend le contrôle —
     // sans ça, les vieux chunks JS restent en mémoire même après l'activation.
     let reloading = false
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
+    const onControllerChange = () => {
       if (reloading) return
       reloading = true
       window.location.reload()
-    })
+    }
+
+    // iOS gèle setInterval en arrière-plan : une PWA installée reprend au
+    // lieu de recharger, donc le timer ne se relance jamais et le SW reste
+    // bloqué sur l'ancien code. On force une vérification à chaque retour au
+    // premier plan → nouveau SW détecté → skipWaiting → controllerchange →
+    // reload. C'est ce qui rend les déploiements visibles sans fermeture manuelle.
+    const checkOnFocus = () => {
+      if (document.visibilityState === 'visible') reg?.update()
+    }
+
+    const onUpdateFound = () => {
+      const newWorker = reg?.installing
+      newWorker?.addEventListener('statechange', () => {
+        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+          newWorker.postMessage({ type: 'SKIP_WAITING' })
+        }
+      })
+    }
+
+    navigator.serviceWorker.addEventListener('controllerchange', onControllerChange)
+    document.addEventListener('visibilitychange', checkOnFocus)
+    window.addEventListener('focus', checkOnFocus)
 
     navigator.serviceWorker
       .register('/sw.js', { scope: '/' })
       .then((registration) => {
-        // Vérifier une mise à jour toutes les 5 minutes (au lieu d'1h)
-        setInterval(() => registration.update(), 5 * 60 * 1000)
+        if (cancelled) return
+        reg = registration
 
-        // iOS gèle setInterval en arrière-plan : une PWA installée reprend au
-        // lieu de recharger, donc le timer ne se relance jamais et le SW reste
-        // bloqué sur l'ancien code. On force une vérification à chaque retour au
-        // premier plan → nouveau SW détecté → skipWaiting → controllerchange →
-        // reload. C'est ce qui rend les déploiements visibles sans fermeture manuelle.
-        const checkOnFocus = () => {
-          if (document.visibilityState === 'visible') registration.update()
-        }
-        document.addEventListener('visibilitychange', checkOnFocus)
-        window.addEventListener('focus', checkOnFocus)
+        // Vérifier une mise à jour toutes les 5 minutes (au lieu d'1h)
+        updateTimer = setInterval(() => registration.update(), 5 * 60 * 1000)
+
+        registration.addEventListener('updatefound', onUpdateFound)
 
         if (registration.waiting) {
           registration.waiting.postMessage({ type: 'SKIP_WAITING' })
         }
-
-        registration.addEventListener('updatefound', () => {
-          const newWorker = registration.installing
-          newWorker?.addEventListener('statechange', () => {
-            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              newWorker.postMessage({ type: 'SKIP_WAITING' })
-            }
-          })
-        })
 
         // Re-sync l'abonnement push si la permission est déjà accordée.
         // Couvre le cas où la subscription a expiré et été supprimée de la DB
@@ -94,6 +113,15 @@ export default function ServiceWorkerRegistration() {
 
       })
       .catch(() => {})
+
+    return () => {
+      cancelled = true
+      clearInterval(updateTimer)
+      navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange)
+      document.removeEventListener('visibilitychange', checkOnFocus)
+      window.removeEventListener('focus', checkOnFocus)
+      reg?.removeEventListener('updatefound', onUpdateFound)
+    }
   }, [])
 
   return null

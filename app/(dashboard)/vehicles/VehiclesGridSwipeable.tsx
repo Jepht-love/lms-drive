@@ -56,7 +56,7 @@ export default function VehiclesGridSwipeable({
 
         return (
           <AnimatedListItem key={v.id} className="h-full">
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all overflow-hidden h-full flex flex-col">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow overflow-hidden h-full flex flex-col">
               <Link href={`/vehicles/${v.id}`} className="block group active:scale-[.99] flex-1">
                 <div className="p-4">
                   <div className="flex items-start justify-between gap-2 mb-3">

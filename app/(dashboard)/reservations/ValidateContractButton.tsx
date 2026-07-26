@@ -32,13 +32,13 @@ export default function ValidateContractButton({ contractId }: { contractId: str
           </p>
         </div>
         <div className="flex gap-2">
-          <button
+          <button type="button"
             onClick={() => setStep('idle')}
             className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-gray-200 bg-white text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
           >
             <X className="w-3.5 h-3.5" /> Annuler
           </button>
-          <button
+          <button type="button"
             onClick={handleValidate}
             className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-[#111111] text-white text-sm font-semibold hover:bg-gray-800 transition-colors"
           >
@@ -51,7 +51,7 @@ export default function ValidateContractButton({ contractId }: { contractId: str
 
   return (
     <div className="space-y-2">
-      <button
+      <button type="button"
         onClick={() => setStep('confirm')}
         disabled={step === 'loading'}
         className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-semibold text-sm bg-[#111111] text-white hover:bg-gray-800 disabled:opacity-40 transition-colors shadow-sm"

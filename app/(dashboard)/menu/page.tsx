@@ -46,19 +46,20 @@ export default async function MenuPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('full_name, role, is_admin')
-    .eq('id', user.id)
-    .single()
-
-  // Permissions par onglet — colonne optionnelle : requête séparée tolérante à
-  // son absence (avant l'exécution de la migration 017, perm = null → accès complet).
-  const { data: perm } = await supabase
-    .from('profiles')
-    .select('allowed_tabs')
-    .eq('id', user.id)
-    .maybeSingle()
+  const [{ data: profile }, { data: perm }] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('full_name, role, is_admin')
+      .eq('id', user.id)
+      .single(),
+    // Permissions par onglet — colonne optionnelle : requête séparée tolérante à
+    // son absence (avant l'exécution de la migration 017, perm = null → accès complet).
+    supabase
+      .from('profiles')
+      .select('allowed_tabs')
+      .eq('id', user.id)
+      .maybeSingle(),
+  ])
 
   const isManager = profile?.role === 'gerant' || profile?.role === 'associe'
   const savAdmin = isSavAdmin(user.email)

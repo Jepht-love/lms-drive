@@ -27,7 +27,7 @@ export default function MarkReceivablePaid({ id, amount }: { id: string; amount:
 
   if (!confirm) {
     return (
-      <button
+      <button type="button"
         onClick={() => setConfirm(true)}
         className="mt-3 w-full h-10 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm font-bold hover:bg-green-100 transition-colors"
       >
@@ -38,7 +38,7 @@ export default function MarkReceivablePaid({ id, amount }: { id: string; amount:
 
   return (
     <div className="mt-3 flex gap-2">
-      <button
+      <button type="button"
         onClick={onPaid}
         disabled={pending}
         className="flex-1 inline-flex items-center justify-center gap-1.5 h-10 rounded-lg bg-green-600 text-white text-sm font-bold hover:bg-green-700 disabled:opacity-50 transition-colors"
@@ -46,7 +46,7 @@ export default function MarkReceivablePaid({ id, amount }: { id: string; amount:
         {pending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
         Confirmer {formatPrice(amount)} reçus
       </button>
-      <button
+      <button type="button"
         onClick={() => setConfirm(false)}
         disabled={pending}
         className="px-4 h-10 rounded-lg border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors"

@@ -295,7 +295,9 @@ export default function EventDrawer({ open, event, slotContext, resources, prese
           {/* Raccourcis vers les objets métier liés */}
           {links.length > 0 && (
             <div className="mb-4">
-              <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Raccourcis</label>
+              {/* Intitulé de section, pas un libellé de champ : ce bloc n'est pas
+                  une saisie mais une liste de liens. */}
+              <p className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Raccourcis</p>
               <div className="grid grid-cols-1 gap-1.5">
                 {links.map(({ href, label, Icon }) => (
                   <Link
@@ -322,8 +324,9 @@ export default function EventDrawer({ open, event, slotContext, resources, prese
             </div>
           )}
 
-          <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1">Titre</label>
+          <label htmlFor="event-title" className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1">Titre</label>
           <input
+            id="event-title"
             type="text"
             value={title}
             onChange={e => setTitle(e.target.value)}
@@ -332,10 +335,11 @@ export default function EventDrawer({ open, event, slotContext, resources, prese
             placeholder="Ex : RDV client signature contrat"
           />
 
-          <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1">Type d&apos;événement</label>
+          <label htmlFor="event-type" className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1">Type d&apos;événement</label>
           <div className="flex items-center gap-2 mb-3">
             <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: EVENT_COLORS[eventType] }} />
             <select
+              id="event-type"
               value={eventType}
               onChange={e => setEventType(e.target.value as EventType)}
               disabled={locked}
@@ -347,8 +351,11 @@ export default function EventDrawer({ open, event, slotContext, resources, prese
             </select>
           </div>
 
-          <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1">Statut</label>
-          <div className="flex flex-wrap gap-1.5 mb-3">
+          {/* Groupe de boutons, pas un champ : l'intitulé nomme le groupe via
+              aria-labelledby, et aria-pressed porte l'état sélectionné — que
+              seule la couleur signalait jusqu'ici. */}
+          <p id="event-status-label" className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1">Statut</p>
+          <div role="group" aria-labelledby="event-status-label" className="flex flex-wrap gap-1.5 mb-3">
             {Object.entries(EVENT_STATUS_LABELS).map(([key, label]) => {
               const active = key === status
               const color = STATUS_COLORS[key as EventStatus]
@@ -356,6 +363,7 @@ export default function EventDrawer({ open, event, slotContext, resources, prese
                 <button
                   key={key}
                   type="button"
+                  aria-pressed={active}
                   onClick={() => setStatus(key as EventStatus)}
                   className="h-7 px-2.5 rounded-full text-[11px] font-medium"
                   style={active
@@ -372,8 +380,9 @@ export default function EventDrawer({ open, event, slotContext, resources, prese
               a une largeur incompressible sur Safari et déborderait du drawer). */}
           <div className="space-y-2.5 mb-3">
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1">Début</label>
+              <label htmlFor="event-start" className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1">Début</label>
               <DateTimeField
+                id="event-start"
                 value={startAt}
                 onChange={setStartAt}
                 disabled={locked}
@@ -381,8 +390,9 @@ export default function EventDrawer({ open, event, slotContext, resources, prese
               />
             </div>
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1">Fin</label>
+              <label htmlFor="event-end" className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1">Fin</label>
               <DateTimeField
+                id="event-end"
                 value={endAt}
                 onChange={setEndAt}
                 disabled={locked}
@@ -391,8 +401,9 @@ export default function EventDrawer({ open, event, slotContext, resources, prese
             </div>
           </div>
 
-          <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1">Ressource assignée</label>
+          <label htmlFor="event-assignee" className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1">Ressource assignée</label>
           <select
+            id="event-assignee"
             value={assignee}
             onChange={e => setAssignee(e.target.value)}
             className="w-full border border-gray-200 rounded-lg px-3 h-9 text-[13px] mb-3"
@@ -410,10 +421,12 @@ export default function EventDrawer({ open, event, slotContext, resources, prese
             </optgroup>
           </select>
 
-          <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1">
+          {/* Intitulé du groupe de cases à cocher (chaque case a déjà son propre
+              libellé juste en dessous), donc aria-labelledby plutôt qu'un label. */}
+          <p id="event-vehicles-label" className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1">
             Véhicules liés {vehicleIds.length > 0 && `(${vehicleIds.length})`}
-          </label>
-          <div className="border border-gray-200 rounded-lg max-h-[140px] overflow-y-auto mb-3">
+          </p>
+          <div role="group" aria-labelledby="event-vehicles-label" className="border border-gray-200 rounded-lg max-h-[140px] overflow-y-auto mb-3">
             {vehicles.length === 0 && (
               <p className="text-[12px] text-gray-400 px-3 py-2">Chargement…</p>
             )}
@@ -442,8 +455,9 @@ export default function EventDrawer({ open, event, slotContext, resources, prese
             })}
           </div>
 
-          <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1">Client lié</label>
+          <label htmlFor="event-client" className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1">Client lié</label>
           <select
+            id="event-client"
             value={clientId}
             onChange={e => setClientId(e.target.value)}
             disabled={locked}
@@ -455,8 +469,9 @@ export default function EventDrawer({ open, event, slotContext, resources, prese
             ))}
           </select>
 
-          <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1">Notes</label>
+          <label htmlFor="event-notes" className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1">Notes</label>
           <textarea
+            id="event-notes"
             value={notes}
             onChange={e => setNotes(e.target.value)}
             rows={3}

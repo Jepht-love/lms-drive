@@ -67,8 +67,9 @@ export default function ResolveDamageRow({ vehicleId, flag }: { vehicleId: strin
         <div className="mt-2 space-y-2 border-t border-gray-100 pt-2">
           <div className="flex gap-2">
             <div className="flex-1">
-              <label className="block text-[10px] text-gray-400 mb-0.5">Prix payé (€)</label>
+              <label htmlFor="resolve-damage-amount" className="block text-[10px] text-gray-400 mb-0.5">Prix payé (€)</label>
               <input
+                id="resolve-damage-amount"
                 inputMode="decimal"
                 autoFocus
                 value={amount}
@@ -78,8 +79,8 @@ export default function ResolveDamageRow({ vehicleId, flag }: { vehicleId: strin
               />
             </div>
             <div className="flex-1">
-              <label className="block text-[10px] text-gray-400 mb-0.5">Date</label>
-              <DatePickerField
+              <label htmlFor="resolvedamagerow-date" className="block text-[10px] text-gray-400 mb-0.5">Date</label>
+              <DatePickerField id="resolvedamagerow-date"
                 value={date}
                 onChange={setDate}
                 className="w-full px-2.5 py-1.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
@@ -88,8 +89,9 @@ export default function ResolveDamageRow({ vehicleId, flag }: { vehicleId: strin
             </div>
           </div>
           <div>
-            <label className="block text-[10px] text-gray-400 mb-0.5">Réparation effectuée (note)</label>
+            <label htmlFor="resolve-damage-note" className="block text-[10px] text-gray-400 mb-0.5">Réparation effectuée (note)</label>
             <input
+              id="resolve-damage-note"
               value={note}
               onChange={e => setNote(e.target.value)}
               placeholder="Ex : remplacement pare-choc AV"
@@ -98,14 +100,14 @@ export default function ResolveDamageRow({ vehicleId, flag }: { vehicleId: strin
           </div>
           {err && <p className="text-xs text-red-500">{err}</p>}
           <div className="flex gap-2">
-            <button
+            <button type="button"
               onClick={() => { setOpen(false); setErr(null) }}
               disabled={pending}
               className="flex-1 py-1.5 rounded-lg text-xs font-semibold border border-gray-200 text-gray-600 disabled:opacity-40 flex items-center justify-center gap-1"
             >
               <X className="w-3.5 h-3.5" /> Annuler
             </button>
-            <button
+            <button type="button"
               onClick={submit}
               disabled={pending}
               className="flex-1 py-1.5 rounded-lg text-xs font-bold bg-green-600 text-white hover:bg-green-700 disabled:opacity-40 flex items-center justify-center gap-1"

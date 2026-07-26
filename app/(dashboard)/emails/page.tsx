@@ -13,6 +13,11 @@ const TYPE_LABELS: Record<string, string> = {
 
 const TYPES = ['contrat_location', 'contrat_restitution', 'facture_restitution', 'avis_infraction']
 
+const pill = (active: boolean) =>
+  `px-3 py-2.5 min-h-[44px] flex items-center rounded-xl text-xs font-semibold whitespace-nowrap flex-shrink-0 transition-colors ${
+    active ? 'bg-[#111111] text-white' : 'bg-white border border-gray-100 text-gray-600 hover:bg-gray-50 shadow-sm'
+  }`
+
 export default async function EmailsPage({
   searchParams,
 }: {
@@ -37,11 +42,6 @@ export default async function EmailsPage({
   const counts: Record<string, number> = {}
   const { data: allLogs } = await supabase.from('email_logs').select('type')
   for (const l of allLogs ?? []) counts[l.type] = (counts[l.type] ?? 0) + 1
-
-  const pill = (active: boolean) =>
-    `px-3 py-2.5 min-h-[44px] flex items-center rounded-xl text-xs font-semibold whitespace-nowrap flex-shrink-0 transition-colors ${
-      active ? 'bg-[#111111] text-white' : 'bg-white border border-gray-100 text-gray-600 hover:bg-gray-50 shadow-sm'
-    }`
 
   return (
     <div className="space-y-4">
