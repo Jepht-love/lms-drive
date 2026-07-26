@@ -1,6 +1,7 @@
 import {
   Document, Page, Text, View, StyleSheet, Image,
 } from '@react-pdf/renderer'
+import { fmtEuro } from './nombres'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -40,7 +41,7 @@ function fmtDate(dt?: string | null) {
 
 function fmtPrice(n?: number | null) {
   if (n == null) return '—'
-  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(n)
+  return fmtEuro(n)
 }
 
 // Clauses de mise à disposition inter-agences — mêmes termes que l'aperçu écran.

@@ -9,6 +9,10 @@ export interface SeedVehicle {
   // Granular pricing
   price_day_week: number | null
   price_day_weekend: number | null
+  /** Forfait « week-end complet » (vendredi → dimanche), confirmé par le gérant
+   *  le 26/07/2026. Coexiste avec `price_day_weekend`, le tarif journalier majoré
+   *  du week-end : lequel des deux s'applique n'est PAS encore arbitré, et le
+   *  calcul ne lit pour l'instant que le tarif journalier. */
   price_weekend_full: number | null
   price_week: number | null
   km_included_day: number
@@ -49,7 +53,7 @@ export const INITIAL_VEHICLES: SeedVehicle[] = [
     is_active: true,
   },
   {
-    plate: 'B-122-RLS',
+    plate: 'BD-122-RLS',
     brand: 'BMW',
     model: 'M135i',
     version: 'Bleu',

@@ -34,37 +34,56 @@ export default async function VehiclePage({ params }: { params: Promise<{ id: st
     .from('profiles').select('role').eq('id', user?.id ?? '').single()
   const isManager = caller?.role === 'gerant' || caller?.role === 'associe'
 
-  const { data: recentReservations } = await supabase
-    .from('reservations')
-    .select('id, reservation_number, status, start_datetime, end_datetime, client:clients(first_name, last_name)')
-    .eq('vehicle_id', id)
-    .order('start_datetime', { ascending: false })
-    .limit(5)
-
-  // ── Location en cours + réservations futures (vue rapide "et après ?") ──
-  const { data: activeReservation } = await supabase
-    .from('reservations')
-    .select('id, reservation_number, status, start_datetime, end_datetime, client:clients(first_name, last_name)')
-    .eq('vehicle_id', id)
-    .in('status', ['en_cours', 'en_retard'])
-    .limit(1)
-    .maybeSingle()
-
-  const { data: futureReservations } = await supabase
-    .from('reservations')
-    .select('id, reservation_number, start_datetime, end_datetime, client:clients(first_name, last_name)')
-    .eq('vehicle_id', id)
-    .in('status', ['confirmee', 'option'])
-    .gt('start_datetime', new Date().toISOString())
-    .order('start_datetime', { ascending: true })
-    .limit(5)
-
-  // ── État mécanique : échéances + km depuis dernier entretien ──
-  const { data: maintRecords } = await supabase
-    .from('maintenance_records')
-    .select('type, km_at_intervention, date, amount')
-    .eq('vehicle_id', id)
-    .order('date', { ascending: false })
+  // Ces six lectures sont indépendantes (toutes clefées sur `id`) : les enchaîner
+  // en série cumulait six aller-retours réseau. En parallèle, la latence de la
+  // page retombe à celle de la requête la plus lente.
+  const [
+    { data: recentReservations },
+    { data: activeReservation },
+    { data: futureReservations },
+    { data: maintRecords },
+    { count: totalRentals },
+    { count: completedRentals },
+  ] = await Promise.all([
+    supabase
+      .from('reservations')
+      .select('id, reservation_number, status, start_datetime, end_datetime, client:clients(first_name, last_name)')
+      .eq('vehicle_id', id)
+      .order('start_datetime', { ascending: false })
+      .limit(5),
+    // ── Location en cours + réservations futures (vue rapide "et après ?") ──
+    supabase
+      .from('reservations')
+      .select('id, reservation_number, status, start_datetime, end_datetime, client:clients(first_name, last_name)')
+      .eq('vehicle_id', id)
+      .in('status', ['en_cours', 'en_retard'])
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from('reservations')
+      .select('id, reservation_number, start_datetime, end_datetime, client:clients(first_name, last_name)')
+      .eq('vehicle_id', id)
+      .in('status', ['confirmee', 'option'])
+      .gt('start_datetime', new Date().toISOString())
+      .order('start_datetime', { ascending: true })
+      .limit(5),
+    // ── État mécanique : échéances + km depuis dernier entretien ──
+    supabase
+      .from('maintenance_records')
+      .select('type, km_at_intervention, date, amount')
+      .eq('vehicle_id', id)
+      .order('date', { ascending: false }),
+    // ── Historique & immobilisations ──
+    supabase
+      .from('reservations')
+      .select('id', { count: 'exact', head: true })
+      .eq('vehicle_id', id),
+    supabase
+      .from('reservations')
+      .select('id', { count: 'exact', head: true })
+      .eq('vehicle_id', id)
+      .eq('status', 'terminee'),
+  ])
 
   const needs = computeVehicleNeeds(vehicle, buildLastByType(maintRecords ?? []), new Date())
   const flags = (vehicle.maintenance_flags ?? []) as MaintenanceFlag[]
@@ -73,16 +92,6 @@ export default async function VehiclePage({ params }: { params: Promise<{ id: st
     ? vehicle.current_km - (lastKmRecord.km_at_intervention as number)
     : null
 
-  // ── Historique & immobilisations ──
-  const { count: totalRentals } = await supabase
-    .from('reservations')
-    .select('id', { count: 'exact', head: true })
-    .eq('vehicle_id', id)
-  const { count: completedRentals } = await supabase
-    .from('reservations')
-    .select('id', { count: 'exact', head: true })
-    .eq('vehicle_id', id)
-    .eq('status', 'terminee')
   const immobCount = (maintRecords ?? []).length
 
   // ── Performance commerciale (CA, occupation, rentabilité) ──
@@ -119,8 +128,14 @@ export default async function VehiclePage({ params }: { params: Promise<{ id: st
   const autresCharges = (vehicleExpenses ?? []).reduce((s, t) => s + (t.amount ?? 0), 0)
   const rentabilite   = caGenere - entretienTotal - autresCharges
 
-  // ── Incidents (infractions + sinistres) — RLS gérant/associé ──
-  const [{ data: vInfractions }, { data: vAccidents }] = await Promise.all([
+  const [
+    { data: vInfractions },
+    { data: vAccidents },
+    { data: vDocuments },
+    { data: vInternalTrips },
+    { data: vInterAgencyOps },
+  ] = await Promise.all([
+    // ── Incidents (infractions + sinistres) — RLS gérant/associé ──
     supabase
       .from('infractions')
       .select('id, infraction_date, type, amount, status')
@@ -131,30 +146,27 @@ export default async function VehiclePage({ params }: { params: Promise<{ id: st
       .select('id, accident_date, description, status')
       .eq('vehicle_id', id)
       .order('accident_date', { ascending: false }),
+    // ── Documents administratifs rattachés au véhicule ──
+    supabase
+      .from('documents')
+      .select('id, name, subcategory, file_url, expiry_date')
+      .eq('entity_id', id)
+      .order('created_at', { ascending: false }),
+    // ── Utilisations internes + mises à disposition inter-agences (déjà en base,
+    // jamais affichées sur la fiche véhicule) ──
+    supabase
+      .from('internal_trips')
+      .select('id, purpose, start_datetime, end_datetime, user:profiles(full_name)')
+      .eq('vehicle_id', id)
+      .order('start_datetime', { ascending: false })
+      .limit(5),
+    supabase
+      .from('inter_agency_rentals')
+      .select('id, direction, status, start_date, end_date_expected, partner_agency:partner_agencies(name)')
+      .eq('vehicle_id', id)
+      .order('start_date', { ascending: false })
+      .limit(5),
   ])
-
-  // ── Documents administratifs rattachés au véhicule ──
-  const { data: vDocuments } = await supabase
-    .from('documents')
-    .select('id, name, subcategory, file_url, expiry_date')
-    .eq('entity_id', id)
-    .order('created_at', { ascending: false })
-
-  // ── Utilisations internes + mises à disposition inter-agences (déjà en base,
-  // jamais affichées sur la fiche véhicule) ──
-  const { data: vInternalTrips } = await supabase
-    .from('internal_trips')
-    .select('id, purpose, start_datetime, end_datetime, user:profiles(full_name)')
-    .eq('vehicle_id', id)
-    .order('start_datetime', { ascending: false })
-    .limit(5)
-
-  const { data: vInterAgencyOps } = await supabase
-    .from('inter_agency_rentals')
-    .select('id, direction, status, start_date, end_date_expected, partner_agency:partner_agencies(name)')
-    .eq('vehicle_id', id)
-    .order('start_date', { ascending: false })
-    .limit(5)
 
   // ── Photos de référence (bucket vehicle-photos) ──
   const photoPaths = (vehicle.reference_photos ?? []) as string[]
@@ -234,9 +246,10 @@ export default async function VehiclePage({ params }: { params: Promise<{ id: st
 
           <InfoCard title="Tarification">
             <InfoGrid items={[
-              { label: 'Prix/jour', value: formatPrice(vehicle.daily_price) },
-              { label: 'Prix/semaine', value: formatPrice(vehicle.weekly_price) },
-              { label: 'Prix weekend', value: vehicle.price_weekend_full ? formatPrice(vehicle.price_weekend_full) : undefined },
+              { label: 'Prix/jour semaine', value: formatPrice(vehicle.daily_price) },
+              { label: 'Prix/jour week-end', value: vehicle.price_day_weekend ? formatPrice(vehicle.price_day_weekend) : undefined },
+              { label: 'Forfait week-end complet', value: vehicle.price_weekend_full ? formatPrice(vehicle.price_weekend_full) : undefined },
+              { label: 'Prix/semaine (7 j)', value: formatPrice(vehicle.weekly_price) },
               { label: 'Caution', value: formatPrice(vehicle.deposit_amount) },
               { label: 'KM inclus/jour', value: vehicle.km_included_daily?.toString() },
               { label: 'KM inclus/semaine', value: vehicle.km_included_week?.toString() },
@@ -282,7 +295,7 @@ export default async function VehiclePage({ params }: { params: Promise<{ id: st
             <InfoCard title="Photos du véhicule">
               <div className="grid grid-cols-3 gap-2">
                 {photoUrls.map((url, i) => (
-                  <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="block aspect-square rounded-xl overflow-hidden bg-gray-100">
+                  <a key={url} href={url} target="_blank" rel="noopener noreferrer" className="block aspect-square rounded-xl overflow-hidden bg-gray-100">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={url} alt={`Véhicule ${i + 1}`} className="w-full h-full object-cover" />
                   </a>

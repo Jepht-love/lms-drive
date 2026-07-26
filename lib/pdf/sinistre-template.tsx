@@ -1,4 +1,5 @@
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer'
+import { fmtEuro } from './nombres'
 
 const s = StyleSheet.create({
   page:    { fontFamily: 'Helvetica', fontSize: 9, padding: 40, color: '#111111' },
@@ -22,7 +23,7 @@ const s = StyleSheet.create({
 })
 
 function fmt(amount: number): string {
-  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(amount)
+  return fmtEuro(amount)
 }
 function fmtDate(d: string | null): string {
   if (!d) return '—'

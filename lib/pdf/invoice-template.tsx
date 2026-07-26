@@ -1,6 +1,7 @@
 import { Document, Page, View, Text, Image, StyleSheet } from '@react-pdf/renderer'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
+import { fmtNombre } from './nombres'
 
 export interface InvoiceLineItem {
   description: string
@@ -101,13 +102,13 @@ export function InvoicePDF({ data }: { data: InvoiceData }) {
             <View key={i} style={s.tableRow}>
               <Text style={s.cellDesc}>{item.description}</Text>
               <Text style={s.cellQty}>{item.quantity}</Text>
-              <Text style={s.cellPrice}>{item.unit_price.toLocaleString('fr-FR')}</Text>
-              <Text style={s.cellTotal}>{item.total.toLocaleString('fr-FR')}</Text>
+              <Text style={s.cellPrice}>{fmtNombre(item.unit_price)}</Text>
+              <Text style={s.cellTotal}>{fmtNombre(item.total)}</Text>
             </View>
           ))}
           <View style={s.totalRow}>
             <Text style={s.totalLabel}>Total (€)</Text>
-            <Text style={s.totalValue}>{data.totalAmount.toLocaleString('fr-FR')} €</Text>
+            <Text style={s.totalValue}>{fmtNombre(data.totalAmount)} €</Text>
           </View>
         </View>
 

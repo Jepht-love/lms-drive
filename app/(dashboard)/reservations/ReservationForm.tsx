@@ -2,7 +2,7 @@
 
 import { useActionState, useState, useEffect } from 'react'
 import { AlertTriangle } from 'lucide-react'
-import { calculateRentalDays, calculateRentalPrice, formatPrice } from '@/lib/utils'
+import { calculateRentalDays, calculateRentalPrice, ratesFor, formatPrice } from '@/lib/utils'
 import { getMissingClientFields } from '@/lib/clients/completeness'
 import { useToast } from '@/components/Toast'
 import DateTimeField from '@/components/ui/DateTimeField'
@@ -28,6 +28,8 @@ const labelClass = 'mb-1.5 block text-[11px] font-bold uppercase tracking-wide t
 interface Vehicle {
   id: string; plate: string; brand: string; model: string
   daily_price: number | null; weekly_price: number | null
+  price_day_weekend: number | null
+  price_weekend_full: number | null
   deposit_amount: number | null; km_included_daily: number | null
   extra_km_price: number | null
 }
@@ -122,8 +124,9 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
     setEndDatetime(toDatetimeLocal(end))
   }
 
+  // Le total dépend des dates : les jours de week-end coûtent plus cher.
   const totalPrice = days > 0 && dailyPrice
-    ? calculateRentalPrice(Number(dailyPrice), selectedVehicle?.weekly_price ?? null, days)
+    ? calculateRentalPrice(ratesFor(Number(dailyPrice), selectedVehicle), startDatetime, days)
     : 0
   const discountNum = Math.max(0, Number(discount) || 0)
   const netTotal = Math.max(0, totalPrice - discountNum)

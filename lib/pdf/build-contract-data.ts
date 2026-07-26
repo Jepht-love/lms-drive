@@ -16,6 +16,25 @@ export function loadLogoDataUrl(): string | null {
   }
 }
 
+/**
+ * Logo de l'en-tête des CONTRATS uniquement.
+ * `logo.png` porte 36 % de blanc au-dessus du dessin : à hauteur imposée, le
+ * dessin visible ne fait donc que les deux tiers de la place qu'il occupe, et
+ * son bas ne peut pas se caler sur la ligne du bloc de référence en face.
+ * `logo-pdf.png` est le même dessin détouré au ras de l'encre.
+ * Les factures et la convention gardent volontairement `logo.png` : leur mise
+ * en page est calée dessus, on n'y touche pas.
+ */
+export function loadContractLogoDataUrl(): string | null {
+  for (const name of ['logo-pdf.png', 'logo.png']) {
+    try {
+      const buf = readFileSync(join(process.cwd(), 'public', name))
+      return `data:image/png;base64,${buf.toString('base64')}`
+    } catch { /* fichier absent : on tente le suivant */ }
+  }
+  return null
+}
+
 /** Cachet/tampon officiel (coordonnées + SIRET) apposé dans l'encart « Cachet & Visa ». */
 export function loadCachetDataUrl(): string | null {
   try {
@@ -110,7 +129,8 @@ export async function buildContractPdfData(
   // Avant, jusqu'à 2×8 = 16 photos étaient téléchargées une par une depuis le
   // storage (≈14 s pour générer le PDF). On lance tous les téléchargements de
   // front tout en conservant l'ordre (Promise.all préserve l'ordre du tableau).
-  const inspectionData: InspectionPDFData[] = await Promise.all(
+  const [inspectionData, [idFrontUrl, idBackUrl, licFrontUrl, licBackUrl]] = await Promise.all([
+    Promise.all(
     (rawInspections ?? []).map(async (insp): Promise<InspectionPDFData> => {
       const { data: photos } = await supabase
         .from('inspection_photos')
@@ -150,14 +170,14 @@ export async function buildContractPdfData(
         photos: [...photoUrls, ...zonePhotoUrls],
       }
     }),
-  )
-
-  // Documents d'identité du client (bucket client-docs)
-  const [idFrontUrl, idBackUrl, licFrontUrl, licBackUrl] = await Promise.all([
-    c?.id_doc_front_path  ? fetchPhotoAsDataUrl(supabase, c.id_doc_front_path,  'client-documents') : Promise.resolve(null),
-    c?.id_doc_back_path   ? fetchPhotoAsDataUrl(supabase, c.id_doc_back_path,   'client-documents') : Promise.resolve(null),
-    c?.license_front_path ? fetchPhotoAsDataUrl(supabase, c.license_front_path, 'client-documents') : Promise.resolve(null),
-    c?.license_back_path  ? fetchPhotoAsDataUrl(supabase, c.license_back_path,  'client-documents') : Promise.resolve(null),
+    ),
+    // Documents d'identité du client (bucket client-docs)
+    Promise.all([
+      c?.id_doc_front_path  ? fetchPhotoAsDataUrl(supabase, c.id_doc_front_path,  'client-documents') : Promise.resolve(null),
+      c?.id_doc_back_path   ? fetchPhotoAsDataUrl(supabase, c.id_doc_back_path,   'client-documents') : Promise.resolve(null),
+      c?.license_front_path ? fetchPhotoAsDataUrl(supabase, c.license_front_path, 'client-documents') : Promise.resolve(null),
+      c?.license_back_path  ? fetchPhotoAsDataUrl(supabase, c.license_back_path,  'client-documents') : Promise.resolve(null),
+    ]),
   ])
 
   const clientDocs = [
@@ -190,7 +210,7 @@ export async function buildContractPdfData(
   }
 
   const agency = await getAgencySettings(supabase)
-  const logoDataUrl = loadLogoDataUrl()
+  const logoDataUrl = loadContractLogoDataUrl()
   const cachetDataUrl = loadCachetDataUrl()
 
   const pdfData: ContractData = {
@@ -217,6 +237,15 @@ export async function buildContractPdfData(
     totalPrice: r?.total_price ?? 0,
     kmIncluded: r?.km_included ?? undefined,
     extraKmPrice: r?.extra_km_price ?? undefined,
+    // Barème du véhicule (informatif sur le contrat) : les 4 formules du
+    // contrat papier — journée semaine, journée week-end, week-end complet,
+    // semaine 7 jours.
+    priceDayWeek: v?.price_day_week ?? undefined,
+    priceDayWeekend: v?.price_day_weekend ?? undefined,
+    priceWeekendFull: v?.price_weekend_full ?? undefined,
+    priceWeek: v?.price_week ?? undefined,
+    kmIncludedWeekend: v?.km_included_weekend ?? undefined,
+    kmIncludedWeek: v?.km_included_week ?? undefined,
     depositAmount: r?.deposit_amount ?? undefined,
     depositMethod: r?.deposit_method ?? undefined,
     depositDeducted: r?.deposit_deducted > 0 ? r.deposit_deducted : undefined,

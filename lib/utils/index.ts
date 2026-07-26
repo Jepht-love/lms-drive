@@ -71,17 +71,120 @@ export function taskActionHref(task: { id: string; reservation_id?: string | nul
     : `/calendar/tasks/${task.id}`
 }
 
+/**
+ * Jours facturés au tarif week-end (numérotation JavaScript : dimanche = 0).
+ * 5 = vendredi, 6 = samedi, 0 = dimanche.
+ *
+ * ⚠️ C'EST LA SEULE LIGNE À MODIFIER si le gérant change la règle.
+ * Exemple pour un week-end samedi + dimanche uniquement : [6, 0]
+ */
+export const WEEKEND_DAYS: readonly number[] = [5, 6, 0]
+
+export function isWeekendDay(date: Date): boolean {
+  return WEEKEND_DAYS.includes(date.getDay())
+}
+
+export interface RentalRates {
+  /** Tarif d'un jour de semaine. */
+  daily: number
+  /** Tarif d'un jour de week-end. `null` → aucune majoration, tout au tarif `daily`. */
+  weekend?: number | null
+  /** Forfait « week-end complet » couvrant les 3 jours de `WEEKEND_DAYS`. */
+  weekendFull?: number | null
+  /** Forfait 7 jours. `null` → pas de forfait semaine. */
+  weekly?: number | null
+}
+
+/**
+ * Prix d'une location, jour par jour.
+ *
+ * Un « jour » est une tranche de 24 h depuis l'heure de départ, pas une date de
+ * calendrier (voir `calculateRentalDays`) : un départ vendredi 20 h pour un
+ * retour lundi 20 h fait 3 jours facturés — vendredi, samedi, dimanche.
+ *
+ * Trois tarifs, du plus prioritaire au moins prioritaire :
+ *
+ *  1. le **forfait 7 jours** : chaque tranche complète de 7 jours ;
+ *  2. le **forfait week-end complet** : si les jours restants forment exactement
+ *     le week-end (vendredi + samedi + dimanche), un prix unique remplace la
+ *     somme des trois journées — c'est toujours moins cher dans la grille du
+ *     gérant (M135i : 800 € au lieu de 3 × 300 = 900 €) ;
+ *  3. sinon chaque journée à son tarif propre, majoré si elle tombe un jour de
+ *     `WEEKEND_DAYS`. Un lundi reste au tarif de semaine.
+ */
 export function calculateRentalPrice(
-  dailyPrice: number,
-  weeklyPrice: number | null,
-  days: number
+  rates: RentalRates,
+  start: string | Date,
+  days: number,
 ): number {
-  if (weeklyPrice && days >= 7) {
-    const weeks = Math.floor(days / 7)
-    const remainingDays = days % 7
-    return weeks * weeklyPrice + remainingDays * dailyPrice
+  if (days <= 0) return 0
+  const { daily, weekend = null, weekendFull = null, weekly = null } = rates
+
+  // Jour de la semaine de la n-ième tranche de 24 h (0 = tranche du départ).
+  const dayOfWeek = (offset: number): Date => {
+    const d = new Date(start)
+    d.setDate(d.getDate() + offset)
+    return d
   }
-  return days * dailyPrice
+
+  const rateForDay = (offset: number): number => {
+    if (weekend == null) return daily
+    return isWeekendDay(dayOfWeek(offset)) ? weekend : daily
+  }
+
+  let total = 0
+  let firstCountedDay = 0
+
+  if (weekly && days >= 7) {
+    const weeks = Math.floor(days / 7)
+    total += weeks * weekly
+    firstCountedDay = weeks * 7
+  }
+
+  // Forfait week-end : uniquement si le reliquat est EXACTEMENT le week-end
+  // entier. La double condition (bon nombre de jours + tous en week-end) ne
+  // laisse passer qu'un départ le vendredi ; un samedi → mardi fait bien 3 jours
+  // mais inclut un lundi, donc pas de forfait.
+  const remaining = days - firstCountedDay
+  const isFullWeekend =
+    weekendFull != null &&
+    remaining === WEEKEND_DAYS.length &&
+    Array.from({ length: remaining }, (_, i) => firstCountedDay + i)
+      .every(offset => isWeekendDay(dayOfWeek(offset)))
+
+  if (isFullWeekend) {
+    total += weekendFull
+  } else {
+    for (let i = firstCountedDay; i < days; i++) total += rateForDay(i)
+  }
+
+  return Math.round(total * 100) / 100
+}
+
+/**
+ * Tarifs à appliquer à une réservation donnée.
+ *
+ * Si l'agent a saisi un prix/jour DIFFÉRENT du barème du véhicule, c'est un
+ * tarif négocié : il s'applique alors à tous les jours, week-end compris.
+ * Majorer un prix négocié reviendrait à annuler la remise consentie.
+ */
+export function ratesFor(
+  dailyPrice: number,
+  vehicle?: {
+    daily_price?: number | null
+    price_day_weekend?: number | null
+    price_weekend_full?: number | null
+    weekly_price?: number | null
+  } | null,
+): RentalRates {
+  const atBareme = vehicle?.daily_price != null
+    && Number(vehicle.daily_price) === Number(dailyPrice)
+  return {
+    daily: dailyPrice,
+    weekend: atBareme ? (vehicle?.price_day_weekend ?? null) : null,
+    weekendFull: atBareme ? (vehicle?.price_weekend_full ?? null) : null,
+    weekly: vehicle?.weekly_price ?? null,
+  }
 }
 
 /**
@@ -92,16 +195,23 @@ export function calculateRentalPrice(
  * Zéro si le total colle au barème ou le dépasse (majoration, pas une remise).
  * Fiable car en mode « prix total » daily_price reste le barème d'origine.
  */
+type DiscountVehicle = {
+  daily_price?: number | null
+  price_day_weekend?: number | null
+  price_weekend_full?: number | null
+  weekly_price?: number | null
+}
+
 export function reservationDiscount(r: {
   start_datetime: string
   end_datetime: string
   daily_price: number | null
   total_price: number | null
-  vehicle?: { weekly_price?: number | null } | { weekly_price?: number | null }[] | null
+  vehicle?: DiscountVehicle | DiscountVehicle[] | null
 }): { standard: number; discount: number; percent: number } {
   const v = Array.isArray(r.vehicle) ? r.vehicle[0] : r.vehicle
   const days = calculateRentalDays(r.start_datetime, r.end_datetime)
-  const standard = calculateRentalPrice(r.daily_price ?? 0, v?.weekly_price ?? null, days)
+  const standard = calculateRentalPrice(ratesFor(r.daily_price ?? 0, v), r.start_datetime, days)
   const raw = standard - (r.total_price ?? 0)
   const discount = raw > 0 ? Math.round(raw * 100) / 100 : 0
   const percent = standard > 0 ? Math.round((discount / standard) * 100) : 0
@@ -192,6 +302,12 @@ export function compressImageToBase64(file: File, maxSizeKB = 1500): Promise<str
     const canvas = document.createElement('canvas')
     const ctx = canvas.getContext('2d')!
     const img = new Image()
+    // L'adresse temporaire créée pour lire la photo retient le fichier ENTIER en
+    // mémoire jusqu'à ce qu'on la libère. Sans ça, un état des lieux de dix photos
+    // gardait dix fichiers de 3 à 5 Mo en mémoire jusqu'au rechargement de la page —
+    // sur iPhone, l'onglet finit par être fermé d'office par le système.
+    let objectUrl = ''
+    const release = () => { if (objectUrl) { URL.revokeObjectURL(objectUrl); objectUrl = '' } }
 
     img.onload = () => {
       let { width, height } = img
@@ -210,6 +326,9 @@ export function compressImageToBase64(file: File, maxSizeKB = 1500): Promise<str
       canvas.width = width
       canvas.height = height
       ctx.drawImage(img, 0, 0, width, height)
+      // Libéré une fois la photo recopiée dans le canevas : à partir de là, plus
+      // besoin du fichier d'origine.
+      release()
 
       let quality = 0.85
       let dataUrl = canvas.toDataURL('image/jpeg', quality)
@@ -222,7 +341,77 @@ export function compressImageToBase64(file: File, maxSizeKB = 1500): Promise<str
       resolve(dataUrl)
     }
 
-    img.onerror = reject
-    img.src = URL.createObjectURL(file)
+    img.onerror = e => { release(); reject(e) }
+    objectUrl = URL.createObjectURL(file)
+    img.src = objectUrl
   })
+}
+
+/**
+ * Réduit une photo avant envoi, en gardant un vrai fichier (pas du base64 : celui-ci
+ * pèse 37 % de plus sur le réseau). Mêmes réglages que `compressImageToBase64`, déjà
+ * éprouvés sur les états des lieux : 1920 px au plus grand côté, JPEG qualité 0,85,
+ * puis baisse par paliers jusqu'à tenir sous la limite.
+ *
+ * Une photo de permis prise au téléphone fait 3 à 5 Mo et s'affiche en vignette de
+ * 96 px : la transmettre en pleine taille ralentit la fiche client sur le terrain,
+ * dans les deux sens.
+ *
+ * Prudence volontaire — on ne touche pas :
+ * - aux PDF et autres documents non-images ;
+ * - aux PNG (une transparence deviendrait un fond noir) ni aux GIF (animation perdue)
+ *   ni aux SVG (image vectorielle, aucun intérêt à la pixeliser) ;
+ * - aux fichiers déjà légers (≤ 800 Ko), inutile de les ré-encoder et d'y perdre.
+ *
+ * En cas d'échec de lecture (format que le navigateur ne décode pas), on renvoie le
+ * fichier d'origine : un envoi qui aboutit vaut mieux qu'un envoi optimisé qui casse.
+ */
+const COMPRESSIBLE = ['image/jpeg', 'image/jpg', 'image/heic', 'image/heif', 'image/webp']
+
+export async function compressImageFile(file: File, maxSizeKB = 1500): Promise<File> {
+  if (!COMPRESSIBLE.includes(file.type.toLowerCase())) return file
+  if (file.size <= 800 * 1024) return file
+
+  const objectUrl = URL.createObjectURL(file)
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const i = new Image()
+      i.onload = () => resolve(i)
+      i.onerror = () => reject(new Error('décodage impossible'))
+      i.src = objectUrl
+    })
+
+    let { width, height } = img
+    const maxDim = 1920
+    if (width > maxDim || height > maxDim) {
+      if (width > height) { height = Math.round((height * maxDim) / width); width = maxDim }
+      else { width = Math.round((width * maxDim) / height); height = maxDim }
+    }
+
+    const canvas = document.createElement('canvas')
+    canvas.width = width
+    canvas.height = height
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return file
+    ctx.drawImage(img, 0, 0, width, height)
+
+    const toBlob = (q: number) =>
+      new Promise<Blob | null>(res => canvas.toBlob(res, 'image/jpeg', q))
+
+    let quality = 0.85
+    let blob = await toBlob(quality)
+    while (blob && blob.size > maxSizeKB * 1024 && quality > 0.3) {
+      quality -= 0.1
+      blob = await toBlob(quality)
+    }
+    // Le ré-encodage n'a rien gagné (photo déjà bien compressée) → on garde l'original.
+    if (!blob || blob.size >= file.size) return file
+
+    const baseName = file.name.replace(/\.[^.]+$/, '') || 'photo'
+    return new File([blob], `${baseName}.jpg`, { type: 'image/jpeg', lastModified: file.lastModified })
+  } catch {
+    return file
+  } finally {
+    URL.revokeObjectURL(objectUrl)
+  }
 }

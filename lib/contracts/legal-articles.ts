@@ -1,8 +1,12 @@
 // 14 articles juridiques LMS Agency — source contrat officiel
 // Paramètres variables selon catégorie : franchise (Art. 3) et retard €/h (Art. 7)
 
+// Ce texte est imprimé dans un PDF : on formate les montants avec `fmtEntier`
+// et jamais avec `toLocaleString`, qui produirait « 15/000 € » (voir nombres.ts).
+import { fmtEntier } from '@/lib/pdf/nombres'
+
 export interface LegalArticlesParams {
-  franchise: number   // 21000 sport / 15000 citadine / 6000 Smart Fortwo
+  franchise: number   // 15000 partout, sauf Smart Fortwo : 6000
   retardHeure: number // 150 sport / 50 citadine
   caution: number     // montant réel de la réservation
 }
@@ -19,7 +23,7 @@ export function getLegalArticles({ franchise, retardHeure, caution }: LegalArtic
     },
     {
       title: '3 - ASSURANCE',
-      body: `Le LOUEUR s'engage, pendant toute la durée de la location, à assurer le véhicule objet des présentes et à fournir au LOCATAIRE tout justificatif. Le LOCATAIRE donne par le présent contrat son accord à ladite police et s'engage à en observer les clauses et conditions. Ladite police couvre les dommages en illimité contre les tiers suivant la règlementation en vigueur. Le LOCATAIRE s'engage de plus, à prendre toutes les mesures utiles pour protéger les intérêts du loueur et de la compagnie d'assurance de celui-ci, en cas d'accident au cours de la durée du présent contrat. Si l'assureur refuse sa garantie, notamment en cas d'infraction au code de la route prouvée, du LOCATAIRE, celui-ci reste tenu personnellement d'indemniser le loueur du préjudice subi, dont le montant est fixé d'un commun accord entre l'expert délégué par l'assurance et le loueur ou toute autre décision de justice.\nLa franchise peut s'élever jusqu'à ${franchise.toLocaleString('fr-FR')} € par sinistre et par véhicule et est applicable sur les garanties Incendie, Vol, Bris de glace et dommages tous accidents. En cas de sinistre, le LOCATAIRE s'engage à payer au LOUEUR les réparations des dommages du fait de collision ou autre cause au dit véhicule à concurrence du montant de la franchise.\nDans le cas où le LOCATAIRE, de par son activité professionnelle, telle qu'ambulancier ou d'auto-école lesquels sont par nature exclue par la police d'assurance couvrant le présent contrat, il est convenu que le LOCATAIRE assurera par ses propres moyens le bien loué sur une garantie équivalente. A ce titre, il devra fournir préalablement à la livraison du bien, une délégation d'assurance au profit du LOUEUR. Il reste entendu que le LOCATAIRE demeure seul responsable des sinistres et de ses conséquences notamment en cas de non prise en charge, totale ou partielle, par son assurance et s'engage à les supporter personnellement.`,
+      body: `Le LOUEUR s'engage, pendant toute la durée de la location, à assurer le véhicule objet des présentes et à fournir au LOCATAIRE tout justificatif. Le LOCATAIRE donne par le présent contrat son accord à ladite police et s'engage à en observer les clauses et conditions. Ladite police couvre les dommages en illimité contre les tiers suivant la règlementation en vigueur. Le LOCATAIRE s'engage de plus, à prendre toutes les mesures utiles pour protéger les intérêts du loueur et de la compagnie d'assurance de celui-ci, en cas d'accident au cours de la durée du présent contrat. Si l'assureur refuse sa garantie, notamment en cas d'infraction au code de la route prouvée, du LOCATAIRE, celui-ci reste tenu personnellement d'indemniser le loueur du préjudice subi, dont le montant est fixé d'un commun accord entre l'expert délégué par l'assurance et le loueur ou toute autre décision de justice.\nLa franchise peut s'élever jusqu'à ${fmtEntier(franchise)} € par sinistre et par véhicule et est applicable sur les garanties Incendie, Vol, Bris de glace et dommages tous accidents. En cas de sinistre, le LOCATAIRE s'engage à payer au LOUEUR les réparations des dommages du fait de collision ou autre cause au dit véhicule à concurrence du montant de la franchise.\nDans le cas où le LOCATAIRE, de par son activité professionnelle, telle qu'ambulancier ou d'auto-école lesquels sont par nature exclue par la police d'assurance couvrant le présent contrat, il est convenu que le LOCATAIRE assurera par ses propres moyens le bien loué sur une garantie équivalente. A ce titre, il devra fournir préalablement à la livraison du bien, une délégation d'assurance au profit du LOUEUR. Il reste entendu que le LOCATAIRE demeure seul responsable des sinistres et de ses conséquences notamment en cas de non prise en charge, totale ou partielle, par son assurance et s'engage à les supporter personnellement.`,
     },
     {
       title: '4 - ÉTAT DU VÉHICULE',
@@ -47,7 +51,7 @@ export function getLegalArticles({ franchise, retardHeure, caution }: LegalArtic
     },
     {
       title: '10 - DÉPÔT DE GARANTIE',
-      body: `De convention expresse, le montant du dépôt de garantie est fixé à ${caution.toLocaleString('fr-FR')} euros. Celui-ci est attribué au LOUEUR en toute propriété, à concurrence des sommes dues à un titre quelconque par le LOCATAIRE. Si ces sommes dépassent le montant du dépôt de garantie, pour quelque motif que ce soit, le règlement du solde par le LOCATAIRE devra intervenir dans un délai maximum de 15 jours à compter de la demande écrite du LOUEUR. Le LOCATAIRE qui aura été exempté du paiement du dépôt de garantie s'engage à se soumettre aux conditions énumérées ci-dessus.`,
+      body: `De convention expresse, le montant du dépôt de garantie est fixé à ${fmtEntier(caution)} euros. Celui-ci est attribué au LOUEUR en toute propriété, à concurrence des sommes dues à un titre quelconque par le LOCATAIRE. Si ces sommes dépassent le montant du dépôt de garantie, pour quelque motif que ce soit, le règlement du solde par le LOCATAIRE devra intervenir dans un délai maximum de 15 jours à compter de la demande écrite du LOUEUR. Le LOCATAIRE qui aura été exempté du paiement du dépôt de garantie s'engage à se soumettre aux conditions énumérées ci-dessus.`,
     },
     {
       title: '11 - CLAUSE PÉNALE',
@@ -68,33 +72,102 @@ export function getLegalArticles({ franchise, retardHeure, caution }: LegalArtic
   ]
 }
 
-export const VIDEO_CLAUSE = `L'état des lieux du véhicule mis à disposition sera effectué par photos horodatées lors de la remise et de la restitution du véhicule. Ces photos seront immédiatement transmises au locataire et conservées par les deux parties à titre de preuve et de justificatif. Elles pourront être utilisées en cas de constatation de dommages, de litige ou de contestation concernant l'état du véhicule avant, pendant ou après la période de location.`
+// « et/ou » : le logiciel produit des photos horodatées ; la vidéo reste possible
+// sur le terrain. Écrire « et » promettrait les deux au client à chaque location,
+// donc une preuve que le logiciel ne fabrique pas systématiquement.
+export const VIDEO_CLAUSE = `L'état des lieux du véhicule mis à disposition sera effectué par photos horodatées et/ou par vidéo lors de la remise et de la restitution du véhicule. Ces éléments seront immédiatement transmis au locataire et conservés par les deux parties à titre de preuve et de justificatif. Ils pourront être utilisés en cas de constatation de dommages, de litige ou de contestation concernant l'état du véhicule avant, pendant ou après la période de location.`
 
+/**
+ * Tableau « MONTANT DES FRAIS POUVANT ETRE FACTURES » — annexe du contrat.
+ *
+ * Reproduit à l'identique les contrats papier 2026 (« contrat sportif new » et
+ * « Contrat citadine new »), dans le même ordre et avec les mêmes libellés :
+ * les 27 lignes doivent correspondre ligne pour ligne, sinon le PDF généré ne
+ * vaut pas le contrat signé.
+ *
+ * Deux barèmes distincts. Les sportifs ne sont PAS une simple majoration des
+ * citadines : certaines lignes changent de nature (frais de gestion en % côté
+ * sportif, en euros côté citadine).
+ */
 export function getFeesTable(category: string, isSmartFortwo = false) {
   const isSport = category === 'sportif'
-  const franchise = isSport ? 21000 : isSmartFortwo ? 6000 : 15000
+  // Franchise : 15 000 € pour tous les véhicules, sauf la Smart Fortwo à 6 000 €.
+  // Le contrat papier « sportif » se contredisait — son article 3 annonçait
+  // 15 000 € et son tableau des frais 21 000 €. Arbitré par Jeff le 26/07/2026 :
+  // c'est 15 000 € qui fait foi. Le montant ne dépend donc PAS de la catégorie ;
+  // seuls le retard horaire et les frais de remise en état la suivent.
+  const franchise = isSmartFortwo ? 6000 : 15000
   const retard = isSport ? 150 : 50
 
-  return {
-    franchise,
-    retard,
-    rows: [
-      { label: 'Franchise RC / Dommages / Incendie / Vol', value: `${franchise.toLocaleString('fr-FR')} €` },
-      { label: `Retard (tolérance 60 min incluse)`, value: `${retard} € / heure` },
-      { label: 'Infraction au Code de la Route', value: 'Montant amende + 50 %' },
-      { label: 'Km supplémentaire (au-delà du forfait)', value: '2 € / km' },
-      { label: 'Carburant incorrect (réservoir)', value: '400 €' },
-      { label: 'Nettoyage intérieur (salissures)', value: '120 €' },
-      { label: 'Nettoyage intérieur (odeur tabac / très sale)', value: '250 €' },
-      { label: 'Perte clé véhicule', value: '350 €' },
-      { label: 'Rayure légère (< 5 cm)', value: '80 €' },
-      { label: 'Rayure profonde / éclat de peinture', value: '250 €' },
-      { label: 'Bosse sans rayure', value: '150 €' },
-      { label: 'Bosse avec rayure', value: '350 €' },
-      { label: 'Jante rayée', value: '200 €' },
-      { label: 'Jante voilée / cassée', value: '400 €' },
-      { label: 'Rétroviseur cassé', value: '180 €' },
-      { label: 'Phare / feu cassé', value: '300 €' },
-    ],
-  }
+  // Côté citadine, le contrat mentionne l'exception Smart Fortwo dans la case
+  // elle-même. On l'affiche uniquement quand le véhicule loué n'est pas la Smart
+  // (pour elle, le montant applicable est déjà le bon).
+  const franchiseTxt = isSmartFortwo
+    ? '6 000 €'
+    : isSport
+      ? '15 000 €'
+      : '15 000 € (sauf Smart Fortwo : 6 000 €)'
+
+  const rows = isSport
+    ? [
+        { label: 'Franchise responsabilité civile', value: franchiseTxt },
+        { label: 'Franchise dommage', value: franchiseTxt },
+        { label: 'Franchise vol', value: franchiseTxt },
+        { label: 'Franchise carburant', value: 'Selon écart + 50 € de frais de service' },
+        { label: 'Rayure légère', value: '500 €' },
+        { label: 'Rayure profonde', value: '800 €' },
+        { label: 'Rayure par jantes', value: '500 €' },
+        { label: 'Fissure jantes', value: '800 €' },
+        { label: 'Casse anormale mécanique', value: 'Sur devis + 50 % de frais' },
+        { label: 'Retard restitution du véhicule', value: '150 € par heure de retard' },
+        { label: 'Nettoyage véhicule intérieur / extérieur', value: '100 € ou sur devis si le montant des frais de nettoyage est supérieur' },
+        { label: 'Déchirure et brûlure / tâches sièges / plafonnier', value: '1 000 € par élément ou sur devis si le montant des frais de remise en état est supérieur' },
+        { label: 'Odeur cigarette ou autre', value: '500 €' },
+        { label: 'Perte clés du véhicule', value: '500 €' },
+        { label: 'Utilisation anormale du véhicule (circuit, drift run, course-poursuite…)', value: '5 000 €' },
+        { label: 'Usure anormale pneu (crevaison, hernie, abîmé)', value: '700 €' },
+        { label: 'Usure anormale freinage', value: '800 €' },
+        { label: 'Contravention au Code de la route', value: 'Montant de la contravention + 50 % de frais de gestion' },
+        { label: 'Frais de sortie de fourrière', value: 'Frais facturés par la fourrière + 200 € de frais de déplacement et de gestion' },
+        { label: 'Frais de saisie judiciaire', value: '500 € par jour d\'immobilisation' },
+        { label: 'Franchise incendie', value: franchiseTxt },
+        { label: 'Jour d\'immobilisation pour réparation', value: '500 €' },
+        { label: 'Dommage carrosserie', value: 'Sur devis + 50 %' },
+        { label: 'Pare-brise, vitre cassé', value: '5 000 €' },
+        { label: 'Tapis manquant', value: '300 €' },
+        { label: 'Frais juridique', value: 'Coût de la procédure + 50 %' },
+        // Le contrat papier imprime « 10 00€ » — coquille de saisie, lue comme 1 000 €.
+        { label: 'Erreur carburant (Gazole, éthanol interdit)', value: '1 000 €' },
+      ]
+    : [
+        { label: 'Franchise responsabilité civile', value: franchiseTxt },
+        { label: 'Franchise dommage', value: franchiseTxt },
+        { label: 'Franchise vol', value: franchiseTxt },
+        { label: 'Franchise carburant', value: 'Selon écart + 20 € de frais de service' },
+        { label: 'Rayure légère', value: '300 €' },
+        { label: 'Rayure profonde', value: '500 €' },
+        { label: 'Rayure par jantes', value: '300 €' },
+        { label: 'Fissure jantes', value: '500 €' },
+        { label: 'Casse anormale mécanique', value: 'Sur devis + 30 % de frais' },
+        { label: 'Retard restitution du véhicule', value: '50 € par heure de retard' },
+        { label: 'Nettoyage véhicule intérieur / extérieur', value: '50 € ou sur devis si le montant des frais de nettoyage est supérieur' },
+        { label: 'Déchirure et brûlure / tâches sièges / plafonnier', value: '200 € par élément ou sur devis si le montant des frais de remise en état est supérieur' },
+        { label: 'Odeur cigarette ou autre', value: '300 €' },
+        { label: 'Perte clés du véhicule', value: '300 €' },
+        { label: 'Utilisation anormale du véhicule (circuit, drift run, course-poursuite…)', value: '5 000 €' },
+        { label: 'Usure anormale pneu (crevaison, hernie, abîmé)', value: '400 €' },
+        { label: 'Usure anormale freinage', value: '300 €' },
+        { label: 'Contravention au Code de la route / Péage', value: 'Montant de la contravention + 50 € de frais de gestion' },
+        { label: 'Frais de sortie de fourrière', value: 'Frais facturés par la fourrière + 200 € de frais de déplacement et de gestion' },
+        { label: 'Frais de saisie judiciaire', value: '70 € par jour d\'immobilisation' },
+        { label: 'Franchise incendie', value: franchiseTxt },
+        { label: 'Jour d\'immobilisation pour réparation', value: '70 €' },
+        { label: 'Dommage carrosserie', value: 'Sur devis + 30 %' },
+        { label: 'Pare-brise, vitre cassé', value: '1 000 €' },
+        { label: 'Tapis manquant', value: '150 €' },
+        { label: 'Frais juridique', value: 'Coût de la procédure + 30 %' },
+        { label: 'Erreur carburant (Gazole, éthanol interdit)', value: '200 €' },
+      ]
+
+  return { franchise, retard, rows }
 }

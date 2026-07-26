@@ -5,6 +5,7 @@ import {
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { getLegalArticles, getFeesTable, VIDEO_CLAUSE } from '@/lib/contracts/legal-articles'
+import { fmtEntier } from './nombres'
 import { EDL_ZONES, zoneBox, EDL_IMG } from '@/components/vehicle-schema/edl-zones'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -53,6 +54,16 @@ export interface ContractData {
   totalPrice: number
   kmIncluded?: number
   extraKmPrice?: number
+  // Grille tarifaire du véhicule (reprise des contrats papier 2026).
+  // Informative : elle affiche le barème, le prix réellement facturé reste
+  // `dailyPrice` / `totalPrice`. Il n'y a PAS de forfait week-end — le
+  // week-end est simplement un tarif journalier majoré.
+  priceDayWeek?: number
+  priceDayWeekend?: number
+  priceWeekendFull?: number
+  priceWeek?: number
+  kmIncludedWeekend?: number
+  kmIncludedWeek?: number
   depositAmount?: number
   depositMethod?: string
   depositDeducted?: number   // montant retenu sur la caution (le reste est restitué)
@@ -85,10 +96,16 @@ const s = StyleSheet.create({
   page: { fontFamily: 'Helvetica', fontSize: 10, padding: 36, color: '#1e293b', backgroundColor: '#ffffff' },
 
   docTitle: { fontSize: 18, fontFamily: 'Helvetica-Bold', color: '#0f172a', textAlign: 'center', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, paddingBottom: 14, borderBottom: '2px solid #2563eb' },
+  // flex-end : le logo et le bloc référence posent tous les deux leur bas sur le
+  // trait bleu. Avec 'center', le bloc référence (3 lignes) se centrait sur la
+  // hauteur du logo et flottait donc plus haut que lui.
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 20, paddingBottom: 14, borderBottom: '2px solid #2563eb' },
   company: { fontSize: 16, fontFamily: 'Helvetica-Bold', color: '#2563eb' },
   subtitle: { fontSize: 9, color: '#64748b', marginTop: 2 },
-  contractRef: { textAlign: 'right', fontSize: 9, color: '#64748b' },
+  // marginBottom négatif : une ligne de texte réserve sous elle la place des
+  // jambages (p, g, j), que le logo n'a pas. Sans ce rattrapage, les deux blocs
+  // ont bien le même bas de boîte mais l'encre du texte finit ~2,5 pt plus haut.
+  contractRef: { textAlign: 'right', fontSize: 9, color: '#64748b', marginBottom: -1.6 },
   contractNumber: { fontFamily: 'Helvetica-Bold', fontSize: 11, color: '#1e293b' },
 
   section: { marginBottom: 14 },
@@ -155,12 +172,9 @@ const s = StyleSheet.create({
 function fmtMoney(n?: number) {
   return n != null ? `${n.toFixed(2)} €` : '—'
 }
-// Formate un entier avec séparateur de milliers = espace ASCII normale.
-// (toLocaleString('fr-FR') insère U+202F, une espace fine insécable que la
-//  police Helvetica du PDF ne sait pas rendre → glyphe parasite « 23/980 ».)
+// Séparateur de milliers sûr pour un PDF — voir nombres.ts pour le pourquoi.
 function fmtKm(n?: number | null) {
-  if (n == null) return '—'
-  return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
+  return n == null ? '—' : fmtEntier(n)
 }
 function fmtDT(dt: string) {
   try { return format(new Date(dt), 'dd/MM/yyyy HH:mm', { locale: fr }) }
@@ -258,6 +272,15 @@ function SchemaLegend() {
   )
 }
 
+const badgeStyle = (sev: string) =>
+  sev === 'dommage' ? s.badgeDommage : sev === 'rayure' ? s.badgeRayure : s.badgeAttention
+const sevLabel = (sev: string) =>
+  sev === 'dommage' ? 'Dommage' : sev === 'rayure' ? 'Rayure' : 'Attention'
+// Variante liste compacte : libellé neutre « À surveiller » au lieu d'« Attention ».
+const sevLabelMini = (sev: string) =>
+  sev === 'dommage' ? 'Dommage' : sev === 'rayure' ? 'Rayure' : 'À surveiller'
+const dot = (sev: string) => (sev === 'dommage' ? '#ef4444' : sev === 'rayure' ? '#eab308' : '#f97316')
+
 function DamageTable({ zones }: { zones: DamagedZone[] }) {
   if (zones.length === 0) {
     return (
@@ -266,11 +289,6 @@ function DamageTable({ zones }: { zones: DamagedZone[] }) {
       </View>
     )
   }
-
-  const badgeStyle = (sev: string) =>
-    sev === 'dommage' ? s.badgeDommage : sev === 'rayure' ? s.badgeRayure : s.badgeAttention
-  const sevLabel = (sev: string) =>
-    sev === 'dommage' ? 'Dommage' : sev === 'rayure' ? 'Rayure' : 'Attention'
 
   return (
     <View style={{ marginBottom: 8 }}>
@@ -300,7 +318,6 @@ function DamageChips({ zones }: { zones: DamagedZone[] }) {
   if (zones.length === 0) {
     return <Text style={{ fontSize: 8, color: '#16a34a', fontFamily: 'Helvetica-Bold' }}>Aucun dommage constaté</Text>
   }
-  const dot = (sev: string) => (sev === 'dommage' ? '#ef4444' : sev === 'rayure' ? '#eab308' : '#f97316')
   return (
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 3 }}>
       {zones.map((z, i) => (
@@ -319,8 +336,6 @@ function DamageListMini({ zones }: { zones: DamagedZone[] }) {
   if (zones.length === 0) {
     return <Text style={{ fontSize: 8, color: '#16a34a', fontFamily: 'Helvetica-Bold' }}>Aucun dommage constaté</Text>
   }
-  const dot = (sev: string) => (sev === 'dommage' ? '#ef4444' : sev === 'rayure' ? '#eab308' : '#f97316')
-  const sevLabel = (sev: string) => (sev === 'dommage' ? 'Dommage' : sev === 'rayure' ? 'Rayure' : 'À surveiller')
   return (
     <View style={{ gap: 2 }}>
       {zones.map((z, i) => (
@@ -328,7 +343,7 @@ function DamageListMini({ zones }: { zones: DamagedZone[] }) {
           <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: dot(z.severity), marginTop: 2 }} />
           <Text style={{ fontSize: 7, color: '#1e293b', flex: 1 }}>
             <Text style={{ fontFamily: 'Helvetica-Bold' }}>{z.label}</Text>
-            <Text style={{ color: '#64748b' }}>{`  ·  ${sevLabel(z.severity)}${z.description ? ` — ${z.description}` : ''}`}</Text>
+            <Text style={{ color: '#64748b' }}>{`  ·  ${sevLabelMini(z.severity)}${z.description ? ` — ${z.description}` : ''}`}</Text>
           </Text>
         </View>
       ))}
@@ -344,11 +359,6 @@ function DamageListMini({ zones }: { zones: DamagedZone[] }) {
 function DamagePhotos({ zones }: { zones: DamagedZone[] }) {
   const withPhotos = zones.filter(z => (z.photos?.length ?? 0) > 0)
   if (withPhotos.length === 0) return null
-
-  const badgeStyle = (sev: string) =>
-    sev === 'dommage' ? s.badgeDommage : sev === 'rayure' ? s.badgeRayure : s.badgeAttention
-  const sevLabel = (sev: string) =>
-    sev === 'dommage' ? 'Dommage' : sev === 'rayure' ? 'Rayure' : 'Attention'
 
   return (
     <View style={s.section}>
@@ -721,7 +731,7 @@ export function ContractPDF({ data }: { data: ContractData }) {
           <View>
             {logoUrl ? (
               // eslint-disable-next-line jsx-a11y/alt-text
-              <Image src={logoUrl} style={{ height: 36, maxWidth: 160, objectFit: 'contain' }} />
+              <Image src={logoUrl} style={{ height: 55, maxWidth: 160, objectFit: 'contain' }} />
             ) : (
               <Text style={s.company}>{companyName}</Text>
             )}
@@ -815,7 +825,7 @@ export function ContractPDF({ data }: { data: ContractData }) {
         <View style={s.section}>
           <Text style={s.sectionTitle}>Tarification</Text>
           <View style={s.box}>
-            <View style={s.row}><Text style={s.label}>Prix par jour</Text><Text style={s.value}>{fmtMoney(data.dailyPrice)}</Text></View>
+            <View style={s.row}><Text style={s.label}>Prix par jour appliqué</Text><Text style={s.value}>{fmtMoney(data.dailyPrice)}</Text></View>
             {data.kmIncluded && (
               <View style={s.row}><Text style={s.label}>KM inclus / jour</Text><Text style={s.value}>{data.kmIncluded} km</Text></View>
             )}
@@ -823,6 +833,46 @@ export function ContractPDF({ data }: { data: ContractData }) {
               <View style={s.row}><Text style={s.label}>Supplément KM</Text><Text style={s.value}>{fmtMoney(data.extraKmPrice)} / km</Text></View>
             )}
           </View>
+
+          {/* Barème du véhicule — les 4 formules des contrats papier 2026.
+              Purement informatif : le montant facturé est le Total TTC ci-dessous. */}
+          {(data.priceDayWeek || data.priceDayWeekend || data.priceWeekendFull || data.priceWeek) && (
+            <View style={[s.box, { marginTop: 4 }]}>
+              <Text style={{ fontSize: 8, color: '#64748b', marginBottom: 3 }}>
+                Barème du véhicule
+              </Text>
+              {data.priceDayWeek != null && (
+                <View style={s.row}>
+                  <Text style={s.label}>Journée en semaine ({data.kmIncluded ?? 200} km inclus)</Text>
+                  <Text style={s.value}>{fmtMoney(data.priceDayWeek)}</Text>
+                </View>
+              )}
+              {data.priceDayWeekend != null && (
+                <View style={s.row}>
+                  <Text style={s.label}>Journée en week-end ({data.kmIncluded ?? 200} km inclus)</Text>
+                  <Text style={s.value}>{fmtMoney(data.priceDayWeekend)}</Text>
+                </View>
+              )}
+              {data.priceWeekendFull != null && (
+                <View style={s.row}>
+                  {/* Libellé volontairement identique au contrat papier, et assez
+                      court pour tenir sur une ligne dans la colonne de gauche. */}
+                  <Text style={s.label}>Week-end complet ({data.kmIncludedWeekend ?? 600} km inclus)</Text>
+                  <Text style={s.value}>{fmtMoney(data.priceWeekendFull)}</Text>
+                </View>
+              )}
+              {data.priceWeek != null && (
+                <View style={s.row}>
+                  <Text style={s.label}>Semaine 7 jours ({data.kmIncludedWeek ?? 1200} km inclus)</Text>
+                  <Text style={s.value}>{fmtMoney(data.priceWeek)}</Text>
+                </View>
+              )}
+              <View style={s.row}>
+                <Text style={s.label}>Mois</Text>
+                <Text style={s.value}>Sur devis (KM sur devis)</Text>
+              </View>
+            </View>
+          )}
           <View style={s.totalBox}>
             <Text style={s.totalLabel}>Total TTC</Text>
             <Text style={s.totalValue}>{fmtMoney(data.totalPrice)}</Text>
@@ -958,19 +1008,26 @@ export function ContractPDF({ data }: { data: ContractData }) {
             Catégorie : {isSport ? 'Véhicule Sportif' : data.isSmartFortwo ? 'Smart Fortwo' : 'Citadine'}
           </Text>
           <View style={s.damageHeader}>
-            <Text style={{ width: '72%', fontSize: 7, fontFamily: 'Helvetica-Bold', color: '#64748b' }}>NATURE DES FRAIS</Text>
-            <Text style={{ width: '28%', fontSize: 7, fontFamily: 'Helvetica-Bold', color: '#64748b', textAlign: 'right' }}>MONTANT</Text>
+            <Text style={{ width: '58%', fontSize: 7, fontFamily: 'Helvetica-Bold', color: '#64748b' }}>NATURE DES FRAIS</Text>
+            <Text style={{ width: '42%', fontSize: 7, fontFamily: 'Helvetica-Bold', color: '#64748b', textAlign: 'right' }}>MONTANT</Text>
           </View>
-          {fees.rows.map((row, i) => (
-            <View key={i} style={[s.damageRow, i % 2 === 0 ? { backgroundColor: '#ffffff' } : { backgroundColor: '#f8fafc' },
-              i < 2 ? { backgroundColor: isSport ? '#fef2f2' : '#eff6ff' } : {}]}>
-              <Text style={{ width: '72%', fontSize: 8 }}>{row.label}</Text>
-              <Text style={{ width: '28%', fontSize: 8, fontFamily: i < 2 ? 'Helvetica-Bold' : 'Helvetica', textAlign: 'right',
-                color: i < 2 ? (isSport ? '#dc2626' : '#1d4ed8') : '#1e293b' }}>
-                {row.value}
-              </Text>
-            </View>
-          ))}
+          {/* Les lignes « Franchise » sont mises en avant : ce sont les montants
+              les plus lourds et ils ne sont pas groupés dans le contrat papier. */}
+          {fees.rows.map((row, i) => {
+            // « Franchise carburant » exclue : ce n'est pas un plafond de sinistre
+            // mais un calcul au réel, la mettre en rouge gras induirait en erreur.
+            const isFranchise = row.label.startsWith('Franchise') && row.label !== 'Franchise carburant'
+            return (
+              <View key={i} wrap={false} style={[s.damageRow, i % 2 === 0 ? { backgroundColor: '#ffffff' } : { backgroundColor: '#f8fafc' },
+                isFranchise ? { backgroundColor: isSport ? '#fef2f2' : '#eff6ff' } : {}]}>
+                <Text style={{ width: '58%', fontSize: 8 }}>{row.label}</Text>
+                <Text style={{ width: '42%', fontSize: 8, fontFamily: isFranchise ? 'Helvetica-Bold' : 'Helvetica', textAlign: 'right',
+                  color: isFranchise ? (isSport ? '#dc2626' : '#1d4ed8') : '#1e293b' }}>
+                  {row.value}
+                </Text>
+              </View>
+            )
+          })}
           <Text style={{ fontSize: 7, color: '#94a3b8', marginTop: 4 }}>
             Montants TTC. Franchise applicable par sinistre et par véhicule.
           </Text>

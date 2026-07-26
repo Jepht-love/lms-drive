@@ -14,6 +14,13 @@ export async function sendPaymentInfoEmail(
   clientName: string,
   reservationNumber: string,
 ): Promise<{ success?: boolean; deadline?: string; error?: string }> {
+  // Garde d'authentification AVANT l'envoi : une action serveur exportée est
+  // appelable directement par n'importe qui, et celle-ci consomme du quota
+  // Resend et écrit dans `reservations`.
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié' }
+
   if (!clientEmail) return { error: 'Pas d\'adresse email pour ce client' }
   const apiKey = process.env.RESEND_API_KEY
   if (!apiKey) return { error: 'Clé RESEND_API_KEY manquante' }
@@ -43,7 +50,6 @@ export async function sendPaymentInfoEmail(
   })
   if (error) return { error: error.message }
 
-  const supabase = await createClient()
   await supabase
     .from('reservations')
     .update({ payment_email_sent_at: sentAt.toISOString() })
@@ -158,7 +164,7 @@ export async function updatePaymentInfo(
 }
 import { logAudit } from '@/lib/audit/log'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { generateReservationNumber, calculateRentalDays, calculateRentalPrice } from '@/lib/utils'
+import { generateReservationNumber, calculateRentalDays, calculateRentalPrice, ratesFor } from '@/lib/utils'
 import { syncReservationToCalendar } from '@/lib/calendar/syncRental'
 import { recomputeVehicleStatus } from '@/lib/vehicles/vehicleStatus'
 import { broadcastPushToManagers } from '@/lib/push/broadcastPush'
@@ -365,12 +371,13 @@ export async function createReservation(formData: FormData) {
 
   const { data: vehicle } = await supabase
     .from('vehicles')
-    .select('weekly_price, km_included_daily, extra_km_price, brand, model, color')
+    .select('daily_price, weekly_price, price_day_weekend, price_weekend_full, km_included_daily, extra_km_price, brand, model, color')
     .eq('id', vehicleId)
     .single()
 
   const days = calculateRentalDays(startDatetime, endDatetime)
-  const grossPrice = calculateRentalPrice(dailyPrice, vehicle?.weekly_price ?? null, days)
+  // Le prix dépend des DATES : les jours de week-end sont facturés plus cher.
+  const grossPrice = calculateRentalPrice(ratesFor(dailyPrice, vehicle), startDatetime, days)
 
   // Remise fidélité client appliquée automatiquement (tolérant à l'absence de la
   // colonne discount_percent avant la migration 019 → remise 0).
@@ -631,7 +638,7 @@ export async function updateReservationDates(
 
   const { data: reservation } = await supabase
     .from('reservations')
-    .select('daily_price, status, vehicle_id, vehicle:vehicles(weekly_price)')
+    .select('daily_price, status, vehicle_id, vehicle:vehicles(daily_price, weekly_price, price_day_weekend, price_weekend_full)')
     .eq('id', id)
     .single()
 
@@ -662,8 +669,8 @@ export async function updateReservationDates(
 
   const vehicle = Array.isArray(reservation.vehicle) ? reservation.vehicle[0] : reservation.vehicle as any
   const standardPrice = calculateRentalPrice(
-    effectiveDailyPrice,
-    vehicle?.weekly_price ?? null,
+    ratesFor(effectiveDailyPrice, vehicle),
+    startDatetime,
     days,
   )
   // Prix négocié fourni → il prime sur le barème ; sinon calcul standard.
@@ -725,7 +732,7 @@ export async function prolongReservation(
 
   const { data: reservation } = await supabase
     .from('reservations')
-    .select('start_datetime, end_datetime, daily_price, total_price, status, vehicle_id, vehicle:vehicles(weekly_price)')
+    .select('start_datetime, end_datetime, daily_price, total_price, status, vehicle_id, vehicle:vehicles(daily_price, weekly_price, price_day_weekend, price_weekend_full)')
     .eq('id', id)
     .single()
 
@@ -787,8 +794,8 @@ export async function prolongReservation(
   // on les additionne au total existant : un prix négocié (réduction) sur la
   // période initiale est ainsi préservé au lieu d'être écrasé par un recalcul.
   const addedAmount = Math.round((
-    calculateRentalPrice(effectiveDailyPrice, vehicle?.weekly_price ?? null, totalDays)
-    - calculateRentalPrice(effectiveDailyPrice, vehicle?.weekly_price ?? null, previousDays)
+    calculateRentalPrice(ratesFor(effectiveDailyPrice, vehicle), reservation.start_datetime, totalDays)
+    - calculateRentalPrice(ratesFor(effectiveDailyPrice, vehicle), reservation.start_datetime, previousDays)
   ) * 100) / 100
   const previousTotal = reservation.total_price ?? 0
   const newTotalPrice = Math.round((previousTotal + addedAmount) * 100) / 100

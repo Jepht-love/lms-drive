@@ -3,15 +3,23 @@
 import { useState } from 'react'
 import { Pencil, Check, X, Loader2, CalendarClock, AlertTriangle, TrendingUp, TrendingDown, BadgePercent } from 'lucide-react'
 import { updateReservationDates } from '@/lib/actions/reservations'
-import { formatPrice, calculateRentalDays, calculateRentalPrice } from '@/lib/utils'
+import { formatPrice, calculateRentalDays, calculateRentalPrice, ratesFor } from '@/lib/utils'
 import DateTimeField from '@/components/ui/DateTimeField'
+
+/** Barème du véhicule : nécessaire pour savoir quels jours sont majorés. */
+export interface VehicleRates {
+  daily_price: number | null
+  weekly_price: number | null
+  price_day_weekend: number | null
+  price_weekend_full: number | null
+}
 
 interface Props {
   reservationId: string
   startDatetime: string
   endDatetime: string
   dailyPrice: number
-  weeklyPrice: number | null
+  vehicle: VehicleRates | null
   currentTotal: number
   reservationStatus: string
   /** 'hero' : bouton intégré à l'encadré noir en haut de la fiche résa. */
@@ -23,12 +31,15 @@ function toInputValue(iso: string) {
   return iso.slice(0, 16)
 }
 
+const tabCls = (on: boolean) =>
+  `min-h-[auto] h-8 px-3.5 rounded-md text-xs font-bold transition-colors ${on ? 'bg-white/15 text-white' : 'text-white/55 hover:text-white'}`
+
 export default function EditDatesPanel({
   reservationId,
   startDatetime,
   endDatetime,
   dailyPrice,
-  weeklyPrice,
+  vehicle,
   currentTotal,
   reservationStatus,
   variant = 'inline',
@@ -52,8 +63,11 @@ export default function EditDatesPanel({
   const priceNum  = price === '' ? 0 : Number(price)
   const totalNum  = total === '' ? 0 : Number(total)
   const days      = start && end ? calculateRentalDays(start, end) : 0
-  // Tarif « standard » : ce que coûterait la période au barème (jour/semaine).
-  const standard  = days > 0 ? calculateRentalPrice(mode === 'daily' ? priceNum : dailyPrice, weeklyPrice, days) : 0
+  // Tarif « standard » : ce que coûterait la période au barème (jour/semaine),
+  // jours de week-end majorés selon les dates réellement choisies.
+  const standard  = days > 0
+    ? calculateRentalPrice(ratesFor(mode === 'daily' ? priceNum : dailyPrice, vehicle), start, days)
+    : 0
   const newTotal  = mode === 'daily' ? standard : totalNum
   const discount  = mode === 'total' ? Math.round((standard - totalNum) * 100) / 100 : 0
   // Prix de revient à la journée quand on négocie un prix total (ticket 24/07) :
@@ -66,22 +80,27 @@ export default function EditDatesPanel({
   async function handleSave() {
     setError(null)
     setLoading(true)
-    const result = await updateReservationDates(
-      reservationId,
-      start,
-      end,
-      mode === 'daily' ? priceNum : undefined,
-      mode === 'total' ? totalNum : undefined,
-    )
-    setLoading(false)
-    if (result?.error) {
-      setError(result.error)
-    } else {
-      setSaved(true)
-      setTimeout(() => {
-        setSaved(false)
-        setEditing(false)
-      }, 1400)
+    try {
+      const result = await updateReservationDates(
+        reservationId,
+        start,
+        end,
+        mode === 'daily' ? priceNum : undefined,
+        mode === 'total' ? totalNum : undefined,
+      )
+      if (result?.error) {
+        setError(result.error)
+      } else {
+        setSaved(true)
+        setTimeout(() => {
+          setSaved(false)
+          setEditing(false)
+        }, 1400)
+      }
+    } catch {
+      setError('Erreur réseau : les dates n’ont pas été enregistrées. Réessayez.')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -100,7 +119,7 @@ export default function EditDatesPanel({
     // « Prolonger la location » (même style pilule) — ticket SAV 23/07.
     if (variant === 'hero') {
       return (
-        <button
+        <button type="button"
           onClick={() => setEditing(true)}
           className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-white/10 hover:bg-white/20 border border-white/15 text-xs text-white font-semibold transition-colors"
         >
@@ -110,7 +129,7 @@ export default function EditDatesPanel({
       )
     }
     return (
-      <button
+      <button type="button"
         onClick={() => setEditing(true)}
         className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 font-medium mt-2 transition-colors"
       >
@@ -126,9 +145,6 @@ export default function EditDatesPanel({
   const labelCls = 'block text-[11px] font-bold uppercase tracking-wide text-white/50 mb-1.5'
   const fieldCls = 'flex items-center rounded-xl border border-white/15 bg-white/5 transition focus-within:border-white/25 focus-within:ring-2 focus-within:ring-white/10'
   const numCls   = 'flex-1 min-w-0 bg-transparent border-0 outline-none px-3 py-2.5 text-sm text-white [color-scheme:dark] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none'
-  const tabCls = (on: boolean) =>
-    `min-h-[auto] h-8 px-3.5 rounded-md text-xs font-bold transition-colors ${on ? 'bg-white/15 text-white' : 'text-white/55 hover:text-white'}`
-
   return (
     // Wrapper pleine largeur (hero) : force le panneau sur sa propre ligne du
     // flex-wrap → il ne partage plus la ligne du badge de statut et s'aligne à
@@ -140,7 +156,7 @@ export default function EditDatesPanel({
       <div className="flex items-center gap-2">
         <CalendarClock className="w-4 h-4 text-white/60 flex-shrink-0" />
         <p className="text-sm font-bold text-white">Modifier les dates &amp; tarif</p>
-        <button onClick={handleCancel} className="ml-auto p-1.5 rounded-lg text-white/50 hover:bg-white/10 transition-colors" aria-label="Fermer">
+        <button type="button" onClick={handleCancel} className="ml-auto p-1.5 rounded-lg text-white/50 hover:bg-white/10 transition-colors" aria-label="Fermer">
           <X className="w-4 h-4" />
         </button>
       </div>
@@ -148,12 +164,12 @@ export default function EditDatesPanel({
       {/* Dates — DateTimeField groupé, ton sombre. */}
       <div className="space-y-3">
         <div>
-          <label className={labelCls}>Départ</label>
-          <DateTimeField value={start} onChange={setStart} grouped tone="dark" />
+          <label htmlFor="editdatespanel-depart" className={labelCls}>Départ</label>
+          <DateTimeField id="editdatespanel-depart" value={start} onChange={setStart} grouped tone="dark" />
         </div>
         <div>
-          <label className={labelCls}>Retour</label>
-          <DateTimeField value={end} onChange={setEnd} min={start} grouped tone="dark" />
+          <label htmlFor="editdatespanel-retour" className={labelCls}>Retour</label>
+          <DateTimeField id="editdatespanel-retour" value={end} onChange={setEnd} min={start} grouped tone="dark" />
         </div>
       </div>
 
@@ -170,23 +186,39 @@ export default function EditDatesPanel({
 
         {mode === 'daily' ? (
           <>
+            <label htmlFor="edit-price-daily" className="sr-only">Prix par jour (€)</label>
             <div className={fieldCls}>
               <input
+                id="edit-price-daily"
                 type="number" min="0" step="0.01" inputMode="decimal" placeholder="0"
                 value={price} onChange={e => setPrice(e.target.value)} className={numCls}
               />
               <span className="pr-3 text-xs font-semibold text-white/45 whitespace-nowrap">€ / jour</span>
             </div>
-            {weeklyPrice != null && weeklyPrice > 0 && (
+            {vehicle?.price_day_weekend != null && vehicle.price_day_weekend > 0 && (
               <p className="text-[11px] text-white/45 mt-1.5">
-                Tarif semaine : {formatPrice(weeklyPrice)} — appliqué auto si ≥ 7 jours
+                Tarif week-end : {formatPrice(vehicle.price_day_weekend)} / jour — appliqué
+                automatiquement aux vendredis, samedis et dimanches
+              </p>
+            )}
+            {vehicle?.price_weekend_full != null && vehicle.price_weekend_full > 0 && (
+              <p className="text-[11px] text-white/45 mt-1.5">
+                Forfait week-end complet : {formatPrice(vehicle.price_weekend_full)} — remplace les
+                3 journées si la location va du vendredi au lundi
+              </p>
+            )}
+            {vehicle?.weekly_price != null && vehicle.weekly_price > 0 && (
+              <p className="text-[11px] text-white/45 mt-1.5">
+                Tarif semaine : {formatPrice(vehicle.weekly_price)} — appliqué auto si ≥ 7 jours
               </p>
             )}
           </>
         ) : (
           <>
+            <label htmlFor="edit-price-total" className="sr-only">Prix total (€)</label>
             <div className={fieldCls}>
               <input
+                id="edit-price-total"
                 type="number" min="0" step="0.01" inputMode="decimal" placeholder="0"
                 value={total} onChange={e => setTotal(e.target.value)} className={numCls}
               />
@@ -281,7 +313,7 @@ export default function EditDatesPanel({
       )}
 
       <div className="flex gap-2">
-        <button
+        <button type="button"
           onClick={handleSave}
           disabled={loading || !canSave}
           className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all disabled:opacity-50 ${
@@ -295,7 +327,7 @@ export default function EditDatesPanel({
             : <Check className="w-3.5 h-3.5" />}
           {saved ? 'Enregistré ✓' : 'Enregistrer'}
         </button>
-        <button
+        <button type="button"
           onClick={handleCancel}
           className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium border border-white/20 text-white hover:bg-white/10 transition-colors"
         >
