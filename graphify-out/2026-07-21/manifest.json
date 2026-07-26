@@ -540,8 +540,8 @@
     "semantic_hash": ""
   },
   "app/api/contracts/send-email/route.ts": {
-    "mtime": 1783982175.3562782,
-    "ast_hash": "98ef1d6b1411c73f547ae4985fa4d2e0",
+    "mtime": 1784633428.741433,
+    "ast_hash": "85688dd29b3f7a35da402e191a296990",
     "semantic_hash": ""
   },
   "app/api/contracts/sign/route.ts": {
@@ -985,8 +985,8 @@
     "semantic_hash": "ace49c057ae3e1669b959b63b56753f1"
   },
   "public/sw.js": {
-    "mtime": 1784631204.779065,
-    "ast_hash": "3066210cffc7918de8242932bc662c8a",
+    "mtime": 1784632339.713316,
+    "ast_hash": "2b5bb184e8884778b2aebba1739e3e34",
     "semantic_hash": ""
   },
   "scripts/seed-vehicles.ts": {
@@ -2495,13 +2495,18 @@
     "semantic_hash": ""
   },
   "components/signature/ZoneSignature.tsx": {
-    "mtime": 1784620961.736002,
-    "ast_hash": "36b33dfc084ed8b1afaf0be0a1dd6836",
+    "mtime": 1784632316.4019809,
+    "ast_hash": "a4f95eb74276d368325a079ff4372bf5",
     "semantic_hash": ""
   },
   "supabase/migrations/059_inspection_invoice_signature.sql": {
     "mtime": 1784627560.7717955,
     "ast_hash": "469fcfd0b719d43172ed8e2c7d0a6ce5",
+    "semantic_hash": ""
+  },
+  "lib/email/templates.ts": {
+    "mtime": 1784633533.1030266,
+    "ast_hash": "a9d1c3889db80d3f723bc611003ac5a8",
     "semantic_hash": ""
   }
 }
