@@ -5,6 +5,7 @@ import {
   getCategoryLabel, REVENUE_CATEGORIES, EXPENSE_FAMILIES,
   expenseFamily, expenseNature, type CostNature,
 } from '@/lib/accounting/categories'
+import { toYMD } from '@/lib/utils'
 
 type Tx = {
   date: string; type: string; category: string
@@ -41,7 +42,7 @@ export async function GET(req: NextRequest) {
   } else if (monthParam) {
     const month = Number(monthParam)
     from = `${year}-${String(month).padStart(2, '0')}-01`
-    to = new Date(year, month, 0).toISOString().slice(0, 10)
+    to = toYMD(new Date(year, month, 0))
     periodLabel = `${year}-${String(month).padStart(2, '0')}`
   } else {
     from = `${year}-01-01`; to = `${year}-12-31`; periodLabel = `${year}`

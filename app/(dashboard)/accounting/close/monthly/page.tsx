@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, CheckCircle2 } from 'lucide-react'
 import BackButton from '@/components/ui/BackButton'
-import { formatPrice } from '@/lib/utils'
+import { formatPrice, toYMD } from '@/lib/utils'
 import { getCategoryLabel, paymentMethodLabel, expenseNature } from '@/lib/accounting/categories'
 import CloseButton from '../CloseButton'
 import ReopenClosingButton from '../ReopenClosingButton'
@@ -23,12 +23,12 @@ export default async function MonthlyClosingPage() {
   const month = now.getMonth() + 1
   const year = now.getFullYear()
   const from = `${year}-${String(month).padStart(2, '0')}-01`
-  const to = new Date(year, month, 0).toISOString().slice(0, 10)
+  const to = toYMD(new Date(year, month, 0))
   // Mois précédent (pour l'analyse de variation)
   const pm = month === 1 ? 12 : month - 1
   const py = month === 1 ? year - 1 : year
   const pFrom = `${py}-${String(pm).padStart(2, '0')}-01`
-  const pTo = new Date(py, pm, 0).toISOString().slice(0, 10)
+  const pTo = toYMD(new Date(py, pm, 0))
 
   const [{ data: closing }, { data: txs }, { data: prevTxs }] = await Promise.all([
     supabase.from('monthly_closings').select('*').eq('month', month).eq('year', year).maybeSingle(),

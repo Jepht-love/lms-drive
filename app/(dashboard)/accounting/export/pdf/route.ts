@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { AccountingPdf, type AccountingPdfData } from '@/lib/accounting/AccountingPdf'
 import { getAgencySettings } from '@/lib/contracts/agency'
 import { getCategoryLabel } from '@/lib/accounting/categories'
+import { toYMD } from '@/lib/utils'
 
 const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre']
 
@@ -33,7 +34,7 @@ export async function GET(req: NextRequest) {
   } else if (monthParam) {
     const month = Number(monthParam)
     from = `${year}-${String(month).padStart(2, '0')}-01`
-    to = new Date(year, month, 0).toISOString().slice(0, 10)
+    to = toYMD(new Date(year, month, 0))
     periodLabel = `Bilan mensuel — ${MONTHS[month - 1]} ${year}`
     fileLabel = `${year}-${String(month).padStart(2, '0')}`
   } else {

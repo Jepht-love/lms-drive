@@ -170,14 +170,21 @@ export default async function ClientPage({
   const active     = reservations?.filter(r => ['en_cours', 'confirmee', 'option', 'en_retard'].includes(r.status)) ?? []
   const totalCA    = completed.reduce((s, r) => s + (r.total_price ?? 0), 0)
   const avgCA      = completed.length > 0 ? totalCA / completed.length : 0
-  const totalAll   = reservations?.filter(r => r.status !== 'annulee').length ?? 0
-  // Annulations : signal de fiabilité commerciale (désistements, no-shows). Non
-  // comptées dans l'historique facturé mais suivies à part.
+  // Ni les annulations ni les clients non présentés ne comptent comme des
+  // locations : aucune voiture n'est sortie dans les deux cas.
+  const CLOSES_SANS_LOCATION = ['annulee', 'non_presente']
+  const totalAll   = reservations?.filter(r => !CLOSES_SANS_LOCATION.includes(r.status)).length ?? 0
+  // Annulations : signal de fiabilité commerciale (désistements). Non comptées
+  // dans l'historique facturé mais suivies à part.
   const annulations = reservations?.filter(r => r.status === 'annulee').length ?? 0
-  // Remises accordées à ce client (réservations non annulées, prix négocié sous
-  // le barème) — demande Jepht 24/07 : voir les remises consenties par client.
+  // Clients non présentés, suivis séparément des annulations : une annulation est
+  // annoncée à l'avance, un client absent a immobilisé la voiture pour rien. Au
+  // bout de plusieurs, ne plus bloquer de véhicule sans paiement intégral.
+  const nonPresentes = reservations?.filter(r => r.status === 'non_presente').length ?? 0
+  // Remises accordées à ce client (réservations effectives, prix négocié sous
+  // le barème). Demande Jepht 24/07 : voir les remises consenties par client.
   const withDiscount = (reservations ?? [])
-    .filter(r => r.status !== 'annulee')
+    .filter(r => !CLOSES_SANS_LOCATION.includes(r.status))
     .map(r => ({ r, d: reservationDiscount(r as any).discount }))
     .filter(x => x.d > 0)
   const totalRemises = withDiscount.reduce((s, x) => s + x.d, 0)
@@ -354,33 +361,12 @@ export default async function ClientPage({
         </div>
       )}
 
-      {/* ─── RÉSUMÉ ACTIVITÉ ─── */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-3 text-center">
-          <p className="text-2xl font-black text-gray-900">{totalAll}</p>
-          <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400 mt-0.5">
-            Location{totalAll !== 1 ? 's' : ''}
-          </p>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-3 text-center">
-          <p className="text-lg font-black text-gray-900">{formatPrice(totalCA)}</p>
-          <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400 mt-0.5">
-            CA total
-          </p>
-        </div>
-        <div className={`rounded-xl border shadow-sm p-3 text-center ${
-          impayes.length > 0 ? 'bg-red-50 border-red-100' : 'bg-white border-gray-100'
-        }`}>
-          <p className={`text-2xl font-black ${impayes.length > 0 ? 'text-red-600' : 'text-gray-900'}`}>
-            {impayes.length}
-          </p>
-          <p className={`text-[10px] font-bold uppercase tracking-wide mt-0.5 ${
-            impayes.length > 0 ? 'text-red-400' : 'text-gray-400'
-          }`}>
-            Impayé{impayes.length !== 1 ? 's' : ''}
-          </p>
-        </div>
-      </div>
+      {/* Pas de bloc « Résumé activité » ici : il répétait « Locations » et « CA
+          total » déjà affichés dans la bannière du haut, à deux doigts au-dessus
+          (constat 27/07 : les mêmes chiffres deux fois sur le même écran). Son
+          troisième compteur, les impayés, vit plus bas dans « Historique &
+          incidents » AVEC son montant, et le bandeau rouge juste en dessous le
+          signale dès qu'il y en a. Rien n'a donc été perdu. */}
 
       {/* Détail impayés */}
       {impayes.length > 0 && (
@@ -441,6 +427,9 @@ export default async function ClientPage({
             { label: 'Impayés', value: impayes.length, sub: impayesCA > 0 ? formatPrice(impayesCA) : null, tone: 'red' as const },
             // Annulations : informationnel (ambre), pas une faute grave comme un impayé.
             { label: 'Annulations', value: annulations, sub: null, tone: 'amber' as const },
+            // Client jamais venu chercher la voiture : plus lourd qu'un désistement
+            // annoncé, la voiture est restée immobilisée pour rien.
+            { label: 'Non présenté', value: nonPresentes, sub: null, tone: 'amber' as const },
           ].map(s => {
             const active = s.value > 0
             const bg   = !active ? 'bg-gray-50' : s.tone === 'amber' ? 'bg-amber-50' : 'bg-red-50'

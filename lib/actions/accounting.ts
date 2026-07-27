@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { assertPeriodOpen } from '@/lib/accounting/period-lock'
 import { assertManager } from '@/lib/auth/roles'
+import { toYMD } from '@/lib/utils'
 
 export async function createTransaction(formData: FormData) {
   const supabase = await createClient()
@@ -20,7 +21,7 @@ export async function createTransaction(formData: FormData) {
   if (!category || !(amount > 0)) return { error: 'Catégorie et montant (> 0) requis' }
 
   const str = (k: string) => (formData.get(k) as string)?.trim() || null
-  const date = str('date') || new Date().toISOString().slice(0, 10)
+  const date = str('date') || toYMD(new Date())
 
   // Verrou : on ne saisit pas dans une période déjà clôturée (figée).
   const locked = await assertPeriodOpen(supabase, date)
@@ -140,7 +141,7 @@ export async function closeMonthlyAccounting(month: number, year: number) {
   if (mgrErr) return { error: mgrErr.error }
 
   const from = `${year}-${String(month).padStart(2, '0')}-01`
-  const to = new Date(year, month, 0).toISOString().slice(0, 10)
+  const to = toYMD(new Date(year, month, 0))
 
   const { data: existing } = await supabase.from('monthly_closings').select('is_closed').eq('month', month).eq('year', year).maybeSingle()
   if (existing?.is_closed) return { error: 'Mois déjà clôturé' }

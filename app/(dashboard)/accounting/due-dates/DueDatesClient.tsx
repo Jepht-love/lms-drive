@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Plus, CheckCircle2, AlertTriangle, Trash2, Undo2, X } from 'lucide-react'
 import Toggle from '@/components/ui/Toggle'
 import DatePickerField from '@/components/ui/DatePickerField'
-import { formatPrice, formatDate } from '@/lib/utils'
+import { formatPrice, formatDate, toYMD } from '@/lib/utils'
 import { REVENUE_CATEGORIES, getCategoryLabel, expenseCategoriesByFamily } from '@/lib/accounting/categories'
 import { createDueDate, createRecurringDueDates, markDuePaid, deleteDueDate, restoreDueDate } from '@/lib/actions/dueDates'
 
@@ -37,7 +37,7 @@ export default function DueDatesClient({ dueDates, deletedDueDates = [], vehicle
   const [confirmDelete, setConfirmDelete] = useState<DueDate | null>(null)
   const [trashOpen, setTrashOpen] = useState(false)
 
-  const today = new Date().toISOString().slice(0, 10)
+  const today = toYMD(new Date())
   const unpaid = dueDates.filter(d => !d.is_paid)
   const overdue = unpaid.filter(d => d.due_date < today)
   const upcoming = unpaid.filter(d => d.due_date >= today)

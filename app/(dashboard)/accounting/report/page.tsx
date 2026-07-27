@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useTransition, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { formatPrice, formatDate } from '@/lib/utils'
+import { formatPrice, formatDate, toYMD } from '@/lib/utils'
 import { FileDown, Check, Minus } from 'lucide-react'
 import AnimatedTabs from '@/components/AnimatedTabs'
 import { AnimatedList, AnimatedListItem } from '@/components/AnimatedList'
@@ -36,7 +36,7 @@ function periodRange(period: string): { from: string; to: string } {
   const now = new Date()
   const y = now.getFullYear()
   const m = now.getMonth()
-  const iso = (d: Date) => d.toISOString().slice(0, 10)
+  const iso = toYMD
   if (period === 'day') {
     return { from: iso(now), to: iso(now) }
   }

@@ -21,6 +21,22 @@ export function formatDateTime(date: string | Date | null | undefined) {
   return format(d, 'dd/MM/yyyy HH:mm', { locale: fr })
 }
 
+/**
+ * Écrit une date au format `2026-07-31` en se basant sur le calendrier local.
+ *
+ * À utiliser partout où une date part vers la base ou vers un filtre de période.
+ * Ne JAMAIS écrire `.toISOString().slice(0, 10)` pour ça : en France (UTC+2 en
+ * été) minuit local devient 22 h la veille, donc la date recule d'un jour et une
+ * période entière se décale : le 30 juin est compté en juillet, le 31 juillet
+ * nulle part.
+ */
+export function toYMD(date: Date): string {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
 export function formatRelative(date: string | Date | null | undefined) {
   if (!date) return '—'
   const d = new Date(date)
@@ -272,6 +288,9 @@ export function getReservationStatusColor(status: string): string {
     terminee: 'bg-gray-100 text-gray-700',
     annulee: 'bg-red-100 text-red-700',
     en_retard: 'bg-orange-100 text-orange-700',
+    // Ambre plutôt que rouge : ce n'est pas une faute de l'agence, et l'acompte
+    // reste acquis. Se distingue quand même d'une annulation ordinaire.
+    non_presente: 'bg-amber-100 text-amber-800',
   }
   return colors[status] ?? 'bg-gray-100 text-gray-700'
 }
@@ -284,6 +303,7 @@ export function getReservationStatusLabel(status: string): string {
     terminee: 'Terminée',
     annulee: 'Annulée',
     en_retard: 'En retard',
+    non_presente: 'Client non présenté',
   }
   return labels[status] ?? status
 }

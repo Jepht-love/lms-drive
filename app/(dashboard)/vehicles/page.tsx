@@ -65,11 +65,17 @@ export default async function VehiclesPage({
   // Véhicules ENGAGÉS maintenant (une réservation a déjà démarré, départ <= maintenant,
   // non clôturée) : PAS disponibles même si le statut est resté « reserve » (EDL de
   // départ non fait). Aligné avec les compteurs du tableau de bord (demande gérant 24/07).
+  //
+  // « option » EXCLU (décision gérant 27/07) : un pré-blocage ne vaut que le temps de
+  // l'acompte ; passé l'heure de départ sans que le client soit venu, le véhicule est
+  // au parking et redevient louable. Cette liste de statuts DOIT rester identique à
+  // celle du tableau de bord (app/(dashboard)/page.tsx, startedRes) : c'est leur
+  // divergence qui faisait afficher « En location 7 » et « Loué 6 » sur le même écran.
   const nowIso = new Date().toISOString()
   const { data: startedRes } = await supabase
     .from('reservations')
     .select('vehicle_id')
-    .in('status', ['option', 'confirmee', 'en_cours', 'en_retard'])
+    .in('status', ['confirmee', 'en_cours', 'en_retard'])
     .lte('start_datetime', nowIso)
   const engagedVehicleIds = new Set((startedRes ?? []).map(r => r.vehicle_id as string))
 
@@ -99,7 +105,7 @@ export default async function VehiclesPage({
       .from('reservations')
       .select('vehicle_id, start_datetime, end_datetime, status')
       .in('vehicle_id', louableVehicleIds)
-      .not('status', 'in', '("annulee","terminee")')
+      .not('status', 'in', '("annulee","terminee","non_presente")')
 
     const activeStatusesByVehicle = new Map<string, string[]>()
     for (const r of activeReservations ?? []) {
@@ -211,6 +217,13 @@ export default async function VehiclesPage({
   const total = allVehicles.length
   const immobilisesCount = allVehicles.filter(isImmobiliseV).length
   const enLocationCount = allVehicles.filter(isEnLocationV).length
+  // « dispo » = LOUABLE MAINTENANT (décision gérant 27/07), pas « dont l'étiquette
+  // dit disponible ». Comprend donc le véhicule garé ET le réservé dont le départ
+  // n'a pas eu lieu ou dont l'option est périmée. C'est la même règle que le
+  // compteur « DISPONIBLES » du tableau de bord. Avant, ce sous-titre comptait
+  // l'étiquette brute et annonçait « 1 dispo » quand l'accueil disait 2.
+  // Les onglets plus bas, eux, restent par étiquette (Disponible / Réservé).
+  const disponiblesCount = allVehicles.filter(isDisponibleV).length
 
   return (
     <div className="space-y-4">
@@ -221,8 +234,8 @@ export default async function VehiclesPage({
           <h1 className="text-xl font-black text-gray-900">Flotte</h1>
           <p className="text-sm text-gray-400 mt-0.5">
             {total} véhicule{total !== 1 ? 's' : ''}
-            {counts['disponible'] > 0 && (
-              <span className="ml-2 text-green-600 font-semibold">· {counts['disponible']} dispo</span>
+            {disponiblesCount > 0 && (
+              <span className="ml-2 text-green-600 font-semibold">· {disponiblesCount} dispo</span>
             )}
           </p>
         </div>

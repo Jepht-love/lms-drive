@@ -1,3 +1,5 @@
+import { toYMD } from '@/lib/utils'
+
 // ─── Catégories comptables ────────────────────────────────────────────────────
 
 // `nature` : charge fixe (récurrente, indépendante de l'activité) ou variable
@@ -175,6 +177,11 @@ export const REVENUE_CATEGORIES = [
   { id: 'mise_a_disposition_sortante', label: 'Mise à disposition sortante' },
   { id: 'facturation', label: 'Facturation (frais de restitution)' },
   { id: 'recouvrement_amende', label: 'Recouvrement amende' },
+  // Acompte gardé quand le client n'est jamais venu chercher le véhicule. Classé
+  // à part du CA « location » : aucune location n'a eu lieu, donc le compter en
+  // chiffre d'affaires gonflerait la rentabilité du véhicule, et le comptable ne
+  // traite pas une indemnité comme une prestation.
+  { id: 'acompte_conserve', label: 'Acompte conservé' },
   { id: 'autres_recettes', label: 'Autres recettes' },
 ]
 
@@ -201,7 +208,7 @@ export function paymentMethodLabel(id: string): string {
 // ─── Périodes ─────────────────────────────────────────────────────────────────
 export function periodRange(period: string, ref = new Date()): { from: string; to: string; label: string } {
   const d = new Date(ref)
-  const iso = (x: Date) => x.toISOString().slice(0, 10)
+  const iso = toYMD
   const startOfDay = new Date(d.getFullYear(), d.getMonth(), d.getDate())
 
   switch (period) {

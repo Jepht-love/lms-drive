@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { updateReservationStatus, updatePaymentInfo } from '@/lib/actions/reservations'
+import { updateReservationStatus, updatePaymentInfo, markReservationNoShow } from '@/lib/actions/reservations'
 import { getReservationStatusLabel, getReservationStatusColor, formatPrice } from '@/lib/utils'
 import type { ReservationStatus } from '@/types/database'
-import { ClipboardList, AlertTriangle, CheckCircle2, ShieldCheck, X } from 'lucide-react'
+import { ClipboardList, AlertTriangle, CheckCircle2, ShieldCheck, X, UserX } from 'lucide-react'
 
 export default function ReservationStatusButtons({
   reservationId,
@@ -13,12 +13,15 @@ export default function ReservationStatusButtons({
   currentStatus,
   contractClosed = false,
   totalPrice,
+  startDatetime,
 }: {
   reservationId: string
   contractId?: string
   currentStatus: ReservationStatus
   contractClosed?: boolean
   totalPrice?: number | null
+  /** Sert à n'afficher « Client non présenté » qu'une fois l'heure de départ passée. */
+  startDatetime?: string | null
 }) {
   const router = useRouter()
   const [status, setStatus] = useState<ReservationStatus>(currentStatus)
@@ -26,8 +29,32 @@ export default function ReservationStatusButtons({
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [showAcompteModal, setShowAcompteModal] = useState(false)
   const [acompteAmount, setAcompteAmount] = useState('')
+  const [showNoShowModal, setShowNoShowModal] = useState(false)
 
   useEffect(() => { setStatus(currentStatus) }, [currentStatus])
+
+  // Le geste n'a de sens qu'après l'heure de départ : avant, le client n'est pas
+  // en retard, il n'est simplement pas encore arrivé.
+  const departPasse = !!startDatetime && new Date(startDatetime) <= new Date()
+
+  async function handleNoShow() {
+    setLoading(true)
+    setErrorMsg(null)
+    setShowNoShowModal(false)
+    try {
+      const result = await markReservationNoShow(reservationId)
+      if (result?.error) {
+        setErrorMsg(result.error)
+      } else {
+        setStatus('non_presente')
+        router.refresh()
+      }
+    } catch {
+      setErrorMsg('Erreur réseau : la clôture n’a pas été enregistrée. Réessayez.')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   async function handleChange(newStatus: ReservationStatus) {
     setLoading(true)
@@ -108,6 +135,16 @@ export default function ReservationStatusButtons({
             <ClipboardList className="w-4 h-4" />
             Démarrer + état des lieux départ
           </button>
+          {departPasse && (
+            <button type="button"
+              onClick={() => setShowNoShowModal(true)}
+              disabled={loading}
+              className="w-full py-2.5 px-3 rounded-xl text-sm font-medium border border-amber-200 text-amber-700 hover:bg-amber-50 flex items-center justify-center gap-2 transition-[background-color,opacity] disabled:opacity-50"
+            >
+              <UserX className="w-4 h-4" />
+              {loading ? '…' : 'Client non présenté'}
+            </button>
+          )}
           <button type="button"
             onClick={() => handleChange('annulee')}
             disabled={loading}
@@ -128,6 +165,16 @@ export default function ReservationStatusButtons({
             <ClipboardList className="w-4 h-4" />
             Démarrer + état des lieux départ
           </button>
+          {departPasse && (
+            <button type="button"
+              onClick={() => setShowNoShowModal(true)}
+              disabled={loading}
+              className="w-full py-2.5 px-3 rounded-xl text-sm font-medium border border-amber-200 text-amber-700 hover:bg-amber-50 flex items-center justify-center gap-2 transition-[background-color,opacity] disabled:opacity-50"
+            >
+              <UserX className="w-4 h-4" />
+              {loading ? '…' : 'Client non présenté'}
+            </button>
+          )}
           <button type="button"
             onClick={() => handleChange('annulee')}
             disabled={loading}
@@ -189,6 +236,56 @@ export default function ReservationStatusButtons({
       {/* Annulée */}
       {status === 'annulee' && (
         <p className="text-xs text-gray-400 text-center py-1">Réservation annulée</p>
+      )}
+
+      {/* Client non présenté */}
+      {status === 'non_presente' && (
+        <div className="flex items-start gap-2 px-3 py-2.5 bg-amber-50 rounded-xl border border-amber-200 text-amber-800">
+          <UserX className="w-4 h-4 mt-0.5 flex-shrink-0" />
+          <p className="text-xs">
+            Le client n'est jamais venu chercher le véhicule. Le dossier est clos,
+            la voiture est de nouveau disponible et l'acompte encaissé reste acquis.
+          </p>
+        </div>
+      )}
+
+      {/* Confirmation « client non présenté » : le geste clôt le dossier et touche
+          la comptabilité, il ne se déclenche donc pas au premier clic. */}
+      {showNoShowModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center p-4" onClick={() => setShowNoShowModal(false)}>
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm space-y-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-gray-900">Le client n'est pas venu ?</h3>
+              <button type="button" aria-label="Fermer" onClick={() => setShowNoShowModal(false)} className="p-1 rounded-lg hover:bg-gray-100">
+                <X className="w-4 h-4 text-gray-400" />
+              </button>
+            </div>
+            <div className="space-y-2 text-sm text-gray-600">
+              <p>En validant, trois choses se passent :</p>
+              <ul className="space-y-1.5 pl-1">
+                <li className="flex gap-2"><span className="text-amber-500 font-bold">·</span> le dossier est clos, sans être confondu avec une annulation ;</li>
+                <li className="flex gap-2"><span className="text-amber-500 font-bold">·</span> le véhicule redevient disponible à la location ;</li>
+                <li className="flex gap-2"><span className="text-amber-500 font-bold">·</span> l'acompte déjà encaissé reste acquis, reclassé en « acompte conservé » plutôt qu'en chiffre d'affaires de location.</li>
+              </ul>
+            </div>
+            <div className="flex gap-2">
+              <button type="button"
+                onClick={() => setShowNoShowModal(false)}
+                disabled={loading}
+                className="flex-1 py-2.5 text-sm font-medium text-gray-500 hover:bg-gray-100 rounded-xl disabled:opacity-50"
+              >
+                Retour
+              </button>
+              <button type="button"
+                onClick={handleNoShow}
+                disabled={loading}
+                className="flex-1 py-2.5 text-sm font-bold text-white bg-amber-600 hover:bg-amber-700 rounded-xl disabled:opacity-50"
+              >
+                {loading ? '…' : 'Valider'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Modal acompte */}

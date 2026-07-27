@@ -33,12 +33,13 @@ Deux choses à en retenir :
 - **Ces cinq rubriques ne sont décrites dans aucun document.** Pour elles, la référence est le gérant lui-même, pas le cahier des charges. Ne pas conclure d'une absence dans le CDC qu'une fonctionnalité est hors périmètre.
 - **La source de vérité de ce qui existe réellement est `lib/navigation/tabs.ts`** — 10 onglets dans le menu, plus les 4 modules réservés aux managers (compta, marketing, équipe, paramètres) qui n'y figurent pas.
 
-## 3. Ce dépôt porte deux choses à la fois
+## 3. Ce dépôt ne porte plus qu'une chose : LMS Drive
 
-1. **LMS Drive** — le logiciel livré au premier client. C'est tout `app/(dashboard)/`.
-2. **FleetLive** — la marque de Jeff, celle qui détient la licence. Sa vitrine publique bilingue FR/EN vit dans `app/fleetaxis/` et `components/fleetaxis/`, volontairement isolée pour n'exposer **aucune référence à LMS Drive** — c'est elle qu'on montre aux prospects institutionnels.
+Tout le logiciel livré au premier client est dans `app/(dashboard)/`.
 
-**Ne jamais faire fuiter l'un dans l'autre** : aucune donnée, aucun nom, aucun visuel du client LMS Drive côté FleetLive.
+**La vitrine commerciale n'est plus ici.** Elle vit dans son propre projet, `~/fleetlive`, refondu le 27/07/2026 (mode clair et sombre, grille tarifaire, FAQ, écrans de gestion de flotte). L'ancienne vitrine qui cohabitait dans ce dépôt — `app/fleetaxis/`, `components/fleetaxis/`, `lib/fleetaxis-i18n.ts`, 13 fichiers — a été **retirée le 27/07/2026 sur décision de Jeff** : elle était devenue une version périmée de la marque, accessible sur le domaine du logiciel sans qu'aucun lien n'y mène. Elle reste dans la corbeille et dans l'historique git si besoin.
+
+**Conséquence à garder :** ne rien recréer de commercial ici. Une page vitrine, un tarif public, un formulaire de démonstration vont dans `~/fleetlive`. Et toujours **aucune fuite dans l'autre sens** : aucune donnée, aucun nom, aucun visuel du client LMS Drive côté FleetLive.
 
 ## 4. Le socle sert à équiper d'autres clients — et c'est voulu
 
@@ -147,7 +148,6 @@ Ce chantier ne se lance pas de sa propre initiative. Quand il démarrera, il sui
 - `app/(dashboard)/sav/` — le canal par lequel le gérant remonte ses bugs. **C'est aussi un produit facturé** : FleetLive vend une assistance 24h/24 assurée par son équipe, et tout passe par cette rubrique. Elle doit être irréprochable — c'est la vitrine du service que le client paie.
 - `supabase/migrations/` — 65 migrations numérotées `0XX_nom.sql`. Une nouvelle prend le numéro suivant.
 - **Graphiques : `recharts` 3.8.1**, avec trois fichiers de référence — détail dans `~/.claude/rules/design-front.md`, qui se charge dès qu'on touche un composant.
-- `app/fleetaxis/` + `components/fleetaxis/` + `lib/fleetaxis-i18n.ts` — la vitrine commerciale FleetLive (le dossier porte encore l'ancien nom, voir §12).
 
 ### Documents déjà écrits — les lire avant de refaire le travail
 
@@ -160,7 +160,7 @@ Ce chantier ne se lance pas de sa propre initiative. Quand il démarrera, il sui
 
 - **`calendar` et `calendrier` coexistent, et c'est voulu — ne pas supprimer `calendar`.** Le calendrier actuel est `/calendrier` (agenda et disponibilités), celui du menu. L'ancien `/calendar` a été vidé : il ne reste qu'un aiguillage vers `/calendrier`, pour que les anciens favoris et les vieilles notifications push ne tombent pas sur une page d'erreur. Et `/calendar/tasks` est bien vivant : c'est là que vivent les tâches, avec sept renvois depuis les notifications, les alertes et la fiche d'un salarié. *Vérifié le 26/07/2026.*
 - **`maintenance` et `incidents` sont fusionnés dans `/suivi` — même schéma, ne rien supprimer.** La page « Suivi véhicule » réunit trois volets : Entretien, Sinistres, Infractions. `/maintenance` et `/incidents` ne sont plus que des aiguillages vers `/suivi`, conservés pour les liens et marque-pages existants. **Mais `/incidents/sinistres/new` et `/incidents/infractions/new` sont bien vivants** : les formulaires de création y vivent, liés depuis les sections de `/suivi`. *Vérifié le 26/07/2026.*
-- **La vitrine porte encore l'ancien nom « FleetAxis ».** La marque est **FleetLive** — confirmé par l'identifiant de l'app mobile `com.fleetlive.lmsdrive`. Mais la page publique affiche FleetAxis à 17 endroits visibles : logo, titre de l'onglet, nom sur l'écran d'accueil, « © 2026 » du pied de page, et l'objet du mail de demande de démonstration. À corriger avant d'envoyer le lien à un prospect.
+- **Le piège « FleetAxis » est éteint.** L'ancien nom apparaissait à 17 endroits visibles de la vitrine qui vivait ici ; cette vitrine a été retirée le 27/07/2026 (voir §3) et il ne reste **aucune mention de FleetAxis dans le code** — vérifié. La marque est **FleetLive**, confirmée par l'identifiant de l'app mobile `com.fleetlive.lmsdrive`. Si le sujet revient, il concerne le projet `~/fleetlive`, pas ce dépôt.
 - **Les règles d'accès Supabase (RLS) ne sont pas automatiques.** Plusieurs migrations récentes n'existent que pour les activer après coup. Une nouvelle table sans ses règles est soit ouverte à tout le monde, soit invisible depuis l'appli.
 - **Décision déjà tranchée, à ne pas re-proposer** : les `const { id } = await params` suivis de `const supabase = await createClient()` restent en l'état. Aucun des deux ne fait d'aller-retour réseau, il n'y a rien à gagner. Ce n'est pas un oubli.
 - **Différé volontairement** : dans `lib/actions/reservations.ts` (autour de la ligne 469), une lecture précède une écriture sur la même réservation. Les paralléliser ferait gagner un aller-retour et risquerait un statut de location incohérent. À laisser tel quel.

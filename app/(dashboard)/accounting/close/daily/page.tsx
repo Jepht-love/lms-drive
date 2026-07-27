@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, CheckCircle2 } from 'lucide-react'
 import BackButton from '@/components/ui/BackButton'
-import { formatPrice, formatDate } from '@/lib/utils'
+import { formatPrice, formatDate, toYMD } from '@/lib/utils'
 import DailyCloseReconcile from '../DailyCloseReconcile'
 import DayPicker from '../DayPicker'
 
@@ -15,7 +15,7 @@ export default async function DailyClosingPage({ searchParams }: { searchParams:
   if (!profile || !['gerant', 'associe'].includes(profile.role)) redirect('/')
 
   // Date sélectionnée (par défaut aujourd'hui) — permet de consulter/clôturer un jour passé.
-  const today = dp || new Date().toISOString().slice(0, 10)
+  const today = dp || toYMD(new Date())
   const [{ data: closing }, { data: txs }] = await Promise.all([
     supabase.from('daily_closings').select('*').eq('date', today).maybeSingle(),
     supabase.from('financial_transactions').select('type, amount, payment_method').eq('date', today),

@@ -3,14 +3,16 @@
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import DatePickerField from '@/components/ui/DatePickerField'
+import { toYMD } from '@/lib/utils'
 
 export default function DayPicker({ date }: { date: string }) {
   const router = useRouter()
-  const today = new Date().toISOString().slice(0, 10)
+  const today = toYMD(new Date())
 
   function shift(days: number) {
-    const d = new Date(date); d.setDate(d.getDate() + days)
-    router.push(`/accounting/close/daily?date=${d.toISOString().slice(0, 10)}`)
+    // `T00:00:00` force la lecture sur le calendrier local, comme toYMD l'écrit.
+    const d = new Date(`${date}T00:00:00`); d.setDate(d.getDate() + days)
+    router.push(`/accounting/close/daily?date=${toYMD(d)}`)
   }
 
   return (

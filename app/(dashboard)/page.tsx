@@ -178,10 +178,20 @@ export default async function DashboardPage() {
   // disponibles — même quand leur statut est resté « reserve » faute d'EDL de départ
   // (le passage à « loué » se fait à l'état des lieux). Sans ça, un véhicule parti
   // restait compté « disponible » (bug « tout loué mais N disponibles », 24/07).
+  //
+  // « option » EXCLU (décision gérant 27/07) : une option n'est qu'un pré-blocage
+  // valable le temps de l'acompte. Passé l'heure de départ sans que le client soit
+  // venu, le véhicule est toujours au parking et redevient louable. Le compter
+  // « en location » gonflait le taux d'occupation et faisait dire au compteur du
+  // haut (7) l'inverse de la liste juste en dessous (6). Une CONFIRMÉE, elle, reste
+  // engagée : l'avance est versée, le client est parti ou passe la chercher.
+  // La réservation non honorée reste signalée dans « Tâches du jour »
+  // (recuperationsEnRetard) et par l'alerte « contrat à signer ». Elle ne disparaît
+  // pas de l'écran, elle change seulement de compteur.
   const { data: startedRes } = await supabase
     .from('reservations')
     .select('vehicle_id')
-    .in('status', ['option', 'confirmee', 'en_cours', 'en_retard'])
+    .in('status', ['confirmee', 'en_cours', 'en_retard'])
     .lte('start_datetime', now.toISOString())
   const engagedVehicleIds = new Set((startedRes ?? []).map(r => r.vehicle_id as string))
 
@@ -221,14 +231,26 @@ export default async function DashboardPage() {
     .lte('start_datetime', in7Days.toISOString())
     .order('start_datetime', { ascending: true })
 
-  const departsAujourdhui =reservations?.filter(r =>
+  // ── Le critère qui départage TOUTES les listes de cet écran ─────────────────
+  // Une CONFIRMÉE dont l'heure de départ est passée = véhicule sorti : l'avance est
+  // versée, le client est parti (ou passe la chercher), même si l'état des lieux de
+  // départ n'a pas été validé. Décision gérant du 27/07 : elle vit dans
+  // « En location », avec le badge « Départ en retard », et NULLE PART AILLEURS :
+  // ni dans les départs du jour, ni dans les récupérations en retard. Sinon la même
+  // voiture s'affiche deux fois sur le même écran.
+  // Une OPTION n'est PAS concernée : ce n'est qu'un pré-blocage le temps de
+  // l'acompte. Passé l'heure sans que le client vienne, elle reste une tâche à
+  // traiter et le véhicule redevient louable (cf. startedRes plus haut).
+  const isSortiSansEdl = (r: { status: string; start_datetime: string }) =>
+    r.status === 'confirmee' && new Date(r.start_datetime) <= now
+
+  const departsAujourdhui = reservations?.filter(r =>
     isDepart(r.status) &&
+    !isSortiSansEdl(r) &&            // partie → elle est dans « En location »
     new Date(r.start_datetime) >= businessDayStart &&
     new Date(r.start_datetime) <= businessDayEnd
-    // On garde les départs du jour MÊME quand l'heure est passée et que le client
-    // n'est pas venu : ça reste une tâche « à récupérer », pas une location. Ces
-    // réservations n'apparaissent plus dans « En location » (réservé aux
-    // véhicules réellement sortis), uniquement ici.
+    // Restent ici : les départs encore à venir dans la journée, et les options du
+    // jour même dont l'heure est passée (le véhicule est toujours au parking).
   ) ?? []
 
   // Retours du jour : fenêtre calendaire (minuit→23h59) pour ne pas rater
@@ -256,19 +278,21 @@ export default async function DashboardPage() {
     .sort((a, b) => a.end_datetime.localeCompare(b.end_datetime)) // plus en retard en premier
 
   // ── RÉCUPÉRATIONS EN RETARD (départ dépassé, client pas venu chercher) ──────
-  // Une réservation CONFIRMÉE (avance bloquée) dont l'heure de départ est passée
-  // mais qui n'est pas encore partie (statut toujours "confirmee", EDL non fait)
-  // reste une action à réaliser : on la remonte tout en haut des tâches, comme
-  // pour un retour en retard. Le départ "du jour même" reste, lui, dans
-  // departsAujourdhui (badge DÉPART / À PRÉPARER).
+  // Une réservation en OPTION dont l'heure de départ est passée sans que le client
+  // soit venu reste une action à réaliser : on la remonte tout en haut des tâches,
+  // comme pour un retour en retard. Le véhicule, lui, est toujours au parking.
   // Ticket SAV 21/07 : sans cette liste, un départ passé des jours précédents
   // (client pas venu, contrat pas signé) disparaissait des « Tâches du jour »
   // alors que les alertes le signalaient — le gérant voyait « Aucune mission ».
+  // Les CONFIRMÉES au départ dépassé ne sont plus ici (décision 27/07,
+  // cf. isSortiSansEdl) : elles comptent comme sorties et s'affichent dans
+  // « En location » avec le badge « Départ en retard ».
   const hoursLateOf = (r: { start_datetime: string }) =>
     Math.max(1, Math.floor((now.getTime() - new Date(r.start_datetime).getTime()) / 36e5))
   const recuperationsEnRetard = (reservations ?? [])
     .filter(r =>
       isDepart(r.status) &&
+      !isSortiSansEdl(r) &&
       new Date(r.start_datetime) < businessDayStart
     )
     .sort((a, b) => a.start_datetime.localeCompare(b.start_datetime)) // plus ancien en premier
@@ -282,13 +306,18 @@ export default async function DashboardPage() {
 
   // ── « En location » : une seule liste, un badge par ligne ───────────────────
   // Demande gérant : ne PAS scinder en deux sections. Une seule section « En
-  // location » qui liste tout ce qui touche un véhicule (sorti OU à venir), et
-  // c'est le BADGE de chaque ligne qui distingue « Loué » (réellement sorti :
-  // en_cours / en_retard) de « Réservé » (départ à venir : option / confirmee).
-  // Le KPI de la flotte, lui, reste strict (seuls les loués comptent « en
-  // location », les réservés restent « disponibles »). Requête SANS plafond de
-  // date : options (pré-blocage), confirmées (avance versée, à venir OU départ
-  // dépassé non récupéré), en_cours (partie), en_retard (retour dépassé).
+  // location », et c'est le BADGE de chaque ligne qui distingue « Loué » (sorti :
+  // en_cours / en_retard) de « Départ en retard » (confirmée dont l'heure de départ
+  // est passée, client pas venu).
+  //
+  // ⚠️ Cette liste et le compteur « EN LOCATION » du haut doivent porter sur le MÊME
+  // ensemble : c'est leur divergence qui affichait 7 en haut et 6 juste en dessous.
+  // Règle commune : est « en location » ce qui est sorti, ou ce qui est engagé par une
+  // CONFIRMÉE au départ dépassé. Une option ne compte jamais (pré-blocage, cf.
+  // startedRes). Toucher l'un sans l'autre recrée l'écart.
+  //
+  // Requête SANS plafond de date (le tri et le filtre font le reste) : options,
+  // confirmées (à venir OU départ dépassé), en_cours, en_retard.
   const { data: locationRaw } = await supabase
     .from('reservations')
     .select(`
@@ -311,12 +340,19 @@ export default async function DashboardPage() {
     if (r.status === 'en_cours')  return 2
     return 4 // option (réservé, non confirmé)
   }
-  // « En location » = uniquement les véhicules réellement SORTIS (départ fait) :
-  // en_cours / en_retard. Les réservations simplement réservées/confirmées (pas
-  // encore parties) ne sont PAS ici — elles restent dans « Tâches du jour » comme
-  // départ à préparer, jusqu'à ce que l'EDL départ soit validé.
+  // « En location » = les véhicules SORTIS (en_cours / en_retard) PLUS les
+  // confirmées au départ dépassé sans état des lieux (badge « Départ en retard »,
+  // cf. pickupDue plus bas). Décision gérant du 27/07 : ce dernier cas était compté
+  // par le compteur du haut sans apparaître ici, d'où « EN LOCATION 7 » au-dessus de
+  // « En location · 6 ». Il a été retiré des « Tâches du jour » en échange, donc
+  // aucune voiture n'est affichée deux fois.
+  //
+  // ⚠️ Ce filtre et le compteur du haut (startedRes + enLocation) doivent rester
+  // d'accord. Toucher l'un sans l'autre recrée l'écart. Une confirmée dont le départ
+  // est ENCORE À VENIR reste dehors, elle vit dans « Tâches du jour ». Une option
+  // n'est jamais ici.
   const enLocationNow = (locationRaw ?? [])
-    .filter(r => r.status === 'en_cours' || r.status === 'en_retard')
+    .filter(r => r.status === 'en_cours' || r.status === 'en_retard' || isSortiSansEdl(r))
     .slice().sort((a, b) => {
       const ra = locationRank(a), rb = locationRank(b)
       if (ra !== rb) return ra - rb

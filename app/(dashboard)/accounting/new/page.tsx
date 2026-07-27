@@ -9,6 +9,7 @@ import DatePickerField from '@/components/ui/DatePickerField'
 import { createClient } from '@/lib/supabase/client'
 import { REVENUE_CATEGORIES, PAYMENT_METHODS, expenseCategoriesByFamily } from '@/lib/accounting/categories'
 import { createTransaction } from '@/lib/actions/accounting'
+import { toYMD } from '@/lib/utils'
 
 interface Vehicle { id: string; plate: string; brand: string; model: string }
 
@@ -27,7 +28,7 @@ export default function NewTransactionPage() {
   }, [])
 
   const expenseGroups = expenseCategoriesByFamily()
-  const today = new Date().toISOString().slice(0, 10)
+  const today = toYMD(new Date())
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()

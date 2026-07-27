@@ -327,6 +327,7 @@ export default async function ReservationPage({
           currentStatus={reservation.status as ReservationStatus}
           contractClosed={contractClosed}
           totalPrice={reservation.total_price}
+          startDatetime={reservation.start_datetime}
         />
       </div>
 

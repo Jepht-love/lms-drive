@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, HandCoins, CalendarDays, AlertTriangle } from 'lucide-react'
 import BackButton from '@/components/ui/BackButton'
-import { formatPrice, formatDate } from '@/lib/utils'
+import { formatPrice, formatDate, toYMD } from '@/lib/utils'
 import MarkReceivablePaid from './MarkReceivablePaid'
 
 // Créances client = échéances 'recette' rattachées à une réservation, non
@@ -26,7 +26,7 @@ export default async function CreancesPage() {
     .order('due_date', { ascending: true })
 
   const creances = (rows ?? []).filter((d: any) => !d.deleted_at)
-  const today = new Date().toISOString().slice(0, 10)
+  const today = toYMD(new Date())
   const overdue = creances.filter((d: any) => d.due_date < today)
   const total = creances.reduce((s: number, d: any) => s + (d.amount ?? 0), 0)
   const overdueTotal = overdue.reduce((s: number, d: any) => s + (d.amount ?? 0), 0)

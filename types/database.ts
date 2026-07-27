@@ -6,7 +6,12 @@ export type VehicleFuelType = 'essence' | 'diesel' | 'hybride' | 'electrique'
 export type VehicleCategory = 'citadine' | 'suv' | 'sportif'
 export type VehicleTransmission = 'manuelle' | 'automatique'
 export type ClientStatus = 'standard' | 'vip' | 'blackliste'
-export type ReservationStatus = 'option' | 'confirmee' | 'en_cours' | 'terminee' | 'annulee' | 'en_retard'
+// « non_presente » : clôture pour client jamais venu chercher le véhicule, alors
+// que l'heure de départ est passée. Distinct d'« annulee » (prévenue à l'avance,
+// véhicule relouable) : ici la voiture a été immobilisée pour rien et l'acompte
+// reste acquis. Toute liste qui exclut 'annulee' et 'terminee' doit l'exclure
+// aussi, sinon la réservation continue de bloquer le véhicule.
+export type ReservationStatus = 'option' | 'confirmee' | 'en_cours' | 'terminee' | 'annulee' | 'en_retard' | 'non_presente'
 export type DepositStatus = 'en_attente' | 'liberee' | 'saisie_partielle' | 'saisie_totale' | 'litigieuse'
 export type PaymentStatus = 'en_attente' | 'paye' | 'partiel' | 'impaye'
 export type PaymentMethod = 'especes' | 'virement' | 'cb' | 'cheque'

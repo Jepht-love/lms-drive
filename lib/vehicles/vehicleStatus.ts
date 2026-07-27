@@ -20,7 +20,9 @@ export async function recomputeVehicleStatus(
     .from('reservations')
     .select('status')
     .eq('vehicle_id', vehicleId)
-    .not('status', 'in', '("annulee","terminee")')
+    // « non_presente » compte comme close : le client n'est jamais venu, donc la
+    // réservation ne doit plus retenir le véhicule (il repasse « disponible »).
+    .not('status', 'in', '("annulee","terminee","non_presente")')
 
   const hasOngoing  = (active ?? []).some(r => ['en_cours', 'en_retard'].includes(r.status))
   const hasUpcoming = (active ?? []).some(r => ['confirmee', 'option'].includes(r.status))

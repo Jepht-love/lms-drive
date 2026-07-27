@@ -82,14 +82,28 @@ export default async function AccountingPage({
         </Link>
       </div>
 
-      {/* Sélecteur de période */}
-      <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
-        {PERIODS.map(p => (
-          <Link key={p.id} href={`/accounting?period=${p.id}${type ? `&type=${type}` : ''}`} className={periodPill(period === p.id)}>{p.label}</Link>
-        ))}
-        <Link href={`/accounting?period=custom${type ? `&type=${type}` : ''}`} className={periodPill(period === 'custom')}>
-          Personnalisé
-        </Link>
+      {/* Sélecteur de période. La barre glisse horizontalement. Sur téléphone,
+          8 périodes pour ~350 px de large : plus de la moitié est hors de l'écran
+          (mesuré à 390 px le 27/07 : 448 px cachés sur 799). Le fondu à droite est
+          là pour qu'on VOIE qu'il y a une suite. Sans lui, « Mois préc. » est
+          tranché net au bord et « Trimestre », « Année », « Personnalisé »
+          n'existent pas pour l'utilisateur. Il ne capte pas les clics
+          (pointer-events-none) et, comme il reprend la couleur du fond de page,
+          il devient invisible de lui-même dès que la barre tient en entier.
+          D'où l'absence de point de rupture : il sert aussi sur tablette. */}
+      <div className="relative">
+        <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+          {PERIODS.map(p => (
+            <Link key={p.id} href={`/accounting?period=${p.id}${type ? `&type=${type}` : ''}`} className={periodPill(period === p.id)}>{p.label}</Link>
+          ))}
+          <Link href={`/accounting?period=custom${type ? `&type=${type}` : ''}`} className={periodPill(period === 'custom')}>
+            Personnalisé
+          </Link>
+        </div>
+        <div
+          aria-hidden
+          className="pointer-events-none absolute top-0 right-0 bottom-1 w-10 bg-gradient-to-l from-[#F2F2F7] to-transparent"
+        />
       </div>
 
       {/* Date picker personnalisé */}

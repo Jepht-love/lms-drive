@@ -337,7 +337,7 @@ export async function createReservation(formData: FormData) {
     .from('reservations')
     .select('id')
     .eq('vehicle_id', vehicleId)
-    .not('status', 'in', '("annulee","terminee")')
+    .not('status', 'in', '("annulee","terminee","non_presente")')
     .lt('start_datetime', endDatetime)
     .gt('end_datetime', startDatetime)
     .limit(1)
@@ -426,6 +426,27 @@ export async function createReservation(formData: FormData) {
   if (error) return { error: error.message }
 
   await recomputeVehicleStatus(supabase, vehicleId)
+
+  // Acompte encaissé dès la création : il DOIT partir en comptabilité, comme un
+  // paiement saisi ensuite depuis la fiche.
+  //
+  // Constat du 27/07/2026 : ce n'était pas le cas. L'insertion ci-dessus remplit
+  // payment_amount et payment_status, mais rien ne créait l'écriture, alors que la
+  // saisie manuelle le fait (cf. updatePaymentInfo). Résultat sur la base réelle :
+  // 700 € encaissés sur deux réservations, introuvables dans les comptes.
+  //
+  // On délègue à updatePaymentInfo au lieu de recopier ici l'insertion comptable :
+  // une seule logique de comptabilisation, donc pas deux versions qui divergent.
+  // Le petit aller-retour supplémentaire est le prix de cette garantie.
+  if (paymentAmount > 0) {
+    await updatePaymentInfo(data.id, {
+      payment_status: payload.payment_status,
+      payment_method: (formData.get('payment_method') as string) || null,
+      payment_amount: paymentAmount,
+      payment_ref: (formData.get('payment_ref') as string) || null,
+      payment_date: new Date().toISOString(),
+    })
+  }
 
   await supabase.from('audit_logs').insert({
     user_id: user.id,
@@ -622,6 +643,91 @@ export async function updateReservationStatus(id: string, status: ReservationSta
   return { success: true }
 }
 
+/**
+ * Clôture une réservation dont le client n'est jamais venu chercher le véhicule.
+ *
+ * Besoin gérant du 27/07/2026. Sans ce geste, une réservation confirmée dont
+ * l'heure de départ était passée restait en l'état indéfiniment : la voiture
+ * demeurait bloquée alors qu'elle était au parking, et le tableau de bord devait
+ * deviner s'il s'agissait d'un départ sans état des lieux ou d'un client absent.
+ *
+ * Ce que le clic déclenche :
+ *   1. la réservation passe en « non_presente » (clôture, pas annulation) ;
+ *   2. le véhicule est recalculé, donc libéré s'il n'a pas d'autre engagement ;
+ *   3. la recette déjà encaissée est RECLASSÉE de « location » vers
+ *      « acompte_conserve ». On ne crée ni ne supprime d'argent : l'acompte a été
+ *      comptabilisé à l'encaissement et il reste acquis. Seule son étiquette
+ *      change, pour que le chiffre d'affaires de location et la rentabilité du
+ *      véhicule ne comptent pas une location qui n'a jamais eu lieu.
+ *
+ * Une période comptable déjà clôturée n'est jamais modifiée : si la recette y est
+ * figée, elle reste telle quelle et la réservation est quand même close.
+ */
+export async function markReservationNoShow(id: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié' }
+
+  const { data: reservation } = await supabase
+    .from('reservations')
+    .select('vehicle_id, status, start_datetime')
+    .eq('id', id)
+    .single()
+
+  if (!reservation) return { error: 'Réservation introuvable' }
+
+  // Garde-fou : le geste n'a de sens que sur une réservation encore en attente de
+  // départ dont l'heure est passée. Une location démarrée se termine par l'état
+  // des lieux d'arrivée, pas par ici.
+  if (!['option', 'confirmee'].includes(reservation.status)) {
+    return { error: 'Seule une réservation en option ou confirmée peut être clôturée ainsi.' }
+  }
+  if (new Date(reservation.start_datetime) > new Date()) {
+    return { error: "L'heure de départ n'est pas encore passée." }
+  }
+
+  const { error: updateError } = await supabase
+    .from('reservations')
+    .update({ status: 'non_presente' })
+    .eq('id', id)
+  if (updateError) return { error: updateError.message }
+
+  await recomputeVehicleStatus(supabase, reservation.vehicle_id)
+
+  // Reclassement de la recette encaissée, hors période figée.
+  const admin = createAdminClient()
+  const { data: recettes } = await admin
+    .from('financial_transactions')
+    .select('id, date')
+    .eq('reservation_id', id)
+    .eq('category', 'location')
+  for (const t of recettes ?? []) {
+    if (await assertPeriodOpen(supabase, t.date)) continue
+    await admin
+      .from('financial_transactions')
+      .update({ category: 'acompte_conserve' })
+      .eq('id', t.id)
+  }
+
+  await supabase.from('audit_logs').insert({
+    user_id: user.id,
+    action: 'reservation_no_show',
+    entity_type: 'reservations',
+    entity_id: id,
+    metadata: { previous_status: reservation.status },
+  })
+
+  await syncReservationToCalendar(id)
+
+  revalidatePath(`/reservations/${id}`)
+  revalidatePath('/reservations')
+  revalidatePath('/accounting')
+  revalidatePath('/vehicles')
+  revalidatePath('/')
+  revalidatePath('/calendrier')
+  return { success: true }
+}
+
 export async function updateReservationDates(
   id: string,
   startDatetime: string,
@@ -654,7 +760,7 @@ export async function updateReservationDates(
     .select('id')
     .eq('vehicle_id', reservation.vehicle_id)
     .neq('id', id)
-    .not('status', 'in', '("annulee","terminee")')
+    .not('status', 'in', '("annulee","terminee","non_presente")')
     .lt('start_datetime', endDatetime)
     .gt('end_datetime', startDatetime)
     .limit(1)
@@ -758,7 +864,7 @@ export async function prolongReservation(
     .select('id')
     .eq('vehicle_id', reservation.vehicle_id)
     .neq('id', id)
-    .not('status', 'in', '("annulee","terminee")')
+    .not('status', 'in', '("annulee","terminee","non_presente")')
     .lt('start_datetime', newEnd)
     .gt('end_datetime', reservation.end_datetime)
     .limit(1)
