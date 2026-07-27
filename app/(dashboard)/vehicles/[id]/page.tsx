@@ -14,6 +14,7 @@ import type { MaintenanceFlag } from '@/types/database'
 const RESA_STATUS_LABEL: Record<string, string> = {
   option: 'En cours', confirmee: 'Confirmée', en_cours: 'En location',
   en_retard: 'En retard', terminee: 'Terminée', annulee: 'Annulée',
+  non_presente: 'Client non présenté',
 }
 
 export default async function VehiclePage({ params }: { params: Promise<{ id: string }> }) {

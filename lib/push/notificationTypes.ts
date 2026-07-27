@@ -32,11 +32,11 @@ export interface NotificationTypeDef {
 
 export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
   { key: 'new_reservation_alert', label: 'Nouvelle réservation',            category: 'Réservations' },
-  { key: 'departure_alert',       label: 'Départ imminent',                 category: 'Réservations' },
+  { key: 'departure_alert',       label: 'Départ du jour',                  category: 'Réservations' },
   { key: 'return_alert',          label: 'Retour du jour',                  category: 'Réservations' },
   { key: 'late_return_alert',     label: 'Retour en retard',                category: 'Réservations' },
   { key: 'contract_alert',        label: 'Contrat à signer / clôturer',     category: 'Réservations' },
-  { key: 'pickup_late_alert',     label: 'Récupération en retard',          category: 'Réservations' },
+  { key: 'pickup_late_alert',     label: 'Départ en retard',                category: 'Réservations' },
 
   { key: 'wash_alert',            label: 'Lavage avant location',           category: 'Flotte & entretien' },
   { key: 'ct_alert',              label: 'Contrôle technique à échéance',   category: 'Flotte & entretien' },
@@ -61,6 +61,11 @@ export const NOTIFICATION_DEFAULTS: Record<NotificationType, boolean> = Object.f
 export const ALERT_TYPE_TO_NOTIF: Record<string, NotificationType> = {
   contrat:             'contract_alert',
   recuperation_retard: 'pickup_late_alert',
+  // Les deux alertes qui anticipent la journée (ajout 27/07). « return_alert »
+  // existait déjà dans les préférences du gérant sous le nom « Retour du jour »,
+  // mais aucune alerte ne l'alimentait : la case était réglable sans effet.
+  depart_imminent:     'departure_alert',
+  retour_jour:         'return_alert',
   ct:                  'ct_alert',
   assurance:           'insurance_alert',
   revision:            'service_alert',

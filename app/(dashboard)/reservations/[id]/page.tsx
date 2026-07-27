@@ -54,6 +54,7 @@ const STATUS_CONFIG: Record<string, { label: string; hero: string; badge: string
   en_retard: { label: 'En retard', hero: 'bg-red-700',    badge: 'bg-red-50 text-red-700' },
   terminee:  { label: 'Terminée',  hero: 'bg-gray-500',   badge: 'bg-gray-100 text-gray-500' },
   annulee:   { label: 'Annulée',   hero: 'bg-gray-400',   badge: 'bg-gray-100 text-gray-400' },
+  non_presente: { label: 'Client non présenté', hero: 'bg-amber-700', badge: 'bg-amber-100 text-amber-800' },
 }
 
 const PAYMENT_LABELS: Record<string, string> = {

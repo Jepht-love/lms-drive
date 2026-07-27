@@ -17,6 +17,7 @@ const STATUS_CONFIG: Record<string, { label: string; bar: string; badge: string 
   en_retard: { label: 'En retard',  bar: 'bg-red-500',    badge: 'bg-red-50 text-red-700' },
   terminee:  { label: 'Terminée',   bar: 'bg-gray-200',   badge: 'bg-gray-100 text-gray-500' },
   annulee:   { label: 'Annulée',    bar: 'bg-gray-100',   badge: 'bg-gray-50 text-gray-400' },
+  non_presente: { label: 'Client non présenté', bar: 'bg-amber-400', badge: 'bg-amber-100 text-amber-800' },
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -71,7 +72,11 @@ export default async function ReservationsPage({
       })
     : (rawReservations ?? [])
 
-  const statuses = ['option', 'confirmee', 'en_cours', 'en_retard', 'terminee', 'annulee']
+  // « non_presente » en dernier : c'est un état de clôture, comme annulée. L'onglet
+  // n'apparaît que s'il y en a (cf. le test count === 0 plus bas), et c'est le seul
+  // endroit de l'appli où l'on peut retrouver ces dossiers, puisqu'ils sortent du
+  // tableau de bord et des tâches du jour.
+  const statuses = ['option', 'confirmee', 'en_cours', 'en_retard', 'terminee', 'annulee', 'non_presente']
   const total = reservations.length
 
   return (

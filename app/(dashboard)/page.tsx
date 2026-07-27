@@ -60,8 +60,16 @@ const ALERT_GROUPS: AlertGroup[] = [
     cardBg: 'bg-red-50',    cardBorder: 'border-red-100',    labelColor: 'text-red-700',    iconColor: 'text-red-500',    badgeBg: 'bg-red-500',    badgeText: 'text-white' },
   { type: 'contrat',  label: 'Contrat à signer',       icon: FileText,      href: '/contracts',
     cardBg: 'bg-red-50',    cardBorder: 'border-red-100',    labelColor: 'text-red-700',    iconColor: 'text-red-500',    badgeBg: 'bg-red-500',    badgeText: 'text-white' },
-  { type: 'recuperation_retard', label: 'Récupération en retard', icon: AlertTriangle, href: '/reservations',
+  { type: 'recuperation_retard', label: 'Départ en retard', icon: AlertTriangle, href: '/reservations',
     cardBg: 'bg-orange-50', cardBorder: 'border-orange-100', labelColor: 'text-orange-700', iconColor: 'text-orange-500', badgeBg: 'bg-orange-500', badgeText: 'text-white' },
+  // Les deux alertes qui anticipent la journée (ajout 27/07). En bleu, jamais en
+  // rouge ni orange : rien n'est en retard, il s'agit d'organiser la journée. Dès
+  // l'heure dépassée, la même réservation ressort en « Départ en retard » ou
+  // « Retour en retard » au-dessus.
+  { type: 'depart_imminent', label: 'Départ du jour', icon: Clock, href: '/reservations',
+    cardBg: 'bg-blue-50',   cardBorder: 'border-blue-100',   labelColor: 'text-blue-700',   iconColor: 'text-blue-500',   badgeBg: 'bg-blue-500',   badgeText: 'text-white' },
+  { type: 'retour_jour',     label: 'Retour du jour', icon: Clock, href: '/reservations',
+    cardBg: 'bg-blue-50',   cardBorder: 'border-blue-100',   labelColor: 'text-blue-700',   iconColor: 'text-blue-500',   badgeBg: 'bg-blue-500',   badgeText: 'text-white' },
   { type: 'ct',       label: 'Contrôle technique',     icon: AlertTriangle, href: '/vehicles',
     cardBg: 'bg-orange-50', cardBorder: 'border-orange-100', labelColor: 'text-orange-700', iconColor: 'text-orange-500', badgeBg: 'bg-orange-500', badgeText: 'text-white' },
   { type: 'assurance',label: 'Assurance',              icon: AlertTriangle, href: '/vehicles',
@@ -916,7 +924,7 @@ export default async function DashboardPage() {
                     </span>
                     <div className="flex-1 min-w-0">
                       <p className="text-[11px] font-black uppercase tracking-wide text-orange-600">
-                        Récupération en retard de {lateLabel}
+                        Départ en retard de {lateLabel}
                       </p>
                       <p className="text-sm font-bold text-gray-900 truncate">
                         {c?.first_name} {c?.last_name}

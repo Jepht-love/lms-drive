@@ -295,29 +295,74 @@ export async function fetchAllAlerts(
     })
   })
 
-  // ── 9. Départs imminents (< 1h) ─────────────────────────────────────────────
-  const in1h = new Date(now.getTime() + 3600 * 1000)
-  const { data: upcomingDepartures } = await supabase
+  // ── 9. Départs et retours DU JOUR ───────────────────────────────────────────
+  // Deux alertes qui anticipent, et qui laissent la place à leur version « en
+  // retard » dès que l'heure est dépassée (décision gérant 27/07) :
+  //   DÉPART DU JOUR  → DÉPART EN RETARD   (section 11)
+  //   RETOUR DU JOUR  → RETOUR EN RETARD   (section 2)
+  //
+  // Elles couvrent la JOURNÉE entière, pas la dernière heure : le but est
+  // d'organiser la journée le matin, pas d'être prévenu quand il est trop tard
+  // pour appeler le client ou libérer une place. Rangées en « important » : le
+  // rouge urgent reste réservé aux retards réels.
+  //
+  // Bornes calculées sur le calendrier LOCAL (voir toYMD dans lib/utils) : en
+  // passant par l'heure de Londres, « aujourd'hui » basculerait la veille entre
+  // minuit et 2 h du matin.
+  const finDeJournee = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999)
+
+  // Départs du jour : heure encore à venir. Seules les CONFIRMÉES comptent, une
+  // option n'étant qu'un pré-blocage qui peut ne jamais se concrétiser.
+  const { data: departuresToday } = await supabase
     .from('reservations')
-    .select('id, vehicle_id, start_datetime, vehicles(plate, brand, model)')
+    .select('id, vehicle_id, start_datetime, vehicles(plate, brand, model), clients(first_name, last_name)')
     .eq('status', 'confirmee')
     .gte('start_datetime', now.toISOString())
-    .lte('start_datetime', in1h.toISOString())
+    .lte('start_datetime', finDeJournee.toISOString())
+    .order('start_datetime', { ascending: true })
 
-  upcomingDepartures?.forEach(r => {
+  departuresToday?.forEach(r => {
     const v = Array.isArray(r.vehicles) ? r.vehicles[0] : r.vehicles
-    const minutesLeft = Math.max(0, Math.round(
-      (new Date(r.start_datetime).getTime() - now.getTime()) / 60000
-    ))
+    const c = Array.isArray(r.clients)  ? r.clients[0]  : r.clients
+    const heure = new Date(r.start_datetime).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
     alerts.push({
       id: `depart-${r.id}`,
       category: 'important',
       urgent: false,
       type: 'depart_imminent',
-      label: 'DÉPART IMMINENT',
-      sublabel: `${vLabel(v)} · dans ${minutesLeft} min`,
+      label: 'DÉPART DU JOUR',
+      sublabel: `${vLabel(v)} · ${(c as any)?.first_name ?? ''} ${(c as any)?.last_name ?? ''} · à ${heure}`,
       href: `/reservations/${r.id}?from=alerts`,
       date: r.start_datetime,
+      vehicleId: r.vehicle_id,
+      reservationId: r.id,
+    })
+  })
+
+  // Retours du jour : voiture sortie, retour attendu aujourd'hui, heure encore à
+  // venir. Dès l'heure dépassée, la réservation passe « en_retard » et c'est la
+  // section 2 qui la reprend en rouge.
+  const { data: returnsToday } = await supabase
+    .from('reservations')
+    .select('id, vehicle_id, end_datetime, vehicles(plate, brand, model), clients(first_name, last_name)')
+    .eq('status', 'en_cours')
+    .gte('end_datetime', now.toISOString())
+    .lte('end_datetime', finDeJournee.toISOString())
+    .order('end_datetime', { ascending: true })
+
+  returnsToday?.forEach(r => {
+    const v = Array.isArray(r.vehicles) ? r.vehicles[0] : r.vehicles
+    const c = Array.isArray(r.clients)  ? r.clients[0]  : r.clients
+    const heure = new Date(r.end_datetime).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+    alerts.push({
+      id: `retour-jour-${r.id}`,
+      category: 'important',
+      urgent: false,
+      type: 'retour_jour',
+      label: 'RETOUR DU JOUR',
+      sublabel: `${vLabel(v)} · ${(c as any)?.first_name ?? ''} ${(c as any)?.last_name ?? ''} · à ${heure}`,
+      href: `/reservations/${r.id}?from=alerts`,
+      date: r.end_datetime,
       vehicleId: r.vehicle_id,
       reservationId: r.id,
     })
@@ -372,7 +417,10 @@ export async function fetchAllAlerts(
     })
   })
 
-  // ── 11. Récupérations en retard (confirmée, start_datetime dépassé, non traitée) ─
+  // ── 11. DÉPARTS EN RETARD (confirmée, heure de départ dépassée, non traitée) ──
+  // Prend le relais de « DÉPART DU JOUR » (section 9) dès l'heure passée. Deux
+  // suites possibles pour le gérant : faire l'état des lieux de départ si le
+  // client est là, ou déclarer « client non présenté » sur la fiche.
   const { data: overduePickups } = await supabase
     .from('reservations')
     .select('id, vehicle_id, start_datetime, vehicles(plate, brand, model), clients(first_name, last_name)')
@@ -390,7 +438,7 @@ export async function fetchAllAlerts(
       category: 'urgent',
       urgent: true,
       type: 'recuperation_retard',
-      label: 'RÉCUPÉRATION EN RETARD',
+      label: 'DÉPART EN RETARD',
       sublabel: `${vLabel(v)} · ${(c as any)?.first_name ?? ''} ${(c as any)?.last_name ?? ''} · ${daysLate > 0 ? `${daysLate}j de retard` : `${hoursLate}h de retard`}`,
       href: `/reservations/${r.id}?from=alerts`,
       date: r.start_datetime,

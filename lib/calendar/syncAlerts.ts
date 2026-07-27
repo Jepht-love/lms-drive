@@ -14,12 +14,18 @@ export async function syncAlertsToCalendar(
   supabase: ReturnType<typeof createAdminClient>,
   alerts: AppAlert[],
 ): Promise<void> {
-  // 'retard' et 'lavage' sont déjà représentés sur le calendrier par les
-  // événements liés à la réservation elle-même (retour_vehicule passe en
-  // en_cours quand en retard ; syncWashTask crée déjà sa propre tâche lavage,
-  // avec un déclencheur plus précis que l'alerte de tableau de bord) — les
-  // resynchroniser ici créerait un doublon visuel sur la même réservation.
-  const ALREADY_ON_CALENDAR_TYPES = ['retard', 'lavage']
+  // Types déjà représentés sur le calendrier par les événements liés à la
+  // réservation elle-même. Les resynchroniser ici créerait un doublon visuel sur
+  // la même réservation, au même horaire.
+  //   'retard'  : retour_vehicule passe en en_cours quand le retour est dépassé.
+  //   'lavage'  : syncWashTask crée déjà sa propre tâche, avec un déclencheur
+  //               plus précis que l'alerte de tableau de bord.
+  //   'depart_imminent' / 'retour_jour' : les départs et retours du jour ONT
+  //               déjà leur événement de départ / retour au calendrier. Constaté
+  //               le 27/07 dès l'ajout de ces alertes : « 12:00 RETOUR ... » et
+  //               « 12:00 TÂCHE — RETOUR DU JOUR ... » côte à côte dans les
+  //               tâches du jour, pour la même voiture et le même client.
+  const ALREADY_ON_CALENDAR_TYPES = ['retard', 'lavage', 'depart_imminent', 'retour_jour']
   const actionable = alerts.filter(a =>
     (a.category === 'urgent' || a.category === 'important') &&
     !ALREADY_ON_CALENDAR_TYPES.includes(a.type),

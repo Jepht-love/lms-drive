@@ -82,7 +82,8 @@ export function auditEntityLabel(entityType: string | null | undefined): string 
 
 const STATUS_LABELS: Record<string, string> = {
   option: 'option', confirmee: 'confirmée', en_cours: 'en cours', terminee: 'terminée',
-  annulee: 'annulée', en_retard: 'en retard', cloture: 'clôturé', declare: 'déclaré',
+  annulee: 'annulée', en_retard: 'en retard', non_presente: 'client non présenté',
+  cloture: 'clôturé', declare: 'déclaré',
   disponible: 'disponible', maintenance: 'maintenance', loue: 'loué', reserve: 'réservé',
 }
 const human = (v: unknown) => {

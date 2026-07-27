@@ -42,6 +42,7 @@ const STATUS_RES: Record<string, string> = {
   en_retard: 'bg-red-50 text-red-700',
   terminee:  'bg-gray-100 text-gray-500',
   annulee:   'bg-gray-100 text-gray-400',
+  non_presente: 'bg-amber-100 text-amber-800',
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -51,6 +52,7 @@ const STATUS_LABELS: Record<string, string> = {
   en_retard: 'En retard',
   terminee:  'Terminée',
   annulee:   'Annulée',
+  non_presente: 'Client non présenté',
 }
 
 const PAYMENT_LABELS: Record<string, string> = {
@@ -541,15 +543,11 @@ export default async function ClientPage({
 
       {/* ─── Documents d'identité (infos + pièces importées) ─── */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+        {/* Pas de compteur de pièces à côté du titre (retiré le 27/07) : il n'était
+            pas aligné avec le texte du titre, et il n'apprenait rien de plus que
+            l'indicateur « Manque : … » / « Pièces complètes » posé juste à droite. */}
         <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <SectionLabel>Documents d&apos;identité</SectionLabel>
-            {clientDocs.length > 0 && (
-              <span className="text-[10px] font-black bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
-                {clientDocs.length}
-              </span>
-            )}
-          </div>
+          <SectionLabel>Documents d&apos;identité</SectionLabel>
           {/* Indicateur de pièces manquantes */}
           {missingDocs.length > 0 ? (
             <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-orange-50 text-orange-600 border border-orange-200 px-2 py-0.5 rounded-full">
