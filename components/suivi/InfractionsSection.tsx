@@ -75,10 +75,19 @@ export default async function InfractionsSection({
             const v = Array.isArray(inf.vehicles) ? inf.vehicles[0] : inf.vehicles
             const c = Array.isArray(inf.clients) ? inf.clients[0] : inf.clients
             const st = INFRACTION_STATUS[inf.status] ?? INFRACTION_STATUS.en_attente
-            // Amende avancée par l'agence → statut de recouvrement client
-            const advanced = inf.paid_by === 'agence'
-            const totalDue = (inf.amount ?? 0) + (inf.admin_fees ?? 0)
-            const fullyRecovered = advanced && (inf.recovered_amount ?? 0) >= totalDue && totalDue > 0
+            // Amende avancée par l'agence → il reste de l'argent à récupérer sur
+            // le client. Encore faut-il qu'il y ait un client : sur un véhicule
+            // en usage interne (ni client ni réservation), l'amende est une
+            // charge de l'entreprise, pas une avance. L'ancienne condition ne
+            // testait que le payeur et affichait « à recouvrer » sur un dossier
+            // sans personne à qui réclamer, juste à côté d'un « clôturé » qui
+            // disait l'inverse. Remonté par le gérant le 27/07/2026.
+            const totalDue = Number(inf.amount ?? 0) + Number(inf.admin_fees ?? 0)
+            const paidByAgency = inf.paid_by === 'agence'
+            const hasDebtor = !!(c || inf.reservation_id)
+            const advanced = paidByAgency && hasDebtor
+            const remaining = Math.max(0, totalDue - Number(inf.recovered_amount ?? 0))
+            const fullyRecovered = advanced && remaining === 0 && totalDue > 0
             return (
               <Link key={inf.id} href={`/incidents/infractions/${inf.id}`} className="block">
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 hover:shadow-md transition-[box-shadow,scale] active:scale-[.99]">
@@ -88,8 +97,11 @@ export default async function InfractionsSection({
                         <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${st.bg} ${st.text}`}>{st.label}</span>
                         {advanced && (
                           fullyRecovered
-                            ? <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-green-50 text-green-700">Recouvrée</span>
-                            : <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">À recouvrer</span>
+                            ? <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-green-50 text-green-700">Récupérée</span>
+                            : <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">Reste à récupérer {formatPrice(remaining)}</span>
+                        )}
+                        {paidByAgency && !hasDebtor && (
+                          <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">Charge agence</span>
                         )}
                         <span className="text-sm font-black text-gray-900">{v ? `${v.brand} ${v.model}` : '—'}</span>
                         {v?.plate && <span className="text-xs font-mono text-gray-400">{v.plate}</span>}

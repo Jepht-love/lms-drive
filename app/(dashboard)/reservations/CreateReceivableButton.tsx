@@ -6,12 +6,29 @@ import { createReceivable } from '@/lib/actions/dueDates'
 import { formatPrice } from '@/lib/utils'
 import DatePickerField from '@/components/ui/DatePickerField'
 
-interface Props {
-  reservationId: string
-  /** Reste dû = total − déjà encaissé. Pré-remplit le montant de la 1re échéance. */
+interface ReservationChoice {
+  id: string
+  /** « RES-2607-9768 — Mohamed-amine Baazaoui · BMW Série 1 » */
+  label: string
+  /** Reste dû de cette réservation. */
   remaining: number
-  /** Échéance par défaut (YYYY-MM-DD). */
+  /** Échéance par défaut (YYYY-MM-DD) = date de retour. */
   defaultDueDate: string
+}
+
+interface Props {
+  /** Fiche réservation : la créance est rattachée à CETTE réservation. */
+  reservationId?: string
+  /** Reste dû = total − déjà encaissé. Pré-remplit le montant de la 1re échéance. */
+  remaining?: number
+  /** Échéance par défaut (YYYY-MM-DD). */
+  defaultDueDate?: string
+  /**
+   * Écran Créances : aucune réservation n'est imposée, on la choisit dans la
+   * liste. Demande du gérant du 27/07/2026 — il ne voulait plus avoir à passer
+   * par une fiche réservation pour enregistrer une créance.
+   */
+  reservations?: ReservationChoice[]
 }
 
 interface Echeance {
@@ -22,8 +39,16 @@ interface Echeance {
   dueDate: string
 }
 
-export default function CreateReceivableButton({ reservationId, remaining, defaultDueDate }: Props) {
+export default function CreateReceivableButton({
+  reservationId,
+  remaining = 0,
+  defaultDueDate = '',
+  reservations,
+}: Props) {
   const [open, setOpen] = useState(false)
+  // Mode « choix libre » quand la liste est fournie (écran Créances).
+  const picking = Array.isArray(reservations)
+  const [chosenId, setChosenId] = useState(reservationId ?? '')
   // Une créance peut être découpée en plusieurs échéances (paiement échelonné).
   // On démarre avec une seule ligne pré-remplie au reste dû.
   const nextEcheanceId = useRef(1)
@@ -35,7 +60,16 @@ export default function CreateReceivableButton({ reservationId, remaining, defau
   const [saved, setSaved] = useState(false)
 
   const total = echeances.reduce((s, e) => s + (e.amount === '' ? 0 : Number(e.amount)), 0)
-  const valid = echeances.every(e => Number(e.amount) > 0 && e.dueDate)
+  const valid = !!chosenId && echeances.every(e => Number(e.amount) > 0 && e.dueDate)
+
+  // Choisir une réservation pré-remplit la première échéance avec son reste dû
+  // et sa date de retour, comme le fait la fiche réservation.
+  function chooseReservation(id: string) {
+    setChosenId(id)
+    const r = reservations?.find(x => x.id === id)
+    if (!r) return
+    setEcheances([{ id: 0, amount: r.remaining > 0 ? String(r.remaining) : '', dueDate: r.defaultDueDate }])
+  }
 
   function updateEcheance(i: number, patch: Partial<Echeance>) {
     setEcheances(prev => prev.map((e, idx) => (idx === i ? { ...e, ...patch } : e)))
@@ -51,7 +85,7 @@ export default function CreateReceivableButton({ reservationId, remaining, defau
     setError(null)
     setLoading(true)
     const fd = new FormData()
-    fd.set('reservation_id', reservationId)
+    fd.set('reservation_id', chosenId)
     fd.set('echeances', JSON.stringify(
       echeances.map(e => ({ amount: Number(e.amount), due_date: e.dueDate }))
     ))
@@ -82,7 +116,7 @@ export default function CreateReceivableButton({ reservationId, remaining, defau
         className="mt-3 w-full inline-flex items-center justify-center gap-2 h-11 rounded-xl bg-[#111111] text-white text-sm font-semibold hover:bg-black transition-colors"
       >
         <HandCoins className="w-4 h-4 text-emerald-300" />
-        Enregistrer une créance (paiement à recevoir)
+        {picking ? 'Ajouter une créance' : 'Enregistrer une créance (paiement à recevoir)'}
       </button>
     )
   }
@@ -109,6 +143,25 @@ export default function CreateReceivableButton({ reservationId, remaining, defau
         en « à recevoir » et entre au chiffre d&apos;affaires une fois encaissée. Ajoutez
         plusieurs échéances pour un paiement échelonné.
       </p>
+
+      {picking && (
+        <div>
+          <label className={labelCls} htmlFor="creance-reservation">Réservation</label>
+          <div className={fieldCls}>
+            <select
+              id="creance-reservation"
+              value={chosenId}
+              onChange={ev => chooseReservation(ev.target.value)}
+              className="flex-1 min-w-0 bg-transparent border-0 outline-none px-3 py-2.5 text-sm text-white [color-scheme:dark]"
+            >
+              <option value="">— Choisir une réservation —</option>
+              {reservations!.map(r => (
+                <option key={r.id} value={r.id}>{r.label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      )}
 
       <div className="space-y-3">
         {echeances.map((e, i) => (

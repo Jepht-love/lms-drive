@@ -5,6 +5,7 @@ import { ArrowLeft, HandCoins, CalendarDays, AlertTriangle } from 'lucide-react'
 import BackButton from '@/components/ui/BackButton'
 import { formatPrice, formatDate, toYMD } from '@/lib/utils'
 import MarkReceivablePaid from './MarkReceivablePaid'
+import CreateReceivableButton from '@/app/(dashboard)/reservations/CreateReceivableButton'
 
 // Créances client = échéances 'recette' rattachées à une réservation, non
 // soldées. Le service est daté à service_date (date de la résa) ; l'encaissement
@@ -24,6 +25,29 @@ export default async function CreancesPage() {
     .eq('is_paid', false)
     .not('reservation_id', 'is', null)
     .order('due_date', { ascending: true })
+
+  // Réservations proposées à la création d'une créance depuis cet écran (le
+  // gérant ne veut plus passer par une fiche réservation). On écarte celles qui
+  // n'ont plus rien à recevoir : annulées, non présentées, et déjà soldées.
+  const { data: resaRows } = await supabase
+    .from('reservations')
+    .select('id, reservation_number, total_price, payment_amount, end_datetime, vehicles(brand, model, plate), clients(first_name, last_name)')
+    .not('status', 'in', '("annulee","non_presente")')
+    .order('end_datetime', { ascending: false })
+    .limit(100)
+
+  const reservationChoices = (resaRows ?? []).map((r: any) => {
+    const v = Array.isArray(r.vehicles) ? r.vehicles[0] : r.vehicles
+    const c = Array.isArray(r.clients) ? r.clients[0] : r.clients
+    const client = c ? `${c.first_name} ${c.last_name}` : 'Client'
+    const veh = v ? `${v.brand} ${v.model}` : ''
+    return {
+      id: r.id,
+      label: `${r.reservation_number} — ${client}${veh ? ` · ${veh}` : ''}`,
+      remaining: Math.round(((r.total_price ?? 0) - (r.payment_amount ?? 0)) * 100) / 100,
+      defaultDueDate: r.end_datetime ? new Date(r.end_datetime).toISOString().slice(0, 10) : '',
+    }
+  })
 
   const creances = (rows ?? []).filter((d: any) => !d.deleted_at)
   const today = toYMD(new Date())
@@ -57,11 +81,14 @@ export default async function CreancesPage() {
         </div>
       )}
 
+      {/* Création d'une créance sans passer par une fiche réservation. */}
+      <CreateReceivableButton reservations={reservationChoices} />
+
       {creances.length === 0 ? (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 text-center">
           <HandCoins className="w-8 h-8 text-gray-200 mx-auto mb-2" />
           <p className="text-gray-400 font-medium text-sm">Aucune créance en attente</p>
-          <p className="text-gray-300 text-xs mt-1">Créez-en une depuis une fiche réservation non soldée.</p>
+          <p className="text-gray-300 text-xs mt-1">Ajoutez-en une pour suivre un paiement à recevoir.</p>
         </div>
       ) : (
         <div className="space-y-2">

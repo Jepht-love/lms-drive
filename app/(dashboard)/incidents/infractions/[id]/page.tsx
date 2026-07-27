@@ -78,6 +78,9 @@ export default async function InfractionDetailPage({
         id={inf.id}
         status={inf.status}
         hasClientEmail={!!c?.email}
+        // Y a-t-il quelqu'un à qui refacturer ? Sur un véhicule en usage
+        // interne, l'amende avancée est une charge, pas une avance.
+        hasDebtor={!!(c || inf.reservation_id)}
         paidBy={inf.paid_by}
         rebilled={!!inf.rebilled_to_client}
         recoveredAmount={inf.recovered_amount ?? 0}

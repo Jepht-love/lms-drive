@@ -7,9 +7,11 @@ import { transmitInfractionToClient, markInfractionPaid, closeInfraction, delete
 import { useToast } from '@/components/Toast'
 
 export default function InfractionActions({
-  id, status, hasClientEmail, paidBy, rebilled, recoveredAmount, total,
+  id, status, hasClientEmail, hasDebtor = true, paidBy, rebilled, recoveredAmount, total,
 }: {
   id: string; status: string; hasClientEmail: boolean
+  /** Un client ou une réservation existe → il y a quelqu'un à qui refacturer. */
+  hasDebtor?: boolean
   paidBy?: string | null; rebilled?: boolean; recoveredAmount?: number; total?: number
 }) {
   const router = useRouter()
@@ -100,8 +102,21 @@ export default function InfractionActions({
         </button>
       </div>
 
+      {/* Amende avancée par l'agence sur un véhicule en usage interne : personne
+          à qui la réclamer, c'est une charge de l'entreprise. Proposer
+          « Refacturer au client » n'avait aucun sens ici. Gérant, 27/07/2026. */}
+      {paidBy === 'agence' && !hasDebtor && (
+        <div className="rounded-2xl border border-gray-100 bg-white p-3">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Recouvrement client</p>
+          <p className="text-[13px] text-gray-600 mt-1.5">
+            Aucun client ni location rattachés à cette infraction : l'amende reste
+            une charge de l'agence, il n'y a rien à récupérer.
+          </p>
+        </div>
+      )}
+
       {/* Recouvrement — amende avancée par l'agence à récupérer sur le client */}
-      {paidBy === 'agence' && (
+      {paidBy === 'agence' && hasDebtor && (
         <div className="rounded-2xl border border-gray-100 bg-white p-3 space-y-2.5">
           <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Recouvrement client</p>
 
