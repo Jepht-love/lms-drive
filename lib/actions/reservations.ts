@@ -164,7 +164,8 @@ export async function updatePaymentInfo(
 }
 import { logAudit } from '@/lib/audit/log'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { generateReservationNumber, calculateRentalDays, calculateRentalPrice, ratesFor } from '@/lib/utils'
+import { generateReservationNumber, calculateRentalDays, calculateRentalPrice, rentalPriceBreakdown, ratesFor, toYMD, type RentalRates } from '@/lib/utils'
+import { businessNow } from '@/lib/calendar/dateUtils'
 import { syncReservationToCalendar } from '@/lib/calendar/syncRental'
 import { recomputeVehicleStatus } from '@/lib/vehicles/vehicleStatus'
 import { broadcastPushToManagers } from '@/lib/push/broadcastPush'
@@ -172,6 +173,43 @@ import type { NotificationType } from '@/lib/push/notificationTypes'
 import { generateInvoiceDraft } from '@/lib/actions/invoices'
 import type { ReservationStatus } from '@/types/database'
 import { jourHeureAgence, instantDepuisSaisie } from '@/lib/format/heureAgence'
+
+/**
+ * Fige la ventilation du prix telle qu'elle a été appliquée.
+ *
+ * Le prix se calcule à partir des tarifs COURANTS du véhicule. Sans cette
+ * photographie, changer la grille tarifaire réécrirait tout l'historique et
+ * l'analyse des offres deviendrait fausse rétroactivement — et surtout, la base
+ * ne gardait que `total_price` : impossible de savoir QUELLE formule avait
+ * produit ce montant. Stockée pour l'analyse, elle n'intervient dans aucun
+ * calcul et ne s'affiche nulle part (décision du 27/07/2026).
+ *
+ * `start` doit être l'heure MURALE de l'agence : c'est elle qui dit quel jour de
+ * la semaine est facturé.
+ */
+function buildPriceBreakdownRecord(rates: RentalRates, start: string | Date, days: number) {
+  if (days <= 0) return null
+  const { lines, total } = rentalPriceBreakdown(rates, start, days)
+  if (!lines.length) return null
+  return {
+    rates: {
+      daily: rates.daily,
+      weekend: rates.weekend ?? null,
+      weekendFull: rates.weekendFull ?? null,
+      weekly: rates.weekly ?? null,
+    },
+    lines: lines.map(l => (
+      l.kind === 'day'
+        ? { kind: l.kind, date: toYMD(l.date), weekend: l.weekend, amount: l.amount }
+        : l.kind === 'week'
+          ? { kind: l.kind, from: toYMD(l.from), to: toYMD(l.to), amount: l.amount }
+          : { kind: l.kind, from: toYMD(l.from), to: toYMD(l.to), amount: l.amount, instead: l.instead }
+    )),
+    total,
+    days,
+    computedAt: new Date().toISOString(),
+  }
+}
 
 const DIACRITICS_RE = new RegExp('[' + String.fromCharCode(0x0300) + '-' + String.fromCharCode(0x036f) + ']', 'g')
 
@@ -430,6 +468,8 @@ export async function createReservation(formData: FormData) {
     client_id: clientId,
     start_datetime: startInstant,
     end_datetime: endInstant,
+    // Photographie de la ventilation, pour l'analyse ultérieure des offres.
+    price_breakdown: buildPriceBreakdownRecord(ratesFor(dailyPrice, vehicle), startDatetime, days),
     status: 'option' as ReservationStatus,
     daily_price: dailyPrice,
     total_price: totalPrice,
@@ -815,6 +855,7 @@ export async function updateReservationDates(
     end_datetime: endInstant,
     daily_price: effectiveDailyPrice,
     total_price: totalPrice,
+    price_breakdown: buildPriceBreakdownRecord(ratesFor(effectiveDailyPrice, vehicle), startDatetime, days),
   }).eq('id', id)
 
   if (error) return { error: error.message }
@@ -937,6 +978,11 @@ export async function prolongReservation(
     end_datetime: newEnd,
     daily_price: effectiveDailyPrice,
     total_price: newTotalPrice,
+    price_breakdown: buildPriceBreakdownRecord(
+      ratesFor(effectiveDailyPrice, vehicle),
+      businessNow(new Date(reservation.start_datetime)),
+      totalDays,
+    ),
   }).eq('id', id)
 
   if (error) return { error: error.message }
