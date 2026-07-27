@@ -8,6 +8,7 @@ import { revalidatePath } from 'next/cache'
 import TaskTypeField from './TaskTypeField'
 import { broadcastPushToManagers } from '@/lib/push/broadcastPush'
 import { jourHeureAgence, instantDepuisSaisie } from '@/lib/format/heureAgence'
+import { sendPushToUser } from '@/lib/push/sendPushToUser'
 
 async function createTask(formData: FormData) {
   'use server'
@@ -25,18 +26,37 @@ async function createTask(formData: FormData) {
 
   if (!title || !due) return
 
-  await supabase.from('tasks').insert({
+  const { data: created } = await supabase.from('tasks').insert({
     title, type: type || null, due_datetime: instantDepuisSaisie(due),
     description, vehicle_id, assigned_to, notes,
     status: 'a_faire', created_by: user.id,
-  })
+  }).select('id').single()
 
   const dueDate = jourHeureAgence(due)
-  await broadcastPushToManagers({
-    title: 'Nouvelle tâche créée',
-    body: `${title} — prévu le ${dueDate}`,
-    url: '/calendar/tasks',
-  }, 'new_task_alert')
+
+  // Deuxième chemin d'assignation, à côté du tiroir du calendrier. Il ne faisait
+  // que diffuser « Nouvelle tâche créée » à tous les managers : la personne
+  // concernée n'était pas prévenue, et les autres l'étaient pour rien.
+  if (assigned_to && assigned_to !== user.id) {
+    const pushTitle = 'Nouvelle tâche pour vous'
+    const pushBody = `${title} · le ${dueDate}`
+    await supabase.from('notifications').insert({
+      user_id: assigned_to,
+      type: 'new_task_alert',
+      title: pushTitle,
+      body: pushBody,
+      entity_type: 'tasks',
+      entity_id: created?.id ?? null,
+    })
+    await sendPushToUser(assigned_to, { title: pushTitle, body: pushBody, url: '/calendar/tasks' }, 'new_task_alert')
+  } else {
+    // Tâche sans personne désignée : l'équipe doit la voir pour s'en saisir.
+    await broadcastPushToManagers({
+      title: 'Nouvelle tâche créée',
+      body: `${title} — prévu le ${dueDate}`,
+      url: '/calendar/tasks',
+    }, 'new_task_alert')
+  }
 
   revalidatePath('/calendar/tasks')
   revalidatePath('/')
