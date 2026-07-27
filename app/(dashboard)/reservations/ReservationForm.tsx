@@ -2,7 +2,7 @@
 
 import { useActionState, useState, useEffect } from 'react'
 import { AlertTriangle } from 'lucide-react'
-import { calculateRentalDays, calculateRentalPrice, ratesFor, formatPrice } from '@/lib/utils'
+import { calculateRentalDays, rentalPriceBreakdown, ratesFor, formatPrice, formatDate } from '@/lib/utils'
 import { getMissingClientFields } from '@/lib/clients/completeness'
 import { useToast } from '@/components/Toast'
 import DateTimeField from '@/components/ui/DateTimeField'
@@ -66,7 +66,11 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
   const [dailyPrice, setDailyPrice] = useState('')
   const [creatingNewClient, setCreatingNewClient] = useState(false)
   const [acompte, setAcompte] = useState('')
-  const [discount, setDiscount] = useState('')
+  // Prix négocié : le gérant écrase le tarif calculé pour accorder une remise.
+  // Remplace l'ancienne case « Réduction » — la remise est désormais DÉDUITE de
+  // l'écart avec le barème, comme dans « Modifier les dates & tarif ». Demande
+  // du 27/07/2026 : une seule façon de baisser un prix, et elle s'explique.
+  const [customTotal, setCustomTotal] = useState('')
   const [selectedClientId, setSelectedClientId] = useState(defaultClientId ?? '')
   const [clientQuery, setClientQuery] = useState('')
   const [showClientResults, setShowClientResults] = useState(false)
@@ -124,12 +128,20 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
     setEndDatetime(toDatetimeLocal(end))
   }
 
-  // Le total dépend des dates : les jours de week-end coûtent plus cher.
-  const totalPrice = days > 0 && dailyPrice
-    ? calculateRentalPrice(ratesFor(Number(dailyPrice), selectedVehicle), startDatetime, days)
-    : 0
-  const discountNum = Math.max(0, Number(discount) || 0)
-  const netTotal = Math.max(0, totalPrice - discountNum)
+  // Le total dépend des dates : les jours de week-end coûtent plus cher. On
+  // récupère aussi le DÉTAIL, pour que le gérant puisse justifier le montant.
+  const breakdown = days > 0 && dailyPrice
+    ? rentalPriceBreakdown(ratesFor(Number(dailyPrice), selectedVehicle), startDatetime, days)
+    : { lines: [], total: 0 }
+  const totalPrice = breakdown.total
+  const negotiated = customTotal === '' ? null : Math.max(0, Number(customTotal) || 0)
+  const netTotal = negotiated ?? totalPrice
+  // Remise = écart entre le barème et le prix appliqué. Négative = majoration.
+  const discountNum = negotiated == null ? 0 : Math.round((totalPrice - negotiated) * 100) / 100
+  const effectiveDaily = days > 0 ? Math.round((netTotal / days) * 100) / 100 : 0
+
+  const rates = selectedVehicle
+  const dayLabel = (d: Date) => formatDate(d, 'EEEE d MMM')
 
   return (
     <form action={formAction} className="space-y-6">
@@ -271,32 +283,22 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
             </div>
             <div>
               <Label className={labelClass}>Durée</Label>
-              <div className="flex items-end gap-3">
-                <div className="flex-1">
-                  <Input
-                    type="number" min="0" placeholder="0"
-                    value={durDays || ''}
-                    onChange={e => {
-                      const d = Math.max(0, parseInt(e.target.value) || 0)
-                      setDurDays(d)
-                      setDuration(d * 24 + durHours)
-                    }}
-                  />
-                  <span className="mt-0.5 block text-[10px] text-muted-foreground">jours</span>
-                </div>
-                <div className="flex-1">
-                  <Input
-                    type="number" min="0" max="23" placeholder="0"
-                    value={durHours || ''}
-                    onChange={e => {
-                      const h = Math.min(23, Math.max(0, parseInt(e.target.value) || 0))
-                      setDurHours(h)
-                      setDuration(durDays * 24 + h)
-                    }}
-                  />
-                  <span className="mt-0.5 block text-[10px] text-muted-foreground">heures</span>
-                </div>
-              </div>
+              {/* Champs de saisie retirés le 27/07/2026 à la demande du gérant :
+                  ils prêtaient à confusion avec les dates. La durée est
+                  désormais une conséquence des dates, écrite en clair. */}
+              {startDatetime && endDatetime && days > 0 ? (
+                <>
+                  <p className="text-sm font-semibold text-foreground">
+                    {durDays} jour{durDays > 1 ? 's' : ''} et {durHours} heure{durHours > 1 ? 's' : ''}
+                  </p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    Du {formatDate(new Date(startDatetime), 'd MMM yyyy')} à {new Date(startDatetime).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                    {' '}au {formatDate(new Date(endDatetime), 'd MMM yyyy')} à {new Date(endDatetime).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">Renseignez le départ et le retour.</p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -390,45 +392,125 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
             </div>
           </div>
 
-          {/* Réduction manuelle (montant fixe en €), déduite du total */}
-          <div className="mt-4">
-            <Label htmlFor="discount_amount" className={labelClass}>Réduction (€)</Label>
-            <Input
-              id="discount_amount"
-              type="number"
-              name="discount_amount"
-              value={discount}
-              onChange={e => setDiscount(e.target.value)}
-              step="0.01"
-              min="0"
-              placeholder="0"
-              inputMode="decimal"
-              enterKeyHint="done"
-            />
-          </div>
+          {/* Rappel des règles tarifaires — repris de « Modifier les dates & tarif ». */}
+          {(rates?.price_day_weekend || rates?.price_weekend_full || rates?.weekly_price) && (
+            <div className="mt-4 space-y-1">
+              {!!rates?.price_day_weekend && (
+                <p className="text-[11px] text-muted-foreground">
+                  Tarif week-end : {formatPrice(rates.price_day_weekend)} / jour, appliqué automatiquement aux vendredis, samedis et dimanches
+                </p>
+              )}
+              {!!rates?.price_weekend_full && (
+                <p className="text-[11px] text-muted-foreground">
+                  Forfait week-end complet : {formatPrice(rates.price_weekend_full)}, remplace les 3 journées si la location va du vendredi au lundi
+                </p>
+              )}
+              {!!rates?.weekly_price && (
+                <p className="text-[11px] text-muted-foreground">
+                  Tarif semaine : {formatPrice(rates.weekly_price)}, appliqué automatiquement à partir de 7 jours
+                </p>
+              )}
+            </div>
+          )}
 
           {totalPrice > 0 && (
             <div className="mt-4 space-y-2 rounded-md border border-border bg-muted p-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-muted-foreground">Total estimé ({days} jour{days > 1 ? 's' : ''})</span>
-                <span className={discountNum > 0 ? 'text-base font-bold text-foreground line-through opacity-50' : 'text-xl font-bold text-foreground'}>{formatPrice(totalPrice)}</span>
+              {/* Le DÉTAIL : d'où vient le total, ligne par ligne. Sans lui, le
+                  gérant ne peut justifier ni à lui-même ni au client un total de
+                  300 € quand la fiche annonce 100 € par jour. */}
+              <div className="space-y-1">
+                {breakdown.lines.map((l, i) => (
+                  <div key={i} className="flex items-center justify-between gap-3 text-xs">
+                    {l.kind === 'day' && (
+                      <>
+                        <span className="text-muted-foreground capitalize">{dayLabel(l.date)}</span>
+                        <span className="flex items-center gap-2">
+                          <span className="text-muted-foreground">{l.weekend ? 'Tarif week-end' : 'Tarif semaine'}</span>
+                          <span className="font-semibold text-foreground tabular-nums">{formatPrice(l.amount)}</span>
+                        </span>
+                      </>
+                    )}
+                    {l.kind === 'week' && (
+                      <>
+                        <span className="text-muted-foreground capitalize">{dayLabel(l.from)} → {dayLabel(l.to)}</span>
+                        <span className="flex items-center gap-2">
+                          <span className="text-muted-foreground">Forfait semaine</span>
+                          <span className="font-semibold text-foreground tabular-nums">{formatPrice(l.amount)}</span>
+                        </span>
+                      </>
+                    )}
+                    {l.kind === 'weekendFull' && (
+                      <>
+                        <span className="text-muted-foreground capitalize">{dayLabel(l.from)} → {dayLabel(l.to)}</span>
+                        <span className="flex items-center gap-2">
+                          <span className="text-green-700">Forfait week-end, au lieu de {formatPrice(l.instead)}</span>
+                          <span className="font-semibold text-foreground tabular-nums">{formatPrice(l.amount)}</span>
+                        </span>
+                      </>
+                    )}
+                  </div>
+                ))}
               </div>
-              {discountNum > 0 && (
+
+              <div className="flex items-center justify-between border-t border-border pt-2">
+                <span className="text-sm font-medium text-muted-foreground">Tarif calculé ({days} jour{days > 1 ? 's' : ''})</span>
+                <span className={negotiated != null ? 'text-base font-bold text-foreground line-through opacity-50 tabular-nums' : 'text-xl font-bold text-foreground tabular-nums'}>
+                  {formatPrice(totalPrice)}
+                </span>
+              </div>
+
+              {/* Prix négocié : le gérant peut écraser le tarif, la remise est
+                  alors calculée toute seule. */}
+              <div className="flex items-center justify-between gap-3 pt-1">
+                <Label htmlFor="custom_total" className="text-sm font-medium text-muted-foreground">Prix négocié</Label>
+                <Input
+                  id="custom_total"
+                  name="custom_total"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  inputMode="decimal"
+                  enterKeyHint="done"
+                  placeholder={String(totalPrice)}
+                  value={customTotal}
+                  onChange={e => setCustomTotal(e.target.value)}
+                  className="h-9 w-36 text-right"
+                />
+              </div>
+
+              {negotiated != null && discountNum > 0 && (
                 <>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-green-700">Réduction</span>
-                    <span className="text-sm font-bold text-green-700">− {formatPrice(discountNum)}</span>
+                    <span className="text-sm font-medium text-green-700">Réduction accordée</span>
+                    <span className="text-sm font-bold text-green-700 tabular-nums">
+                      − {formatPrice(discountNum)}{totalPrice > 0 ? ` (−${Math.round((discountNum / totalPrice) * 100)} %)` : ''}
+                    </span>
                   </div>
-                  <div className="flex items-center justify-between border-t border-border pt-2">
-                    <span className="text-sm font-medium text-foreground">Total après réduction</span>
-                    <span className="text-xl font-bold text-foreground">{formatPrice(netTotal)}</span>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">Soit à la journée</span>
+                    <span className="font-semibold text-foreground tabular-nums">{formatPrice(effectiveDaily)} / jour</span>
                   </div>
                 </>
               )}
+
+              {negotiated != null && discountNum < 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-orange-700">Majoration appliquée</span>
+                  <span className="text-sm font-bold text-orange-700 tabular-nums">+ {formatPrice(-discountNum)}</span>
+                </div>
+              )}
+
+              {negotiated != null && (
+                <div className="flex items-center justify-between border-t border-border pt-2">
+                  <span className="text-sm font-medium text-foreground">Prix appliqué</span>
+                  <span className="text-xl font-bold text-foreground tabular-nums">{formatPrice(netTotal)}</span>
+                </div>
+              )}
+
               {Number(acompte) > 0 && (
                 <div className="flex items-center justify-between border-t border-border pt-2">
                   <span className="text-sm font-medium text-muted-foreground">Reste à payer (acompte {formatPrice(Number(acompte))})</span>
-                  <span className="text-lg font-bold text-foreground">{formatPrice(Math.max(0, netTotal - Number(acompte)))}</span>
+                  <span className="text-lg font-bold text-foreground tabular-nums">{formatPrice(Math.max(0, netTotal - Number(acompte)))}</span>
                 </div>
               )}
             </div>

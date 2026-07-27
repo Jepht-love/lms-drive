@@ -54,10 +54,17 @@ export interface ContractData {
   totalPrice: number
   kmIncluded?: number
   extraKmPrice?: number
+  /**
+   * Le détail qui justifie le total : une ligne par journée facturée, ou une
+   * ligne unique pour un forfait. Ajouté le 27/07/2026 — le contrat n'affichait
+   * qu'un prix par jour et un total, impossibles à relier dès qu'un jour de
+   * week-end entrait dans la période.
+   */
+  priceBreakdown?: { label: string; detail: string; amount: number }[]
   // Grille tarifaire du véhicule (reprise des contrats papier 2026).
   // Informative : elle affiche le barème, le prix réellement facturé reste
-  // `dailyPrice` / `totalPrice`. Il n'y a PAS de forfait week-end — le
-  // week-end est simplement un tarif journalier majoré.
+  // `dailyPrice` / `totalPrice`. Le forfait week-end complet, lui, EST appliqué
+  // par le calcul et apparaît dans `priceBreakdown` quand il joue.
   priceDayWeek?: number
   priceDayWeekend?: number
   priceWeekendFull?: number
@@ -833,6 +840,22 @@ export function ContractPDF({ data }: { data: ContractData }) {
               <View style={s.row}><Text style={s.label}>Supplément KM</Text><Text style={s.value}>{fmtMoney(data.extraKmPrice)} / km</Text></View>
             )}
           </View>
+
+          {/* Le DÉTAIL du prix facturé — c'est lui qui rend le total opposable :
+              le client signe des journées identifiées, pas un montant global. */}
+          {(data.priceBreakdown?.length ?? 0) > 0 && (
+            <View style={[s.box, { marginTop: 4 }]}>
+              <Text style={{ fontSize: 8, color: '#64748b', marginBottom: 3 }}>
+                Détail de la période louée
+              </Text>
+              {data.priceBreakdown!.map((l, i) => (
+                <View key={i} style={s.row}>
+                  <Text style={s.label}>{l.label} — {l.detail}</Text>
+                  <Text style={s.value}>{fmtMoney(l.amount)}</Text>
+                </View>
+              ))}
+            </View>
+          )}
 
           {/* Barème du véhicule — les 4 formules des contrats papier 2026.
               Purement informatif : le montant facturé est le Total TTC ci-dessous. */}

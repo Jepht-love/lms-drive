@@ -5,6 +5,45 @@ import type { ContractData, InspectionPDFData } from '@/lib/pdf/contract-templat
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { dateAgence } from '@/lib/format/heureAgence'
+import { businessNow } from '@/lib/calendar/dateUtils'
+import { calculateRentalDays, rentalPriceBreakdown, ratesFor, formatPrice } from '@/lib/utils'
+import { format } from 'date-fns'
+import { fr } from 'date-fns/locale'
+
+/**
+ * Le détail du prix, prêt à imprimer sur le contrat.
+ *
+ * Le contrat n'affichait qu'un « prix par jour appliqué » et un total : pour
+ * deux jours de week-end à 150 €, le client lisait « 100 € / jour » puis
+ * « 300 € » sans pouvoir relier les deux. Un tarif qu'on ne peut pas expliquer
+ * est un tarif contestable. Remonté par le gérant le 27/07/2026.
+ *
+ * `businessNow` ramène l'instant à l'heure murale de l'agence : sans lui, un
+ * départ le vendredi à 00:30 est un jeudi côté serveur (UTC) et perdrait sa
+ * majoration week-end dans le détail imprimé.
+ */
+function buildPriceBreakdown(r: any, v: any) {
+  if (!r?.start_datetime || !r?.end_datetime) return undefined
+  const days = calculateRentalDays(r.start_datetime, r.end_datetime)
+  if (days <= 0) return undefined
+  const startWall = businessNow(new Date(r.start_datetime))
+  const { lines } = rentalPriceBreakdown(ratesFor(Number(r.daily_price ?? 0), v), startWall, days)
+  if (!lines.length) return undefined
+  const jour = (d: Date) => format(d, 'EEEE d MMMM', { locale: fr })
+  return lines.map(l => {
+    if (l.kind === 'day') {
+      return { label: jour(l.date), detail: l.weekend ? 'Tarif week-end' : 'Tarif semaine', amount: l.amount }
+    }
+    if (l.kind === 'week') {
+      return { label: `${jour(l.from)} → ${jour(l.to)}`, detail: 'Forfait semaine 7 jours', amount: l.amount }
+    }
+    return {
+      label: `${jour(l.from)} → ${jour(l.to)}`,
+      detail: `Forfait week-end complet, au lieu de ${formatPrice(l.instead)}`,
+      amount: l.amount,
+    }
+  })
+}
 
 type SupabaseServer = Awaited<ReturnType<typeof createClient>>
 
@@ -236,6 +275,8 @@ export async function buildContractPdfData(
     isSmartFortwo: v?.model?.toLowerCase().includes('smart') || v?.brand?.toLowerCase().includes('smart') || false,
     dailyPrice: r?.daily_price ?? 0,
     totalPrice: r?.total_price ?? 0,
+    // Détail qui justifie le total, jour par jour (voir buildPriceBreakdown).
+    priceBreakdown: buildPriceBreakdown(r, v),
     kmIncluded: r?.km_included ?? undefined,
     extraKmPrice: r?.extra_km_price ?? undefined,
     // Barème du véhicule (informatif sur le contrat) : les 4 formules du

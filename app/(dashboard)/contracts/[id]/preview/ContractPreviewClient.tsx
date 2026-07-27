@@ -8,6 +8,7 @@ import BackButton from '@/components/ui/BackButton'
 import VehicleInspectionMap from '@/components/vehicle-schema/VehicleInspectionMap'
 import { graviteLabel, type DamageEntry, type DamageSeverity } from '@/components/vehicle-schema/inspection-types'
 import { getLegalArticles, getFeesTable, VIDEO_CLAUSE } from '@/lib/contracts/legal-articles'
+import { calculateRentalDays, rentalPriceBreakdown, ratesFor, formatDate } from '@/lib/utils'
 
 // État des lieux de départ assemblé côté serveur (page.tsx) pour être relu dans
 // la prévisualisation du contrat, juste avant la signature.
@@ -54,6 +55,34 @@ function formatPrice(n?: number) {
 }
 
 export default function ContractPreviewClient({ contract, reservation, vehicle, client, agency, chain, departInspection }: Props) {
+  // Détail du prix facturé, calculé par la MÊME fonction que le formulaire et le
+  // PDF — jamais une seconde implémentation de la règle tarifaire.
+  const priceLines = useMemo(() => {
+    if (!reservation?.start_datetime || !reservation?.end_datetime) return []
+    const days = calculateRentalDays(reservation.start_datetime, reservation.end_datetime)
+    if (days <= 0) return []
+    const { lines } = rentalPriceBreakdown(
+      ratesFor(Number(reservation.daily_price ?? 0), vehicle),
+      new Date(reservation.start_datetime),
+      days,
+    )
+    const jour = (d: Date) => formatDate(d, 'EEEE d MMMM')
+    return lines.map(l => {
+      if (l.kind === 'day') {
+        return { label: jour(l.date), detail: l.weekend ? 'Tarif week-end' : 'Tarif semaine', amount: l.amount, highlight: false }
+      }
+      if (l.kind === 'week') {
+        return { label: `${jour(l.from)} → ${jour(l.to)}`, detail: 'Forfait semaine 7 jours', amount: l.amount, highlight: true }
+      }
+      return {
+        label: `${jour(l.from)} → ${jour(l.to)}`,
+        detail: `Forfait week-end, au lieu de ${formatPrice(l.instead)}`,
+        amount: l.amount,
+        highlight: true,
+      }
+    })
+  }, [reservation, vehicle])
+
   const isSigned = contract.status === 'signe' || contract.status === 'cloture'
 
   // Schéma readonly de l'EDL départ : reconstruit le Record<zoneId, DamageEntry[]>
@@ -181,7 +210,7 @@ export default function ContractPreviewClient({ contract, reservation, vehicle, 
           </div>
 
           {/* Tarification */}
-          <div className="grid grid-cols-3 gap-2 mb-4 text-center">
+          <div className="grid grid-cols-3 gap-2 mb-2 text-center">
             <div className="bg-gray-50 rounded-xl p-2">
               <p className="text-xs text-gray-500">Prix / jour</p>
               <p className="font-bold text-gray-900">{formatPrice(reservation?.daily_price)}</p>
@@ -195,6 +224,24 @@ export default function ContractPreviewClient({ contract, reservation, vehicle, 
               <p className="font-bold text-green-800">{formatPrice(reservation?.total_price)}</p>
             </div>
           </div>
+
+          {/* Détail du prix : sans lui, « 80 € / jour » et « 450 € » pour 7 jours
+              ne se relient pas (c'est le forfait semaine qui joue). Même défaut
+              que sur le PDF, corrigé le 27/07/2026. */}
+          {priceLines.length > 0 && (
+            <div className="mb-4 rounded-xl border border-gray-100 bg-gray-50 p-3 space-y-1">
+              <p className="text-[11px] font-bold uppercase tracking-wide text-gray-400">Détail de la période louée</p>
+              {priceLines.map((l, i) => (
+                <div key={i} className="flex items-center justify-between gap-3 text-xs">
+                  <span className="text-gray-500 capitalize">{l.label}</span>
+                  <span className="flex items-center gap-2">
+                    <span className={l.highlight ? 'text-green-700' : 'text-gray-500'}>{l.detail}</span>
+                    <span className="font-semibold text-gray-900 tabular-nums">{formatPrice(l.amount)}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
 
           {reservation?.deposit_amount && (
             <div className="p-3 bg-amber-50 rounded-xl flex items-center justify-between">

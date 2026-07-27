@@ -112,6 +112,22 @@ export interface RentalRates {
 }
 
 /**
+ * Une ligne du détail d'un prix : ce qui a été facturé, et à quel titre.
+ *
+ * Elle existe parce que le gérant doit pouvoir JUSTIFIER un total. Deux jours de
+ * week-end à 150 € font 300 € alors que la fiche annonce 100 € par jour : sans
+ * ce détail, ni lui ni le client ne peuvent relier les deux. Remonté le
+ * 27/07/2026.
+ */
+export type RentalPriceLine =
+  /** Une journée, au tarif de semaine ou majorée week-end. */
+  | { kind: 'day'; date: Date; weekend: boolean; amount: number }
+  /** Forfait 7 jours, qui remplace sept journées. */
+  | { kind: 'week'; from: Date; to: Date; amount: number }
+  /** Forfait week-end complet, qui remplace les trois journées du week-end. */
+  | { kind: 'weekendFull'; from: Date; to: Date; amount: number; instead: number }
+
+/**
  * Prix d'une location, jour par jour.
  *
  * Un « jour » est une tranche de 24 h depuis l'heure de départ, pas une date de
@@ -127,40 +143,44 @@ export interface RentalRates {
  *     gérant (M135i : 800 € au lieu de 3 × 300 = 900 €) ;
  *  3. sinon chaque journée à son tarif propre, majoré si elle tombe un jour de
  *     `WEEKEND_DAYS`. Un lundi reste au tarif de semaine.
+ *
+ * Cette fonction rend le total ET le détail qui l'explique. C'est la SEULE
+ * implémentation de la règle : `calculateRentalPrice` ne fait que renvoyer son
+ * total. Dupliquer le calcul pour l'affichage garantirait qu'un jour les deux
+ * ne disent plus la même chose.
+ *
  */
-export function calculateRentalPrice(
+export function rentalPriceBreakdown(
   rates: RentalRates,
   start: string | Date,
   days: number,
-): number {
-  if (days <= 0) return 0
+): { lines: RentalPriceLine[]; total: number } {
+  if (days <= 0) return { lines: [], total: 0 }
   const { daily, weekend = null, weekendFull = null, weekly = null } = rates
 
-  // Jour de la semaine de la n-ième tranche de 24 h (0 = tranche du départ).
   const dayOfWeek = (offset: number): Date => {
     const d = new Date(start)
     d.setDate(d.getDate() + offset)
     return d
   }
-
   const rateForDay = (offset: number): number => {
     if (weekend == null) return daily
     return isWeekendDay(dayOfWeek(offset)) ? weekend : daily
   }
 
+  const lines: RentalPriceLine[] = []
   let total = 0
   let firstCountedDay = 0
 
   if (weekly && days >= 7) {
     const weeks = Math.floor(days / 7)
-    total += weeks * weekly
+    for (let w = 0; w < weeks; w++) {
+      lines.push({ kind: 'week', from: dayOfWeek(w * 7), to: dayOfWeek(w * 7 + 6), amount: weekly })
+      total += weekly
+    }
     firstCountedDay = weeks * 7
   }
 
-  // Forfait week-end : uniquement si le reliquat est EXACTEMENT le week-end
-  // entier. La double condition (bon nombre de jours + tous en week-end) ne
-  // laisse passer qu'un départ le vendredi ; un samedi → mardi fait bien 3 jours
-  // mais inclut un lundi, donc pas de forfait.
   const remaining = days - firstCountedDay
   const isFullWeekend =
     weekendFull != null &&
@@ -169,12 +189,36 @@ export function calculateRentalPrice(
       .every(offset => isWeekendDay(dayOfWeek(offset)))
 
   if (isFullWeekend) {
+    // « Au lieu de » : ce que coûteraient les trois journées séparément. C'est
+    // l'argument commercial du forfait, il n'a de sens qu'affiché à côté.
+    const instead = Array.from({ length: remaining }, (_, i) => rateForDay(firstCountedDay + i))
+      .reduce((s, v) => s + v, 0)
+    lines.push({
+      kind: 'weekendFull',
+      from: dayOfWeek(firstCountedDay),
+      to: dayOfWeek(firstCountedDay + remaining - 1),
+      amount: weekendFull,
+      instead: Math.round(instead * 100) / 100,
+    })
     total += weekendFull
   } else {
-    for (let i = firstCountedDay; i < days; i++) total += rateForDay(i)
+    for (let i = firstCountedDay; i < days; i++) {
+      const date = dayOfWeek(i)
+      const amount = rateForDay(i)
+      lines.push({ kind: 'day', date, weekend: weekend != null && isWeekendDay(date), amount })
+      total += amount
+    }
   }
 
-  return Math.round(total * 100) / 100
+  return { lines, total: Math.round(total * 100) / 100 }
+}
+
+export function calculateRentalPrice(
+  rates: RentalRates,
+  start: string | Date,
+  days: number,
+): number {
+  return rentalPriceBreakdown(rates, start, days).total
 }
 
 /**

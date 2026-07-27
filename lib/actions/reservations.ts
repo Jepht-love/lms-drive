@@ -399,10 +399,20 @@ export async function createReservation(formData: FormData) {
     ? Math.round(grossPrice * (1 - discountPct / 100) * 100) / 100
     : grossPrice
 
-  // Réduction manuelle (montant € saisi sur la résa), déduite APRÈS la remise
-  // fidélité. total_price la reflète → CA / compta / reste à payer cohérents.
-  const manualDiscount = Math.max(0, Number(formData.get('discount_amount')) || 0)
-  const totalPrice = Math.max(0, Math.round((loyaltyPrice - manualDiscount) * 100) / 100)
+  // Prix négocié saisi par le gérant : il REMPLACE le tarif au barème (remise
+  // fidélité comprise) au lieu de s'en déduire. L'ancienne case « Réduction »
+  // (montant fixe en €) a été retirée le 27/07/2026 : deux façons de baisser un
+  // prix cohabitaient sans que le total sache dire laquelle avait joué. La
+  // remise est désormais DÉRIVÉE de l'écart barème / prix appliqué, comme dans
+  // « Modifier les dates & tarif ».
+  const customTotalRaw = ((formData.get('custom_total') as string) ?? '').trim()
+  const customTotal = customTotalRaw
+    ? Math.max(0, Number(customTotalRaw.replace(',', '.')) || 0)
+    : null
+  const totalPrice = customTotal != null && customTotal > 0
+    ? Math.round(customTotal * 100) / 100
+    : loyaltyPrice
+  const manualDiscount = Math.round((loyaltyPrice - totalPrice) * 100) / 100
 
   const paymentAmount = formData.get('payment_amount') ? Number(formData.get('payment_amount')) : 0
 
@@ -410,7 +420,8 @@ export async function createReservation(formData: FormData) {
   const noteParts: string[] = []
   if (baseNotes) noteParts.push(baseNotes)
   if (discountPct > 0) noteParts.push(`Remise fidélité ${discountPct}% appliquée (tarif ${grossPrice}€ → ${loyaltyPrice}€).`)
-  if (manualDiscount > 0) noteParts.push(`Réduction ${manualDiscount}€ appliquée (${loyaltyPrice}€ → ${totalPrice}€).`)
+  if (manualDiscount > 0) noteParts.push(`Prix négocié : réduction de ${manualDiscount}€ accordée (${loyaltyPrice}€ → ${totalPrice}€).`)
+  if (manualDiscount < 0) noteParts.push(`Prix négocié : majoration de ${-manualDiscount}€ appliquée (${loyaltyPrice}€ → ${totalPrice}€).`)
   const internalNotes = noteParts.length ? noteParts.join('\n') : null
 
   const payload = {
