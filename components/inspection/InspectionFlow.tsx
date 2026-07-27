@@ -13,7 +13,7 @@ import { calculateLateFee, calculateExtraKm } from '@/lib/calculations/fees'
 import { reportVehicleIssues } from '@/lib/actions/vehicle-issues'
 import { markReservationDeparted } from '@/lib/actions/reservations'
 import { buildDamageFlag } from '@/lib/maintenance-health'
-import { Camera, CheckCircle2, AlertTriangle, X, ChevronRight, ChevronLeft, Clock, Gauge, Fuel, FileDown, Mail } from 'lucide-react'
+import { Camera, CheckCircle2, AlertTriangle, X, ChevronRight, ChevronLeft, Clock, Gauge, Fuel, FileDown, Mail, Sparkles } from 'lucide-react'
 
 interface Props {
   type: 'depart' | 'arrivee'
@@ -33,6 +33,10 @@ interface Props {
   fuelRangeAtDeparture?: number
   kmIncluded?: number
   extraKmPrice?: number
+  /** Forfait de location facturé (total_price de la réservation). */
+  rentalTotal?: number
+  /** Déjà encaissé sur cette location (acompte ou paiement complet). */
+  alreadyPaid?: number
   previousDamagedZones?: { id: string; label: string; severity: string; description?: string; photos?: string[]; kind?: string }[]
   // Contrat locataire à prévisualiser/signer dans le flux (ticket SAV 21/07) :
   // au départ, le contrat descend sous l'EDL et se signe sur la même page.
@@ -95,6 +99,8 @@ export default function InspectionFlow({
   fuelRangeAtDeparture,
   kmIncluded = 200,
   extraKmPrice = 2,
+  rentalTotal = 0,
+  alreadyPaid = 0,
   previousDamagedZones = [],
   contratInfo = null,
 }: Props) {
@@ -609,13 +615,25 @@ export default function InspectionFlow({
           )}
         </div>
 
-        {/* Récap frais EDL retour */}
-        {type === 'arrivee' && computedFees && totalExtra > 0 && (
-          <div className="bg-white rounded-2xl border border-amber-200 shadow-sm overflow-hidden">
-            <div className="bg-amber-50 px-5 py-3 border-b border-amber-100">
-              <p className="font-semibold text-amber-800 text-sm">Frais complémentaires calculés</p>
+        {/* Récapitulatif de facturation — forfait + frais, ce qui reste dû.
+            L'écran n'affichait que les frais : impossible de savoir ce que le
+            client devait au total, ni ce qu'il restait à encaisser. Chaque frais
+            porte désormais son vrai nom (un lavage n'est pas un dommage).
+            Remonté par le gérant et par Alexis le 27/07/2026. */}
+        {type === 'arrivee' && computedFees && (
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="bg-gray-50 px-5 py-3 border-b border-gray-100">
+              <p className="font-semibold text-gray-800 text-sm">Récapitulatif de facturation</p>
             </div>
             <div className="divide-y divide-gray-50">
+
+              {rentalTotal > 0 && (
+                <div className="flex items-center justify-between px-5 py-4">
+                  <span className="text-sm font-semibold text-gray-900">Forfait de location</span>
+                  <span className="text-base font-bold text-gray-900">{rentalTotal.toLocaleString('fr-FR')} €</span>
+                </div>
+              )}
+
               {computedFees.lateFeeAmount > 0 && (
                 <div className="flex items-center justify-between px-5 py-4">
                   <div className="flex items-center gap-3">
@@ -623,7 +641,7 @@ export default function InspectionFlow({
                       <Clock className="w-4 h-4 text-red-600" />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-gray-900">Frais de retard</p>
+                      <p className="text-sm font-semibold text-gray-900">Retard de restitution</p>
                       <p className="text-xs text-gray-400">
                         {computedFees.lateMinutes} min · tolérance 60 min · {vehicleCategory === 'sportif' ? '150' : '50'} €/h
                       </p>
@@ -632,6 +650,7 @@ export default function InspectionFlow({
                   <span className="text-base font-bold text-red-600">+{computedFees.lateFeeAmount.toLocaleString('fr-FR')} €</span>
                 </div>
               )}
+
               {computedFees.extraKmCount > 0 && (
                 <div className="flex items-center justify-between px-5 py-4">
                   <div className="flex items-center gap-3">
@@ -646,34 +665,72 @@ export default function InspectionFlow({
                   <span className="text-base font-bold text-orange-600">+{computedFees.extraKmAmount.toLocaleString('fr-FR')} €</span>
                 </div>
               )}
-              {computedFees.damageFeeAmount > 0 && (
+
+              {/* Dommages et frais intérieurs séparés : ils étaient additionnés
+                  sous le seul libellé « Dommages constatés », d'où un lavage à
+                  50 € affiché à côté de « 0 nouvelle zone endommagée ». */}
+              {exteriorDamageFee > 0 && (
                 <div className="flex items-center justify-between px-5 py-4">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-xl bg-red-100 flex items-center justify-center flex-shrink-0">
                       <AlertTriangle className="w-4 h-4 text-red-600" />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-gray-900">Dommages constatés</p>
-                      <p className="text-xs text-gray-400">{newDamageZoneIds.length} nouvelle(s) zone(s) endommagée(s)</p>
+                      <p className="text-sm font-semibold text-gray-900">Dommages sur la carrosserie</p>
+                      <p className="text-xs text-gray-400">
+                        {currentDamagedZoneIds.length} zone{currentDamagedZoneIds.length > 1 ? 's' : ''} facturée{currentDamagedZoneIds.length > 1 ? 's' : ''}
+                        {newDamageZoneIds.length > 0 && ` · dont ${newDamageZoneIds.length} nouvelle${newDamageZoneIds.length > 1 ? 's' : ''}`}
+                      </p>
                     </div>
                   </div>
-                  <span className="text-base font-bold text-red-600">+{computedFees.damageFeeAmount.toLocaleString('fr-FR')} €</span>
+                  <span className="text-base font-bold text-red-600">+{exteriorDamageFee.toLocaleString('fr-FR')} €</span>
                 </div>
               )}
-              <div className="flex items-center justify-between px-5 py-4 bg-gray-50">
-                <span className="text-sm font-bold text-gray-700">Total frais supplémentaires</span>
-                <span className="text-lg font-bold text-gray-900">{totalExtra.toLocaleString('fr-FR')} €</span>
-              </div>
-            </div>
-          </div>
-        )}
 
-        {type === 'arrivee' && computedFees && totalExtra === 0 && (
-          <div className="bg-green-50 rounded-2xl border border-green-100 px-5 py-4 flex items-center gap-3">
-            <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
-            <p className="text-sm text-green-700 font-medium">
-              Aucun frais supplémentaire — restitution dans les délais et kilométrage respecté.
-            </p>
+              {INTERIOR_DAMAGE_ITEMS.filter(it => (interiorCharges[it.id] ?? 0) > 0).map(it => (
+                <div key={it.id} className="flex items-center justify-between px-5 py-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
+                      <Sparkles className="w-4 h-4 text-amber-600" />
+                    </div>
+                    <p className="text-sm font-semibold text-gray-900">{it.label}</p>
+                  </div>
+                  <span className="text-base font-bold text-amber-600">+{(interiorCharges[it.id] ?? 0).toLocaleString('fr-FR')} €</span>
+                </div>
+              ))}
+
+              <div className="flex items-center justify-between px-5 py-4 bg-gray-900">
+                <span className="text-sm font-bold text-white">Total à payer</span>
+                <span className="text-lg font-black text-white">{(rentalTotal + totalExtra).toLocaleString('fr-FR')} €</span>
+              </div>
+
+              {alreadyPaid > 0 && (
+                <div className="flex items-center justify-between px-5 py-3">
+                  <span className="text-sm text-gray-500">Déjà encaissé</span>
+                  <span className="text-sm font-semibold text-gray-700">− {alreadyPaid.toLocaleString('fr-FR')} €</span>
+                </div>
+              )}
+
+              {(() => {
+                const reste = Math.round((rentalTotal + totalExtra - alreadyPaid) * 100) / 100
+                if (reste > 0) {
+                  return (
+                    <div className="flex items-center justify-between px-5 py-4 bg-red-50">
+                      <span className="text-sm font-bold text-red-700">Reste à payer</span>
+                      <span className="text-lg font-black text-red-700">{reste.toLocaleString('fr-FR')} €</span>
+                    </div>
+                  )
+                }
+                return (
+                  <div className="flex items-center justify-center gap-2 px-5 py-4 bg-green-50">
+                    <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+                    <span className="text-sm font-bold text-green-700">
+                      Facture soldée{reste < 0 ? ` · ${Math.abs(reste).toLocaleString('fr-FR')} € à rembourser` : ''}
+                    </span>
+                  </div>
+                )
+              })()}
+            </div>
           </div>
         )}
 

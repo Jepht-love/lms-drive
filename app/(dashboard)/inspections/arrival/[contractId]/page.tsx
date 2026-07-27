@@ -24,6 +24,7 @@ export default async function ArrivalInspectionPage({ params }: { params: Promis
         extra_km_price,
         daily_price,
         total_price,
+        payment_amount,
         deposit_amount,
         vehicle:vehicles(*),
         client:clients(first_name, last_name, phone, address)
@@ -80,6 +81,11 @@ export default async function ArrivalInspectionPage({ params }: { params: Promis
         previousDamagedZones={(departureInspection?.damaged_zones as { id: string; label: string; severity: string; description?: string; photos?: string[] }[] | null) ?? []}
         kmIncluded={kmIncludedTotal}
         extraKmPrice={reservation?.extra_km_price ?? 2}
+        // Forfait de location et acompte déjà encaissé : sans eux, l'écran de
+        // retour n'affichait que les frais et le gérant ne pouvait pas savoir
+        // ce que le client doit au total (remonté le 27/07/2026).
+        rentalTotal={Number(reservation?.total_price ?? 0)}
+        alreadyPaid={Number(reservation?.payment_amount ?? 0)}
         contratInfo={{
           // Au retour : en-tête du contrat en prévisualisation (pas de re-signature,
           // le contrat a été signé au départ) — demande gérant, ticket SAV 21/07.
