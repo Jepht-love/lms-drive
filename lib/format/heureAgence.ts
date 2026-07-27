@@ -1,4 +1,36 @@
+import { TZDate } from '@date-fns/tz'
 import { BUSINESS_TZ } from '@/lib/calendar/constants'
+
+/**
+ * Convertit une heure SAISIE dans un formulaire en instant réel.
+ *
+ * Les champs de date rendent « 2026-07-27T10:00 », une heure murale sans
+ * fuseau. Envoyée telle quelle en base, elle est comprise comme de l'heure
+ * universelle : une restitution saisie à 10:00 se relit 12:00 en France l'été.
+ * Constaté le 27/07/2026 sur toutes les réservations, d'où des retours qui ne
+ * passaient en retard que deux heures trop tard.
+ *
+ * Cette fonction fait l'inverse de `heureAgence` : elle interprète la saisie
+ * dans le fuseau de l'agence et rend l'instant correspondant. Le changement
+ * d'heure est géré (10:00 → 08:00 l'été, 09:00 l'hiver).
+ *
+ * À utiliser dans TOUTE action serveur qui écrit une date saisie. Inutile dans
+ * le navigateur, où `new Date('...')` interprète déjà la saisie dans le fuseau
+ * de l'utilisateur.
+ */
+export function instantDepuisSaisie(valeur: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/.exec(valeur)
+  // Valeur déjà horodatée (avec fuseau) ou format inattendu : on ne réinterprète
+  // rien, au risque de décaler une date déjà juste.
+  if (!m) return new Date(valeur).toISOString()
+  const [, annee, mois, jour, heures, minutes, secondes] = m
+  const t = new TZDate(
+    +annee, +mois - 1, +jour,
+    +heures, +minutes, +(secondes ?? 0),
+    BUSINESS_TZ,
+  )
+  return new Date(t.getTime()).toISOString()
+}
 
 /**
  * Met en forme une date à l'heure de l'agence (BUSINESS_TZ), et non à l'heure

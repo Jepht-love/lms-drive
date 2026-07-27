@@ -7,6 +7,7 @@ import DateTimeField from '@/components/ui/DateTimeField'
 import { revalidatePath } from 'next/cache'
 import TaskTypeField from './TaskTypeField'
 import { broadcastPushToManagers } from '@/lib/push/broadcastPush'
+import { jourHeureAgence, instantDepuisSaisie } from '@/lib/format/heureAgence'
 
 async function createTask(formData: FormData) {
   'use server'
@@ -25,12 +26,12 @@ async function createTask(formData: FormData) {
   if (!title || !due) return
 
   await supabase.from('tasks').insert({
-    title, type: type || null, due_datetime: due,
+    title, type: type || null, due_datetime: instantDepuisSaisie(due),
     description, vehicle_id, assigned_to, notes,
     status: 'a_faire', created_by: user.id,
   })
 
-  const dueDate = new Date(due).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+  const dueDate = jourHeureAgence(due)
   await broadcastPushToManagers({
     title: 'Nouvelle tâche créée',
     body: `${title} — prévu le ${dueDate}`,

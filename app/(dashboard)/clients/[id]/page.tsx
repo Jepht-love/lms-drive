@@ -14,6 +14,7 @@ import ClientDocuments, { type ClientDoc } from './ClientDocuments'
 import ClientNotesEditor from './ClientNotesEditor'
 import ClientStatusActions from './ClientStatusActions'
 import BackButton from '@/components/ui/BackButton'
+import { fmtAgence } from '@/lib/format/heureAgence'
 
 // ─── Helpers visuels ──────────────────────────────────────────────────────────
 
@@ -678,9 +679,9 @@ export default async function ClientPage({
                     </div>
                     <div className="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
                       <CalendarDays className="w-3 h-3" />
-                      {startDate.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
+                      {fmtAgence(startDate, { day: '2-digit', month: 'short' })}
                       {' → '}
-                      {endDate.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      {fmtAgence(endDate, { day: '2-digit', month: 'short', year: 'numeric' })}
                     </div>
                     {hasIssue && (
                       <p className="text-[10px] font-bold text-red-500 uppercase tracking-wide mt-0.5">

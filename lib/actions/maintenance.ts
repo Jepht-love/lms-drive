@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { SERVICE_INTERVALS } from '@/lib/maintenance-health'
 import { maintenanceType } from '@/lib/maintenance'
+import { instantDepuisSaisie } from '@/lib/format/heureAgence'
 
 // Types qui correspondent à un passage en atelier (immobilisation + RDV
 // visible au calendrier/tâches du jour) — carburant et lavage sont trop
@@ -80,7 +81,8 @@ export async function createMaintenanceRecord(formData: FormData) {
 
     if (vehicle) {
       const admin = createAdminClient()
-      const startAt = new Date(`${payload.date}T08:00:00`)
+      // 8 h du matin à l'agence, pas 8 h au fuseau du serveur.
+      const startAt = new Date(instantDepuisSaisie(`${payload.date}T08:00:00`))
       const endAt = new Date(startAt.getTime() + 60 * 60_000)
       const today = new Date().toISOString().slice(0, 10)
       const isUpcoming = payload.date >= today

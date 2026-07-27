@@ -171,7 +171,7 @@ import { broadcastPushToManagers } from '@/lib/push/broadcastPush'
 import type { NotificationType } from '@/lib/push/notificationTypes'
 import { generateInvoiceDraft } from '@/lib/actions/invoices'
 import type { ReservationStatus } from '@/types/database'
-import { jourHeureAgence } from '@/lib/format/heureAgence'
+import { jourHeureAgence, instantDepuisSaisie } from '@/lib/format/heureAgence'
 
 const DIACRITICS_RE = new RegExp('[' + String.fromCharCode(0x0300) + '-' + String.fromCharCode(0x036f) + ']', 'g')
 
@@ -291,6 +291,16 @@ export async function createReservation(formData: FormData) {
   if (!vehicleId) return { error: 'Veuillez sélectionner un véhicule.' }
   if (!startDatetime || !endDatetime) return { error: 'Veuillez renseigner les dates de début et de fin.' }
 
+  // Deux formes de la même date, à ne pas confondre :
+  //   · `startDatetime` / `endDatetime` — l'heure MURALE saisie (« 10:00 »).
+  //     C'est elle qui dit quel jour de la semaine est facturé : convertie trop
+  //     tôt, un départ le vendredi à 00:30 devient jeudi côté serveur (UTC) et
+  //     perd sa majoration week-end.
+  //   · `startInstant` / `endInstant` — l'instant réel, pour tout ce qui touche
+  //     la base : écritures et comparaisons avec les colonnes horodatées.
+  const startInstant = instantDepuisSaisie(startDatetime)
+  const endInstant = instantDepuisSaisie(endDatetime)
+
   // Nouveau client créé à la volée (prénom/nom/téléphone uniquement)
   const newFirstName = (formData.get('new_client_first_name') as string)?.trim()
   const newLastName = (formData.get('new_client_last_name') as string)?.trim()
@@ -339,8 +349,8 @@ export async function createReservation(formData: FormData) {
     .select('id')
     .eq('vehicle_id', vehicleId)
     .not('status', 'in', '("annulee","terminee","non_presente")')
-    .lt('start_datetime', endDatetime)
-    .gt('end_datetime', startDatetime)
+    .lt('start_datetime', endInstant)
+    .gt('end_datetime', startInstant)
     .limit(1)
 
   if (conflicts && conflicts.length > 0) {
@@ -356,8 +366,8 @@ export async function createReservation(formData: FormData) {
     .eq('event_type', 'rdv_garage')
     .neq('status', 'annule')
     .contains('vehicle_ids', [vehicleId])
-    .lt('start_at', endDatetime)
-    .gt('end_at', startDatetime)
+    .lt('start_at', endInstant)
+    .gt('end_at', startInstant)
     .limit(1)
 
   if (garageConflicts && garageConflicts.length > 0) {
@@ -366,7 +376,7 @@ export async function createReservation(formData: FormData) {
 
   // Indisponibilité DÉPLACEMENT INTERNE : un trajet interne qui chevauche le créneau
   // (ou un trajet en cours au retour inconnu) bloque la location.
-  if (await findBlockingInternalTrip(supabase, vehicleId, startDatetime, endDatetime)) {
+  if (await findBlockingInternalTrip(supabase, vehicleId, startInstant, endInstant)) {
     return { error: 'Ce véhicule est utilisé pour un déplacement interne sur cette période.' }
   }
 
@@ -376,7 +386,7 @@ export async function createReservation(formData: FormData) {
     .eq('id', vehicleId)
     .single()
 
-  const days = calculateRentalDays(startDatetime, endDatetime)
+  const days = calculateRentalDays(startInstant, endInstant)
   // Le prix dépend des DATES : les jours de week-end sont facturés plus cher.
   const grossPrice = calculateRentalPrice(ratesFor(dailyPrice, vehicle), startDatetime, days)
 
@@ -407,8 +417,8 @@ export async function createReservation(formData: FormData) {
     reservation_number: generateReservationNumber(),
     vehicle_id: vehicleId,
     client_id: clientId,
-    start_datetime: startDatetime,
-    end_datetime: endDatetime,
+    start_datetime: startInstant,
+    end_datetime: endInstant,
     status: 'option' as ReservationStatus,
     daily_price: dailyPrice,
     total_price: totalPrice,
@@ -459,7 +469,7 @@ export async function createReservation(formData: FormData) {
 
   await syncReservationToCalendar(data.id)
 
-  const startFmt = jourHeureAgence(startDatetime)
+  const startFmt = jourHeureAgence(startInstant)
   const vehLabel = vehicle
     ? `${vehicle.brand} ${vehicle.model}${vehicle.color ? ' ' + vehicle.color : ''}`
     : ''
@@ -751,7 +761,12 @@ export async function updateReservationDates(
 
   if (!reservation) return { error: 'Réservation introuvable' }
 
-  const days = calculateRentalDays(startDatetime, endDatetime)
+  // Heure murale pour le barème (jour de la semaine), instant pour la base —
+  // voir le commentaire détaillé dans createReservation.
+  const startInstant = instantDepuisSaisie(startDatetime)
+  const endInstant = instantDepuisSaisie(endDatetime)
+
+  const days = calculateRentalDays(startInstant, endInstant)
   if (days <= 0) return { error: 'Les dates sont invalides.' }
 
   // Même contrôle de chevauchement que createReservation (ET, pas OU) — sans ça,
@@ -762,8 +777,8 @@ export async function updateReservationDates(
     .eq('vehicle_id', reservation.vehicle_id)
     .neq('id', id)
     .not('status', 'in', '("annulee","terminee","non_presente")')
-    .lt('start_datetime', endDatetime)
-    .gt('end_datetime', startDatetime)
+    .lt('start_datetime', endInstant)
+    .gt('end_datetime', startInstant)
     .limit(1)
 
   if (conflicts && conflicts.length > 0) {
@@ -785,8 +800,8 @@ export async function updateReservationDates(
   const discount   = Math.round((standardPrice - totalPrice) * 100) / 100
 
   const { error } = await supabase.from('reservations').update({
-    start_datetime: startDatetime,
-    end_datetime: endDatetime,
+    start_datetime: startInstant,
+    end_datetime: endInstant,
     daily_price: effectiveDailyPrice,
     total_price: totalPrice,
   }).eq('id', id)
@@ -799,8 +814,8 @@ export async function updateReservationDates(
     entity_type: 'reservations',
     entity_id: id,
     metadata: {
-      start_datetime: startDatetime,
-      end_datetime: endDatetime,
+      start_datetime: startInstant,
+      end_datetime: endInstant,
       daily_price: effectiveDailyPrice,
       total_price: totalPrice,
       standard_price: standardPrice,

@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { syncTripToCalendar } from '@/lib/calendar/syncInternalTrip'
+import { instantDepuisSaisie } from '@/lib/format/heureAgence'
 
 export async function startTrip(formData: FormData) {
   const supabase = await createClient()
@@ -166,8 +167,9 @@ export async function planTrip(formData: FormData) {
   // Motif « autre » : le mot ne dit rien, la précision est donc obligatoire.
   if (purpose === 'autre' && !purposeNotes) return { error: 'Précisez le motif du déplacement' }
 
-  const startIso = new Date(startRaw).toISOString()
-  const endIso = new Date(endRaw).toISOString()
+  // Heures saisies dans le fuseau de l'agence, pas dans celui du serveur.
+  const startIso = instantDepuisSaisie(startRaw)
+  const endIso = instantDepuisSaisie(endRaw)
   if (endIso <= startIso) return { error: 'La fin doit être après le début' }
 
   // Employé : forcé sur lui-même. Manager : valeur du select ('' ou 'none' = non assigné).

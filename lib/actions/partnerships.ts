@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { formatDate, generateReservationNumber, calculateRentalDays } from '@/lib/utils'
 import { recomputeVehicleStatus } from '@/lib/vehicles/vehicleStatus'
+import { instantDepuisSaisie } from '@/lib/format/heureAgence'
 
 const str = (fd: FormData, k: string) => (fd.get(k) as string)?.trim() || null
 const num = (fd: FormData, k: string) => {
@@ -186,8 +187,8 @@ export async function createOperation(formData: FormData) {
     external_vehicle_description: direction === 'in' ? str(formData, 'external_vehicle_description') : null,
     client_reservation_id:        str(formData, 'client_reservation_id'),
     client_id:                    clientId,
-    start_date:                   startDate,
-    end_date_expected:            endExpected,
+    start_date:                   instantDepuisSaisie(startDate),
+    end_date_expected:            instantDepuisSaisie(endExpected),
     departure_km:                 int(formData, 'departure_km'),
     fuel_level_departure:         int(formData, 'fuel_level_departure'),
     rental_cost:                  num(formData, 'rental_cost'),

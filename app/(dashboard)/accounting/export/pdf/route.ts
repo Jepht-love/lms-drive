@@ -6,6 +6,7 @@ import { AccountingPdf, type AccountingPdfData } from '@/lib/accounting/Accounti
 import { getAgencySettings } from '@/lib/contracts/agency'
 import { getCategoryLabel } from '@/lib/accounting/categories'
 import { toYMD } from '@/lib/utils'
+import { dateAgence } from '@/lib/format/heureAgence'
 
 const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre']
 
@@ -69,7 +70,7 @@ export async function GET(req: NextRequest) {
     totalExpenses,
     revenueByCategory: toCat(revMap),
     expenseByCategory: toCat(expMap),
-    generatedAt: new Date().toLocaleDateString('fr-FR'),
+    generatedAt: dateAgence(new Date()),
   }
 
   const element = createElement(AccountingPdf, { data }) as ReactElement<DocumentProps>
