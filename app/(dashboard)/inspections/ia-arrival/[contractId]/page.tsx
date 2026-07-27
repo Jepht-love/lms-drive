@@ -43,9 +43,9 @@ export default async function IaArrivalInspectionPage({ params }: { params: Prom
   const periodStart = clientRes?.start_datetime ?? op?.start_date
   const periodEnd = clientRes?.end_datetime ?? op?.end_date_actual ?? op?.end_date_expected
   const rentalDays = periodStart && periodEnd ? calculateRentalDays(periodStart, periodEnd) : 1
-  const kmPerDay = clientRes?.km_included ?? vehicle?.km_included_daily ?? vehicle?.km_included_day ?? 200
+  const kmPerDay = clientRes?.km_included ?? vehicle?.km_included_daily ?? 200
   const kmIncludedTotal = kmPerDay * rentalDays
-  const extraKmPrice = clientRes?.extra_km_price ?? vehicle?.extra_km_price ?? vehicle?.km_extra_price ?? 2
+  const extraKmPrice = clientRes?.extra_km_price ?? vehicle?.extra_km_price ?? 2
 
   // Relevé de départ pour comparer km / dommages
   const { data: departureInspection } = await supabase

@@ -41,8 +41,13 @@ export default async function DueDatesPage() {
     const key = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`
     const label = `${MONTHS[dt.getMonth()]} ${dt.getFullYear()}`
     const e = byMonth.get(key) ?? { label, revenue: 0, expenses: 0 }
-    if (d.type === 'recette') e.revenue += d.amount ?? 0
-    else e.expenses += d.amount ?? 0
+    // Number() indispensable : Supabase rend les montants NUMERIC sous forme de
+    // CHAÎNE. Sans conversion, `0 + "446.09"` vaut "0446.09" et recharts, qui
+    // attend un nombre, ne trace aucune barre — le graphique restait vide alors
+    // que 57 échéances totalisant 31 310 € l'alimentaient. Constaté le 27/07/2026.
+    const montant = Number(d.amount ?? 0) || 0
+    if (d.type === 'recette') e.revenue += montant
+    else e.expenses += montant
     byMonth.set(key, e)
   }
   const monthlyForecast = [...byMonth.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([, v]) => v)

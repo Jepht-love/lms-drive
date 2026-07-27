@@ -282,10 +282,14 @@ export async function buildContractPdfData(
     // Barème du véhicule (informatif sur le contrat) : les 4 formules du
     // contrat papier — journée semaine, journée week-end, week-end complet,
     // semaine 7 jours.
-    priceDayWeek: v?.price_day_week ?? undefined,
+    // Le contrat imprime la grille qui FACTURE. Il lisait `price_day_week` /
+    // `price_week`, un second jeu de colonnes que rien ne maintenait à jour :
+    // au premier prix modifié depuis la fiche véhicule, le document aurait
+    // annoncé un tarif que la facture n'appliquait plus (27/07/2026).
+    priceDayWeek: v?.daily_price ?? undefined,
     priceDayWeekend: v?.price_day_weekend ?? undefined,
     priceWeekendFull: v?.price_weekend_full ?? undefined,
-    priceWeek: v?.price_week ?? undefined,
+    priceWeek: v?.weekly_price ?? undefined,
     kmIncludedWeekend: v?.km_included_weekend ?? undefined,
     kmIncludedWeek: v?.km_included_week ?? undefined,
     depositAmount: r?.deposit_amount ?? undefined,
