@@ -171,6 +171,7 @@ import { broadcastPushToManagers } from '@/lib/push/broadcastPush'
 import type { NotificationType } from '@/lib/push/notificationTypes'
 import { generateInvoiceDraft } from '@/lib/actions/invoices'
 import type { ReservationStatus } from '@/types/database'
+import { jourHeureAgence } from '@/lib/format/heureAgence'
 
 const DIACRITICS_RE = new RegExp('[' + String.fromCharCode(0x0300) + '-' + String.fromCharCode(0x036f) + ']', 'g')
 
@@ -458,7 +459,7 @@ export async function createReservation(formData: FormData) {
 
   await syncReservationToCalendar(data.id)
 
-  const startFmt = new Date(startDatetime).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+  const startFmt = jourHeureAgence(startDatetime)
   const vehLabel = vehicle
     ? `${vehicle.brand} ${vehicle.model}${vehicle.color ? ' ' + vehicle.color : ''}`
     : ''
@@ -598,7 +599,7 @@ export async function updateReservationStatus(id: string, status: ReservationSta
   const pushClientName = clt ? `${clt.first_name} ${clt.last_name}` : reservation.reservation_number
   const pushVehicle = veh ? `${veh.brand} ${veh.model}${veh.color ? ' ' + veh.color : ''} (${veh.plate})` : ''
   const fmtDate = (iso: string | null) => iso
-    ? new Date(iso).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+    ? jourHeureAgence(iso)
     : ''
   const departFmt = fmtDate(reservation.start_datetime)
   const retourFmt = fmtDate(reservation.end_datetime)

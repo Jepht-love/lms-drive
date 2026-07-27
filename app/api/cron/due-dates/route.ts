@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendPushToSubscription } from '@/lib/push/sendPush'
+import { fmtAgence } from '@/lib/format/heureAgence'
 
 // ─── Calendrier de rappel des échéances (facile à ajuster) ───────────────────
 // AVANT l'échéance : on prévient à J-7, J-5, J-3, J-1.
@@ -151,5 +152,5 @@ function formatAmount(amount: number): string {
 }
 
 function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+  return fmtAgence(dateStr, { day: 'numeric', month: 'short' })
 }

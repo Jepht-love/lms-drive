@@ -1,5 +1,6 @@
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer'
 import { fmtEuro } from './nombres'
+import { fmtAgence } from '@/lib/format/heureAgence'
 
 const s = StyleSheet.create({
   page:    { fontFamily: 'Helvetica', fontSize: 9, padding: 40, color: '#111111' },
@@ -27,7 +28,7 @@ function fmt(amount: number): string {
 }
 function fmtDate(d: string | null): string {
   if (!d) return '—'
-  return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
+  return fmtAgence(d, { day: '2-digit', month: 'long', year: 'numeric' })
 }
 
 export type SinistrePDFData = {

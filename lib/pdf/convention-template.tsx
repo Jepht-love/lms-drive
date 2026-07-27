@@ -2,6 +2,7 @@ import {
   Document, Page, Text, View, StyleSheet, Image,
 } from '@react-pdf/renderer'
 import { fmtEuro } from './nombres'
+import { fmtAgence } from '@/lib/format/heureAgence'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -35,7 +36,7 @@ export interface ConventionData {
 function fmtDate(dt?: string | null) {
   if (!dt) return '—'
   try {
-    return new Date(dt).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+    return fmtAgence(dt, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
   } catch { return dt }
 }
 

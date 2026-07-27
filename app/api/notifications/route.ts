@@ -7,6 +7,7 @@ import { ALERT_TYPE_TO_NOTIF } from '@/lib/push/notificationTypes'
 import { RESEND_FROM, resendTo } from '@/lib/email/config'
 import { supportContactBlock } from '@/lib/email/templates'
 import { businessNow } from '@/lib/calendar/dateUtils'
+import { heureAgence, jourHeureAgence } from '@/lib/format/heureAgence'
 import { addHours, subMinutes } from 'date-fns'
 
 // POST: push immédiat depuis le client (ex : alerte clôture contrat après EDL retour)
@@ -25,7 +26,7 @@ export async function POST(request: NextRequest) {
 // (pas d'hébergement Vercel) avec `Authorization: Bearer CRON_SECRET`.
 // Plus de session utilisateur (un cron n'en a pas) → client admin + notifications
 // en broadcast (user_id: null, visibles de tous).
-const fmtH = (x: string) => new Date(x).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+const fmtH = (x: string) => heureAgence(x)
 const one = <T,>(v: T | T[] | null): T | null => (Array.isArray(v) ? v[0] ?? null : v)
 const vehCli = (vRaw: any, cRaw: any) => {
   const v = one<{ brand: string; model: string }>(vRaw)
@@ -86,7 +87,7 @@ export async function GET(request: NextRequest) {
       const veh = r.vehicle as any
       const clientLabel = clt ? `${clt.first_name} ${clt.last_name}` : r.reservation_number
       const vehLabel = veh ? `${veh.brand} ${veh.model}${veh.color ? ' ' + veh.color : ''} (${veh.plate})` : ''
-      const departFmt = new Date(r.start_datetime).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+      const departFmt = jourHeureAgence(r.start_datetime)
       const title = `Départ dans ${stage.lead}`
       const body = `${clientLabel}${vehLabel ? ' — ' + vehLabel : ''} · départ le ${departFmt}`
       await supabase.from('notifications').insert({
@@ -117,7 +118,7 @@ export async function GET(request: NextRequest) {
         .select('id').eq('type', stage.type).eq('entity_id', t.id).limit(1)
       if (exists && exists.length) continue
       const veh = t.vehicle as any
-      const heure = new Date(t.due_datetime).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+      const heure = heureAgence(t.due_datetime)
       const title = `Tâche dans ${stage.lead}`
       const body = `${t.title}${veh?.plate ? ` — ${veh.brand} ${veh.model} (${veh.plate})` : ''} · prévu à ${heure}`
       await supabase.from('notifications').insert({
@@ -141,7 +142,7 @@ export async function GET(request: NextRequest) {
       const { data: exists } = await supabase.from('notifications')
         .select('id').eq('type', stage.type).eq('entity_id', ev.id).limit(1)
       if (exists && exists.length) continue
-      const heure = new Date(ev.start_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+      const heure = heureAgence(ev.start_at)
       const title = `Rappel dans ${stage.lead}`
       const body = `${ev.title} · prévu à ${heure}`
       await supabase.from('notifications').insert({
@@ -178,7 +179,7 @@ export async function GET(request: NextRequest) {
       const veh = r.vehicle as any
       const clientLabel = clt ? `${clt.first_name} ${clt.last_name}` : r.reservation_number
       const vehLabel = veh ? `${veh.brand} ${veh.model} (${veh.plate})` : ''
-      const heureFmt = new Date(r.end_datetime).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+      const heureFmt = heureAgence(r.end_datetime)
       const title = 'Retour dans 1 h'
       const body = `${clientLabel}${vehLabel ? ' — ' + vehLabel : ''} · retour prévu à ${heureFmt}`
       await supabase.from('notifications').insert({
@@ -221,7 +222,7 @@ export async function GET(request: NextRequest) {
         const veh = r.vehicle as any
         const clientLabel = clt ? `${clt.first_name} ${clt.last_name}` : r.reservation_number
         const vehLabel = veh ? `${veh.brand} ${veh.model}${veh.color ? ' ' + veh.color : ''} (${veh.plate})` : ''
-        const retourFmt = new Date(r.end_datetime).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+        const retourFmt = jourHeureAgence(r.end_datetime)
         const body = `${clientLabel}${vehLabel ? ' — ' + vehLabel : ''} · prévu le ${retourFmt}`
         await supabase.from('notifications').insert({
           user_id: null, type: 'return_late',
@@ -332,7 +333,7 @@ export async function GET(request: NextRequest) {
       const veh = r.vehicle as any
       const clientLabel = `${clt.first_name ?? ''} ${clt.last_name ?? ''}`.trim()
       const vehLabel = veh ? `${veh.brand} ${veh.model} (${veh.plate})` : ''
-      const retourFmt = new Date(r.end_datetime).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+      const retourFmt = jourHeureAgence(r.end_datetime)
 
       try {
         const { Resend } = await import('resend')

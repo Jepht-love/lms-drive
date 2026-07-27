@@ -7,6 +7,7 @@ import { recomputeVehicleStatus } from '@/lib/vehicles/vehicleStatus'
 import { findDriverAtDate } from '@/lib/utils/findDriverAtDate'
 import { logEmail } from '@/lib/email/log'
 import { RESEND_FROM, resendTo } from '@/lib/email/config'
+import { dateAgence } from '@/lib/format/heureAgence'
 
 // Appelé depuis le formulaire client quand véhicule + date sont renseignés
 export async function lookupDriver(vehicleId: string, date: string, time?: string) {
@@ -71,7 +72,7 @@ export async function createInfraction(formData: FormData) {
       await supabase.from('documents').insert({
         category: 'vehicule',
         subcategory: 'autres',
-        name: `Infraction ${new Date(infractionDate).toLocaleDateString('fr-FR')} — ${vehicle?.plate ?? vehicleId}`,
+        name: `Infraction ${dateAgence(infractionDate)} — ${vehicle?.plate ?? vehicleId}`,
         file_url: documentUrl,
         entity_id: vehicleId,
         entity_type: 'vehicle',

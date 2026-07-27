@@ -4,6 +4,7 @@ import { getAgencySettings } from '@/lib/contracts/agency'
 import type { ContractData, InspectionPDFData } from '@/lib/pdf/contract-template'
 import { readFileSync } from 'fs'
 import { join } from 'path'
+import { dateAgence } from '@/lib/format/heureAgence'
 
 type SupabaseServer = Awaited<ReturnType<typeof createClient>>
 
@@ -202,7 +203,7 @@ export async function buildContractPdfData(
     prolongations = (prologs ?? []).map((l: any) => {
       const m = l.metadata ?? {}
       return {
-        date: new Date(l.created_at).toLocaleDateString('fr-FR'),
+        date: dateAgence(l.created_at),
         additionalDays: Number(m.additional_days ?? 0),
         addedAmount: Number(m.added_amount ?? 0),
       }

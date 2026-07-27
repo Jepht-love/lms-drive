@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import type { DocumentCategory } from '@/lib/documents/categories'
 import { DOCUMENT_SUBCATEGORIES } from '@/lib/documents/categories'
 import { RESEND_FROM, resendTo } from '@/lib/email/config'
+import { dateAgence } from '@/lib/format/heureAgence'
 
 export async function uploadDocument(formData: FormData) {
   const supabase = await createClient()
@@ -386,7 +387,7 @@ export async function archiveInfractionDocument(opts: {
   await supabase.from('documents').insert({
     category: 'vehicule',
     subcategory: 'autres',
-    name: `Infraction ${new Date(opts.infractionDate).toLocaleDateString('fr-FR')} — ${opts.vehiclePlate}`,
+    name: `Infraction ${dateAgence(opts.infractionDate)} — ${opts.vehiclePlate}`,
     file_url: opts.documentUrl,
     entity_id: opts.vehicleId,
     entity_type: 'vehicle',

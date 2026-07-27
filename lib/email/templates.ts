@@ -11,6 +11,7 @@
  * quand le client bloque le chargement des images.
  */
 import type { ContractData } from '@/lib/pdf/contract-template'
+import { fmtAgence } from '@/lib/format/heureAgence'
 
 type Agency = ContractData['agency']
 
@@ -36,7 +37,7 @@ function esc(s: string | null | undefined): string {
 
 function fmtDateTime(d?: string | null): string {
   if (!d) return '—'
-  return new Date(d).toLocaleString('fr-FR', { dateStyle: 'long', timeStyle: 'short' })
+  return fmtAgence(d, { dateStyle: 'long', timeStyle: 'short' })
 }
 
 function fmtPrix(n?: number | null): string {
