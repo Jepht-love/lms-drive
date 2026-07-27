@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Drawer from '@/components/Drawer'
 import { useRouter } from 'next/navigation'
 import { updateReservationStatus, updatePaymentInfo, markReservationNoShow } from '@/lib/actions/reservations'
 import { getReservationStatusLabel, getReservationStatusColor, formatPrice } from '@/lib/utils'
@@ -288,66 +289,61 @@ export default function ReservationStatusButtons({
         </div>
       )}
 
-      {/* Modal acompte */}
-      {showAcompteModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center p-4" onClick={() => setShowAcompteModal(false)}>
-          <div className="bg-white rounded-2xl p-6 w-full max-w-sm space-y-4" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between">
-              <h3 className="font-bold text-gray-900">Acompte à encaisser</h3>
-              <button type="button" aria-label="Fermer" onClick={() => setShowAcompteModal(false)} className="p-1 rounded-lg hover:bg-gray-100">
-                <X className="w-4 h-4 text-gray-400" />
-              </button>
-            </div>
-            <div>
-              <label htmlFor="acompte-amount" className="text-[11px] font-bold text-gray-400 uppercase tracking-wide block mb-1.5">Montant (€)</label>
-              <input
-                id="acompte-amount"
-                type="number"
-                value={acompteAmount}
-                onChange={e => setAcompteAmount(e.target.value)}
-                step="0.01"
-                min="0"
-                placeholder="0"
-                autoFocus
-                inputMode="decimal"
-                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm"
-              />
-              {totalPrice && Number(acompteAmount) > 0 && (
-                <div className="mt-2 p-3 bg-blue-50 rounded-xl">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-blue-700">Total</span>
-                    <span className="font-bold text-blue-900">{formatPrice(totalPrice)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm mt-1">
-                    <span className="text-blue-700">Acompte</span>
-                    <span className="font-bold text-blue-900">− {formatPrice(Number(acompteAmount))}</span>
-                  </div>
-                  <div className="flex justify-between text-sm mt-1 pt-1 border-t border-blue-100">
-                    <span className="text-blue-800 font-semibold">Reste à payer</span>
-                    <span className="font-extrabold text-blue-900">{formatPrice(Math.max(0, totalPrice - Number(acompteAmount)))}</span>
-                  </div>
+      {/* Panneau acompte — via Drawer : une fenêtre collée en bas avec
+          `fixed inset-0` passait SOUS la barre de navigation sur iPhone, et le
+          bouton Confirmer devenait inatteignable (ticket « Défaillance » du
+          gérant, 27/07/2026). Drawer borne la hauteur, fait défiler le contenu
+          et réserve la place de la barre plus la zone sûre de l'écran. */}
+      <Drawer open={showAcompteModal} onClose={() => setShowAcompteModal(false)} title="Acompte à encaisser">
+        <div className="space-y-4">
+          <div>
+            <label htmlFor="acompte-amount" className="text-[11px] font-bold text-gray-400 uppercase tracking-wide block mb-1.5">Montant (€)</label>
+            <input
+              id="acompte-amount"
+              type="number"
+              value={acompteAmount}
+              onChange={e => setAcompteAmount(e.target.value)}
+              step="0.01"
+              min="0"
+              placeholder="0"
+              inputMode="decimal"
+              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm"
+            />
+            {totalPrice && Number(acompteAmount) > 0 && (
+              <div className="mt-2 p-3 bg-blue-50 rounded-xl">
+                <div className="flex justify-between text-sm">
+                  <span className="text-blue-700">Total</span>
+                  <span className="font-bold text-blue-900">{formatPrice(totalPrice)}</span>
                 </div>
-              )}
-            </div>
-            <div className="flex gap-2">
-              <button type="button"
-                onClick={() => handleConfirmerWithAcompte(true)}
-                disabled={loading}
-                className="flex-1 py-2.5 text-sm font-medium text-gray-500 hover:bg-gray-100 rounded-xl disabled:opacity-50"
-              >
-                Passer
-              </button>
-              <button type="button"
-                onClick={() => handleConfirmerWithAcompte(false)}
-                disabled={loading}
-                className="flex-1 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl disabled:opacity-50"
-              >
-                {loading ? '…' : 'Confirmer'}
-              </button>
-            </div>
+                <div className="flex justify-between text-sm mt-1">
+                  <span className="text-blue-700">Acompte</span>
+                  <span className="font-bold text-blue-900">− {formatPrice(Number(acompteAmount))}</span>
+                </div>
+                <div className="flex justify-between text-sm mt-1 pt-1 border-t border-blue-100">
+                  <span className="text-blue-800 font-semibold">Reste à payer</span>
+                  <span className="font-extrabold text-blue-900">{formatPrice(Math.max(0, totalPrice - Number(acompteAmount)))}</span>
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <button type="button"
+              onClick={() => handleConfirmerWithAcompte(true)}
+              disabled={loading}
+              className="flex-1 py-3 min-h-[44px] text-sm font-medium text-gray-500 hover:bg-gray-100 rounded-xl disabled:opacity-50"
+            >
+              Passer
+            </button>
+            <button type="button"
+              onClick={() => handleConfirmerWithAcompte(false)}
+              disabled={loading}
+              className="flex-1 py-3 min-h-[44px] text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl disabled:opacity-50"
+            >
+              {loading ? '…' : 'Confirmer'}
+            </button>
           </div>
         </div>
-      )}
+      </Drawer>
     </div>
   )
 }
