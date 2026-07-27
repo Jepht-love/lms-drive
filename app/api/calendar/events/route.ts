@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { sendPushToUser } from '@/lib/push/sendPushToUser'
+import { jourHeureAgence } from '@/lib/format/heureAgence'
 import { createClient } from '@/lib/supabase/server'
 import { enrichEvents } from '@/lib/calendar/enrichEvents'
 import { generateAlertsForEvent } from '@/lib/calendar/generateAlerts'
@@ -90,6 +92,24 @@ export async function POST(request: NextRequest) {
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+
+  // Tâche créée DÉJÀ assignée : c'est le cas courant (on ouvre le tiroir, on
+  // saisit et on attribue d'un coup). Sans ça, seule une réattribution
+  // ultérieure aurait prévenu l'intéressé. Jamais de notification à soi-même.
+  if (assigned_to && assigned_to !== user.id) {
+    const quand = start_at ? jourHeureAgence(start_at) : null
+    const pushTitle = 'Nouvelle tâche pour vous'
+    const pushBody = [title ?? 'Tâche', quand && `le ${quand}`].filter(Boolean).join(' · ')
+    await supabase.from('notifications').insert({
+      user_id: assigned_to,
+      type: 'new_task_alert',
+      title: pushTitle,
+      body: pushBody,
+      entity_type: 'calendar_events',
+      entity_id: data.id,
+    })
+    await sendPushToUser(assigned_to, { title: pushTitle, body: pushBody, url: `/calendrier?event=${data.id}` }, 'new_task_alert')
+  }
 
   // Sens calendrier → déplacements internes : un événement "Déplacement
   // interne" créé directement ici (pas via la page Déplacements) crée le trip

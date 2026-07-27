@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { sendPushToUser } from '@/lib/push/sendPushToUser'
+import { jourHeureAgence } from '@/lib/format/heureAgence'
 import { createClient } from '@/lib/supabase/server'
 import { generateAlertsForEvent } from '@/lib/calendar/generateAlerts'
 import { enrichEvents } from '@/lib/calendar/enrichEvents'
@@ -93,6 +95,43 @@ export async function GET(
   return NextResponse.json(enriched)
 }
 
+/**
+ * Prévient la personne à qui on vient de confier une tâche.
+ *
+ * Assigner ne notifiait personne : l'associé ne l'apprenait qu'en ouvrant le
+ * calendrier de lui-même (constaté par Jeff le 27/07/2026 sur trois appareils).
+ * L'envoi est ciblé — lui seul le reçoit, pas toute l'équipe.
+ *
+ * N'envoie que si l'assignation CHANGE réellement, et jamais à soi-même :
+ * prendre en charge une tâche libre ne doit pas déclencher sa propre alerte.
+ */
+async function notifierPersonneAssignee(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  event: { id: string; title: string | null; start_at: string | null; assigned_to: string | null },
+  previousAssignee: string | null,
+  actorId: string,
+): Promise<void> {
+  const assignee = event.assigned_to
+  if (!assignee || assignee === previousAssignee || assignee === actorId) return
+
+  const quand = event.start_at ? jourHeureAgence(event.start_at) : null
+  const title = 'Nouvelle tâche pour vous'
+  const body = [event.title ?? 'Tâche', quand && `le ${quand}`].filter(Boolean).join(' · ')
+
+  // Trace dans la cloche de l'application, en plus du push : si le téléphone
+  // n'a pas les notifications activées, la tâche reste visible quelque part.
+  await supabase.from('notifications').insert({
+    user_id: assignee,
+    type: 'new_task_alert',
+    title,
+    body,
+    entity_type: 'calendar_events',
+    entity_id: event.id,
+  })
+
+  await sendPushToUser(assignee, { title, body, url: `/calendrier?event=${event.id}` }, 'new_task_alert')
+}
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -132,6 +171,18 @@ export async function PATCH(
     }
   }
 
+  // Assignation AVANT mise à jour : c'est le seul moyen de savoir si elle change
+  // vraiment, et donc de ne pas re-notifier à chaque enregistrement du tiroir.
+  let previousAssignee: string | null = null
+  if ('assigned_to' in update) {
+    const { data: before } = await supabase
+      .from('calendar_events')
+      .select('assigned_to')
+      .eq('id', id)
+      .maybeSingle()
+    previousAssignee = (before as { assigned_to: string | null } | null)?.assigned_to ?? null
+  }
+
   const { data, error } = await supabase
     .from('calendar_events')
     .update(update)
@@ -140,6 +191,10 @@ export async function PATCH(
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+
+  if ('assigned_to' in update) {
+    await notifierPersonneAssignee(supabase, data, previousAssignee, user.id)
+  }
 
   if ('start_at' in update || 'end_at' in update) {
     await generateAlertsForEvent(data)
