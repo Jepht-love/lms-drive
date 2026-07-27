@@ -6,7 +6,7 @@ import {
   CreditCard, Shield, AlertTriangle, ChevronRight, Phone, BadgePercent,
 } from 'lucide-react'
 import BackButton from '@/components/ui/BackButton'
-import { formatDateTime, formatPrice, reservationDiscount } from '@/lib/utils'
+import { formatDateTime, formatPrice, reservationDiscount, calculateRentalDays } from '@/lib/utils'
 import ReservationStatusButtons from '../ReservationStatusButtons'
 import DepositStatusEditor from '../DepositStatusEditor'
 import DepositInfoEditor from '../DepositInfoEditor'
@@ -152,6 +152,16 @@ export default async function ReservationPage({
   const totalHours = differenceInHours(endDate, startDate)
   const nbDays     = Math.max(0, Math.floor(totalHours / 24))
   const nbHours    = totalHours % 24
+  // Durée réelle et durée FACTURÉE ne sont pas la même chose : une location de
+  // 5 h dure zéro jour mais se facture une journée (toute journée entamée est
+  // due). L'écran n'affichait que la durée réelle, d'où un « Période · 0j 5h »
+  // au-dessus d'un total de 150 € que le gérant ne pouvait pas relier.
+  // Remonté le 27/07/2026.
+  const billedDays = calculateRentalDays(reservation.start_datetime, reservation.end_datetime)
+  // « 5h » plutôt que « 0j 5h » : un zéro devant une unité ne veut rien dire.
+  const dureeCourte = nbDays > 0
+    ? `${nbDays}j${nbHours > 0 ? ` ${nbHours}h` : ''}`
+    : `${nbHours}h`
   const isLate    = reservation.status === 'en_retard'
   const hasExtraFees =
     (reservation.late_fee_amount > 0) || (reservation.extra_km_count > 0)
@@ -269,7 +279,10 @@ export default async function ReservationPage({
         <div className="mt-3 bg-white/10 rounded-xl p-3">
           <div className="flex items-center gap-1.5 text-white/60 mb-2">
             <CalendarDays className="w-3.5 h-3.5" />
-            <span className="text-xs font-semibold">Période · {nbDays}j{nbHours > 0 ? ` ${nbHours}h` : ''}</span>
+            <span className="text-xs font-semibold">
+              Période · {dureeCourte}
+              {billedDays !== nbDays && <span className="font-normal opacity-70"> · {billedDays} j facturé{billedDays > 1 ? 's' : ''}</span>}
+            </span>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
@@ -364,7 +377,12 @@ export default async function ReservationPage({
         <SectionLabel>Tarif</SectionLabel>
         <div>
           <InfoRow label="Prix / jour">{formatPrice(reservation.daily_price)}</InfoRow>
-          <InfoRow label="Durée">{nbDays} jour{nbDays > 1 ? 's' : ''}{nbHours > 0 ? ` ${nbHours}h` : ''}</InfoRow>
+          <InfoRow label="Durée">
+            {nbDays > 0 ? `${nbDays} jour${nbDays > 1 ? 's' : ''}` : ''}{nbHours > 0 ? `${nbDays > 0 ? ' ' : ''}${nbHours} h` : ''}
+            {billedDays !== nbDays && (
+              <span className="text-gray-400"> · facturée {billedDays} jour{billedDays > 1 ? 's' : ''}</span>
+            )}
+          </InfoRow>
           {reservation.km_included && (
             <InfoRow label="KM inclus / jour">{reservation.km_included} km</InfoRow>
           )}

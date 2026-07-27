@@ -72,10 +72,10 @@ export default async function ReservationsPage({
       })
     : (rawReservations ?? [])
 
-  // « non_presente » en dernier : c'est un état de clôture, comme annulée. L'onglet
-  // n'apparaît que s'il y en a (cf. le test count === 0 plus bas), et c'est le seul
-  // endroit de l'appli où l'on peut retrouver ces dossiers, puisqu'ils sortent du
-  // tableau de bord et des tâches du jour.
+  // « non_presente » en dernier : c'est un état de clôture, comme annulée. C'est
+  // le seul endroit de l'appli où l'on peut retrouver ces dossiers, puisqu'ils
+  // sortent du tableau de bord et des tâches du jour — raison de plus pour que
+  // son onglet reste visible même à zéro.
   const statuses = ['option', 'confirmee', 'en_cours', 'en_retard', 'terminee', 'annulee', 'non_presente']
   const total = reservations.length
 
@@ -125,7 +125,12 @@ export default async function ReservationsPage({
         {statuses.map(s => {
           const cfg = STATUS_CONFIG[s] ?? { label: s, badge: '', bar: '' }
           const count = counts[s] ?? 0
-          if (count === 0 && status !== s) return null
+          // Tous les statuts restent visibles, même à zéro. Les masquer privait
+          // les associés de la moitié de la palette : sur la capture d'Alexis
+          // (27/07), seuls « En location » et « Terminée » apparaissaient, donc
+          // impossible de savoir qu'« À venir », « En retard », « Annulée » ou
+          // « Client non présenté » existent. Un filtre vide est une
+          // information ; un filtre absent est une lacune.
           return (
             <Link
               key={s}
@@ -137,7 +142,7 @@ export default async function ReservationsPage({
               }`}
             >
               {cfg.label}
-              {count > 0 && <span className="ml-1.5 opacity-60">({count})</span>}
+              <span className="ml-1.5 opacity-60">({count})</span>
             </Link>
           )
         })}
