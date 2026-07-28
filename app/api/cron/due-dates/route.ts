@@ -93,8 +93,30 @@ export async function GET(request: NextRequest) {
     morceaux.push(`dont ${creances.length} créance${creances.length > 1 ? 's' : ''} client · ${formatAmount(somme(creances))}`)
   }
 
+  // Les dates, regroupées PAR JOUR. Demande de Jeff du 28/07/2026 : savoir quand
+  // sortir l'argent, pas seulement combien. Une ligne par échéance serait
+  // illisible — il y a 64 loyers de véhicules en base, et une notification ne
+  // montre que quelques lignes avant d'être tronquée par le téléphone.
+  const parJour = new Map<string, { nb: number; total: number }>()
+  for (const d of aVenir) {
+    const cle = d.due_date as string
+    const acc = parJour.get(cle) ?? { nb: 0, total: 0 }
+    acc.nb += 1
+    acc.total += Number(d.amount ?? 0)
+    parJour.set(cle, acc)
+  }
+  const jours = [...parJour.entries()].sort(([a], [b]) => a.localeCompare(b))
+  const MAX_JOURS = 4
+  const detail = jours.slice(0, MAX_JOURS)
+    .map(([date, v]) => `${jourCourt(date)} : ${formatAmount(v.total)}${v.nb > 1 ? ` (${v.nb})` : ''}`)
+    .join(' · ')
+  const reste = jours.length - MAX_JOURS
+  const ligneJours = detail
+    ? detail + (reste > 0 ? ` · +${reste} autre${reste > 1 ? 's' : ''} jour${reste > 1 ? 's' : ''}` : '')
+    : ''
+
   const title = enRetard.length ? '📅 Échéances — dont des retards' : '📅 Échéances de la semaine'
-  const body = morceaux.join(' · ')
+  const body = [morceaux.join(' · '), ligneJours].filter(Boolean).join('\n')
 
   await supabase.from('notifications').insert({
     user_id: null,
@@ -131,6 +153,22 @@ function localDateStr(date: Date): string {
   const m = String(date.getMonth() + 1).padStart(2, '0')
   const d = String(date.getDate()).padStart(2, '0')
   return `${y}-${m}-${d}`
+}
+
+/**
+ * « lun. 3 août » à partir d'un `2026-08-03`.
+ *
+ * La date est découpée à la main plutôt que passée à `new Date(...)` : une
+ * chaîne « AAAA-MM-JJ » est interprétée en temps universel, et sur un serveur
+ * décalé le 3 devient le 2. La colonne `due_date` est une date sans fuseau,
+ * elle ne doit surtout pas en gagner un au passage.
+ */
+function jourCourt(dateStr: string): string {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  if (!y || !m || !d) return dateStr
+  return new Date(y, m - 1, d)
+    .toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })
+    .replace('.', '')
 }
 
 function formatAmount(amount: number): string {
