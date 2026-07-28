@@ -82,26 +82,19 @@ export async function GET(request: NextRequest) {
 
   const somme = (liste: any[]) => liste.reduce((s, d) => s + Number(d.amount ?? 0), 0)
 
-  const morceaux: string[] = []
-  if (enRetard.length) {
-    morceaux.push(`⚠️ ${enRetard.length} en retard · ${formatAmount(somme(enRetard))}`)
-  }
-  if (aVenir.length) {
-    morceaux.push(`${aVenir.length} cette semaine · ${formatAmount(somme(aVenir))}`)
-  }
-  // « dont N créances » n'a de sens que s'il y a autre chose à côté. Quand toutes
-  // les échéances de la semaine sont des créances, la phrase répète la précédente.
-  if (creances.length && creances.length !== aVenir.length) {
-    morceaux.push(`dont ${creances.length} créance${creances.length > 1 ? 's' : ''} client · ${formatAmount(somme(creances))}`)
-  }
+  // UNE LIGNE, UN SUJET (demande de Jeff, 28/07/2026). Trois lignes au maximum :
+  // ce qui traîne, ce qu'on doit payer, ce qu'on doit encaisser. Un téléphone
+  // n'affiche qu'environ quatre lignes de notification avant de tronquer, et une
+  // ligne qui empile trois informations ne se lit pas d'un coup d'œil.
+  const loyers = aVenir.filter((d: any) => !d.reservation_id)
+  const creancesAVenir = aVenir.filter((d: any) => d.reservation_id)
 
   // Qui doit l'argent, et quand. « 2 créances client » ne dit pas qui relancer,
   // et c'est tout l'intérêt d'une créance. Regroupé PAR PERSONNE : le même client
-  // avec deux échéances tient sur une ligne, avec ses deux dates, au lieu d'être
-  // nommé deux fois. Demande de Jeff du 28/07/2026. Trois personnes au maximum,
-  // au-delà le téléphone tronque le message.
+  // avec deux échéances est nommé une fois. Trois personnes au maximum, au-delà
+  // le téléphone tronque le message.
   const parClient = new Map<string, { date: string; montant: number }[]>()
-  for (const d of creances as any[]) {
+  for (const d of creancesAVenir as any[]) {
     const c = Array.isArray(d.clients) ? d.clients[0] : d.clients
     const nom = c ? `${c.first_name} ${c.last_name}`.trim() : 'Client'
     const liste = parClient.get(nom) ?? []
@@ -115,18 +108,18 @@ export async function GET(request: NextRequest) {
   // et tronquée par le téléphone. On dit alors combien, pour quel total, et à
   // partir de quand — le détail est sur l'écran des créances.
   const MAX_DATES = 2
-  const ligneCreances = clients.slice(0, MAX_CLIENTS)
+  const nomsClients = clients.slice(0, MAX_CLIENTS)
     .map(([nom, lignes]) => {
       const triees = lignes.sort((a, b) => a.date.localeCompare(b.date))
+      // Au-delà de deux échéances, on ne déroule plus : un paiement échelonné en
+      // dix fois donnerait dix dates sur une ligne. On dit combien et à partir de
+      // quand, le détail est sur l'écran des créances où mène le clic.
       if (triees.length > MAX_DATES) {
-        const total = triees.reduce((s, l) => s + l.montant, 0)
-        return `${nom} : ${triees.length} échéances · ${formatAmount(total)} · dès ${jourCourt(triees[0].date)}`
+        return `${nom} (${triees.length} dès ${jourCourt(triees[0].date)})`
       }
-      const dates = triees.map(l => `${jourCourt(l.date)} ${formatAmount(l.montant)}`).join(' · ')
-      return `${nom} : ${dates}`
+      return `${nom} (${triees.map(l => jourCourt(l.date)).join(', ')})`
     })
-    .join('\n')
-    + (clients.length > MAX_CLIENTS ? `\n+${clients.length - MAX_CLIENTS} autre${clients.length - MAX_CLIENTS > 1 ? 's' : ''}` : '')
+  const clientsNonCites = clients.length - nomsClients.length
 
   // Les dates, regroupées PAR JOUR. Demande de Jeff du 28/07/2026 : savoir quand
   // sortir l'argent, pas seulement combien. Une ligne par échéance serait
@@ -136,7 +129,7 @@ export async function GET(request: NextRequest) {
   // ligne juste en dessous, nommée. Les compter aux deux endroits ferait
   // apparaître deux fois la même somme.
   const parJour = new Map<string, { nb: number; total: number }>()
-  for (const d of aVenir.filter((x: any) => !x.reservation_id)) {
+  for (const d of loyers as any[]) {
     const cle = d.due_date as string
     const acc = parJour.get(cle) ?? { nb: 0, total: 0 }
     acc.nb += 1
@@ -144,17 +137,26 @@ export async function GET(request: NextRequest) {
     parJour.set(cle, acc)
   }
   const jours = [...parJour.entries()].sort(([a], [b]) => a.localeCompare(b))
-  const MAX_JOURS = 4
-  const detail = jours.slice(0, MAX_JOURS)
-    .map(([date, v]) => `${jourCourt(date)} : ${formatAmount(v.total)}${v.nb > 1 ? ` (${v.nb})` : ''}`)
-    .join(' · ')
-  const reste = jours.length - MAX_JOURS
-  const ligneJours = detail
-    ? detail + (reste > 0 ? ` · +${reste} autre${reste > 1 ? 's' : ''} jour${reste > 1 ? 's' : ''}` : '')
-    : ''
+  const MAX_JOURS = 3
+  const nomsJours = jours.slice(0, MAX_JOURS).map(([date]) => jourCourt(date))
+  const joursNonCites = jours.length - nomsJours.length
+
+  // Une ligne par sujet, et rien d'autre sur la ligne.
+  const lignes: string[] = []
+  if (enRetard.length) {
+    lignes.push(`⚠️ En retard : ${enRetard.length} · ${formatAmount(somme(enRetard))}`)
+  }
+  if (loyers.length) {
+    const quand = nomsJours.join(', ') + (joursNonCites > 0 ? `, +${joursNonCites}` : '')
+    lignes.push(`À payer : ${loyers.length} · ${formatAmount(somme(loyers))} — ${quand}`)
+  }
+  if (creancesAVenir.length) {
+    const qui = nomsClients.join(', ') + (clientsNonCites > 0 ? `, +${clientsNonCites}` : '')
+    lignes.push(`À encaisser : ${creancesAVenir.length} · ${formatAmount(somme(creancesAVenir))} — ${qui}`)
+  }
 
   const title = enRetard.length ? '📅 Échéances — dont des retards' : '📅 Échéances de la semaine'
-  const body = [morceaux.join(' · '), ligneJours, ligneCreances].filter(Boolean).join('\n')
+  const body = lignes.join('\n')
 
   // Où mène le clic. Quand le résumé ne contient QUE des créances client, il
   // ouvre l'écran des créances, là où on les encaisse. Sinon l'écran des
