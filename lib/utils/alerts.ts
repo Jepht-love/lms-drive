@@ -239,6 +239,12 @@ export async function fetchAllAlerts(
     .in('event_type', ['tache', 'rdv_client', 'rdv_garage', 'rdv_autre', 'livraison', 'recuperation'])
     .in('status', ['a_faire', 'en_cours'])
     .is('source_key', null)
+    // Seulement les tâches confiées par QUELQU'UN. Celles que l'application
+    // fabrique elle-même (lavage avant location, révision, clôture de contrat,
+    // échéance proche) n'ont pas d'auteur, et elles ont déjà leur propre alerte :
+    // les reprendre ici affichait tout en double, une fois sous son vrai nom et
+    // une fois en « TÂCHE EN RETARD ». Signalé par Jeff le 28/07/2026.
+    .not('created_by', 'is', null)
     .gte('end_at', retard7j.toISOString())
     .lt('end_at', limiteRetard.toISOString())
     .order('end_at', { ascending: true })
