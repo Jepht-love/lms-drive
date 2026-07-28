@@ -28,7 +28,13 @@ export async function syncAlertsToCalendar(
   const ALREADY_ON_CALENDAR_TYPES = ['retard', 'lavage', 'depart_imminent', 'retour_jour']
   const actionable = alerts.filter(a =>
     (a.category === 'urgent' || a.category === 'important') &&
-    !ALREADY_ON_CALENDAR_TYPES.includes(a.type),
+    !ALREADY_ON_CALENDAR_TYPES.includes(a.type) &&
+    // Les alertes « event-… » décrivent une tâche du calendrier en retard :
+    // elles sont déjà au calendrier, ce sont elles. Les recopier créait une
+    // tâche dont le titre reprenait l'alerte, qui redevenait une alerte au tour
+    // suivant : le titre s'allongeait à chaque passage jusqu'à une notification
+    // illisible. Constaté sur le téléphone de Jeff le 28/07/2026.
+    !a.id.startsWith('event-'),
   )
 
   const { data: existing } = await supabase

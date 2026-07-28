@@ -225,11 +225,20 @@ export async function fetchAllAlerts(
   // On borne à 7 jours : au-delà, une tâche jamais clôturée n'est plus une
   // urgence du jour, et la faire remonter indéfiniment noierait l'écran.
   const retard7j = new Date(now.getTime() - 7 * 24 * 3600 * 1000)
+  //
+  // ⚠️ `source_key is null` est INDISPENSABLE. Les alertes sont recopiées dans le
+  // calendrier sous forme de tâches (syncAlertsToCalendar, titre = libellé de
+  // l'alerte). Sans ce filtre, ces copies deviennent à leur tour des alertes dont
+  // le libellé reprend le précédent : le titre s'allonge à chaque passage du cron
+  // et la notification devient illisible. Constaté sur le téléphone de Jeff le
+  // 28/07/2026, après six tours (« TÂCHE EN RETARD — TÂCHE EN RETARD — … »).
+  // Ces copies ont déjà leur propre alerte, il n'y a donc rien à perdre.
   const { data: overdueEvents } = await supabase
     .from('calendar_events')
     .select('id, title, event_type, end_at, reservation_id, vehicle_ids, assignee:profiles!assigned_to(full_name)')
     .in('event_type', ['tache', 'rdv_client', 'rdv_garage', 'rdv_autre', 'livraison', 'recuperation'])
     .in('status', ['a_faire', 'en_cours'])
+    .is('source_key', null)
     .gte('end_at', retard7j.toISOString())
     .lt('end_at', limiteRetard.toISOString())
     .order('end_at', { ascending: true })
