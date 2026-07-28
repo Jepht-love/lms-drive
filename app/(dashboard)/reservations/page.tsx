@@ -4,6 +4,7 @@ import { Plus, ClipboardList } from 'lucide-react'
 import SmartSearch from '@/components/ui/SmartSearch'
 import { formatPrice, reservationDiscount } from '@/lib/utils'
 import DeleteReservationButton from './DeleteReservationButton'
+import VehicleFilter from './VehicleFilter'
 import PaymentCountdownMini from './PaymentCountdownMini'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
@@ -35,6 +36,14 @@ export default async function ReservationsPage({
     .update({ status: 'en_retard' })
     .eq('status', 'en_cours')
     .lt('end_datetime', new Date().toISOString())
+
+  // Véhicules du filtre. La page savait déjà filtrer par véhicule, mais rien ne
+  // permettait d'en choisir un sans connaître son identifiant.
+  const { data: vehiclesList } = await supabase
+    .from('vehicles')
+    .select('id, brand, model, plate')
+    .eq('is_active', true)
+    .order('brand')
 
   // Compteurs par statut (avant filtre)
   const { data: allRes } = await supabase
@@ -79,6 +88,59 @@ export default async function ReservationsPage({
   const statuses = ['option', 'confirmee', 'en_cours', 'en_retard', 'terminee', 'annulee', 'non_presente']
   const total = reservations.length
 
+  // ── Le véhicule choisi : quand revient-il, et est-il libre maintenant ? ──────
+  // Le cas d'usage de Jeff (28/07/2026) : un client appelle pour une voiture
+  // précise, on veut répondre tout de suite « elle rentre jeudi à 10h » sans
+  // ouvrir un autre onglet, puis créer la réservation avec ce véhicule déjà
+  // choisi. On travaille sur TOUTES ses réservations, pas sur la liste filtrée
+  // par statut : sinon un filtre « Confirmée » masquerait la location en cours.
+  const maintenant = new Date()
+  let vehiculeChoisi: {
+    label: string
+    enCours?: { fin: Date; client: string; enRetard: boolean }
+    suivante?: { debut: Date; client: string }
+    precedente?: { fin: Date; client: string }
+  } | null = null
+
+  if (vehicle) {
+    const v = (vehiclesList ?? []).find(x => x.id === vehicle)
+    const { data: sesResas } = await supabase
+      .from('reservations')
+      .select('start_datetime, end_datetime, status, client:clients(first_name, last_name)')
+      .eq('vehicle_id', vehicle)
+      .not('status', 'in', '("annulee","non_presente")')
+      .order('start_datetime', { ascending: true })
+
+    const nom = (r: any) => {
+      const c = Array.isArray(r.client) ? r.client[0] : r.client
+      return c ? `${c.first_name} ${c.last_name}`.trim() : 'Client'
+    }
+    const lignes = (sesResas ?? []).map((r: any) => ({
+      debut: new Date(r.start_datetime),
+      fin: new Date(r.end_datetime),
+      client: nom(r),
+      statut: r.status as string,
+    }))
+
+    // Le STATUT prime sur les dates. Une location « en retard » a une fin déjà
+    // passée alors que la voiture est toujours dehors : se fier à la date
+    // seule l'annonçait « disponible », ce qui est faux et dangereux — on
+    // pourrait la relouer. Constaté à l'écran le 28/07/2026 sur la BMW M135i.
+    const dehors = lignes.find(l => l.statut === 'en_cours' || l.statut === 'en_retard')
+    const enCours = dehors ?? lignes.find(l => l.debut <= maintenant && l.fin > maintenant)
+    const suivante = lignes.find(l => l.debut > maintenant && l !== enCours)
+    // La plus récente réellement rendue : utile pour savoir depuis quand la
+    // voiture est au dépôt. « Terminée » uniquement, pour la même raison.
+    const precedente = [...lignes].reverse().find(l => l.statut === 'terminee')
+
+    vehiculeChoisi = {
+      label: v ? `${[v.brand, v.model].filter(Boolean).join(' ')} · ${v.plate}` : 'Véhicule',
+      enCours: enCours && { fin: enCours.fin, client: enCours.client, enRetard: enCours.statut === 'en_retard' },
+      suivante: suivante && { debut: suivante.debut, client: suivante.client },
+      precedente: precedente && { fin: precedente.fin, client: precedente.client },
+    }
+  }
+
   return (
     <div className="space-y-4">
 
@@ -95,8 +157,10 @@ export default async function ReservationsPage({
             )}
           </p>
         </div>
+        {/* Un véhicule choisi suit dans « Nouvelle » : le client appelle pour
+            cette voiture-là, on ne la resélectionne pas à la main. */}
         <Link
-          href="/reservations/new"
+          href={vehicle ? `/reservations/new?vehicle=${vehicle}` : '/reservations/new'}
           className="flex items-center gap-2 px-4 py-2.5 bg-[#111111] text-white rounded-xl font-semibold hover:bg-gray-800 transition-colors text-sm active:scale-[.98]"
         >
           <Plus className="w-4 h-4" />
@@ -113,6 +177,7 @@ export default async function ReservationsPage({
 
       {/* Filtres statut — scroll horizontal */}
       <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}>
+        <VehicleFilter vehicles={vehiclesList ?? []} selected={vehicle} />
         <Link
           href="/reservations"
           className={`px-3.5 py-2 min-h-[44px] flex items-center rounded-xl text-sm font-semibold whitespace-nowrap transition-colors flex-shrink-0 ${
@@ -147,6 +212,44 @@ export default async function ReservationsPage({
           )
         })}
       </div>
+
+      {/* Le véhicule choisi, en une carte : disponible ou non, et quand */}
+      {vehiculeChoisi && (
+        <div className="bg-[#111111] text-white rounded-2xl p-4">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-white/50">{vehiculeChoisi.label}</p>
+          {vehiculeChoisi.enCours ? (
+            <>
+              <p className={`text-lg font-black mt-1 ${vehiculeChoisi.enCours.enRetard ? 'text-red-400' : ''}`}>
+                {vehiculeChoisi.enCours.enRetard ? 'Devait revenir le ' : 'Revient le '}
+                {format(vehiculeChoisi.enCours.fin, "d MMMM 'à' HH:mm", { locale: fr })}
+              </p>
+              <p className="text-xs text-white/60 mt-0.5">
+                {vehiculeChoisi.enCours.enRetard ? 'En retard' : 'En location'} · {vehiculeChoisi.enCours.client}
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-lg font-black mt-1 text-emerald-300">Disponible</p>
+              {vehiculeChoisi.precedente && (
+                <p className="text-xs text-white/60 mt-0.5">
+                  Rentré le {format(vehiculeChoisi.precedente.fin, "d MMMM 'à' HH:mm", { locale: fr })} · {vehiculeChoisi.precedente.client}
+                </p>
+              )}
+            </>
+          )}
+          {vehiculeChoisi.suivante && (
+            <p className="text-xs text-white/60 mt-1.5 pt-1.5 border-t border-white/10">
+              Repart le {format(vehiculeChoisi.suivante.debut, "d MMMM 'à' HH:mm", { locale: fr })} · {vehiculeChoisi.suivante.client}
+            </p>
+          )}
+          <Link
+            href={`/reservations/new?vehicle=${vehicle}`}
+            className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-[#111111] bg-white px-3 py-2 rounded-lg"
+          >
+            <Plus className="w-3.5 h-3.5" /> Réserver ce véhicule
+          </Link>
+        </div>
+      )}
 
       {/* Liste */}
       {total === 0 ? (
