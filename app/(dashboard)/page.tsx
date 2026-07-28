@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { fetchAllAlerts } from '@/lib/utils/alerts'
+import { fetchAllAlerts, seuilRetardMinutes } from '@/lib/utils/alerts'
 import { fetchActiveInternalTrips } from '@/lib/vehicles/internalTrips'
 import Link from 'next/link'
 import {
@@ -489,9 +489,20 @@ export default async function DashboardPage() {
     .order('due_datetime', { ascending: true })
   // « Tâches du jour » = journée métier courante (7h→3h, comme le calendrier)
   // OU jour civil (rétro-compatibilité, ne masque rien de ce qui s'affichait).
+  // Une tâche dépassée et non faite QUITTE « Tâches du jour » et devient une
+  // alerte (fetchAllAlerts). Sans ça elle restait dans la liste du jour, noyée
+  // parmi celles encore à l'heure, et personne ne voyait qu'elle était en
+  // souffrance. Tolérance : le seuil des paramètres, 30 minutes par défaut,
+  // pour ne pas basculer une tâche pendant qu'on est en train de la faire.
+  const toleranceMin = await seuilRetardMinutes(supabase)
+  const limiteRetard = new Date(now.getTime() - toleranceMin * 60_000)
+
   const todayTasks = (weekTasks ?? []).filter(t => {
     const d = new Date(t.due_datetime)
-    return (d >= businessDayStart && d <= businessDayEnd) || (d >= todayStart && d <= todayEnd)
+    const dansLaJournee = (d >= businessDayStart && d <= businessDayEnd) || (d >= todayStart && d <= todayEnd)
+    if (!dansLaJournee) return false
+    // Terminée : elle disparaît d'elle-même. En retard et pas faite : en alerte.
+    return !(t.status === 'a_faire' && d < limiteRetard)
   })
 
   // ── Tâches calendrier du jour (lavage, CT, assurance, révision, infraction,
@@ -513,9 +524,15 @@ export default async function DashboardPage() {
     .in('status', ['a_faire', 'en_cours'])
     .order('start_at', { ascending: true })
   const weekCalendarTasks = (rawCalendarTasks ?? []).filter(t => !t.source_key?.startsWith('task-'))
-  const todayCalendarTasks = weekCalendarTasks.filter(t =>
-    new Date(t.start_at) >= businessDayStart && new Date(t.start_at) <= businessDayEnd
-  )
+  // Même règle que pour les tâches ci-dessus : dépassée et non faite, elle part
+  // en alerte. On juge sur la FIN de l'événement, pas sur son début : un lavage
+  // prévu de 9h à 10h n'est pas en retard à 9h05.
+  const todayCalendarTasks = weekCalendarTasks.filter(t => {
+    const debut = new Date(t.start_at)
+    if (!(debut >= businessDayStart && debut <= businessDayEnd)) return false
+    const fin = t.end_at ? new Date(t.end_at) : debut
+    return !(fin < limiteRetard)
+  })
   const vehicleById = new Map((vehicles ?? []).map(v => [v.id, v]))
 
   // La liste « Semaine » (jour par jour) est désormais rendue par le widget

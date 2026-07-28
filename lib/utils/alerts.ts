@@ -22,11 +22,37 @@ function vLabel(v: any): string {
   return bm ? `${bm} · ${plate}` : plate
 }
 
+/**
+ * Tolérance avant qu'une tâche non faite soit déclarée en retard.
+ *
+ * C'est le réglage « Seuil retour en retard » des paramètres, 30 minutes par
+ * défaut. On le lit sur le GÉRANT : la table porte une ligne par utilisateur, et
+ * un `.limit(1)` tombait sur le réglage de n'importe qui.
+ *
+ * Sans cette tolérance, une tâche prévue à 10h basculait en alerte à 10h00 et
+ * une minute, alors que la personne était en train de la faire.
+ */
+export async function seuilRetardMinutes(
+  supabase: ReturnType<typeof createAdminClient>,
+): Promise<number> {
+  const { data: gerant } = await supabase
+    .from('profiles').select('id').eq('role', 'gerant').limit(1).maybeSingle()
+  if (!gerant?.id) return 30
+  const { data: cfg } = await supabase
+    .from('notification_settings')
+    .select('late_return_threshold_minutes')
+    .eq('user_id', gerant.id)
+    .maybeSingle()
+  return cfg?.late_return_threshold_minutes ?? 30
+}
+
 export async function fetchAllAlerts(
   supabase: ReturnType<typeof createAdminClient>,
 ): Promise<AppAlert[]> {
   const now = new Date()
   const alerts: AppAlert[] = []
+  const tolerance = await seuilRetardMinutes(supabase)
+  const limiteRetard = new Date(now.getTime() - tolerance * 60_000)
 
   // ── 1. Contrats non signés ──────────────────────────────────────────────────
   const { data: contracts } = await supabase
@@ -167,7 +193,7 @@ export async function fetchAllAlerts(
       vehicles(plate, brand, model),
       profiles!tasks_assigned_to_fkey(full_name)`)
     .eq('status', 'a_faire')
-    .lt('due_datetime', now.toISOString())
+    .lt('due_datetime', limiteRetard.toISOString())
     .order('due_datetime', { ascending: true })
 
   overdueTasks?.forEach(t => {
@@ -188,6 +214,46 @@ export async function fetchAllAlerts(
       reservationId: t.reservation_id ?? undefined,
     })
   })
+
+  // ── 4 bis. Tâches et rendez-vous du calendrier en retard ────────────────────
+  // Le lavage, le rendez-vous garage, la livraison ou la récupération vivent dans
+  // `calendar_events`, pas dans `tasks` : ils restaient donc éternellement dans
+  // « Tâches du jour » sans jamais devenir une alerte. Une tâche dépassée et non
+  // faite doit quitter la liste du jour et venir ici (demande du 27/07/2026,
+  // tolérance tranchée à 30 minutes par Jeff le 28/07/2026).
+  //
+  // On borne à 7 jours : au-delà, une tâche jamais clôturée n'est plus une
+  // urgence du jour, et la faire remonter indéfiniment noierait l'écran.
+  const retard7j = new Date(now.getTime() - 7 * 24 * 3600 * 1000)
+  const { data: overdueEvents } = await supabase
+    .from('calendar_events')
+    .select('id, title, event_type, end_at, reservation_id, vehicle_ids, assignee:profiles!assigned_to(full_name)')
+    .in('event_type', ['tache', 'rdv_client', 'rdv_garage', 'rdv_autre', 'livraison', 'recuperation'])
+    .in('status', ['a_faire', 'en_cours'])
+    .gte('end_at', retard7j.toISOString())
+    .lt('end_at', limiteRetard.toISOString())
+    .order('end_at', { ascending: true })
+
+  for (const ev of overdueEvents ?? []) {
+    const qui = Array.isArray(ev.assignee) ? ev.assignee[0] : ev.assignee
+    const minutes = Math.round((now.getTime() - new Date(ev.end_at).getTime()) / 60_000)
+    const retard = minutes < 60
+      ? `${minutes} min de retard`
+      : `${Math.round(minutes / 60)}h de retard`
+    alerts.push({
+      id: `event-${ev.id}`,
+      category: 'important',
+      urgent: false,
+      type: 'tache',
+      label: 'TÂCHE EN RETARD',
+      sublabel: `${ev.title}${(qui as any)?.full_name ? ` · ${(qui as any).full_name}` : ' · non assignée'} · ${retard}`,
+      // Le clic ouvre la tâche elle-même : c'est là qu'on la passe en terminé.
+      href: `/calendrier?event=${ev.id}`,
+      date: ev.end_at,
+      vehicleId: (ev.vehicle_ids as string[] | null)?.[0] ?? undefined,
+      reservationId: ev.reservation_id ?? undefined,
+    })
+  }
 
   // ── 5. Lavage avant location (départ confirmé < 24h, dernier lavage > 2j) ───
   const in24h = new Date(now.getTime() + 24 * 3600 * 1000)

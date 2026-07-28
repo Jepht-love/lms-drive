@@ -93,6 +93,14 @@ export async function updatePaymentInfo(
     payment_amount: number | null
     payment_ref: string | null
     payment_date: string | null
+    /**
+     * Part du règlement qui solde les frais de restitution (km, retard,
+     * dégâts). Volontairement HORS de `payment_amount` : la recette « location »
+     * est posée en comptabilité avec `payment_amount`, alors que les frais y
+     * figurent déjà dans leurs propres catégories à la clôture. Les mélanger
+     * les compterait deux fois. Décision de Jeff du 28/07/2026.
+     */
+    fees_paid_amount?: number
   }
 ) {
   const supabase = await createClient()

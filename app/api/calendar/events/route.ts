@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { sendPushToUser } from '@/lib/push/sendPushToUser'
 import { jourHeureAgence } from '@/lib/format/heureAgence'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { enrichEvents } from '@/lib/calendar/enrichEvents'
 import { generateAlertsForEvent } from '@/lib/calendar/generateAlerts'
 import { syncReservationToCalendar } from '@/lib/calendar/syncRental'
@@ -100,7 +101,10 @@ export async function POST(request: NextRequest) {
     const quand = start_at ? jourHeureAgence(start_at) : null
     const pushTitle = 'Nouvelle tâche pour vous'
     const pushBody = [title ?? 'Tâche', quand && `le ${quand}`].filter(Boolean).join(' · ')
-    await supabase.from('notifications').insert({
+    // Connexion d'administration : la règle d'accès de `notifications` n'autorise
+    // chacun qu'à écrire pour lui-même, donc écrire au nom du destinataire était
+    // refusé en silence. Constaté le 28/07/2026.
+    await createAdminClient().from('notifications').insert({
       user_id: assigned_to,
       type: 'new_task_alert',
       title: pushTitle,

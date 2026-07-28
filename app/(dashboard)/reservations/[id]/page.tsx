@@ -96,6 +96,19 @@ export default async function ReservationPage({
 
   if (!reservation) notFound()
 
+  // Créances déjà ouvertes sur CETTE réservation. Sans elles, le bouton
+  // « Enregistrer une créance » reproposait chaque fois la somme entière, et le
+  // gérant pouvait réclamer deux fois le même argent. L'écran Créances déduisait
+  // déjà ces montants, pas cette fiche : les deux disent maintenant la même chose.
+  const { data: creancesOuvertes } = await supabase
+    .from('financial_due_dates')
+    .select('amount')
+    .eq('reservation_id', id)
+    .eq('type', 'recette')
+    .eq('is_paid', false)
+    .is('deleted_at', null)
+  const dejaEnCreance = (creancesOuvertes ?? []).reduce((s, d: any) => s + Number(d.amount ?? 0), 0)
+
   // Détection auto retards — mutation directe (pas l'action updateReservationStatus,
   // qui appelle revalidatePath : interdit pendant le rendu d'une page, Next.js plante).
   if (reservation.status === 'en_cours') {
@@ -487,6 +500,15 @@ export default async function ReservationPage({
           currentMethod={(reservation.payment_method ?? null) as PaymentMethod | null}
           currentAmount={reservation.payment_amount ?? null}
           currentRef={reservation.payment_ref ?? null}
+          fees={[
+            { label: 'Kilomètres supplémentaires', amount: Number(reservation.extra_km_amount ?? 0) },
+            // Le retard ne se facture qu'une fois validé : tant qu'il ne l'est
+            // pas, il ne doit ni s'afficher ni être réclamé.
+            { label: 'Frais de retard', amount: reservation.late_fee_validated ? Number(reservation.late_fee_amount ?? 0) : 0 },
+            { label: 'Dommages', amount: Number(reservation.deposit_deducted ?? 0) },
+          ].filter(f => f.amount > 0)}
+          feesPaid={Number(reservation.fees_paid_amount ?? 0)}
+          inReceivables={dejaEnCreance}
         />
         {reservation.status === 'option' && reservation.payment_status === 'en_attente' && c?.email && (
           <SendPaymentEmailButton
@@ -501,7 +523,7 @@ export default async function ReservationPage({
             (dommages, frais…) ou un paiement échelonné à tout moment. */}
         <CreateReceivableButton
           reservationId={id}
-          remaining={Math.round(((reservation.total_price ?? 0) - (reservation.payment_amount ?? 0)) * 100) / 100}
+          remaining={Math.max(0, Math.round(((reservation.total_price ?? 0) - (reservation.payment_amount ?? 0) - dejaEnCreance) * 100) / 100)}
           defaultDueDate={new Date(reservation.end_datetime).toISOString().slice(0, 10)}
         />
       </div>

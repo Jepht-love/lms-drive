@@ -25,6 +25,11 @@ export const RAISON_LABEL: Record<RaisonIndisponibilite, string> = {
   deplacement:  'déplacement interne',
 }
 
+// À TRANCHER AVEC LE GÉRANT (28/07/2026) : un véhicule en fourrière, non
+// restitué ou hors service est aujourd'hui annoncé libre et peut être réservé.
+// La question de le bloquer, et à partir de quel statut, lui revient : c'est une
+// règle de métier, pas un choix technique. Rien n'est fait ici pour l'instant.
+
 /**
  * Véhicules indisponibles sur une période, avec la raison de chacun.
  *
@@ -40,6 +45,11 @@ export async function vehiculesIndisponibles(
   const indispo = new Map<string, RaisonIndisponibilite>()
   const cibles = options?.vehicleIds
 
+  // Liste des véhicules à examiner quand l'appelant n'en impose pas.
+  let qVehicules = supabase.from('vehicles').select('id')
+  if (cibles?.length) qVehicules = qVehicules.in('id', cibles)
+  const { data: vehicules } = await qVehicules
+
   // 1. Autres réservations. Chevauchement RÉEL : l'existante commence avant la
   //    fin de la nouvelle ET se termine après son début.
   let q = supabase
@@ -52,7 +62,9 @@ export async function vehiculesIndisponibles(
   if (options?.ignorerReservationId) q = q.neq('id', options.ignorerReservationId)
   const { data: resas } = await q
   for (const r of resas ?? []) {
-    if (r.vehicle_id) indispo.set(r.vehicle_id, 'reservation')
+    // On ne remplace pas une raison d'état déjà posée : « en fourrière » est plus
+    // parlant que « déjà réservé » pour la même voiture.
+    if (r.vehicle_id && !indispo.has(r.vehicle_id)) indispo.set(r.vehicle_id, 'reservation')
   }
 
   // 2. Rendez-vous garage, sur leur propre fenêtre uniquement : un RDV 14h-17h
@@ -74,11 +86,7 @@ export async function vehiculesIndisponibles(
   // 3. Déplacements internes. Le contrôle existant travaille véhicule par
   //    véhicule (il gère le cas du trajet en cours sans retour connu) : on ne
   //    l'interroge que pour ceux encore déclarés libres.
-  let aTester = cibles
-  if (!aTester?.length) {
-    const { data: tous } = await supabase.from('vehicles').select('id')
-    aTester = (tous ?? []).map(v => v.id)
-  }
+  const aTester = cibles?.length ? cibles : (vehicules ?? []).map(v => v.id)
   const restants = aTester.filter((vid): vid is string => !!vid && !indispo.has(vid))
   await Promise.all(restants.map(async vid => {
     if (await findBlockingInternalTrip(supabase, vid, debutInstant, finInstant)) {

@@ -3,6 +3,7 @@ import { sendPushToUser } from '@/lib/push/sendPushToUser'
 import { broadcastPushToManagers } from '@/lib/push/broadcastPush'
 import { jourHeureAgence } from '@/lib/format/heureAgence'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { generateAlertsForEvent } from '@/lib/calendar/generateAlerts'
 import { enrichEvents } from '@/lib/calendar/enrichEvents'
 import { isManagerRole } from '@/lib/auth/roles'
@@ -121,7 +122,12 @@ async function notifierPersonneAssignee(
 
   // Trace dans la cloche de l'application, en plus du push : si le téléphone
   // n'a pas les notifications activées, la tâche reste visible quelque part.
-  await supabase.from('notifications').insert({
+  //
+  // Connexion d'administration OBLIGATOIRE : la règle d'accès de `notifications`
+  // n'autorise chacun qu'à écrire pour lui-même. Écrire au nom du destinataire
+  // était donc refusé par la base, sans erreur remontée — aucune notification
+  // personnelle n'a jamais été enregistrée. Constaté le 28/07/2026.
+  await createAdminClient().from('notifications').insert({
     user_id: assignee,
     type: 'new_task_alert',
     title,
@@ -170,7 +176,9 @@ async function notifierAvancement(
   const body = event.title ?? 'Tâche'
 
   if (event.created_by && event.created_by !== actorId) {
-    await supabase.from('notifications').insert({
+    // Même raison que ci-dessus : on écrit pour le créateur de la tâche, pas
+    // pour soi, ce que la règle d'accès de la table refuse.
+    await createAdminClient().from('notifications').insert({
       user_id: event.created_by,
       type: 'task_progress_alert',
       title,

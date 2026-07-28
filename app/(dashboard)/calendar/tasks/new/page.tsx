@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
@@ -40,7 +41,10 @@ async function createTask(formData: FormData) {
   if (assigned_to && assigned_to !== user.id) {
     const pushTitle = 'Nouvelle tâche pour vous'
     const pushBody = `${title} · le ${dueDate}`
-    await supabase.from('notifications').insert({
+    // Connexion d'administration : la règle d'accès de `notifications` n'autorise
+    // chacun qu'à écrire pour lui-même, donc écrire au nom du destinataire était
+    // refusé en silence. Constaté le 28/07/2026.
+    await createAdminClient().from('notifications').insert({
       user_id: assigned_to,
       type: 'new_task_alert',
       title: pushTitle,

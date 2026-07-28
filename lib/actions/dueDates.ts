@@ -203,12 +203,18 @@ export async function markDuePaid(id: string) {
   if (!due) return { error: 'Échéance introuvable' }
   if (due.is_paid) return { error: 'Échéance déjà réglée' }
 
+  // `reservation_id` est INDISPENSABLE, pas décoratif : la clôture d'une location
+  // (postRentalRevenue) cherche les recettes déjà posées par ce lien avant de
+  // poser la sienne. Sans lui, elle ne voyait pas l'encaissement de la créance et
+  // reposait une seconde recette « location » : une location de 500 € réglée par
+  // créance comptait 1 000 € au chiffre d'affaires. Constaté le 28/07/2026.
   const { data: tx, error: txError } = await supabase.from('financial_transactions').insert({
     date: new Date().toISOString().slice(0, 10),
     type: due.type,
     category: due.category,
     amount: due.amount,
     vehicle_id: due.vehicle_id,
+    reservation_id: due.reservation_id ?? null,
     notes: due.notes ?? due.description,
     reference: due.id,
     created_by: user.id,

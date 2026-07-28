@@ -30,19 +30,54 @@ interface Props {
   currentMethod: PaymentMethodType | null
   currentAmount: number | null
   currentRef: string | null
+  /** Frais constatés au retour, déjà nommés (km, retard, dommages). */
+  fees?: { label: string; amount: number }[]
+  /** Ce qui a déjà été encaissé sur ces frais. */
+  feesPaid?: number
+  /**
+   * Part de la location déjà placée en créance, non encore encaissée. Elle est
+   * suivie sur l'écran Créances : la réclamer ici aussi ferait apparaître la même
+   * somme à deux endroits.
+   */
+  inReceivables?: number
 }
 
-export default function PaymentEditor({ reservationId, totalPrice, currentStatus, currentMethod, currentAmount, currentRef }: Props) {
+export default function PaymentEditor({ reservationId, totalPrice, currentStatus, currentMethod, currentAmount, currentRef, fees = [], feesPaid = 0, inReceivables = 0 }: Props) {
   const router = useRouter()
   const [status, setStatus] = useState<PaymentStatus>(currentStatus ?? 'en_attente')
   const [method, setMethod] = useState<PaymentMethodType | ''>(currentMethod ?? '')
-  const [amount, setAmount] = useState(currentAmount?.toString() ?? totalPrice.toString())
   const [ref, setRef] = useState(currentRef ?? '')
   const [loading, setLoading] = useState(false)
   const [saved, setSaved] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
+  // Le champ porte le TOTAL reçu sur la réservation, location et frais confondus :
+  // c'est ce que le gérant a réellement en main. La ventilation est faite juste
+  // en dessous, et c'est elle qui part en base.
+  const feesTotal = fees.reduce((s, f) => s + f.amount, 0)
+  // Ce qui reste à encaisser ICI. Une location non soldée au départ part en
+  // créance : elle est réclamée sur l'écran Créances, pas ici. Sans cette
+  // déduction, le gérant verrait la même somme demandée à deux endroits.
+  const locationIci = Math.max(0, totalPrice - inReceivables)
+  const totalDu = locationIci + feesTotal
+  // `currentAmount === null` veut dire « rien n'a jamais été saisi » → on propose
+  // le total dû. Un acompte enregistré à 0 € est une saisie, elle, et doit rester
+  // affichée telle quelle.
+  const [amount, setAmount] = useState(
+    currentAmount == null && feesPaid === 0 ? totalDu.toString() : ((currentAmount ?? 0) + feesPaid).toString()
+  )
+
   const current = PAYMENT_STATUSES.find(s => s.value === status) ?? PAYMENT_STATUSES[0]
+
+  // Ventilation : ce qui est reçu solde d'abord la location, le surplus va aux
+  // frais. Deux comptes séparés, et c'est volontaire — la recette « location »
+  // est posée en comptabilité avec le montant payé, tandis que les frais y
+  // figurent dans leurs propres catégories à la clôture. Tout verser dans le
+  // même sac les compterait deux fois. Décision de Jeff du 28/07/2026.
+  const recu = Number(amount) || 0
+  const partLocation = Math.min(Math.max(recu, 0), locationIci)
+  const partFrais = Math.max(0, Math.min(recu - locationIci, feesTotal))
+  const reste = Math.max(0, totalDu - recu)
 
   async function handleSave() {
     setLoading(true)
@@ -52,7 +87,8 @@ export default function PaymentEditor({ reservationId, totalPrice, currentStatus
       const result = await updatePaymentInfo(reservationId, {
         payment_status: status,
         payment_method: method || null,
-        payment_amount: amount ? Number(amount) : null,
+        payment_amount: amount ? partLocation : null,
+        fees_paid_amount: feesTotal > 0 ? partFrais : undefined,
         payment_ref: ref || null,
         payment_date: status === 'paye' || status === 'partiel' ? new Date().toISOString() : null,
       })
@@ -147,12 +183,56 @@ export default function PaymentEditor({ reservationId, totalPrice, currentStatus
         </div>
       </div>
 
-      {/* Reste à payer */}
-      {Number(amount) > 0 && Number(amount) < totalPrice && (
+      {/* Ce qu'il y a à encaisser. Les frais du retour n'y figuraient pas : le
+          gérant réclamait la location, et les km ou le retard restaient dans un
+          coin de sa tête. */}
+      {(feesTotal > 0 || inReceivables > 0) && (
+        <div className="rounded-xl border border-gray-100 bg-gray-50 px-3 py-2.5 space-y-1">
+          <div className="flex items-center justify-between text-xs text-gray-500">
+            <span>Location</span>
+            <span className="font-semibold text-gray-700">{formatPrice(totalPrice)}</span>
+          </div>
+          {inReceivables > 0 && (
+            <div className="flex items-center justify-between text-xs text-gray-500">
+              <span>Dont placé en créance</span>
+              <span className="font-semibold text-gray-700">− {formatPrice(inReceivables)}</span>
+            </div>
+          )}
+          {fees.map(f => (
+            <div key={f.label} className="flex items-center justify-between text-xs text-gray-500">
+              <span>{f.label}</span>
+              <span className="font-semibold text-gray-700">{formatPrice(f.amount)}</span>
+            </div>
+          ))}
+          <div className="flex items-center justify-between pt-1.5 border-t border-gray-200">
+            <span className="text-sm font-bold text-gray-900">
+              {inReceivables > 0 ? 'À encaisser ici' : 'Total dû'}
+            </span>
+            <span className="text-sm font-black text-gray-900">{formatPrice(totalDu)}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Reste à payer, frais compris */}
+      {recu > 0 && reste > 0 && (
         <div className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-orange-50 border border-orange-100">
           <span className="text-sm font-semibold text-orange-700">Reste à payer</span>
-          <span className="text-base font-bold text-orange-700">{formatPrice(totalPrice - Number(amount))}</span>
+          <span className="text-base font-bold text-orange-700">{formatPrice(reste)}</span>
         </div>
+      )}
+      {recu > 0 && reste === 0 && feesTotal > 0 && (
+        <div className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-green-50 border border-green-100">
+          <span className="text-sm font-semibold text-green-700">Tout est soldé</span>
+          <span className="text-base font-bold text-green-700">{formatPrice(totalDu)}</span>
+        </div>
+      )}
+
+      {/* La ventilation est montrée, pas cachée : c'est elle qui part en
+          comptabilité, la location d'un côté, les frais de l'autre. */}
+      {feesTotal > 0 && recu > 0 && (
+        <p className="text-[11px] text-gray-400 leading-relaxed">
+          Dont {formatPrice(partLocation)} sur la location et {formatPrice(partFrais)} sur les frais de restitution.
+        </p>
       )}
 
       {errorMsg && (

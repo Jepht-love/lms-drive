@@ -122,24 +122,39 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
   // garage, déplacement interne) : recopier ces règles ici finirait par annoncer
   // « libre » là où l'enregistrement refuse. Ticket SAV du 27/07/2026.
   const [busy, setBusy] = useState<Record<string, string>>({})
+  // « Pas encore su » n'est pas « libre ». Sans cet état, une session expirée ou
+  // une coupure réseau renvoyait une liste vide, indistinguable de « tout est
+  // libre » : l'écran annonçait en vert un véhicule que l'enregistrement allait
+  // refuser. C'est exactement ce que cette fonctionnalité doit éviter.
+  const [dispoEtat, setDispoEtat] = useState<'vide' | 'chargement' | 'ok' | 'echec'>('vide')
   useEffect(() => {
-    if (!startDatetime || !endDatetime) { setBusy({}); return }
-    if (!(new Date(startDatetime).getTime() < new Date(endDatetime).getTime())) { setBusy({}); return }
+    if (!startDatetime || !endDatetime) { setBusy({}); setDispoEtat('vide'); return }
+    if (!(new Date(startDatetime).getTime() < new Date(endDatetime).getTime())) {
+      setBusy({}); setDispoEtat('vide'); return
+    }
     let annule = false
+    setDispoEtat('chargement')
     const params = new URLSearchParams({ start: startDatetime, end: endDatetime })
     fetch(`/api/vehicles/availability?${params}`)
-      .then(r => (r.ok ? r.json() : { busy: {} }))
-      .then(d => { if (!annule) setBusy(d.busy ?? {}) })
-      .catch(() => { if (!annule) setBusy({}) })
+      .then(async r => {
+        if (!r.ok) throw new Error('indisponible')
+        return r.json()
+      })
+      .then(d => { if (!annule) { setBusy(d.busy ?? {}); setDispoEtat('ok') } })
+      .catch(() => { if (!annule) { setBusy({}); setDispoEtat('echec') } })
     return () => { annule = true }
   }, [startDatetime, endDatetime])
 
+  // Recopié de lib/reservations/disponibilite.ts plutôt qu'importé : ce fichier
+  // est un composant navigateur, et l'import entraînerait tout le code serveur
+  // avec lui. À garder en phase si une raison s'ajoute.
   const RAISON: Record<string, string> = {
-    reservation: 'déjà réservé',
-    garage:      'au garage',
-    deplacement: 'déplacement interne',
+    reservation:  'déjà réservé',
+    garage:       'au garage',
+    deplacement:  'déplacement interne',
   }
-  const datesSaisies = !!startDatetime && !!endDatetime
+  // On n'affiche un verdict QUE si le contrôle a réellement abouti.
+  const datesSaisies = dispoEtat === 'ok'
   const raisonVehiculeChoisi = selectedVehicleId ? busy[selectedVehicleId] : undefined
 
   const days = startDatetime && endDatetime
@@ -209,9 +224,17 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
               {/* Les dates sont plus bas dans le formulaire : tant qu'elles ne
                   sont pas saisies, on ne peut rien dire, et le taire vaut mieux
                   que d'afficher « libre » à tort. */}
-              {!datesSaisies ? (
+              {dispoEtat === 'vide' ? (
                 <p className="mt-1.5 text-xs text-muted-foreground">
                   Renseignez les dates pour voir quels véhicules sont libres.
+                </p>
+              ) : dispoEtat === 'chargement' ? (
+                <p className="mt-1.5 text-xs text-muted-foreground">
+                  Vérification des disponibilités…
+                </p>
+              ) : dispoEtat === 'echec' ? (
+                <p className="mt-1.5 text-xs font-semibold text-amber-600">
+                  Impossible de vérifier les disponibilités. Enregistrez pour savoir si le véhicule est libre.
                 </p>
               ) : raisonVehiculeChoisi ? (
                 <p className="mt-1.5 text-xs font-semibold text-red-600">
