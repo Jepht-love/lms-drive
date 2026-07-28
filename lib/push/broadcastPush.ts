@@ -8,9 +8,17 @@ import type { NotificationType } from './notificationTypes'
 // est filtré par destinataire : seul un manager qui a laissé ce type activé
 // dans ses réglages ET qui est dans sa plage horaire de réception le reçoit.
 // Sans `type` (rétro-compat), l'envoi part à tous les managers, sans filtre.
+//
+// `options` (ajout 28/07/2026) élargit ou restreint le cercle sans changer le
+// comportement par défaut :
+//   · `roles` — pour l'avancement des tâches, les salariés doivent voir qu'un
+//     collègue a pris le travail, sinon deux personnes partent dessus.
+//   · `excludeUserId` — celui qui déclenche l'action n'a pas à recevoir sa
+//     propre annonce (« Alexis a commencé » notifié à Alexis).
 export async function broadcastPushToManagers(
   payload: PushPayload,
   type?: NotificationType,
+  options?: { roles?: string[]; excludeUserId?: string },
 ): Promise<void> {
   try {
     const supabase = createAdminClient()
@@ -18,10 +26,11 @@ export async function broadcastPushToManagers(
     const { data: managers } = await supabase
       .from('profiles')
       .select('id')
-      .in('role', ['gerant', 'associe'])
+      .in('role', options?.roles ?? ['gerant', 'associe'])
 
     if (!managers?.length) return
-    let managerIds = managers.map(m => m.id)
+    let managerIds = managers.map(m => m.id).filter(id => id !== options?.excludeUserId)
+    if (!managerIds.length) return
 
     // Filtrage par réglages utilisateur (défaut : activé, fenêtre 7h-22h).
     if (type) {

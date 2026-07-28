@@ -23,6 +23,7 @@ export type NotificationType =
   // Tâches & calendrier
   | 'new_task_alert'
   | 'task_late_alert'
+  | 'task_progress_alert'
 
 export interface NotificationTypeDef {
   key: NotificationType
@@ -49,6 +50,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 
   { key: 'new_task_alert',        label: 'Nouvelle tâche',                  category: 'Tâches & calendrier' },
   { key: 'task_late_alert',       label: 'Tâche / RDV en retard',           category: 'Tâches & calendrier' },
+  { key: 'task_progress_alert',   label: 'Avancement d’une tâche',      category: 'Tâches & calendrier' },
 ]
 
 export const NOTIFICATION_DEFAULTS: Record<NotificationType, boolean> = Object.fromEntries(

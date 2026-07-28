@@ -117,6 +117,31 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
     }
   }, [startDatetime, endDatetime])
 
+  // Disponibilité des véhicules sur la période saisie. Interrogée au serveur,
+  // qui applique les MÊMES règles que l'enregistrement (autre réservation, RDV
+  // garage, déplacement interne) : recopier ces règles ici finirait par annoncer
+  // « libre » là où l'enregistrement refuse. Ticket SAV du 27/07/2026.
+  const [busy, setBusy] = useState<Record<string, string>>({})
+  useEffect(() => {
+    if (!startDatetime || !endDatetime) { setBusy({}); return }
+    if (!(new Date(startDatetime).getTime() < new Date(endDatetime).getTime())) { setBusy({}); return }
+    let annule = false
+    const params = new URLSearchParams({ start: startDatetime, end: endDatetime })
+    fetch(`/api/vehicles/availability?${params}`)
+      .then(r => (r.ok ? r.json() : { busy: {} }))
+      .then(d => { if (!annule) setBusy(d.busy ?? {}) })
+      .catch(() => { if (!annule) setBusy({}) })
+    return () => { annule = true }
+  }, [startDatetime, endDatetime])
+
+  const RAISON: Record<string, string> = {
+    reservation: 'déjà réservé',
+    garage:      'au garage',
+    deplacement: 'déplacement interne',
+  }
+  const datesSaisies = !!startDatetime && !!endDatetime
+  const raisonVehiculeChoisi = selectedVehicleId ? busy[selectedVehicleId] : undefined
+
   const days = startDatetime && endDatetime
     ? calculateRentalDays(startDatetime, endDatetime)
     : 0
@@ -169,12 +194,38 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
                 className={selectClass}
               >
                 <option value="">— Choisir un véhicule —</option>
-                {vehicles.map(v => (
-                  <option key={v.id} value={v.id}>
-                    {v.brand} {v.model} — {v.plate} {v.daily_price ? `(${v.daily_price}€/j)` : ''}
-                  </option>
-                ))}
+                {vehicles.map(v => {
+                  const pris = datesSaisies ? busy[v.id] : undefined
+                  return (
+                    <option key={v.id} value={v.id}>
+                      {pris ? '● ' : datesSaisies ? '○ ' : ''}
+                      {v.brand} {v.model} — {v.plate} {v.daily_price ? `(${v.daily_price}€/j)` : ''}
+                      {pris ? ` — ${RAISON[pris] ?? 'indisponible'}` : ''}
+                    </option>
+                  )
+                })}
               </select>
+
+              {/* Les dates sont plus bas dans le formulaire : tant qu'elles ne
+                  sont pas saisies, on ne peut rien dire, et le taire vaut mieux
+                  que d'afficher « libre » à tort. */}
+              {!datesSaisies ? (
+                <p className="mt-1.5 text-xs text-muted-foreground">
+                  Renseignez les dates pour voir quels véhicules sont libres.
+                </p>
+              ) : raisonVehiculeChoisi ? (
+                <p className="mt-1.5 text-xs font-semibold text-red-600">
+                  Indisponible sur cette période : {RAISON[raisonVehiculeChoisi] ?? 'indisponible'}.
+                </p>
+              ) : selectedVehicleId ? (
+                <p className="mt-1.5 text-xs font-semibold text-emerald-600">
+                  Libre sur toute la période.
+                </p>
+              ) : (
+                <p className="mt-1.5 text-xs text-muted-foreground">
+                  ○ libre · ● pris sur la période choisie.
+                </p>
+              )}
             </div>
 
             <div>

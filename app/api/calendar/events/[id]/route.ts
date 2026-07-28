@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sendPushToUser } from '@/lib/push/sendPushToUser'
+import { broadcastPushToManagers } from '@/lib/push/broadcastPush'
 import { jourHeureAgence } from '@/lib/format/heureAgence'
 import { createClient } from '@/lib/supabase/server'
 import { generateAlertsForEvent } from '@/lib/calendar/generateAlerts'
@@ -132,6 +133,60 @@ async function notifierPersonneAssignee(
   await sendPushToUser(assignee, { title, body, url: `/calendrier?event=${event.id}` }, 'new_task_alert')
 }
 
+/** Libellés d'avancement, dans la langue du calendrier. */
+const AVANCEMENT: Record<string, string> = {
+  en_cours: 'a commencé',
+  termine:  'a terminé',
+  reporte:  'a reporté',
+  annule:   'a annulé',
+}
+
+/**
+ * Referme la boucle demandée par Jeff (ticket SAV du 27/07/2026, 14h41) : celui
+ * qui a confié la tâche doit apprendre ce qu'elle devient, sans avoir à ouvrir
+ * le calendrier.
+ *
+ * Le message part à TOUTE l'équipe, salariés compris, et c'est voulu : chacun
+ * voit qu'un collègue a déjà pris le travail au lieu que deux ou trois personnes
+ * s'y mettent en même temps (décision du 28/07/2026). Celui qui a créé la tâche
+ * reçoit en plus une trace dans sa cloche, puisque c'est lui qui attend la
+ * réponse.
+ *
+ * Rien ne part si le statut ne change pas réellement : le tiroir renvoie tous
+ * les champs à chaque enregistrement, y compris ceux qu'on n'a pas touchés.
+ */
+async function notifierAvancement(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  event: { id: string; title: string | null; status: string | null; created_by: string | null },
+  previousStatus: string | null,
+  actorId: string,
+  actorName: string | null,
+): Promise<void> {
+  const verbe = AVANCEMENT[event.status ?? '']
+  if (!verbe || event.status === previousStatus) return
+
+  const auteur = actorName?.trim() || 'Un membre de l’équipe'
+  const title = `${auteur} ${verbe} une tâche`
+  const body = event.title ?? 'Tâche'
+
+  if (event.created_by && event.created_by !== actorId) {
+    await supabase.from('notifications').insert({
+      user_id: event.created_by,
+      type: 'task_progress_alert',
+      title,
+      body,
+      entity_type: 'calendar_events',
+      entity_id: event.id,
+    })
+  }
+
+  await broadcastPushToManagers(
+    { title, body, url: `/calendrier?event=${event.id}` },
+    'task_progress_alert',
+    { roles: ['gerant', 'associe', 'employe'], excludeUserId: actorId },
+  )
+}
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -171,16 +226,20 @@ export async function PATCH(
     }
   }
 
-  // Assignation AVANT mise à jour : c'est le seul moyen de savoir si elle change
-  // vraiment, et donc de ne pas re-notifier à chaque enregistrement du tiroir.
+  // État AVANT mise à jour : c'est le seul moyen de savoir si l'assignation ou
+  // le statut changent vraiment, et donc de ne pas re-notifier à chaque
+  // enregistrement du tiroir, qui renvoie tous les champs même intacts.
   let previousAssignee: string | null = null
-  if ('assigned_to' in update) {
+  let previousStatus: string | null = null
+  if ('assigned_to' in update || 'status' in update) {
     const { data: before } = await supabase
       .from('calendar_events')
-      .select('assigned_to')
+      .select('assigned_to, status')
       .eq('id', id)
       .maybeSingle()
-    previousAssignee = (before as { assigned_to: string | null } | null)?.assigned_to ?? null
+    const b = before as { assigned_to: string | null; status: string | null } | null
+    previousAssignee = b?.assigned_to ?? null
+    previousStatus = b?.status ?? null
   }
 
   const { data, error } = await supabase
@@ -194,6 +253,15 @@ export async function PATCH(
 
   if ('assigned_to' in update) {
     await notifierPersonneAssignee(supabase, data, previousAssignee, user.id)
+  }
+
+  if ('status' in update) {
+    const { data: acteur } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('id', user.id)
+      .maybeSingle()
+    await notifierAvancement(supabase, data, previousStatus, user.id, acteur?.full_name ?? null)
   }
 
   if ('start_at' in update || 'end_at' in update) {

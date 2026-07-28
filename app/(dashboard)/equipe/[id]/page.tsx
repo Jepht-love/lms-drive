@@ -1,11 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { format, addDays, startOfDay, startOfWeek, isSameDay } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import {
   ArrowLeft, Mail, Calendar,
-  ChevronRight, Plus, CheckCircle2, Clock,
+  ChevronRight, Plus, CheckCircle2, Clock, Bell, BellOff,
 } from 'lucide-react'
 import BackButton from '@/components/ui/BackButton'
 import { taskActionHref } from '@/lib/utils'
@@ -79,6 +80,25 @@ export default async function MemberProfilePage({
     .maybeSingle()
   const memberDocCats = (memberPerm2 as { allowed_doc_categories?: string[] | null } | null)?.allowed_doc_categories ?? null
   const memberCanViewFleet = (memberPerm2 as { can_view_fleet?: boolean | null } | null)?.can_view_fleet ?? true
+
+  // État des notifications de CE membre. Les abonnements sont protégés par une
+  // règle « chacun ne voit que les siens » : le client d'administration est le
+  // seul moyen de les lire pour quelqu'un d'autre. L'accès à la page est déjà
+  // réservé au gérant, à l'associé et au super-utilisateur (contrôle ci-dessus).
+  //
+  // Pourquoi cet encart : tant qu'une personne n'a pas appuyé sur « Activer les
+  // notifications » depuis son propre téléphone, elle ne reçoit rien, et rien ne
+  // le signalait nulle part. Constaté le 28/07/2026 : un associé n'avait aucun
+  // appareil connecté, donc aucune tâche reçue, sans que personne le sache.
+  const admin = createAdminClient()
+  const [{ count: navigateurs }, { count: appareilsIos }, { data: reglages }] = await Promise.all([
+    admin.from('push_subscriptions').select('*', { count: 'exact', head: true }).eq('user_id', id),
+    admin.from('apns_tokens').select('*', { count: 'exact', head: true }).eq('user_id', id),
+    admin.from('notification_settings').select('alert_window_start, alert_window_end').eq('user_id', id).maybeSingle(),
+  ])
+  const appareils = (navigateurs ?? 0) + (appareilsIos ?? 0)
+  const debutReception = (reglages as { alert_window_start?: number } | null)?.alert_window_start ?? 7
+  const finReception   = (reglages as { alert_window_end?: number } | null)?.alert_window_end ?? 22
 
   const now      = new Date()
   const today    = startOfDay(now)
@@ -177,6 +197,31 @@ export default async function MemberProfilePage({
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 text-center">
           <p className="text-3xl font-black text-green-500">{doneCount ?? 0}</p>
           <p className="text-[10px] font-bold uppercase text-gray-400 mt-1">Terminées</p>
+        </div>
+      </div>
+
+      {/* Notifications : reçoit-il vraiment ce qu'on lui envoie ? */}
+      <div className={`rounded-2xl border shadow-sm p-4 ${appareils > 0 ? 'bg-white border-gray-100' : 'bg-amber-50 border-amber-200'}`}>
+        <div className="flex items-start gap-3">
+          {appareils > 0
+            ? <Bell className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
+            : <BellOff className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />}
+          <div className="flex-1 min-w-0">
+            <p className={`text-sm font-bold ${appareils > 0 ? 'text-gray-900' : 'text-amber-900'}`}>
+              {appareils > 0 ? 'Notifications actives' : 'Ne reçoit aucune notification'}
+            </p>
+            {appareils > 0 ? (
+              <p className="text-xs text-gray-500 mt-0.5">
+                {appareils} appareil{appareils > 1 ? 's' : ''} connecté{appareils > 1 ? 's' : ''}
+                {' · '}reçoit de {String(debutReception).padStart(2, '0')}h à {String(finReception).padStart(2, '0')}h
+              </p>
+            ) : (
+              <p className="text-xs text-amber-800 mt-0.5 leading-relaxed">
+                Aucune tâche assignée ne lui parviendra. Il doit ouvrir l’application depuis son
+                téléphone et appuyer sur « Activer les notifications ».
+              </p>
+            )}
+          </div>
         </div>
       </div>
 

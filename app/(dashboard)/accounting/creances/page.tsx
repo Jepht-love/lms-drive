@@ -36,15 +36,32 @@ export default async function CreancesPage() {
     .order('end_datetime', { ascending: false })
     .limit(100)
 
+  // Créances déjà ouvertes, réservation par réservation. Sans elles, le reste dû
+  // proposé ignorait ce qui a déjà été mis en créance : créer deux échéances de
+  // suite reproposait chaque fois le montant entier, et le gérant se retrouvait
+  // à réclamer deux fois la même somme. Signalé le 27/07/2026.
+  const dejaEnCreance = new Map<string, number>()
+  for (const d of (rows ?? []) as any[]) {
+    if (d.deleted_at || !d.reservation_id) continue
+    dejaEnCreance.set(d.reservation_id, (dejaEnCreance.get(d.reservation_id) ?? 0) + (d.amount ?? 0))
+  }
+
   const reservationChoices = (resaRows ?? []).map((r: any) => {
     const v = Array.isArray(r.vehicles) ? r.vehicles[0] : r.vehicles
     const c = Array.isArray(r.clients) ? r.clients[0] : r.clients
     const client = c ? `${c.first_name} ${c.last_name}` : 'Client'
     const veh = v ? `${v.brand} ${v.model}` : ''
+    const totalPrice = r.total_price ?? 0
+    const paid       = r.payment_amount ?? 0
+    const enCreance  = dejaEnCreance.get(r.id) ?? 0
+    const arrondi = (n: number) => Math.round(n * 100) / 100
     return {
       id: r.id,
       label: `${r.reservation_number} — ${client}${veh ? ` · ${veh}` : ''}`,
-      remaining: Math.round(((r.total_price ?? 0) - (r.payment_amount ?? 0)) * 100) / 100,
+      remaining: arrondi(Math.max(0, totalPrice - paid - enCreance)),
+      totalPrice: arrondi(totalPrice),
+      paid: arrondi(paid),
+      alreadyDue: arrondi(enCreance),
       defaultDueDate: r.end_datetime ? new Date(r.end_datetime).toISOString().slice(0, 10) : '',
     }
   })

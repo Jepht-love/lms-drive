@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
 
   const { data: duesRaw } = await supabase
     .from('financial_due_dates')
-    .select('*, vehicles(brand, model, plate)')
+    .select('*, vehicles(brand, model, plate), clients(first_name, last_name)')
     .eq('is_paid', false)
     .gte('due_date', dueMin)
     .lte('due_date', dueMax)
@@ -86,7 +86,22 @@ export async function GET(request: NextRequest) {
       continue // pas un jour de rappel pour cette échéance
     }
 
-    const body = `${due.description}${vehicleLabel ? ` · ${vehicleLabel}` : ''} — ${formatAmount(due.amount)}${offset < 0 ? ` (due le ${formatDate(dueDate)})` : ''}`
+    // Une créance client se reconnaît à sa réservation. Le rappel doit alors
+    // nommer la PERSONNE qui doit l'argent : « Échéance demain » suivi d'une
+    // description technique ne dit pas au gérant qui relancer. Demande de Jeff
+    // du 28/07/2026 : un rappel la veille, au gérant et aux associés, disant
+    // simplement que cette personne doit de l'argent.
+    const client = due.clients as any
+    const clientLabel = client ? `${client.first_name} ${client.last_name}` : null
+    const estCreance = !!due.reservation_id && !!clientLabel
+
+    const body = estCreance
+      ? `${clientLabel} doit ${formatAmount(due.amount)}${vehicleLabel ? ` · ${vehicleLabel}` : ''}${offset < 0 ? ` (due le ${formatDate(dueDate)})` : ''}`
+      : `${due.description}${vehicleLabel ? ` · ${vehicleLabel}` : ''} — ${formatAmount(due.amount)}${offset < 0 ? ` (due le ${formatDate(dueDate)})` : ''}`
+
+    // Un rappel de créance doit ouvrir l'écran des créances, pas le tableau des
+    // échéances générales : c'est là qu'on encaisse.
+    const url = estCreance ? '/accounting/creances' : '/accounting/due-dates'
 
     // Dédup : une seule notif par échéance et par jour (le cron peut être appelé
     // plusieurs fois sans spammer).
@@ -114,7 +129,7 @@ export async function GET(request: NextRequest) {
     for (const sub of managerSubs) {
       const result = await sendPushToSubscription(
         { id: sub.id, endpoint: sub.endpoint, p256dh: sub.p256dh, auth: sub.auth },
-        { title, body, url: '/accounting/due-dates', icon: '/logo.png', badge: '/logo.png' }
+        { title, body, url, icon: '/logo.png', badge: '/logo.png' }
       )
       if (result.ok) {
         sent++

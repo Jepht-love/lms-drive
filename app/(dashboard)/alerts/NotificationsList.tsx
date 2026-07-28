@@ -31,6 +31,11 @@ function entityLink(n: Notification): string {
     contracts: `/contracts/${n.entity_id}`,
     vehicles: `/vehicles/${n.entity_id}`,
     incidents: `/suivi?tab=sinistres`,
+    // Sans cette entrée, une notification de tâche renvoyait vers « # », donc
+    // nulle part : la personne prévenue devait retrouver sa tâche à la main
+    // dans le calendrier. L'adresse ouvre directement son tiroir, là où elle
+    // choisit En cours, Terminé, Reporté ou Annulé.
+    calendar_events: `/calendrier?event=${n.entity_id}`,
   }
   return map[n.entity_type] ?? '#'
 }

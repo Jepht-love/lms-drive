@@ -115,6 +115,11 @@ export default async function VehicleKpiPage({
       tauxUtilisation: Math.min(100, Math.round((rentedDays / periodDays) * 100)),
       kmDriven,
       coutKm: kmDriven > 0 ? cost / kmDriven : null,
+      // Prix moyen réellement obtenu pour une journée de location, remises et
+      // forfaits compris. À ne pas confondre avec le tarif affiché de la fiche
+      // véhicule : c'est ce que la voiture rapporte, pas ce qu'elle demande.
+      rentedDays,
+      prixJour: rentedDays > 0 ? ca / rentedDays : null,
       pannes: panneBy.get(v.id) ?? 0,
       age: v.year ? currentYear - v.year : null,
       tauxImmobilisation: Math.min(100, Math.round((immobDays / periodDays) * 100)),
@@ -138,6 +143,13 @@ export default async function VehicleKpiPage({
       return ages.length ? Math.round((ages.reduce((s, a) => s + a, 0) / ages.length) * 10) / 10 : null
     })(),
     tauxImmobilisation: Math.round(rows.reduce((s, r) => s + r.tauxImmobilisation, 0) / n),
+    // Moyenne du parc pondérée par les jours loués, PAS moyenne des moyennes :
+    // sinon une voiture louée un seul jour pèserait autant qu'une louée trente.
+    prixJour: (() => {
+      const totalJours = rows.reduce((s, r) => s + r.rentedDays, 0)
+      const totalCa    = rows.reduce((s, r) => s + r.ca, 0)
+      return totalJours > 0 ? totalCa / totalJours : null
+    })(),
     coutKm: (() => {
       const totalKm = rows.reduce((s, r) => s + r.kmDriven, 0)
       const totalCost = rows.reduce((s, r) => s + r.cost, 0)
@@ -193,6 +205,10 @@ export default async function VehicleKpiPage({
             <p className="text-sm font-black text-white">{fleet.coutKm != null ? `${fleet.coutKm.toFixed(2)} €` : '—'}</p>
           </div>
           <div>
+            <p className="text-[9px] font-black uppercase tracking-wide text-white/40">Prix moyen / jour</p>
+            <p className="text-sm font-black text-white">{fleet.prixJour != null ? formatPrice(fleet.prixJour) : '—'}</p>
+          </div>
+          <div>
             <p className="text-[9px] font-black uppercase tracking-wide text-white/40">Pannes</p>
             <p className="text-sm font-black text-white">{fleet.pannes}</p>
           </div>
@@ -234,6 +250,7 @@ export default async function VehicleKpiPage({
               <Stat label="Taux de panne" value={`${r.pannes} panne${r.pannes !== 1 ? 's' : ''}`} />
               <Stat label="Taux immob." value={`${r.tauxImmobilisation}%`} />
               <Stat label="Km parcourus" value={r.kmDriven > 0 ? `${r.kmDriven.toLocaleString('fr-FR')} km` : '—'} />
+              <Stat label="Prix moyen / jour" value={r.prixJour != null ? formatPrice(r.prixJour) : '—'} />
             </div>
 
             {/* Coûts détaillés par poste */}

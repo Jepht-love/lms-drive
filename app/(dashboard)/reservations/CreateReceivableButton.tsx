@@ -10,8 +10,14 @@ interface ReservationChoice {
   id: string
   /** « RES-2607-9768 — Mohamed-amine Baazaoui · BMW Série 1 » */
   label: string
-  /** Reste dû de cette réservation. */
+  /** Reste dû de cette réservation, créances déjà ouvertes déduites. */
   remaining: number
+  /** Prix total de la location. */
+  totalPrice: number
+  /** Déjà encaissé. */
+  paid: number
+  /** Déjà placé en créance, non encore encaissé. */
+  alreadyDue: number
   /** Échéance par défaut (YYYY-MM-DD) = date de retour. */
   defaultDueDate: string
 }
@@ -59,6 +65,7 @@ export default function CreateReceivableButton({
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
 
+  const choisie = reservations?.find(r => r.id === chosenId)
   const total = echeances.reduce((s, e) => s + (e.amount === '' ? 0 : Number(e.amount)), 0)
   const valid = !!chosenId && echeances.every(e => Number(e.amount) > 0 && e.dueDate)
 
@@ -160,6 +167,35 @@ export default function CreateReceivableButton({
               ))}
             </select>
           </div>
+
+          {/* Le reste dû était calculé puis pré-rempli en silence : quand il
+              tombait à 0, rien ne disait si la location était soldée ou si le
+              calcul s'était trompé. On montre donc les trois chiffres qui le
+              produisent. Demande du 27/07/2026. */}
+          {choisie && (
+            <div className="mt-2.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 space-y-1">
+              <div className="flex items-center justify-between text-[11px] text-white/50">
+                <span>Prix de la location</span>
+                <span className="font-semibold text-white/70">{formatPrice(choisie.totalPrice)}</span>
+              </div>
+              <div className="flex items-center justify-between text-[11px] text-white/50">
+                <span>Déjà encaissé</span>
+                <span className="font-semibold text-white/70">− {formatPrice(choisie.paid)}</span>
+              </div>
+              {choisie.alreadyDue > 0 && (
+                <div className="flex items-center justify-between text-[11px] text-white/50">
+                  <span>Déjà en créance</span>
+                  <span className="font-semibold text-white/70">− {formatPrice(choisie.alreadyDue)}</span>
+                </div>
+              )}
+              <div className="flex items-center justify-between pt-1.5 border-t border-white/10">
+                <span className="text-xs font-bold text-white">Reste à payer</span>
+                <span className={`text-sm font-black ${choisie.remaining > 0 ? 'text-emerald-300' : 'text-white/50'}`}>
+                  {choisie.remaining > 0 ? formatPrice(choisie.remaining) : 'Rien à réclamer'}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
