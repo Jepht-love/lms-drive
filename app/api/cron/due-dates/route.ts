@@ -110,12 +110,19 @@ export async function GET(request: NextRequest) {
   }
   const MAX_CLIENTS = 3
   const clients = [...parClient.entries()]
+  // Au-delà de deux échéances pour la même personne, on ne déroule plus la liste :
+  // un paiement échelonné en dix fois donnerait une ligne de dix dates, illisible
+  // et tronquée par le téléphone. On dit alors combien, pour quel total, et à
+  // partir de quand — le détail est sur l'écran des créances.
+  const MAX_DATES = 2
   const ligneCreances = clients.slice(0, MAX_CLIENTS)
     .map(([nom, lignes]) => {
-      const dates = lignes
-        .sort((a, b) => a.date.localeCompare(b.date))
-        .map(l => `${jourCourt(l.date)} ${formatAmount(l.montant)}`)
-        .join(' · ')
+      const triees = lignes.sort((a, b) => a.date.localeCompare(b.date))
+      if (triees.length > MAX_DATES) {
+        const total = triees.reduce((s, l) => s + l.montant, 0)
+        return `${nom} : ${triees.length} échéances · ${formatAmount(total)} · dès ${jourCourt(triees[0].date)}`
+      }
+      const dates = triees.map(l => `${jourCourt(l.date)} ${formatAmount(l.montant)}`).join(' · ')
       return `${nom} : ${dates}`
     })
     .join('\n')
