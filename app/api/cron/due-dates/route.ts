@@ -1,17 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { sendPushToSubscription } from '@/lib/push/sendPush'
-import { fmtAgence } from '@/lib/format/heureAgence'
+import { broadcastPushToManagers } from '@/lib/push/broadcastPush'
+import { businessNow } from '@/lib/calendar/dateUtils'
 
-// ─── Calendrier de rappel des échéances (facile à ajuster) ───────────────────
-// AVANT l'échéance : on prévient à J-7, J-5, J-3, J-1.
-const UPCOMING_DAYS = [7, 5, 3, 1]
-// APRÈS l'échéance (si toujours impayée) : relance tous les 2 jours jusqu'à J+19.
-const OVERDUE_DAYS = [1, 3, 5, 7, 9, 11, 13, 15, 17, 19]
-// Le jour J (offset 0) déclenche aussi un rappel « échéance aujourd'hui ».
-
-// Cron — à appeler 1×/jour (le rappel du jour dépend de la date, pas de l'heure).
-// Vérifie les échéances de loyers / paiements selon le calendrier ci-dessus.
+/**
+ * Résumé HEBDOMADAIRE des échéances, le lundi matin.
+ *
+ * Avant : un rappel par échéance à J-7, J-5, J-3, J-1, le jour J, puis tous les
+ * deux jours jusqu'à J+19. Sur les 66 échéances en base (dont 64 loyers de
+ * véhicules), ça produisait des dizaines de messages par semaine. Jeff, le
+ * 28/07/2026 : « ça fait beaucoup, une relance globale des échéances chaque
+ * début de semaine, c'est le meilleur format. »
+ *
+ * Un seul message donc, qui dit ce qui est en retard, ce qui tombe cette
+ * semaine, et ouvre l'écran des échéances. Les créances client y figurent à
+ * part : ce n'est pas de l'argent qu'on doit, c'est de l'argent qu'on attend.
+ *
+ * L'envoi passe désormais par `broadcastPushToManagers` avec un type : c'était
+ * le seul envoi de l'application qui ignorait les réglages personnels et la
+ * plage horaire de réception. Personne ne pouvait le couper.
+ *
+ * La tâche planifiée reste QUOTIDIENNE (vercel.json) et ne fait rien les autres
+ * jours : une planification hebdomadaire qui échoue une fois attendrait sept
+ * jours, alors qu'ici un rattrapage manuel suffit. L'anti-doublon garantit un
+ * seul envoi par semaine.
+ */
 export async function GET(request: NextRequest) {
   const auth = request.headers.get('authorization')
   const querySecret = request.nextUrl.searchParams.get('secret')
@@ -22,129 +35,87 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = createAdminClient()
+
+  // Jour de la semaine à l'heure de l'agence : sur un serveur en temps universel,
+  // le lundi 00h30 en France est encore dimanche en UTC.
+  const maintenant = businessNow()
+  const estLundi = maintenant.getDay() === 1
+  const forcer = request.nextUrl.searchParams.get('force') === '1'
+  if (!estLundi && !forcer) {
+    return NextResponse.json({ sent: 0, reason: 'Résumé envoyé le lundi' })
+  }
+
   const today = new Date()
   today.setHours(0, 0, 0, 0)
-  // Instant exact du début de journée locale (pour les comparaisons sur timestamp).
-  const todayStartIso = today.toISOString()
-  // La date du jour doit être lue sur les composantes LOCALES : `toISOString()`
-  // repasse en UTC et, sur un serveur en avance sur UTC (Europe/Afrique), minuit
-  // local tombe la veille en UTC → tout le calcul d'offset serait décalé d'un jour.
   const todayStr = localDateStr(today)
+  const finSemaine = localDateStr(addDays(today, 7))
 
-  // Fenêtre de scan : de J-19 (retard max relancé) à J+7 (anticipation max).
-  const maxUpcoming = Math.max(...UPCOMING_DAYS)
-  const maxOverdue = Math.max(...OVERDUE_DAYS)
-  const dueMax = localDateStr(addDays(today, maxUpcoming))
-  const dueMin = localDateStr(addDays(today, -maxOverdue))
-
-  const { data: duesRaw } = await supabase
+  // Les échéances mises à la corbeille portent `deleted_at`. Le filtre se fait en
+  // base, pas en mémoire : sur une colonne non sélectionnée, un filtre JavaScript
+  // laisserait tout passer sans que rien ne le signale.
+  const { data: dues } = await supabase
     .from('financial_due_dates')
-    .select('*, vehicles(brand, model, plate), clients(first_name, last_name)')
+    .select('id, amount, due_date, description, reservation_id, type')
     .eq('is_paid', false)
-    .gte('due_date', dueMin)
-    .lte('due_date', dueMax)
+    .is('deleted_at', null)
+    .lte('due_date', finSemaine)
     .order('due_date')
 
-  // Exclut les échéances en corbeille (suppression logique) — filtre tolérant.
-  const dues = (duesRaw ?? []).filter((d: any) => !d.deleted_at)
-  if (!dues.length) return NextResponse.json({ sent: 0 })
+  if (!dues?.length) return NextResponse.json({ sent: 0, reason: 'Aucune échéance' })
 
-  // Abonnés push (gérant + associé)
-  const { data: subs } = await supabase
-    .from('push_subscriptions')
-    .select('id, endpoint, p256dh, auth, user_id, profiles(role)')
+  // Anti-doublon : une seule notification par semaine, même si la tâche est
+  // relancée à la main plusieurs fois dans la journée.
+  const debutSemaine = addDays(today, -6).toISOString()
+  const { data: dejaEnvoye } = await supabase
+    .from('notifications')
+    .select('id')
+    .eq('type', 'due_date_reminder')
+    .gte('created_at', debutSemaine)
+    .limit(1)
+  if (dejaEnvoye?.length && !forcer) {
+    return NextResponse.json({ sent: 0, reason: 'Résumé déjà envoyé cette semaine' })
+  }
 
-  const managerSubs = (subs ?? []).filter(s => {
-    const role = (s.profiles as any)?.role
-    return role === 'gerant' || role === 'associe'
+  const enRetard = dues.filter((d: any) => d.due_date < todayStr)
+  const aVenir   = dues.filter((d: any) => d.due_date >= todayStr)
+  const creances = dues.filter((d: any) => d.reservation_id)
+
+  const somme = (liste: any[]) => liste.reduce((s, d) => s + Number(d.amount ?? 0), 0)
+
+  const morceaux: string[] = []
+  if (enRetard.length) {
+    morceaux.push(`⚠️ ${enRetard.length} en retard · ${formatAmount(somme(enRetard))}`)
+  }
+  if (aVenir.length) {
+    morceaux.push(`${aVenir.length} cette semaine · ${formatAmount(somme(aVenir))}`)
+  }
+  if (creances.length) {
+    morceaux.push(`dont ${creances.length} créance${creances.length > 1 ? 's' : ''} client · ${formatAmount(somme(creances))}`)
+  }
+
+  const title = enRetard.length ? '📅 Échéances — dont des retards' : '📅 Échéances de la semaine'
+  const body = morceaux.join(' · ')
+
+  await supabase.from('notifications').insert({
+    user_id: null,
+    type: 'due_date_reminder',
+    title,
+    body,
+    entity_type: 'financial_due_dates',
+    entity_id: null,
   })
 
-  if (!managerSubs.length) return NextResponse.json({ sent: 0, reason: 'No manager subscriptions' })
+  await broadcastPushToManagers(
+    { title, body, url: '/accounting/due-dates', icon: '/logo.png', badge: '/logo.png' },
+    'due_date_alert',
+  )
 
-  let sent = 0
-  const expiredEndpoints: string[] = []
-
-  for (const due of dues) {
-    const dueDate = due.due_date as string
-    const vehicle = due.vehicles as any
-    const vehicleLabel = vehicle ? `${vehicle.brand} ${vehicle.model} (${vehicle.plate})` : null
-
-    // Décalage en jours : >0 à venir, 0 aujourd'hui, <0 en retard.
-    const offset = Math.round(
-      (Date.parse(dueDate + 'T00:00:00Z') - Date.parse(todayStr + 'T00:00:00Z')) / 86_400_000
-    )
-
-    // Aujourd'hui est-il un jour de rappel pour cette échéance ?
-    let title: string
-    if (offset === 0) {
-      title = `🔴 Échéance aujourd'hui`
-    } else if (offset > 0 && UPCOMING_DAYS.includes(offset)) {
-      title = offset === 1 ? `🟡 Échéance demain` : `📅 Échéance dans ${offset} jours`
-    } else if (offset < 0 && OVERDUE_DAYS.includes(-offset)) {
-      title = `⚠️ Échéance en retard — ${-offset} j`
-    } else {
-      continue // pas un jour de rappel pour cette échéance
-    }
-
-    // Une créance client se reconnaît à sa réservation. Le rappel doit alors
-    // nommer la PERSONNE qui doit l'argent : « Échéance demain » suivi d'une
-    // description technique ne dit pas au gérant qui relancer. Demande de Jeff
-    // du 28/07/2026 : un rappel la veille, au gérant et aux associés, disant
-    // simplement que cette personne doit de l'argent.
-    const client = due.clients as any
-    const clientLabel = client ? `${client.first_name} ${client.last_name}` : null
-    const estCreance = !!due.reservation_id && !!clientLabel
-
-    const body = estCreance
-      ? `${clientLabel} doit ${formatAmount(due.amount)}${vehicleLabel ? ` · ${vehicleLabel}` : ''}${offset < 0 ? ` (due le ${formatDate(dueDate)})` : ''}`
-      : `${due.description}${vehicleLabel ? ` · ${vehicleLabel}` : ''} — ${formatAmount(due.amount)}${offset < 0 ? ` (due le ${formatDate(dueDate)})` : ''}`
-
-    // Un rappel de créance doit ouvrir l'écran des créances, pas le tableau des
-    // échéances générales : c'est là qu'on encaisse.
-    const url = estCreance ? '/accounting/creances' : '/accounting/due-dates'
-
-    // Dédup : une seule notif par échéance et par jour (le cron peut être appelé
-    // plusieurs fois sans spammer).
-    const { data: existing } = await supabase
-      .from('notifications')
-      .select('id')
-      .eq('type', 'due_date_reminder')
-      .eq('entity_id', due.id)
-      .gte('created_at', todayStartIso)
-      .limit(1)
-
-    if (existing?.length) continue
-
-    // Notif in-app
-    await supabase.from('notifications').insert({
-      user_id: null,
-      type: 'due_date_reminder',
-      title,
-      body,
-      entity_type: 'financial_due_dates',
-      entity_id: due.id,
-    })
-
-    // Push à tous les managers
-    for (const sub of managerSubs) {
-      const result = await sendPushToSubscription(
-        { id: sub.id, endpoint: sub.endpoint, p256dh: sub.p256dh, auth: sub.auth },
-        { title, body, url, icon: '/logo.png', badge: '/logo.png' }
-      )
-      if (result.ok) {
-        sent++
-      } else if (result.expired) {
-        expiredEndpoints.push(sub.endpoint)
-      }
-    }
-  }
-
-  // Nettoyer les abonnements expirés
-  if (expiredEndpoints.length) {
-    await supabase.from('push_subscriptions').delete().in('endpoint', expiredEndpoints)
-  }
-
-  return NextResponse.json({ sent, expired: expiredEndpoints.length })
+  return NextResponse.json({
+    sent: 1,
+    enRetard: enRetard.length,
+    aVenir: aVenir.length,
+    creances: creances.length,
+  })
 }
 
 function addDays(date: Date, days: number): Date {
@@ -164,8 +135,4 @@ function localDateStr(date: Date): string {
 
 function formatAmount(amount: number): string {
   return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(amount)
-}
-
-function formatDate(dateStr: string): string {
-  return fmtAgence(dateStr, { day: 'numeric', month: 'short' })
 }

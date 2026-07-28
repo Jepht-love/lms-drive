@@ -24,11 +24,13 @@ export type NotificationType =
   | 'new_task_alert'
   | 'task_late_alert'
   | 'task_progress_alert'
+  // Comptabilité
+  | 'due_date_alert'
 
 export interface NotificationTypeDef {
   key: NotificationType
   label: string
-  category: 'Réservations' | 'Flotte & entretien' | 'Incidents' | 'Tâches & calendrier'
+  category: 'Réservations' | 'Flotte & entretien' | 'Incidents' | 'Tâches & calendrier' | 'Comptabilité'
 }
 
 export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
@@ -51,6 +53,8 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
   { key: 'new_task_alert',        label: 'Nouvelle tâche',                  category: 'Tâches & calendrier' },
   { key: 'task_late_alert',       label: 'Tâche / RDV en retard',           category: 'Tâches & calendrier' },
   { key: 'task_progress_alert',   label: 'Avancement d’une tâche',      category: 'Tâches & calendrier' },
+
+  { key: 'due_date_alert',        label: 'Échéances de la semaine',         category: 'Comptabilité' },
 ]
 
 export const NOTIFICATION_DEFAULTS: Record<NotificationType, boolean> = Object.fromEntries(

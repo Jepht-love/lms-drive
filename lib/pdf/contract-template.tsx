@@ -3,6 +3,8 @@ import {
   Svg, Polygon, Ellipse,
 } from '@react-pdf/renderer'
 import { format } from 'date-fns'
+import { TZDate } from '@date-fns/tz'
+import { BUSINESS_TZ } from '@/lib/calendar/constants'
 import { fr } from 'date-fns/locale'
 import { getLegalArticles, getFeesTable, VIDEO_CLAUSE } from '@/lib/contracts/legal-articles'
 import { fmtEntier } from './nombres'
@@ -183,13 +185,24 @@ function fmtMoney(n?: number) {
 function fmtKm(n?: number | null) {
   return n == null ? '—' : fmtEntier(n)
 }
+/**
+ * Toute date imprimée sur le contrat passe par l'heure de l'agence.
+ *
+ * `format(new Date(...))` met en forme dans le fuseau du SERVEUR. Vercel tourne
+ * en temps universel : un départ saisi à 10:00 s'imprimait 08:00 l'été sur le
+ * document que le client signe. Constaté le 28/07/2026, même famille que la
+ * notification de retour fausse de la veille.
+ */
+function heureLocale(dt: string): Date {
+  return new TZDate(new Date(dt), BUSINESS_TZ)
+}
 function fmtDT(dt: string) {
-  try { return format(new Date(dt), 'dd/MM/yyyy HH:mm', { locale: fr }) }
+  try { return format(heureLocale(dt), 'dd/MM/yyyy HH:mm', { locale: fr }) }
   catch { return dt }
 }
 function fmtDate(dt?: string) {
   if (!dt) return '—'
-  try { return format(new Date(dt), 'dd/MM/yyyy à HH:mm', { locale: fr }) }
+  try { return format(heureLocale(dt), 'dd/MM/yyyy à HH:mm', { locale: fr }) }
   catch { return dt }
 }
 function stars(n: number, max = 5) {

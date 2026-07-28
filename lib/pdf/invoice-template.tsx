@@ -2,6 +2,17 @@ import { Document, Page, View, Text, Image, StyleSheet } from '@react-pdf/render
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { fmtNombre } from './nombres'
+import { TZDate } from '@date-fns/tz'
+import { BUSINESS_TZ } from '@/lib/calendar/constants'
+
+/**
+ * Toute date imprimée passe par l'heure de l'agence. `format(new Date(...))` met
+ * en forme dans le fuseau du SERVEUR, et Vercel tourne en temps universel : un
+ * retour à 12:00 s'imprimait 10:00 l'été. Constaté le 28/07/2026.
+ */
+function heureLocale(dt: string): Date {
+  return new TZDate(new Date(dt), BUSINESS_TZ)
+}
 
 export interface InvoiceLineItem {
   description: string
@@ -76,7 +87,7 @@ export function InvoicePDF({ data }: { data: InvoiceData }) {
         <View style={s.metaRow}>
           <View>
             <Text style={s.meta}>Facture N° {data.invoiceNumber}</Text>
-            <Text style={s.meta}>Date : {format(new Date(data.issueDate), 'dd/MM/yyyy')}</Text>
+            <Text style={s.meta}>Date : {format(heureLocale(data.issueDate), 'dd/MM/yyyy')}</Text>
           </View>
           <View style={s.clientBox}>
             <Text style={s.clientLabel}>Client : {data.clientName}</Text>
@@ -87,7 +98,7 @@ export function InvoicePDF({ data }: { data: InvoiceData }) {
         <Text style={s.vehicleInfo}>Véhicule : {data.vehicleBrand} {data.vehicleModel}</Text>
         <Text style={s.vehiclePlateInfo}>Plaque : {data.vehiclePlate}</Text>
         <Text style={s.vehicleInfo}>
-          Retour : {format(new Date(data.returnDatetime), "d MMMM yyyy 'à' HH'h'mm", { locale: fr })}
+          Retour : {format(heureLocale(data.returnDatetime), "d MMMM yyyy 'à' HH'h'mm", { locale: fr })}
         </Text>
         {data.returnLocation && <Text style={s.vehicleInfo}>Lieu : {data.returnLocation}</Text>}
 
