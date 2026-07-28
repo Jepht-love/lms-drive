@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
   // laisserait tout passer sans que rien ne le signale.
   const { data: dues } = await supabase
     .from('financial_due_dates')
-    .select('id, amount, due_date, description, reservation_id, type')
+    .select('id, amount, due_date, description, reservation_id, type, clients(first_name, last_name)')
     .eq('is_paid', false)
     .is('deleted_at', null)
     .lte('due_date', finSemaine)
@@ -93,6 +93,20 @@ export async function GET(request: NextRequest) {
     morceaux.push(`dont ${creances.length} créance${creances.length > 1 ? 's' : ''} client · ${formatAmount(somme(creances))}`)
   }
 
+  // Le nom de qui doit l'argent. « 2 créances client » ne dit pas qui relancer,
+  // et c'est tout l'intérêt d'une créance. Demande de Jeff du 28/07/2026.
+  // Trois noms au maximum : au-delà, le message serait tronqué par le téléphone.
+  const MAX_NOMS = 3
+  const nomsCreances = creances.slice(0, MAX_NOMS).map((d: any) => {
+    const c = Array.isArray(d.clients) ? d.clients[0] : d.clients
+    const nom = c ? `${c.first_name} ${c.last_name}`.trim() : 'Client'
+    return `${nom} ${formatAmount(Number(d.amount ?? 0))}`
+  })
+  const nonCites = creances.length - nomsCreances.length
+  const ligneCreances = nomsCreances.length
+    ? `À encaisser : ${nomsCreances.join(' · ')}${nonCites > 0 ? ` · +${nonCites}` : ''}`
+    : ''
+
   // Les dates, regroupées PAR JOUR. Demande de Jeff du 28/07/2026 : savoir quand
   // sortir l'argent, pas seulement combien. Une ligne par échéance serait
   // illisible — il y a 64 loyers de véhicules en base, et une notification ne
@@ -116,7 +130,12 @@ export async function GET(request: NextRequest) {
     : ''
 
   const title = enRetard.length ? '📅 Échéances — dont des retards' : '📅 Échéances de la semaine'
-  const body = [morceaux.join(' · '), ligneJours].filter(Boolean).join('\n')
+  const body = [morceaux.join(' · '), ligneJours, ligneCreances].filter(Boolean).join('\n')
+
+  // Où mène le clic. Quand le résumé ne contient QUE des créances client, il
+  // ouvre l'écran des créances, là où on les encaisse. Sinon l'écran des
+  // échéances, qui porte les loyers de véhicules et les regroupe tous.
+  const url = creances.length === dues.length ? '/accounting/creances' : '/accounting/due-dates'
 
   await supabase.from('notifications').insert({
     user_id: null,
@@ -128,7 +147,7 @@ export async function GET(request: NextRequest) {
   })
 
   await broadcastPushToManagers(
-    { title, body, url: '/accounting/due-dates', icon: '/logo.png', badge: '/logo.png' },
+    { title, body, url, icon: '/logo.png', badge: '/logo.png' },
     'due_date_alert',
   )
 
