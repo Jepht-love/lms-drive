@@ -102,24 +102,35 @@ export async function GET(request: NextRequest) {
     parClient.set(nom, liste)
   }
   const MAX_CLIENTS = 3
-  const clients = [...parClient.entries()]
+  // Le plus gros débiteur en tête : c'est lui qu'on relance en priorité, et c'est
+  // lui qui doit survivre au plafond de trois lignes.
+  const clients = [...parClient.entries()].sort(
+    ([, a], [, b]) => b.reduce((s, l) => s + l.montant, 0) - a.reduce((s, l) => s + l.montant, 0),
+  )
   // Au-delà de deux échéances pour la même personne, on ne déroule plus la liste :
   // un paiement échelonné en dix fois donnerait une ligne de dix dates, illisible
   // et tronquée par le téléphone. On dit alors combien, pour quel total, et à
   // partir de quand — le détail est sur l'écran des créances.
+  // UNE LIGNE PAR CLIENT : « À encaisser : 6 · 1 100 € » disait le total sans dire
+  // qui doit quoi, donc sans permettre de relancer qui que ce soit. Correction
+  // demandée par Jeff le 28/07/2026, dans la foulée du « une ligne, une
+  // information ».
   const MAX_DATES = 2
-  const nomsClients = clients.slice(0, MAX_CLIENTS)
-    .map(([nom, lignes]) => {
-      const triees = lignes.sort((a, b) => a.date.localeCompare(b.date))
+  const lignesClients = clients.slice(0, MAX_CLIENTS)
+    .map(([nom, echeances]) => {
+      const triees = echeances.sort((a, b) => a.date.localeCompare(b.date))
+      const total = triees.reduce((s, l) => s + l.montant, 0)
       // Au-delà de deux échéances, on ne déroule plus : un paiement échelonné en
       // dix fois donnerait dix dates sur une ligne. On dit combien et à partir de
       // quand, le détail est sur l'écran des créances où mène le clic.
-      if (triees.length > MAX_DATES) {
-        return `${nom} (${triees.length} dès ${jourCourt(triees[0].date)})`
-      }
-      return `${nom} (${triees.map(l => jourCourt(l.date)).join(', ')})`
+      const quand = triees.length > MAX_DATES
+        ? `${triees.length} échéances dès ${jourCourt(triees[0].date)}`
+        : triees.map(l => jourCourt(l.date)).join(', ')
+      return `${nom} : ${formatAmount(total)} — ${quand}`
     })
-  const clientsNonCites = clients.length - nomsClients.length
+  const clientsNonCites = clients.length - lignesClients.length
+  const resteClients = clients.slice(MAX_CLIENTS)
+    .reduce((s, [, e]) => s + e.reduce((t, l) => t + l.montant, 0), 0)
 
   // Les dates, regroupées PAR JOUR. Demande de Jeff du 28/07/2026 : savoir quand
   // sortir l'argent, pas seulement combien. Une ligne par échéance serait
@@ -150,9 +161,11 @@ export async function GET(request: NextRequest) {
     const quand = nomsJours.join(', ') + (joursNonCites > 0 ? `, +${joursNonCites}` : '')
     lignes.push(`À payer : ${loyers.length} · ${formatAmount(somme(loyers))} — ${quand}`)
   }
-  if (creancesAVenir.length) {
-    const qui = nomsClients.join(', ') + (clientsNonCites > 0 ? `, +${clientsNonCites}` : '')
-    lignes.push(`À encaisser : ${creancesAVenir.length} · ${formatAmount(somme(creancesAVenir))} — ${qui}`)
+  // Puis une ligne par client qui doit de l'argent, la plus grosse créance
+  // d'abord : c'est celle qu'on relance en premier.
+  lignes.push(...lignesClients)
+  if (clientsNonCites > 0) {
+    lignes.push(`+${clientsNonCites} autre${clientsNonCites > 1 ? 's' : ''} client${clientsNonCites > 1 ? 's' : ''} : ${formatAmount(resteClients)}`)
   }
 
   const title = enRetard.length ? '📅 Échéances — dont des retards' : '📅 Échéances de la semaine'
