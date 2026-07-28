@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { instantDepuisSaisie } from '@/lib/format/heureAgence'
+import { instantDepuisSaisie, jourHeureAgence } from '@/lib/format/heureAgence'
 import { vehiculesIndisponibles } from '@/lib/reservations/disponibilite'
 
 /**
@@ -36,5 +36,14 @@ export async function GET(request: NextRequest) {
     ignorerReservationId: ignore,
   })
 
-  return NextResponse.json({ busy: Object.fromEntries(indispo) })
+  // `jusqua` est mis en forme ICI, à l'heure de l'agence : le navigateur est déjà
+  // à l'heure française, mais le serveur tourne en temps universel et une date
+  // brute renvoyée telle quelle serait affichée décalée par un rendu serveur.
+  const busy = Object.fromEntries(
+    [...indispo.entries()].map(([id, v]) => [id, {
+      raison: v.raison,
+      jusqua: v.jusqua ? jourHeureAgence(v.jusqua) : null,
+    }]),
+  )
+  return NextResponse.json({ busy })
 }

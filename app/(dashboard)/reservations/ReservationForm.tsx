@@ -121,7 +121,7 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
   // qui applique les MÊMES règles que l'enregistrement (autre réservation, RDV
   // garage, déplacement interne) : recopier ces règles ici finirait par annoncer
   // « libre » là où l'enregistrement refuse. Ticket SAV du 27/07/2026.
-  const [busy, setBusy] = useState<Record<string, string>>({})
+  const [busy, setBusy] = useState<Record<string, { raison: string; jusqua: string | null }>>({})
   // « Pas encore su » n'est pas « libre ». Sans cet état, une session expirée ou
   // une coupure réseau renvoyait une liste vide, indistinguable de « tout est
   // libre » : l'écran annonçait en vert un véhicule que l'enregistrement allait
@@ -211,11 +211,19 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
                 <option value="">— Choisir un véhicule —</option>
                 {vehicles.map(v => {
                   const pris = datesSaisies ? busy[v.id] : undefined
+                  // « Pris » ne suffit pas : le gérant a besoin de savoir QUAND la
+                  // voiture revient pour proposer une autre date au client, plutôt
+                  // que d'ouvrir la Flotte dans un autre onglet.
+                  const detail = pris
+                    ? pris.jusqua
+                      ? `${RAISON[pris.raison] ?? 'indisponible'} jusqu'au ${pris.jusqua}`
+                      : `${RAISON[pris.raison] ?? 'indisponible'} · retour inconnu`
+                    : ''
                   return (
                     <option key={v.id} value={v.id}>
                       {pris ? '● ' : datesSaisies ? '○ ' : ''}
                       {v.brand} {v.model} — {v.plate} {v.daily_price ? `(${v.daily_price}€/j)` : ''}
-                      {pris ? ` — ${RAISON[pris] ?? 'indisponible'}` : ''}
+                      {detail ? ` — ${detail}` : ''}
                     </option>
                   )
                 })}
@@ -238,7 +246,10 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
                 </p>
               ) : raisonVehiculeChoisi ? (
                 <p className="mt-1.5 text-xs font-semibold text-red-600">
-                  Indisponible sur cette période : {RAISON[raisonVehiculeChoisi] ?? 'indisponible'}.
+                  Indisponible : {RAISON[raisonVehiculeChoisi.raison] ?? 'indisponible'}
+                  {raisonVehiculeChoisi.jusqua
+                    ? `, libre à partir du ${raisonVehiculeChoisi.jusqua}`
+                    : ', date de retour inconnue'}.
                 </p>
               ) : selectedVehicleId ? (
                 <p className="mt-1.5 text-xs font-semibold text-emerald-600">

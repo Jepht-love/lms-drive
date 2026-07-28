@@ -36,14 +36,36 @@ export const RAISON_LABEL: Record<RaisonIndisponibilite, string> = {
  * `ignorerReservationId` sert à la modification d'une réservation existante :
  * sans lui, elle se déclarerait en conflit avec elle-même.
  */
+export type Indisponibilite = {
+  raison: RaisonIndisponibilite
+  /**
+   * Instant où le véhicule redevient libre, quand on le connaît. `null` pour un
+   * déplacement en cours sans retour renseigné : on ne peut alors rien promettre.
+   */
+  jusqua: string | null
+}
+
 export async function vehiculesIndisponibles(
   supabase: SupabaseClient,
   debutInstant: string,
   finInstant: string,
   options?: { vehicleIds?: string[]; ignorerReservationId?: string },
-): Promise<Map<string, RaisonIndisponibilite>> {
-  const indispo = new Map<string, RaisonIndisponibilite>()
+): Promise<Map<string, Indisponibilite>> {
+  const indispo = new Map<string, Indisponibilite>()
   const cibles = options?.vehicleIds
+
+  // Un véhicule peut être bloqué par plusieurs choses à la fois : on retient la
+  // date de libération la PLUS TARDIVE, sinon on annoncerait un véhicule libre
+  // alors qu'un autre engagement court encore.
+  const poser = (vid: string, raison: RaisonIndisponibilite, jusqua: string | null) => {
+    const actuel = indispo.get(vid)
+    if (!actuel) { indispo.set(vid, { raison, jusqua }); return }
+    // Une fin inconnue l'emporte : elle est la plus contraignante.
+    if (actuel.jusqua === null) return
+    if (jusqua === null || jusqua > actuel.jusqua) {
+      indispo.set(vid, { raison, jusqua })
+    }
+  }
 
   // Liste des véhicules à examiner quand l'appelant n'en impose pas.
   let qVehicules = supabase.from('vehicles').select('id')
@@ -54,7 +76,7 @@ export async function vehiculesIndisponibles(
   //    fin de la nouvelle ET se termine après son début.
   let q = supabase
     .from('reservations')
-    .select('vehicle_id')
+    .select('vehicle_id, end_datetime')
     .not('status', 'in', '("annulee","terminee","non_presente")')
     .lt('start_datetime', finInstant)
     .gt('end_datetime', debutInstant)
@@ -62,16 +84,14 @@ export async function vehiculesIndisponibles(
   if (options?.ignorerReservationId) q = q.neq('id', options.ignorerReservationId)
   const { data: resas } = await q
   for (const r of resas ?? []) {
-    // On ne remplace pas une raison d'état déjà posée : « en fourrière » est plus
-    // parlant que « déjà réservé » pour la même voiture.
-    if (r.vehicle_id && !indispo.has(r.vehicle_id)) indispo.set(r.vehicle_id, 'reservation')
+    if (r.vehicle_id) poser(r.vehicle_id, 'reservation', r.end_datetime ?? null)
   }
 
   // 2. Rendez-vous garage, sur leur propre fenêtre uniquement : un RDV 14h-17h
   //    n'empêche pas une location à 18h.
   const { data: garages } = await supabase
     .from('calendar_events')
-    .select('vehicle_ids')
+    .select('vehicle_ids, end_at')
     .eq('event_type', 'rdv_garage')
     .neq('status', 'annule')
     .lt('start_at', finInstant)
@@ -79,7 +99,7 @@ export async function vehiculesIndisponibles(
   for (const g of garages ?? []) {
     for (const vid of (g.vehicle_ids as string[] | null) ?? []) {
       if (cibles?.length && !cibles.includes(vid)) continue
-      if (!indispo.has(vid)) indispo.set(vid, 'garage')
+      poser(vid, 'garage', (g.end_at as string | null) ?? null)
     }
   }
 
@@ -87,11 +107,11 @@ export async function vehiculesIndisponibles(
   //    véhicule (il gère le cas du trajet en cours sans retour connu) : on ne
   //    l'interroge que pour ceux encore déclarés libres.
   const aTester = cibles?.length ? cibles : (vehicules ?? []).map(v => v.id)
-  const restants = aTester.filter((vid): vid is string => !!vid && !indispo.has(vid))
-  await Promise.all(restants.map(async vid => {
-    if (await findBlockingInternalTrip(supabase, vid, debutInstant, finInstant)) {
-      indispo.set(vid, 'deplacement')
-    }
+  await Promise.all(aTester.filter(Boolean).map(async vid => {
+    const trajet = await findBlockingInternalTrip(supabase, vid, debutInstant, finInstant)
+    // Un trajet « en cours » sans fin renseignée bloque sans horizon : la voiture
+    // est dehors et personne ne sait quand elle revient.
+    if (trajet) poser(vid, 'deplacement', trajet.end_datetime ?? null)
   }))
 
   return indispo

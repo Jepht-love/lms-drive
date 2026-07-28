@@ -207,10 +207,14 @@ export default async function ReservationsPage({
                     </div>
                     {/* Ligne 3 : dates + n° + countdown paiement */}
                     <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                      {/* L'heure, pas seulement le jour : « 30 juil. » ne dit pas
+                          si la voiture revient le matin ou le soir, donc pas si
+                          elle est relouable dans la journée. Demande de Jeff du
+                          28/07/2026. */}
                       <span className="text-xs text-gray-400">
-                        {format(startDate, 'd MMM', { locale: fr })}
+                        {format(startDate, "d MMM 'à' HH:mm", { locale: fr })}
                         {' → '}
-                        {format(endDate, 'd MMM yyyy', { locale: fr })}
+                        {format(endDate, "d MMM 'à' HH:mm", { locale: fr })}
                       </span>
                       <span className="text-gray-200">·</span>
                       <span className="text-xs text-gray-300 font-mono">{r.reservation_number}</span>
