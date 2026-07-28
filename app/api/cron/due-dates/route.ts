@@ -101,36 +101,10 @@ export async function GET(request: NextRequest) {
     liste.push({ date: d.due_date as string, montant: Number(d.amount ?? 0) })
     parClient.set(nom, liste)
   }
-  const MAX_CLIENTS = 3
-  // Le plus gros débiteur en tête : c'est lui qu'on relance en priorité, et c'est
-  // lui qui doit survivre au plafond de trois lignes.
+  // Le plus gros débiteur en tête : c'est lui qu'on relance en premier.
   const clients = [...parClient.entries()].sort(
     ([, a], [, b]) => b.reduce((s, l) => s + l.montant, 0) - a.reduce((s, l) => s + l.montant, 0),
   )
-  // Au-delà de deux échéances pour la même personne, on ne déroule plus la liste :
-  // un paiement échelonné en dix fois donnerait une ligne de dix dates, illisible
-  // et tronquée par le téléphone. On dit alors combien, pour quel total, et à
-  // partir de quand — le détail est sur l'écran des créances.
-  // UNE LIGNE PAR CLIENT : « À encaisser : 6 · 1 100 € » disait le total sans dire
-  // qui doit quoi, donc sans permettre de relancer qui que ce soit. Correction
-  // demandée par Jeff le 28/07/2026, dans la foulée du « une ligne, une
-  // information ».
-  const MAX_DATES = 2
-  const lignesClients = clients.slice(0, MAX_CLIENTS)
-    .map(([nom, echeances]) => {
-      const triees = echeances.sort((a, b) => a.date.localeCompare(b.date))
-      const total = triees.reduce((s, l) => s + l.montant, 0)
-      // Au-delà de deux échéances, on ne déroule plus : un paiement échelonné en
-      // dix fois donnerait dix dates sur une ligne. On dit combien et à partir de
-      // quand, le détail est sur l'écran des créances où mène le clic.
-      const quand = triees.length > MAX_DATES
-        ? `${triees.length} échéances dès ${jourCourt(triees[0].date)}`
-        : triees.map(l => jourCourt(l.date)).join(', ')
-      return `${nom} : ${formatAmount(total)} — ${quand}`
-    })
-  const clientsNonCites = clients.length - lignesClients.length
-  const resteClients = clients.slice(MAX_CLIENTS)
-    .reduce((s, [, e]) => s + e.reduce((t, l) => t + l.montant, 0), 0)
 
   // Les dates, regroupées PAR JOUR. Demande de Jeff du 28/07/2026 : savoir quand
   // sortir l'argent, pas seulement combien. Une ligne par échéance serait
@@ -161,40 +135,95 @@ export async function GET(request: NextRequest) {
     const quand = nomsJours.join(', ') + (joursNonCites > 0 ? `, +${joursNonCites}` : '')
     lignes.push(`À payer : ${loyers.length} · ${formatAmount(somme(loyers))} — ${quand}`)
   }
-  // Puis une ligne par client qui doit de l'argent, la plus grosse créance
-  // d'abord : c'est celle qu'on relance en premier.
-  lignes.push(...lignesClients)
-  if (clientsNonCites > 0) {
-    lignes.push(`+${clientsNonCites} autre${clientsNonCites > 1 ? 's' : ''} client${clientsNonCites > 1 ? 's' : ''} : ${formatAmount(resteClients)}`)
+  // Les créances ne sont PLUS dans ce message : chacune part dans sa propre
+  // notification, nominative (décision de Jeff du 28/07/2026). Le résumé global
+  // ne porte donc que ce que l'agence doit payer.
+
+  let envoyees = 0
+
+  // 1. Le résumé de ce que l'agence doit payer. Il n'est envoyé que s'il a
+  //    quelque chose à dire : une semaine sans loyer ni retard ne produit rien.
+  if (lignes.length) {
+    const title = enRetard.length ? '📅 Échéances — dont des retards' : '📅 Échéances de la semaine'
+    const body = lignes.join('\n')
+    await supabase.from('notifications').insert({
+      user_id: null,
+      type: 'due_date_reminder',
+      title,
+      body,
+      entity_type: 'financial_due_dates',
+      entity_id: null,
+    })
+    await broadcastPushToManagers(
+      { title, body, url: '/accounting/due-dates', icon: '/logo.png', badge: '/logo.png' },
+      'due_date_alert',
+    )
+    envoyees++
   }
 
-  const title = enRetard.length ? '📅 Échéances — dont des retards' : '📅 Échéances de la semaine'
-  const body = lignes.join('\n')
+  // 2. Puis UNE NOTIFICATION PAR CLIENT qui doit de l'argent (décision de Jeff du
+  //    28/07/2026). Le regroupement disait le total sans dire qui relancer ; ici
+  //    chaque message porte un nom, un montant et une date, et ouvre l'écran des
+  //    créances. Le volume qui inquiétait Jeff venait des loyers, pas des
+  //    créances : elles sont rares et chacune appelle un appel téléphonique.
+  //
+  //    Garde-fou : au-delà de MAX_MESSAGES débiteurs, on regroupe le surplus en
+  //    un seul message. Un lundi avec trente créances ne doit pas faire sonner
+  //    trente fois le téléphone du gérant.
+  const MAX_MESSAGES = 8
+  const MAX_DATES = 2
+  for (const [nom, echeances] of clients.slice(0, MAX_MESSAGES)) {
+    const triees = echeances.sort((a, b) => a.date.localeCompare(b.date))
+    const total = triees.reduce((s, l) => s + l.montant, 0)
+    // Au-delà de deux échéances, on ne déroule plus : un paiement échelonné en
+    // dix fois donnerait dix dates. On dit combien et à partir de quand, le
+    // détail est sur l'écran des créances où mène le clic.
+    const quand = triees.length > MAX_DATES
+      ? `${triees.length} échéances dès ${jourCourt(triees[0].date)}`
+      : triees.map(l => `${jourCourt(l.date)} ${formatAmount(l.montant)}`).join(' · ')
 
-  // Où mène le clic. Quand le résumé ne contient QUE des créances client, il
-  // ouvre l'écran des créances, là où on les encaisse. Sinon l'écran des
-  // échéances, qui porte les loyers de véhicules et les regroupe tous.
-  const url = creances.length === dues.length ? '/accounting/creances' : '/accounting/due-dates'
+    const title = `💶 ${nom} doit ${formatAmount(total)}`
+    await supabase.from('notifications').insert({
+      user_id: null,
+      type: 'due_date_reminder',
+      title,
+      body: quand,
+      entity_type: 'financial_due_dates',
+      entity_id: null,
+    })
+    await broadcastPushToManagers(
+      { title, body: quand, url: '/accounting/creances', icon: '/logo.png', badge: '/logo.png' },
+      'due_date_alert',
+    )
+    envoyees++
+  }
 
-  await supabase.from('notifications').insert({
-    user_id: null,
-    type: 'due_date_reminder',
-    title,
-    body,
-    entity_type: 'financial_due_dates',
-    entity_id: null,
-  })
-
-  await broadcastPushToManagers(
-    { title, body, url, icon: '/logo.png', badge: '/logo.png' },
-    'due_date_alert',
-  )
+  const surplus = clients.slice(MAX_MESSAGES)
+  if (surplus.length) {
+    const total = surplus.reduce((s, [, e]) => s + e.reduce((t, l) => t + l.montant, 0), 0)
+    const title = `💶 ${surplus.length} autres clients doivent ${formatAmount(total)}`
+    const body = surplus.slice(0, 5).map(([nom]) => nom).join(', ') + (surplus.length > 5 ? '…' : '')
+    await supabase.from('notifications').insert({
+      user_id: null,
+      type: 'due_date_reminder',
+      title,
+      body,
+      entity_type: 'financial_due_dates',
+      entity_id: null,
+    })
+    await broadcastPushToManagers(
+      { title, body, url: '/accounting/creances', icon: '/logo.png', badge: '/logo.png' },
+      'due_date_alert',
+    )
+    envoyees++
+  }
 
   return NextResponse.json({
-    sent: 1,
+    sent: envoyees,
     enRetard: enRetard.length,
-    aVenir: aVenir.length,
-    creances: creances.length,
+    loyers: loyers.length,
+    creances: creancesAVenir.length,
+    clients: clients.length,
   })
 }
 
