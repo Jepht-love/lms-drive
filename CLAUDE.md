@@ -1,8 +1,10 @@
-# LMS Drive
+# Le socle FleetLive
 
-Les consignes générales de travail sont dans `~/CLAUDE.md` — qui je suis, comment me parler, comment traiter l'information, le protocole avant d'écrire du code, les règles avant de livrer, le socle shadcn. **Ce fichier ne contient que ce qui est propre à ce projet.**
+Les consignes générales de travail sont dans `~/CLAUDE.md` : qui je suis, comment me parler, comment traiter l'information, le protocole avant d'écrire du code, les règles avant de livrer, le socle shadcn. **Ce fichier ne contient que ce qui est propre à ce projet.**
 
 @AGENTS.md
+
+> **Le nom du dépôt ment, et c'est assumé.** Il s'appelle `lms-drive` parce qu'il a commencé là, mais **depuis le 28/07/2026 il porte le socle FleetLive, déployé pour plusieurs clients** : LMS Drive et Smart Loc, d'autres ensuite. Renommer casserait les liens Vercel et GitHub en pleine stabilisation ; la décision est de garder le nom. Voir §4.
 
 ## 1. Ce que c'est
 
@@ -33,25 +35,80 @@ Deux choses à en retenir :
 - **Ces cinq rubriques ne sont décrites dans aucun document.** Pour elles, la référence est le gérant lui-même, pas le cahier des charges. Ne pas conclure d'une absence dans le CDC qu'une fonctionnalité est hors périmètre.
 - **La source de vérité de ce qui existe réellement est `lib/navigation/tabs.ts`** — 10 onglets dans le menu, plus les 4 modules réservés aux managers (compta, marketing, équipe, paramètres) qui n'y figurent pas.
 
-## 3. Ce dépôt ne porte plus qu'une chose : LMS Drive
+## 3. Ce dépôt ne porte plus rien de commercial
 
-Tout le logiciel livré au premier client est dans `app/(dashboard)/`.
+Tout le logiciel livré aux clients est dans `app/(dashboard)/`.
 
 **La vitrine commerciale n'est plus ici.** Elle vit dans son propre projet, `~/fleetlive`, refondu le 27/07/2026 (mode clair et sombre, grille tarifaire, FAQ, écrans de gestion de flotte). L'ancienne vitrine qui cohabitait dans ce dépôt — `app/fleetaxis/`, `components/fleetaxis/`, `lib/fleetaxis-i18n.ts`, 13 fichiers — a été **retirée le 27/07/2026 sur décision de Jeff** : elle était devenue une version périmée de la marque, accessible sur le domaine du logiciel sans qu'aucun lien n'y mène. Elle reste dans la corbeille et dans l'historique git si besoin.
 
 **Conséquence à garder :** ne rien recréer de commercial ici. Une page vitrine, un tarif public, un formulaire de démonstration vont dans `~/fleetlive`. Et toujours **aucune fuite dans l'autre sens** : aucune donnée, aucun nom, aucun visuel du client LMS Drive côté FleetLive.
 
-## 4. Le socle sert à équiper d'autres clients — et c'est voulu
+## 4. Un seul code, plusieurs clients — décidé le 28/07/2026
 
-FleetLive détient la licence, LMS Drive n'en est que l'utilisateur. **Ce qui se transpose d'un client à l'autre, ce sont les fonctionnalités** — réservation, calendrier, flotte, déplacements, entretien, inspection, comptabilité, tableaux de bord et indicateurs. Les données du client ne se transposent pas : on n'en veut pas.
+FleetLive détient la licence, chaque client n'en est que l'utilisateur. **Ce qui se partage entre clients, ce sont les fonctionnalités** : réservation, calendrier, flotte, déplacements, entretien, inspection, comptabilité, tableaux de bord et indicateurs. **Ce qui ne se partage jamais, ce sont les données.**
 
-Le modèle n'est **pas** de faire cohabiter plusieurs sociétés dans une même base. C'est de **repartir du socle et de le réadapter** : masquer ce qui ne sert pas (tarif jour, caution, contrat de location, dommages facturables pour une flotte qui n'est pas louée), renommer le vocabulaire (« location » devient « mission »), ajouter ce qui manque au secteur. Ne pas proposer d'architecture multi-société.
+### La règle de séparation
 
-**Ce que ça change au quotidien :** chaque bug corrigé ici est un bug que Smartlocation, Jumloc75 et les suivants n'auront jamais, puisqu'ils partiront du socle assaini. C'est ce qui rend la stabilisation actuelle rentable bien au-delà du premier client, et ce qui justifie de corriger la cause de fond plutôt que le symptôme.
+| | Où ça vit |
+|---|---|
+| Le code, les écrans, les fonctionnalités | Ce dépôt, partagé par tous les clients |
+| L'identité d'un client (nom, logo, couleurs, expéditeur, coordonnées, identifiant mobile) | La configuration client, lue au démarrage |
+| Ses données (clients, véhicules, contrats, montants, tarifs, cachet) | **Sa propre base Supabase, une par client** |
 
-Un réflexe à garder : **ce qui est propre à LMS Drive doit rester identifiable et remplaçable** (nom de société, SIRET, logo, tarifs, mentions de contrat).
+**Aucune valeur propre à un client ne s'écrit dans le code.** Ni un nom, ni un SIRET, ni un tarif, ni une adresse e-mail. Elle va dans la configuration client ou en base. C'est la seule discipline qui fait tenir le modèle quand il y aura quatre clients, et c'est la première chose à vérifier avant d'ajouter une constante.
 
-## 5. Qui s'en sert
+**Pas de multi-société dans une même base.** Un client, une base, un déploiement. Ce n'est pas une architecture multi-locataire : les tables ne portent pas de notion de société et ne doivent pas en porter.
+
+### Comment les mises à jour circulent
+
+- **LMS Drive vit sur la branche `main`.** Chaque autre client a **sa propre branche de production**, branchée sur son projet Vercel.
+- **La bascule est automatique par défaut**, avec un gel possible et explicite quand un gérant est en démonstration ou en formation. Un gel se décide, il ne se subit pas.
+- **Une correction de bug ou de sécurité part toujours chez tous les clients.** C'est ce que couvre le contrat d'assistance, ce n'est pas négociable.
+- **Une nouvelle fonctionnalité arrive éteinte**, avec un interrupteur que le client allume quand il veut.
+- **Une modification propre à un seul client est un interrupteur de configuration, jamais du code à part.** Si ça ne peut pas être un réglage, ça remonte à Jeff avant d'être écrit.
+
+### Toute fonctionnalité doit se dupliquer simplement — règle du 29/07/2026
+
+Amener une fonctionnalité chez un nouveau client ne doit demander **aucune ligne de code**. Créer un client, c'est créer sa base, remplir sa configuration et déployer. Rien d'autre.
+
+**La question à se poser avant de considérer une fonctionnalité comme finie :** est-ce que je peux la livrer au client suivant sans ouvrir un fichier de code ? Si la réponse est non, elle n'est pas finie, et le travail restant appartient au socle, pas au client.
+
+Deux écarts vérifiés le 29/07/2026, tous deux dans le chantier Smart Loc :
+
+- **Les jours du week-end sont figés dans le code.** `WEEKEND_DAYS` (`lib/utils/index.ts`, ligne 97) vaut `[5, 6, 0]` avec un commentaire annonçant que c'est la seule ligne à modifier si le gérant change sa règle. Sans effet pour Smart Loc, qui a la même règle que LMS Drive, mais un troisième client au week-end différent obligerait à la changer pour tout le monde. **À descendre en réglage d'agence** (lot 1 du chantier Smart Loc).
+- **`lib/seed/vehicles.ts` porte les 10 véhicules de LMS Drive en dur**, avec leurs tarifs et leurs kilomètres inclus. Il ne doit jamais servir à créer l'agence d'un autre client (lot 2).
+
+**Ce qui se duplique déjà correctement, vérifié le 29/07 :** le forfait week-end (`vehicles.price_weekend_full`) et les kilomètres inclus sont portés par chaque véhicule en base. Les activer chez un nouveau client ne demande aucune modification technique.
+
+**À construire, pas encore fait : l'onglet « Mises à jour ».** Chaque dimanche, le client y voit ce qui a changé, écrit en langage métier, et choisit d'appliquer maintenant ou de reporter d'une semaine. Il choisit **le moment, pas le contenu** : le contenu à la carte reviendrait à maintenir un logiciel différent par client. Chantier de 4 à 6 jours, placé après la livraison de Smart Loc.
+
+### Deux familles de projets — ne pas les confondre
+
+1. **Jumeau du socle** : même code, même périmètre, identité et base différentes. **Smart Loc**, et lui seul à ce jour. Le gérant a demandé exactement le logiciel de son confrère.
+2. **Produit à part** : son propre dépôt, un autre besoin, aucun code partagé avec ici. **Jums Loc** (réservation en ligne par le client final, autre génération de shadcn) et **UNFPA RDC** (besoin différent de la location). **Ne jamais copier un composant entre ce dépôt et ceux-là**, ils ne s'écrivent pas pareil.
+
+Le socle peut techniquement se réadapter à un autre secteur (masquer tarif et caution, renommer « location » en « mission »), mais **ce n'est le cas d'aucun client aujourd'hui**. Ne pas partir de cette hypothèse sans que Jeff l'ait dit.
+
+### Ce que ça change au quotidien
+
+Chaque bug corrigé ici est un bug que Smart Loc et les suivants n'auront jamais. C'est ce qui rend la stabilisation actuelle rentable bien au-delà du premier client, et ce qui justifie de corriger la cause de fond plutôt que le symptôme.
+
+**Avant de modifier un écran, se demander pour quel client on le fait.** Une modification faite pour Smart Loc arrive chez LMS Drive, et l'inverse est vrai.
+
+### Les clients, et où lire leur fiche
+
+| Client | Fiche | Base |
+|---|---|---|
+| **LMS Drive** (1re licence) | dans ce fichier, §5 à §7 | projet `vtxoqybfqdauhblavvza` |
+| **Smart Loc** (2e licence) | `~/smartloc/CLAUDE.md` | projet dédié, à créer |
+
+**Avant de travailler pour un client, lire sa fiche.** Elle contient son identité, ses tarifs, son calendrier et ce qui reste à vérifier chez lui. Ne pas redemander ce qui y est écrit.
+
+---
+
+> **Les §5 à §7 sont la fiche du client LMS Drive**, pas des règles du socle. Elles restent ici parce que LMS Drive est le projet du quotidien jusqu'au 30/08/2026 et que le fichier doit se charger quand on travaille dans le dépôt. À sortir dans son propre dossier quand un troisième client rejoindra le socle.
+
+## 5. Qui s'en sert — LMS Drive
 
 - **Le gérant** — il commande le produit, il teste, et il remonte ses bugs par la rubrique SAV intégrée (1 à 2 par jour).
 - **Les associés et les salariés** — le calendrier, les réservations et les états des lieux, au quotidien.
@@ -61,7 +118,7 @@ Un réflexe à garder : **ce qui est propre à LMS Drive doit rester identifiabl
 
 **Le niveau d'exigence sur mobile est celui des applications grand public récentes, pas celui d'un outil interne.** C'est l'image de Jeff qui se joue ici : c'est sa vitrine auprès de son premier client. Un écran qui déborde, un bouton qu'on n'atteint pas au pouce, un geste qui ne répond pas, une fenêtre qu'on ne peut pas fermer — bugs prioritaires, jamais des détails d'affichage. Vérifier le rendu en largeur téléphone **et** tablette avant de considérer un travail fini.
 
-## 6. Où en est le projet
+## 6. Où en est LMS Drive
 
 - **Aujourd'hui : phase de test.** Toutes les rubriques existent, on stabilise. 20 à 40 corrections par jour.
 - **Mi-août 2026 : déploiement terrain** avec de vraies données. **Septembre 2026 : opérationnel.** Le créneau de travail sur LMS Drive court jusqu'au 30 août.
@@ -114,9 +171,10 @@ Ne pas lancer ce circuit sur un simple ajustement d'affichage demandé par Jeff 
 ## 8. Stack et déploiement
 
 - **Next.js 16.2.7** (App Router), React 19, TypeScript, Tailwind 4, shadcn/ui (voir §10 du CLAUDE.md général).
-- **Supabase** pour la base, l'authentification et le stockage. Projet `vtxoqybfqdauhblavvza` (LMS DRIVE, eu-central-1), accessible via l'outil Supabase — les migrations s'exécutent automatiquement, après avoir affiché le SQL dans la réponse.
+- **Supabase** pour la base, l'authentification et le stockage. **Un projet par client**, organisation `sas-financial-services` : `vtxoqybfqdauhblavvza` (LMS DRIVE, eu-central-1), celui de Smart Loc à créer. Accessible via l'outil Supabase, les migrations s'exécutent automatiquement après avoir affiché le SQL dans la réponse. **Toujours vérifier sur quel projet on écrit avant de lancer quoi que ce soit.**
+- ⚠️ **L'organisation est sur le plan gratuit : aucune sauvegarde automatique, et 2 bases actives au maximum.** La base de production de LMS Drive est aujourd'hui sans filet. Signalé à Jeff le 28/07/2026, décision en attente. Le troisième client imposera le plan payant.
 - Resend pour les e-mails, date-fns pour les dates.
-- **Déploiement : Vercel**, projet `lms-drive`.
+- **Déploiement : Vercel, un projet par client.** `lms-drive` sur la branche `main`, `smartloc` sur sa propre branche de production.
 - **Cette version de Next.js n'est pas celle que je crois connaître.** Avant d'écrire du code qui touche au routage, aux Server Actions, au cache ou aux paramètres de page, lire le guide concerné dans `node_modules/next/dist/docs/`.
 
 ### ⚠️ Le gérant utilise le site en direct, pas une application installée
@@ -146,8 +204,17 @@ Ce chantier ne se lance pas de sa propre initiative. Quand il démarrera, il sui
 - `lib/actions/` — les Server Actions (ce qui écrit en base)
 - `lib/supabase/` — les clients Supabase
 - `app/(dashboard)/sav/` — le canal par lequel le gérant remonte ses bugs. **C'est aussi un produit facturé** : FleetLive vend une assistance 24h/24 assurée par son équipe, et tout passe par cette rubrique. Elle doit être irréprochable — c'est la vitrine du service que le client paie.
-- `supabase/migrations/` — 65 migrations numérotées `0XX_nom.sql`. Une nouvelle prend le numéro suivant.
+- `supabase/migrations/` — 72 migrations numérotées `0XX_nom.sql`. Une nouvelle prend le numéro suivant. **Une migration construit la structure, elle ne charge jamais de données d'un client.** Plusieurs anciennes enfreignent cette règle (la 064 réécrit les tarifs des 10 véhicules de LMS Drive plaque par plaque) : elles ne doivent jamais partir sur la base d'un autre client. Le tri est le lot 2 du chantier Smart Loc.
 - **Graphiques : `recharts` 3.8.1**, avec trois fichiers de référence — détail dans `~/.claude/rules/design-front.md`, qui se charge dès qu'on touche un composant.
+
+### Les notes de reprise — règle du 29/07/2026
+
+**Tout code écrit pour une fonctionnalité, une reprise d'existant ou un changement de structure porte ses notes**, destinées à un développeur qui reprendrait le projet sans Jeff. Règle complète dans le §7 du CLAUDE.md général. Ici, les deux endroits :
+
+- **En tête du fichier**, en français : à quoi il sert, ce qu'il attend et ce qu'il produit s'il calcule, qui d'autre s'en sert, ce qu'il ne faut pas casser. Le style existe déjà dans le dépôt, `lib/utils/index.ts` en est le modèle à suivre.
+- **`docs/technique/<rubrique>.md`** : une fiche par rubrique — les fichiers qui la composent, ses tables, ses Server Actions, ce qui la relie aux autres rubriques, ses pièges. Plus fine que `CARTOGRAPHIE.md`, qui reste l'inventaire global.
+
+Pas de note sur les corrections quotidiennes ni sur un ajustement d'affichage. **Tout fichier rouvert pour une fonctionnalité repart avec son résumé** : pas de chantier de documentation séparé.
 
 ### Documents déjà écrits — les lire avant de refaire le travail
 
@@ -165,6 +232,7 @@ Ce chantier ne se lance pas de sa propre initiative. Quand il démarrera, il sui
 - **Décision déjà tranchée, à ne pas re-proposer** : les `const { id } = await params` suivis de `const supabase = await createClient()` restent en l'état. Aucun des deux ne fait d'aller-retour réseau, il n'y a rien à gagner. Ce n'est pas un oubli.
 - **Différé volontairement** : dans `lib/actions/reservations.ts` (autour de la ligne 469), une lecture précède une écriture sur la même réservation. Les paralléliser ferait gagner un aller-retour et risquerait un statut de location incohérent. À laisser tel quel.
 - **Une heure mise en forme côté serveur doit passer par `lib/format/heureAgence.ts`.** Vercel tourne en temps universel : un `toLocaleTimeString` écrit directement dans une notification, un e-mail ou un PDF affiche deux heures de moins qu'en France l'été, une de moins l'hiver. Constaté le 27/07/2026 sur « Retour dans 1 h », qui annonçait 10:00 pour un retour réel à 12:00 — le rappel partait à la bonne heure, seul le texte était faux. Le repère est `BUSINESS_TZ` (`lib/calendar/constants.ts`). Dans un écran affiché par le navigateur, ce détour est inutile : le téléphone est déjà à l'heure française.
+- **Le bloc « tarifs par défaut » de l'écran des paramètres ne pilote rien.** Les six champs de `agency_settings` (`extra_km_rate`, `late_hourly_rate`, `late_daily_rate`, `fuel_rate_per_liter`, `default_deposit`, `insurance_deductible`) sont enregistrés et réaffichés, mais **aucun autre fichier ne les lit** : vérifié le 28/07/2026, zéro utilisation hors de `settings/AgencySettingsForm.tsx`, `lib/contracts/agency.ts` et `lib/actions/agency.ts`. La facturation prend le prix inscrit **sur le véhicule** (`vehicles.extra_km_price`). Conséquence visible : l'écran affiche 1 € du kilomètre alors que les factures comptent 2 €. Le gérant peut modifier ces champs en croyant changer ses tarifs, sans aucun effet. **Défaut réel, non corrigé, qui touchera aussi Smart Loc.**
 - **Le score de react-doctor se calcule sur le nombre de règles distinctes**, pas sur le nombre d'occurrences. Il ne bouge donc pas quand on vide une règle de ses cas. Ne pas en conclure que le travail n'a servi à rien.
 
 ## 12. graphify
