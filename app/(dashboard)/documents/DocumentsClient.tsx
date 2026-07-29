@@ -214,7 +214,10 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
   const [showUpload,  setShowUpload]  = useState(false)
   const [isPending,   startTransition] = useTransition()
 
-  const urlFor = (doc: Document) => docSignedUrls[doc.id] ?? doc.file_url
+  // Le bucket `documents` est privé : sans URL signée, `file_url` n'est qu'un
+  // chemin de stockage, pas une adresse ouvrable. Retomber dessus enverrait le
+  // navigateur sur une page d'erreur : comme sur la fiche client, on n'ouvre rien.
+  const urlFor = (doc: Document): string | null => docSignedUrls[doc.id] ?? null
 
   const [uploadCat,   setUploadCat]   = useState<DocumentCategory | ''>('')
   const [uploadSub,   setUploadSub]   = useState('')
@@ -379,10 +382,13 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
   // fermer) au lieu de le charger « en plein écran » sans retour possible.
   const [viewDoc, setViewDoc] = useState<Document | null>(null)
   const [sharingId, setSharingId] = useState<string | null>(null)
+  const viewUrl = viewDoc ? urlFor(viewDoc) : null
 
   async function handleShare(doc: Document) {
+    const url = urlFor(doc)
+    if (!url) return
     setSharingId(doc.id)
-    try { await shareFile(urlFor(doc), displayDocName(doc), doc.file_type) }
+    try { await shareFile(url, displayDocName(doc), doc.file_type) }
     finally { setSharingId(null) }
   }
 
@@ -582,14 +588,20 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
                               className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100" title="Visualiser">
                               <Eye className="w-4 h-4 text-gray-400" />
                             </button>
-                            <button type="button" onClick={() => handleShare(doc)} disabled={sharingId === doc.id}
+                            <button type="button" onClick={() => handleShare(doc)} disabled={sharingId === doc.id || !urlFor(doc)}
                               className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 disabled:opacity-40" title="Partager / Enregistrer dans Fichiers">
                               <Share2 className="w-4 h-4 text-gray-400" />
                             </button>
-                            <a href={urlFor(doc)} target="_blank" rel="noopener noreferrer"
-                              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100" title="Imprimer">
-                              <Printer className="w-4 h-4 text-gray-400" />
-                            </a>
+                            {urlFor(doc) ? (
+                              <a href={urlFor(doc)!} target="_blank" rel="noopener noreferrer"
+                                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100" title="Imprimer">
+                                <Printer className="w-4 h-4 text-gray-400" />
+                              </a>
+                            ) : (
+                              <span className="w-8 h-8 flex items-center justify-center rounded-lg opacity-40" title="Fichier introuvable">
+                                <Printer className="w-4 h-4 text-gray-400" />
+                              </span>
+                            )}
                             {!doc.is_auto_generated && (
                               <button type="button" onClick={() => setReplaceTarget(doc)} disabled={isPending}
                                 className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 disabled:opacity-40" title="Remplacer par une nouvelle version">
@@ -621,7 +633,7 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
                                       className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100" title="Visualiser">
                                       <Eye className="w-3.5 h-3.5 text-gray-400" />
                                     </button>
-                                    <button type="button" onClick={() => handleShare(h)} disabled={sharingId === h.id}
+                                    <button type="button" onClick={() => handleShare(h)} disabled={sharingId === h.id || !urlFor(h)}
                                       className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 disabled:opacity-40" title="Partager / Enregistrer dans Fichiers">
                                       <Share2 className="w-3.5 h-3.5 text-gray-400" />
                                     </button>
@@ -760,7 +772,7 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
             <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-gray-100 flex-shrink-0">
               <span className="text-[13px] font-bold text-[#111111] truncate">{displayDocName(viewDoc)}</span>
               <div className="flex items-center gap-1 flex-shrink-0">
-                <button type="button" onClick={() => handleShare(viewDoc)} disabled={sharingId === viewDoc.id}
+                <button type="button" onClick={() => handleShare(viewDoc)} disabled={sharingId === viewDoc.id || !viewUrl}
                   className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 disabled:opacity-40 text-gray-500" title="Partager">
                   <Share2 className="w-[18px] h-[18px]" />
                 </button>
@@ -771,12 +783,18 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
               </div>
             </div>
             <div className="flex-1 bg-gray-50 overflow-hidden">
-              {viewDoc.file_type?.startsWith('image/') ? (
-                <img src={urlFor(viewDoc)} alt={viewDoc.name} className="w-full h-full object-contain" />
-              ) : viewDoc.file_type?.includes('pdf') || urlFor(viewDoc).toLowerCase().includes('.pdf') ? (
+              {!viewUrl ? (
+                // Document absent du coffre : rien à afficher, et surtout aucun
+                // lien mort vers une adresse qui n'existe pas.
+                <div className="w-full h-full flex items-center justify-center px-6">
+                  <p className="text-sm text-gray-400">Fichier introuvable</p>
+                </div>
+              ) : viewDoc.file_type?.startsWith('image/') ? (
+                <img src={viewUrl} alt={viewDoc.name} className="w-full h-full object-contain" />
+              ) : viewDoc.file_type?.includes('pdf') || viewUrl.toLowerCase().includes('.pdf') ? (
                 // pdf.js : toutes les pages (EDL, schéma, photos) — l'iframe
                 // n'affichait que la page 1 sur iOS/WebKit.
-                <PdfPages url={urlFor(viewDoc)} />
+                <PdfPages url={viewUrl} />
               ) : (
                 // Dernier recours : ni image ni PDF. Le document vient du stockage
                 // et son contenu n'est pas maîtrisé (un fichier HTML déposé dans le
@@ -784,7 +802,7 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
                 // script, et surtout pas de renvoi de l'application entière vers une
                 // autre adresse. `allow-downloads` reste, sinon un document que le
                 // navigateur ne sait pas afficher ne pourrait plus être récupéré.
-                <iframe src={urlFor(viewDoc)} title={viewDoc.name} sandbox="allow-downloads" className="w-full h-full border-0" />
+                <iframe src={viewUrl} title={viewDoc.name} sandbox="allow-downloads" className="w-full h-full border-0" />
               )}
             </div>
           </div>

@@ -50,6 +50,23 @@ export default async function SinistreDetailPage({
     .eq('subcategory', 'pv_expertise')
     .order('created_at', { ascending: false })
 
+  // Le bucket `documents` est privé : `file_url` n'est qu'un chemin de stockage,
+  // pas une adresse ouvrable. Il faut le signer, comme sur la fiche client.
+  async function getDocSignedUrl(path: string | null | undefined): Promise<string | null> {
+    if (!path) return null
+    // Tolère l'ancien format URL publique et le nouveau format chemin brut.
+    const raw = path.startsWith('http')
+      ? (path.split('/storage/v1/object/public/documents/')[1] ?? null)
+      : path
+    if (!raw) return null
+    const { data } = await supabase.storage.from('documents').createSignedUrl(raw, 3600)
+    return data?.signedUrl ?? null
+  }
+
+  const justificatifs = await Promise.all(
+    (docs ?? []).map(async d => ({ id: d.id, name: d.name, url: await getDocSignedUrl(d.file_url) })),
+  )
+
   return (
     <div className="space-y-4">
       <BackButton fallbackHref="/suivi?tab=sinistres" className="inline-flex items-center gap-1.5 text-sm text-gray-400 font-medium hover:text-gray-700 transition-colors">
@@ -101,16 +118,21 @@ export default async function SinistreDetailPage({
         </div>
       )}
 
-      {docs && docs.length > 0 && (
+      {justificatifs.length > 0 && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
           <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-3">Justificatifs</p>
           <div className="space-y-2">
-            {docs.map(doc => (
-              <a key={doc.id} href={doc.file_url} target="_blank" rel="noopener noreferrer"
+            {justificatifs.map(doc => doc.url ? (
+              <a key={doc.id} href={doc.url} target="_blank" rel="noopener noreferrer"
                 className="flex items-center gap-2.5 text-sm text-[#111111] hover:text-gray-700 transition-colors">
                 <FileText className="w-4 h-4 flex-shrink-0" />
                 <span className="truncate">{doc.name}</span>
               </a>
+            ) : (
+              <div key={doc.id} className="flex items-center gap-2.5 text-sm text-gray-400">
+                <FileText className="w-4 h-4 flex-shrink-0" />
+                <span className="truncate">{doc.name} · fichier introuvable</span>
+              </div>
             ))}
           </div>
         </div>

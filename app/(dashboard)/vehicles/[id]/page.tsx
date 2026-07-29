@@ -179,6 +179,24 @@ export default async function VehiclePage({ params }: { params: Promise<{ id: st
     })
   )).filter((u): u is string => !!u)
 
+  // ── Documents : le bucket `documents` est privé ──
+  // `file_url` n'est qu'un chemin de stockage, pas une adresse ouvrable. Il faut
+  // le signer, comme sur la fiche client.
+  async function getDocSignedUrl(path: string | null | undefined): Promise<string | null> {
+    if (!path) return null
+    // Tolère l'ancien format URL publique et le nouveau format chemin brut.
+    const raw = path.startsWith('http')
+      ? (path.split('/storage/v1/object/public/documents/')[1] ?? null)
+      : path
+    if (!raw) return null
+    const { data } = await supabase.storage.from('documents').createSignedUrl(raw, 3600)
+    return data?.signedUrl ?? null
+  }
+
+  const vDocumentsSignes = await Promise.all(
+    (vDocuments ?? []).map(async (d: any) => ({ ...d, url: await getDocSignedUrl(d.file_url) })),
+  )
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -495,8 +513,8 @@ export default async function VehiclePage({ params }: { params: Promise<{ id: st
               <p className="text-sm text-gray-400">Aucun document rattaché</p>
             ) : (
               <div className="space-y-2">
-                {vDocuments?.map((doc: any) => (
-                  <a key={doc.id} href={doc.file_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 p-2.5 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
+                {vDocumentsSignes.map((doc: any) => doc.url ? (
+                  <a key={doc.id} href={doc.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 p-2.5 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
                     <FileText className="w-4 h-4 text-gray-400 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-800 truncate">{doc.name}</p>
@@ -506,6 +524,17 @@ export default async function VehiclePage({ params }: { params: Promise<{ id: st
                       </p>
                     </div>
                   </a>
+                ) : (
+                  <div key={doc.id} className="flex items-center gap-2.5 p-2.5 rounded-xl bg-gray-50">
+                    <FileText className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-400 truncate">{doc.name} · fichier introuvable</p>
+                      <p className="text-xs text-gray-400 capitalize">
+                        {doc.subcategory}
+                        {doc.expiry_date && ` · exp. ${formatDate(doc.expiry_date)}`}
+                      </p>
+                    </div>
+                  </div>
                 ))}
               </div>
             )}
