@@ -11,6 +11,7 @@ import { taskActionHref } from '@/lib/utils'
 import { CALENDAR_START_HOUR } from '@/lib/calendar/constants'
 import { fr } from 'date-fns/locale'
 import DashboardCalendar from '@/components/dashboard/DashboardCalendar'
+import DelaiPastille from '@/components/ui/DelaiPastille'
 import {
   ChevronRight, AlertTriangle, CheckCircle2, Plus,
   Wrench, Clock, FileText, ArrowLeftRight, UserRound, type LucideIcon,
@@ -644,7 +645,6 @@ export default async function DashboardPage() {
               const end = op.end_date_expected ? new Date(op.end_date_expected) : null
               const daysLeft = end ? differenceInDays(startOfDay(end), todayStart) : null
               const isLate = daysLeft != null && daysLeft < 0
-              const isReturnToday = daysLeft === 0
               return (
                 <Link key={`dispo-${op.id}`} href={`/partnerships/${op.id}`}>
                   <div className={`bg-white rounded-2xl p-4 border shadow-sm ${isLate ? 'border-orange-200 bg-orange-50/40' : 'border-gray-100'}`}>
@@ -670,28 +670,7 @@ export default async function DashboardPage() {
                           </p>
                         )}
                       </div>
-                      {end && (
-                        <div className={`w-16 h-16 rounded-2xl flex flex-col items-center justify-center flex-shrink-0 ${
-                          isLate          ? 'bg-red-500'
-                          : isReturnToday ? 'bg-orange-500'
-                          : (daysLeft ?? 9) <= 2 ? 'bg-orange-100'
-                          : 'bg-gray-100'
-                        }`}>
-                          <span className={`text-2xl font-black leading-none ${
-                            isLate || isReturnToday ? 'text-white' : (daysLeft ?? 9) <= 2 ? 'text-orange-600' : 'text-gray-700'
-                          }`}>
-                            {isLate ? `+${Math.abs(daysLeft!)}` : daysLeft}
-                          </span>
-                          <span className={`text-[10px] font-bold mt-0.5 ${
-                            isLate          ? 'text-red-100'
-                            : isReturnToday ? 'text-orange-100'
-                            : (daysLeft ?? 9) <= 2 ? 'text-orange-500'
-                            : 'text-gray-400'
-                          }`}>
-                            {isLate ? 'j retard' : isReturnToday ? 'auj.' : 'jours'}
-                          </span>
-                        </div>
-                      )}
+                      {end && <DelaiPastille jours={daysLeft!} echeance={end} />}
                     </div>
                   </div>
                 </Link>
@@ -710,7 +689,6 @@ export default async function DashboardPage() {
               const isReserved  = !isDeparted && !pickupDue                 // RÉSERVÉ (départ à venir : option / confirmée)
 
               const daysLeft    = differenceInDays(startOfDay(end), todayStart)   // avant retour
-              const isReturnToday = isDeparted && daysLeft === 0 && !isLate
               const daysToStart = differenceInDays(startOfDay(start), todayStart)  // avant départ
               const daysLatePickup = differenceInDays(todayStart, startOfDay(start))
 
@@ -760,46 +738,19 @@ export default async function DashboardPage() {
                         )}
                       </div>
 
-                      {/* Countdown 64×64 */}
+                      {/* Délai : avant retour, retard de départ, ou avant départ.
+                          Les deux derniers comptent un départ, d'où la famille
+                          « depart » qui les garde en bleu : la couleur dit ce
+                          qu'on décompte, sinon un départ et un retour dans le
+                          même nombre de jours donnent la même pastille.
+                          `daysLatePickup` compte des jours de retard : il passe en
+                          négatif pour que la pastille l'écrive « +N jours ». */}
                       {isDeparted ? (
-                        <div className={`w-16 h-16 rounded-2xl flex flex-col items-center justify-center flex-shrink-0 ${
-                          isLate          ? 'bg-red-500'
-                          : isReturnToday ? 'bg-orange-500'
-                          : daysLeft <= 2 ? 'bg-orange-100'
-                          : 'bg-gray-100'
-                        }`}>
-                          <span className={`text-2xl font-black leading-none ${
-                            isLate || isReturnToday ? 'text-white' : daysLeft <= 2 ? 'text-orange-600' : 'text-gray-700'
-                          }`}>
-                            {isLate ? `+${Math.abs(daysLeft)}` : daysLeft}
-                          </span>
-                          <span className={`text-[10px] font-bold mt-0.5 ${
-                            isLate          ? 'text-red-100'
-                            : isReturnToday ? 'text-orange-100'
-                            : daysLeft <= 2 ? 'text-orange-500'
-                            : 'text-gray-400'
-                          }`}>
-                            {isLate ? 'j retard' : isReturnToday ? 'auj.' : 'jours'}
-                          </span>
-                        </div>
+                        <DelaiPastille jours={daysLeft} echeance={end} enRetard={isLate} />
                       ) : pickupDue ? (
-                        <div className="w-16 h-16 rounded-2xl flex flex-col items-center justify-center flex-shrink-0 bg-orange-500">
-                          <span className="text-2xl font-black leading-none text-white">
-                            {daysLatePickup >= 1 ? `+${daysLatePickup}` : '!'}
-                          </span>
-                          <span className="text-[10px] font-bold mt-0.5 text-orange-100">
-                            {daysLatePickup >= 1 ? 'j retard' : 'départ'}
-                          </span>
-                        </div>
+                        <DelaiPastille jours={-daysLatePickup} echeance={start} enRetard famille="depart" />
                       ) : (
-                        <div className="w-16 h-16 rounded-2xl flex flex-col items-center justify-center flex-shrink-0 bg-blue-50 border border-blue-100">
-                          <span className="text-2xl font-black leading-none text-blue-700">
-                            {daysToStart === 0 ? 'auj.' : daysToStart}
-                          </span>
-                          <span className="text-[10px] font-bold mt-0.5 text-blue-400">
-                            {daysToStart === 0 ? 'départ' : 'j départ'}
-                          </span>
-                        </div>
+                        <DelaiPastille jours={daysToStart} echeance={start} famille="depart" />
                       )}
                     </div>
 
