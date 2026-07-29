@@ -62,7 +62,22 @@ export default async function ReservationsPage({
     )
     .order('start_datetime', { ascending: false })
 
-  if (status)  query = query.eq('status', status)
+  // « En location » = les voitures qui sont dehors, en retard ou non. Une
+  // location dont l'heure de retour est dépassée bascule toute seule en
+  // « en retard » (la mise à jour tout en haut de cette page), mais la voiture
+  // n'est pas rentrée pour autant : c'est le sens métier, elle reste en
+  // location. Le lien « Tout voir » du tableau de bord arrive ici avec
+  // status=en_cours : la correction porte sur la lecture du paramètre, pas sur
+  // le lien, et profite donc aux deux.
+  //
+  // ⚠️ Les deux écrans ne disent pas la même chose pour autant, et il ne faut
+  // pas le croire : le compteur « En location » de l'accueil ajoute deux cas
+  // que cette liste ne ramène pas, les réservations confirmées dont le départ
+  // est dépassé sans état des lieux, et les véhicules mis à disposition chez un
+  // partenaire. Le nombre de l'accueil reste donc supérieur. L'écart se réduit,
+  // il ne disparaît pas. Décision de Jeff du 29/07/2026.
+  if (status === 'en_cours') query = query.in('status', ['en_cours', 'en_retard'])
+  else if (status)           query = query.eq('status', status)
   if (vehicle) query = query.eq('vehicle_id', vehicle)
 
   const { data: rawReservations } = await query
@@ -81,11 +96,16 @@ export default async function ReservationsPage({
       })
     : (rawReservations ?? [])
 
-  // « non_presente » en dernier : c'est un état de clôture, comme annulée. C'est
-  // le seul endroit de l'appli où l'on peut retrouver ces dossiers, puisqu'ils
-  // sortent du tableau de bord et des tâches du jour — raison de plus pour que
-  // son onglet reste visible même à zéro.
-  const statuses = ['option', 'confirmee', 'en_cours', 'en_retard', 'terminee', 'annulee', 'non_presente']
+  // Deux filtres de statut seulement, décision de Jeff du 29/07/2026 : « En
+  // location » et « Terminée », plus le choix du véhicule. Les cinq autres ont
+  // été retirés de la barre en connaissance de cause, ils ne sont pas repliés
+  // derrière un bouton. Ce sont toujours des statuts à part entière : « Toutes »
+  // affiche leurs réservations (aucun filtre de statut n'est alors posé sur la
+  // requête), la pastille de couleur de chaque ligne les nomme, et le compteur
+  // de retards de l'en-tête continue de les signaler. Seul le raccourci de
+  // filtrage disparaît. « En retard » n'a plus de pastille propre parce que ces
+  // locations sont désormais comprises dans « En location ».
+  const statuses = ['en_cours', 'terminee']
   const total = reservations.length
 
   // ── Le véhicule choisi : quand revient-il, et est-il libre maintenant ? ──────
@@ -175,39 +195,36 @@ export default async function ReservationsPage({
         <SmartSearch name="q" placeholder="Rechercher par n°, véhicule, client…" scope="reservations" defaultValue={q ?? ''} />
       </form>
 
-      {/* Filtres statut — scroll horizontal */}
-      <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}>
+      {/* Filtres : le véhicule, puis les statuts. La rangée doit tenir sur une
+          seule ligne d'iPhone (358 px utiles) : les nombres entre parenthèses
+          sont retirés et les pastilles resserrées, ce qui la ramène à ~350 px
+          mesurés. Le défilement latéral reste en place comme filet, pour les
+          écrans plus étroits que 390 px. */}
+      <div className="flex gap-1.5 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}>
         <VehicleFilter vehicles={vehiclesList ?? []} selected={vehicle} />
         <Link
           href="/reservations"
-          className={`px-3.5 py-2 min-h-[44px] flex items-center rounded-xl text-sm font-semibold whitespace-nowrap transition-colors flex-shrink-0 ${
+          className={`px-2.5 py-2 min-h-[44px] flex items-center rounded-xl text-sm font-semibold whitespace-nowrap transition-colors flex-shrink-0 ${
             !status ? 'bg-[#111111] text-white' : 'bg-white border border-gray-100 text-gray-600 hover:bg-gray-50 shadow-sm'
           }`}
         >
           Toutes
-          {allRes && <span className="ml-1.5 opacity-60">({allRes.length})</span>}
         </Link>
         {statuses.map(s => {
           const cfg = STATUS_CONFIG[s] ?? { label: s, badge: '', bar: '' }
-          const count = counts[s] ?? 0
-          // Tous les statuts restent visibles, même à zéro. Les masquer privait
-          // les associés de la moitié de la palette : sur la capture d'Alexis
-          // (27/07), seuls « En location » et « Terminée » apparaissaient, donc
-          // impossible de savoir qu'« À venir », « En retard », « Annulée » ou
-          // « Client non présenté » existent. Un filtre vide est une
-          // information ; un filtre absent est une lacune.
+          // Les deux filtres restent affichés même à zéro : un filtre vide est
+          // une information, un filtre absent est une lacune.
           return (
             <Link
               key={s}
               href={`/reservations?status=${s}`}
-              className={`px-3.5 py-2 min-h-[44px] flex items-center rounded-xl text-sm font-semibold whitespace-nowrap transition-colors flex-shrink-0 ${
+              className={`px-2.5 py-2 min-h-[44px] flex items-center rounded-xl text-sm font-semibold whitespace-nowrap transition-colors flex-shrink-0 ${
                 status === s
                   ? 'bg-[#111111] text-white'
                   : 'bg-white border border-gray-100 text-gray-600 hover:bg-gray-50 shadow-sm'
               }`}
             >
               {cfg.label}
-              <span className="ml-1.5 opacity-60">({count})</span>
             </Link>
           )
         })}
