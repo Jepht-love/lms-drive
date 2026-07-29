@@ -57,13 +57,12 @@ export default function AssignStatusButton({ clients }: { clients: MiniClient[] 
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-[60] flex items-end md:items-center md:justify-center">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
           <button type="button" aria-label="Fermer" onClick={close} className="absolute inset-0 bg-black/30" />
-          <div
-            className="relative w-full md:w-[420px] bg-white rounded-t-2xl md:rounded-2xl shadow-sm border border-gray-100 max-h-[80vh] flex flex-col"
-            style={{ paddingBottom: 'calc(76px + env(safe-area-inset-bottom))' }}
-          >
-            <div className="md:hidden flex justify-center pt-2"><div className="w-10 h-1 bg-gray-200 rounded-full" /></div>
+          {/* Centrée depuis le 29/07/2026 : la réserve de 76 px en bas n'existait
+              que pour passer au-dessus de la barre de navigation quand la fenêtre
+              était collée en bas de l'écran. Elle n'a plus lieu d'être. */}
+          <div className="relative w-full md:w-[420px] bg-white rounded-2xl shadow-sm border border-gray-100 max-h-[calc(100dvh-64px)] flex flex-col pb-3">
             <div className="flex items-center justify-between px-4 pt-3 pb-2">
               <h3 className="font-bold text-gray-900 text-base">
                 {selected ? `${selected.first_name} ${selected.last_name}` : 'Attribuer un statut'}

@@ -571,8 +571,22 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
       </Drawer>
 
       {/* Edit Drawer (déplacement planifié ou en cours) */}
-      <Drawer open={!!editingTrip} onClose={reset} title={`Modifier — ${editingTrip?.vehicle?.plate ?? ''}`}>
-        <form action={handleUpdate} className="space-y-4">
+      {/* Le bouton d'enregistrement est passé dans la barre du bas de la fenêtre
+          (`footer`) : ce formulaire est le plus long de l'écran et dépassait la
+          hauteur d'un iPhone, obligeant à faire défiler pour l'atteindre
+          (retour Jeff du 29/07/2026). Il reste rattaché au formulaire par
+          `form="edit-trip-form"`, puisqu'il est désormais écrit en dehors. */}
+      <Drawer
+        open={!!editingTrip}
+        onClose={reset}
+        title={`Modifier — ${editingTrip?.vehicle?.plate ?? ''}`}
+        footer={
+          <button type="submit" form="edit-trip-form" disabled={loading} className="w-full py-3 bg-[#111111] text-white rounded-xl font-semibold disabled:opacity-50 transition-colors active:scale-[.97]">
+            {loading ? 'Enregistrement...' : 'Enregistrer'}
+          </button>
+        }
+      >
+        <form id="edit-trip-form" action={handleUpdate} className="space-y-4">
           <p className="text-xs text-gray-500 bg-gray-50 rounded-xl px-3 py-2">
             Le véhicule ne se change pas : il est engagé sur ce déplacement.
             {/* Le carburant DE DÉPART a été saisi au démarrage, il n'est pas ici :
@@ -685,9 +699,6 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
           )}
           {error && <div className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{error}</div>}
           <p className="text-[11px] text-gray-400">* Champ obligatoire</p>
-          <button type="submit" disabled={loading} className="w-full py-3 bg-[#111111] text-white rounded-xl font-semibold disabled:opacity-50 transition-colors active:scale-[.97]">
-            {loading ? 'Enregistrement...' : 'Enregistrer'}
-          </button>
         </form>
       </Drawer>
 

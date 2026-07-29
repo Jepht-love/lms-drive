@@ -155,12 +155,9 @@ function BookSlotModal({
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end md:items-center md:justify-center">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
       <button type="button" aria-label="Fermer" onClick={onClose} className="absolute inset-0 bg-black/30" />
-      <div className="relative w-full md:w-[380px] max-h-[88vh] overflow-y-auto bg-white rounded-t-2xl md:rounded-2xl shadow-sm border border-gray-100 p-4 space-y-3">
-        <div className="md:hidden flex justify-center pb-1">
-          <div className="w-10 h-1 bg-gray-200 rounded-full" />
-        </div>
+      <div className="relative w-full md:w-[380px] max-h-[calc(100dvh-64px)] overflow-y-auto bg-white rounded-2xl shadow-sm border border-gray-100 p-4 space-y-3">
         <div>
           <p className="text-[15px] font-black text-gray-900 leading-tight">
             {isEdit ? 'Modifier le rendez-vous' : 'Réserver le créneau'}
@@ -250,10 +247,6 @@ function BookSlotModal({
             )
           )}
         </div>
-
-        {/* Sur mobile, dégage la barre de navigation basse (60px + safe-area) pour
-            que les boutons d'action ne soient pas masqués derrière. */}
-        <div className="md:hidden" aria-hidden style={{ height: 'calc(60px + env(safe-area-inset-bottom))' }} />
       </div>
     </div>
   )

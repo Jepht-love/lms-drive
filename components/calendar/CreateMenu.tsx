@@ -37,18 +37,14 @@ export default function CreateMenu({ open, onClose, onPickType }: CreateMenuProp
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end md:items-center md:justify-center">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
       <button type="button" aria-label="Fermer" onClick={onClose} className="absolute inset-0 bg-black/30" />
-      {/* La feuille flotte AU-DESSUS de la barre de navigation basse (60px +
-          safe-area) au lieu de la recouvrir : sinon son fond blanc masquait la
-          barre noire (Accueil/Véhicules…) qui « devenait blanche » au clic « + ».
-          La barre reste visible (assombrie par le fond) sous la feuille. */}
-      <div
-        className="relative w-full md:w-[360px] bg-white rounded-t-2xl md:rounded-2xl shadow-sm border border-gray-100 p-3 mb-[calc(60px+env(safe-area-inset-bottom))] md:mb-0"
-      >
-        <div className="md:hidden flex justify-center pb-2">
-          <div className="w-10 h-1 bg-gray-200 rounded-full" />
-        </div>
+      {/* Menu centré depuis le 29/07/2026. Il était collé en bas, avec une marge
+          de 60px + safe-area pour flotter AU-DESSUS de la barre de navigation :
+          sans elle, son fond blanc masquait la barre noire (Accueil/Véhicules…)
+          qui « devenait blanche » au clic « + ». Centré, le problème ne se pose
+          plus et la marge a disparu. */}
+      <div className="relative w-full md:w-[360px] max-h-[calc(100dvh-64px)] overflow-y-auto bg-white rounded-2xl shadow-sm border border-gray-100 p-3">
         <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 px-1 mb-2">Créer</p>
         <div className="flex flex-col gap-1">
           {OPTIONS.map(opt => (

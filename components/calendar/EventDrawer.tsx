@@ -264,26 +264,24 @@ export default function EventDrawer({ open, event, slotContext, resources, prese
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end md:items-stretch md:justify-end">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:items-stretch md:justify-end md:p-0">
       {/* Backdrop */}
       <button type="button" aria-label="Fermer" onClick={onClose} className="absolute inset-0 bg-black/30" />
 
       {/*
-        Mobile  : bottom sheet, monte du bas, 90dvh, coins arrondis en haut
-        Desktop : tiroir droite, plein hauteur
+        Téléphone : fenêtre centrée, marge tout autour (depuis le 29/07/2026 —
+                    elle était collée en bas et le bouton d'enregistrement d'un
+                    formulaire long passait sous le pli)
+        Ordinateur : tiroir à droite, pleine hauteur — volontairement conservé,
+                    c'est la mise en page de l'agenda sur grand écran
       */}
       <div className="
         relative flex flex-col bg-white shadow-sm border-gray-100
-        w-full max-h-[90dvh] rounded-t-2xl
+        w-full max-h-[calc(100dvh-64px)] rounded-2xl
         md:rounded-none md:border-l md:max-h-none md:h-full md:w-full md:max-w-[380px]
       ">
-        {/* Drag handle (mobile only) */}
-        <div className="md:hidden flex justify-center pt-3 pb-1 shrink-0">
-          <div className="w-10 h-1 bg-gray-200 rounded-full" />
-        </div>
-
         {/* Header */}
-        <div className="flex items-center justify-between px-4 pt-2 pb-3 shrink-0 border-b border-gray-100">
+        <div className="flex items-center justify-between px-4 pt-3 pb-3 shrink-0 border-b border-gray-100">
           <h2 className="text-[14px] font-semibold">{isEdit ? "Modifier l'événement" : 'Nouvel événement'}</h2>
           <button type="button" onClick={onClose} className="text-gray-400 text-[20px] leading-none w-7 h-7 flex items-center justify-center rounded-full hover:bg-gray-100">
             ✕
@@ -481,11 +479,10 @@ export default function EventDrawer({ open, event, slotContext, resources, prese
           {error && <p className="text-[12px] text-red-500 mt-2">{error}</p>}
         </div>
 
-        {/* Footer collé en bas — toujours visible sans scroll */}
-        <div
-          className="shrink-0 px-4 pt-3 pb-4 border-t border-gray-100 flex flex-col gap-2 bg-white"
-          style={{ paddingBottom: 'calc(76px + env(safe-area-inset-bottom))' }}
-        >
+        {/* Footer collé en bas — toujours visible sans scroll. La réserve de 76 px
+            qui le remontait au-dessus de la barre de navigation a sauté le
+            29/07/2026 : la fenêtre est centrée, elle ne touche plus le bas. */}
+        <div className="shrink-0 px-4 pt-3 pb-4 border-t border-gray-100 flex flex-col gap-2 bg-white">
           {justSaved ? (
             <>
               <div className="rounded-xl bg-green-50 border border-green-100 px-3 py-2.5 flex items-center gap-2">

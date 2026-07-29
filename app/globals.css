@@ -134,24 +134,20 @@ button, a, [role="button"] { min-height: 44px; }
   input, textarea, select { font-size: 16px; }
 }
 
-/* Tiroir bas d'écran (components/Drawer) — réserve sous le contenu. Elle vaut la
-   hauteur de la barre du bas : sans elle, le bouton de validation passe sous la
-   barre et devient inatteignable (ticket « Défaillance » du gérant, 27/07/2026).
-   C'est la valeur de repli, celle qui s'applique tant que la barre est là. */
-.drawer-body { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
+/* Fenêtre de saisie (components/Drawer). Elle est centrée depuis le 29/07/2026 :
+   elle ne touche plus le bas de l'écran, donc la grosse réserve qui empêchait le
+   bouton de validation de passer sous la barre du bas (ticket « Défaillance » du
+   gérant, 27/07/2026) n'a plus lieu d'être. Il ne reste qu'un peu d'air sous le
+   dernier champ. */
+.drawer-body { padding-bottom: 20px; }
 
-/* Sur téléphone uniquement, tant qu'un tiroir est ouvert (repère posé sur `body`
-   par components/Drawer) :
-   — la barre du bas s'efface, elle s'intercalait entre le tiroir et le clavier
-     numérique. `visibility` et non `display` : la rangée de la grille garde sa
-     hauteur, donc la page ne bouge pas d'un pixel derrière le voile ;
-   — la réserve sous le contenu retombe à la seule zone sûre de l'écran, ce qui
-     supprime la bande blanche morte.
-   Les deux règles dépendent du même repère : si l'effacement ne prend pas, la
-   réserve reste entière et le bouton reste atteignable. */
+/* Sur téléphone uniquement, tant qu'une fenêtre est ouverte (repère posé sur
+   `body` par components/Drawer), la barre du bas s'efface : elle s'intercalait
+   entre la fenêtre et le clavier numérique. `visibility` et non `display` : la
+   rangée de la grille garde sa hauteur, donc la page ne bouge pas d'un pixel
+   derrière le voile. */
 @media (max-width: 768px) {
   body[data-drawer-open] [data-bottom-nav] { visibility: hidden; }
-  body[data-drawer-open] .drawer-body { padding-bottom: calc(20px + env(safe-area-inset-bottom)); }
 }
 
 /* Scrollbar slim */

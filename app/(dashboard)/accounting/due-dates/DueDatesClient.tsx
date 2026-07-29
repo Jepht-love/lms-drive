@@ -257,9 +257,9 @@ export default function DueDatesClient({ dueDates, deletedDueDates = [], vehicle
       {/* Modale de confirmation de suppression — protège contre les suppressions
           accidentelles (« j'ai supprimé un échéancier sans faire exprès »). */}
       {confirmDelete && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/50" onClick={() => setConfirmDelete(null)} />
-          <div className="relative w-full sm:max-w-sm bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl p-5 space-y-4">
+          <div className="relative w-full sm:max-w-sm bg-white rounded-3xl shadow-2xl p-5 space-y-4">
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-xl bg-red-50 text-red-500 flex items-center justify-center flex-shrink-0">
                 <Trash2 className="w-5 h-5" />
@@ -289,9 +289,9 @@ export default function DueDatesClient({ dueDates, deletedDueDates = [], vehicle
 
       {/* Corbeille — liste des échéances supprimées, restaurables une par une. */}
       {trashOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/50" onClick={() => setTrashOpen(false)} />
-          <div className="relative w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[80vh] flex flex-col overflow-hidden">
+          <div className="relative w-full sm:max-w-md bg-white rounded-3xl shadow-2xl max-h-[calc(100dvh-64px)] flex flex-col overflow-hidden">
             <div className="flex items-center justify-between px-5 pt-5 pb-3 flex-shrink-0">
               <div className="flex items-center gap-2">
                 <Trash2 className="w-5 h-5 text-gray-400" />

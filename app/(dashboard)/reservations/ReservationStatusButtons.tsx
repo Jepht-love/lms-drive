@@ -253,8 +253,8 @@ export default function ReservationStatusButtons({
       {/* Confirmation « client non présenté » : le geste clôt le dossier et touche
           la comptabilité, il ne se déclenche donc pas au premier clic. */}
       {showNoShowModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center p-4" onClick={() => setShowNoShowModal(false)}>
-          <div className="bg-white rounded-2xl p-6 w-full max-w-sm space-y-4" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowNoShowModal(false)}>
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm max-h-[calc(100dvh-64px)] overflow-y-auto space-y-4" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between">
               <h3 className="font-bold text-gray-900">Le client n'est pas venu ?</h3>
               <button type="button" aria-label="Fermer" onClick={() => setShowNoShowModal(false)} className="p-1 rounded-lg hover:bg-gray-100">

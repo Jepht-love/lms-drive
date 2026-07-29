@@ -135,9 +135,9 @@ export default function SavButton() {
 
       {/* Modal formulaire */}
       {open && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => !submitting && setOpen(false)} />
-          <div className="relative w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[90vh] overflow-y-auto">
+          <div className="relative w-full sm:max-w-md bg-white rounded-3xl shadow-2xl max-h-[calc(100dvh-64px)] overflow-y-auto">
             {/* En-tête */}
             <div className="flex items-center justify-between px-5 pt-5 pb-3">
               <div>

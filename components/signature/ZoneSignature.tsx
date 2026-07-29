@@ -74,9 +74,9 @@ export default function ZoneSignature({ label, value, onChange }: Props) {
           interférence avec le texte de la page (portail vers <body> pour ne pas
           être piégée par un conteneur en overflow/transform). */}
       {open && typeof document !== 'undefined' && createPortal(
-        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setOpen(false)} />
-          <div className="relative w-full sm:max-w-lg bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl">
+          <div className="relative w-full sm:max-w-lg max-h-[calc(100dvh-64px)] overflow-y-auto bg-white rounded-3xl shadow-2xl">
             {/* En-tête */}
             <div className="flex items-center justify-between px-5 pt-5 pb-3">
               <div>

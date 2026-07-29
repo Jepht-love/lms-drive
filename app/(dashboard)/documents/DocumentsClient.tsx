@@ -762,13 +762,14 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
         </div>
       </Drawer>
 
-      {/* Visualiseur intégré — feuille partielle (≈85 % de l'écran) : on voit le
-          document sans quitter l'app, la liste reste visible derrière, et le X
-          referme la prévisualisation. */}
+      {/* Visualiseur intégré — fenêtre centrée : on voit le document sans quitter
+          l'app, la liste reste visible derrière, et le X referme la
+          prévisualisation. Centrée (et non collée en bas) depuis le 29/07/2026,
+          comme toutes les fenêtres de l'application. */}
       {viewDoc && (
-        <div className="fixed inset-0 z-[70] flex items-end sm:items-center sm:justify-center">
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setViewDoc(null)} />
-          <div className="relative w-full sm:max-w-2xl h-[85vh] sm:h-[80vh] bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden">
+          <div className="relative w-full sm:max-w-2xl h-[calc(100dvh-64px)] sm:h-[80vh] bg-white rounded-3xl shadow-2xl flex flex-col overflow-hidden">
             <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-gray-100 flex-shrink-0">
               <span className="text-[13px] font-bold text-[#111111] truncate">{displayDocName(viewDoc)}</span>
               <div className="flex items-center gap-1 flex-shrink-0">
