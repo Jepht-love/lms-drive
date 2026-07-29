@@ -149,7 +149,7 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
   // est un composant navigateur, et l'import entraînerait tout le code serveur
   // avec lui. À garder en phase si une raison s'ajoute.
   const RAISON: Record<string, string> = {
-    reservation:  'déjà réservé',
+    reservation:  'en location',
     garage:       'au garage',
     deplacement:  'déplacement interne',
   }

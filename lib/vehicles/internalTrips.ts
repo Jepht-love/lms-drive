@@ -74,15 +74,36 @@ export async function fetchActiveInternalTrips(
 }
 
 /**
- * Un déplacement interne empêche-t-il d'engager le véhicule sur [startIso, endIso[ ?
- * Renvoie le déplacement bloquant, sinon null.
+ * Fenêtre pendant laquelle un déplacement interdit d'engager le véhicule.
+ * SEULE définition de cette règle : le contrôle d'enregistrement
+ * (`findBlockingInternalTrip`) et l'affichage des créneaux libres
+ * (`fetchBlockingInternalTripsForVehicles`) passent tous les deux par ici, pour
+ * qu'un écran ne puisse jamais annoncer « libre » là où l'enregistrement refuse.
  *
- * Fenêtre bloquante d'un déplacement :
  *  - fin renseignée → [début, fin[ ;
- *  - « en cours » sans fin → à partir du départ, sans limite (véhicule dehors,
- *    retour inconnu : on ne peut rien promettre) ;
+ *  - « en cours » sans fin → `fin: null`, à partir du départ et sans limite
+ *    (véhicule dehors, retour inconnu : on ne peut rien promettre) ;
  *  - planifié/terminé sans fin → repli d'une heure, sinon une ligne incomplète
  *    condamnerait le véhicule pour toujours.
+ */
+export function fenetreBloquanteDeplacement(trip: {
+  start_datetime: string
+  end_datetime: string | null
+  status: string
+}): { debut: string; fin: string | null } {
+  if (trip.end_datetime) return { debut: trip.start_datetime, fin: trip.end_datetime }
+  if (trip.status === 'en_cours') return { debut: trip.start_datetime, fin: null }
+  return { debut: trip.start_datetime, fin: plusFallback(trip.start_datetime) }
+}
+
+/** Vrai si la fenêtre du déplacement chevauche [startIso, endIso[. */
+const chevauche = (f: { debut: string; fin: string | null }, startIso: string, endIso: string) =>
+  f.debut < endIso && (f.fin === null || f.fin > startIso)
+
+/**
+ * Un déplacement interne empêche-t-il d'engager le véhicule sur [startIso, endIso[ ?
+ * Renvoie le déplacement bloquant, sinon null. Règle de fenêtre :
+ * `fenetreBloquanteDeplacement`.
  *
  * `ignorerTripId` sert à la modification d'un déplacement existant : sans lui, il
  * se déclarerait en conflit avec lui-même (même rôle que `ignorerReservationId`
@@ -104,11 +125,51 @@ export async function findBlockingInternalTrip(
   if (ignorerTripId) q = q.neq('id', ignorerTripId)
   const { data } = await q
 
-  const blocking = (data ?? []).find(t => {
-    if (!t.end_datetime) return t.status === 'en_cours' || plusFallback(t.start_datetime) > startIso
-    return t.end_datetime > startIso
-  })
+  const blocking = (data ?? []).find(t =>
+    chevauche(fenetreBloquanteDeplacement(t), startIso, endIso),
+  )
   return blocking ?? null
+}
+
+/**
+ * Les fenêtres bloquantes de PLUSIEURS véhicules sur [startIso, endIso[, en une
+ * seule requête, et sans s'arrêter au premier déplacement trouvé : l'affichage
+ * des créneaux libres a besoin de tous les trous, pas d'un simple oui/non.
+ *
+ * Même règle que `findBlockingInternalTrip` — elles appellent la même fonction de
+ * fenêtre. Ne pas réécrire la règle ici : deux copies finissent toujours par
+ * diverger, et l'écran promettrait un créneau que l'enregistrement refuserait.
+ *
+ * Rend une entrée par véhicule concerné ; un véhicule sans déplacement bloquant
+ * est simplement absent de la table.
+ */
+export async function fetchBlockingInternalTripsForVehicles(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  vehicleIds: string[],
+  startIso: string,
+  endIso: string,
+  ignorerTripId?: string,
+): Promise<Map<string, { debut: string; fin: string | null }[]>> {
+  const parVehicule = new Map<string, { debut: string; fin: string | null }[]>()
+  if (vehicleIds.length === 0) return parVehicule
+
+  let q = supabase
+    .from('internal_trips')
+    .select('vehicle_id, start_datetime, end_datetime, status')
+    .in('vehicle_id', vehicleIds)
+    .neq('status', 'annule')
+    .lt('start_datetime', endIso)
+  if (ignorerTripId) q = q.neq('id', ignorerTripId)
+  const { data } = await q
+
+  for (const t of data ?? []) {
+    const fenetre = fenetreBloquanteDeplacement(t)
+    if (!chevauche(fenetre, startIso, endIso)) continue
+    const liste = parVehicule.get(t.vehicle_id)
+    if (liste) liste.push(fenetre)
+    else parVehicule.set(t.vehicle_id, [fenetre])
+  }
+  return parVehicule
 }
 
 const PURPOSE_LABELS: Record<string, string> = {

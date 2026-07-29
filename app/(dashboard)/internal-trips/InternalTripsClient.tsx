@@ -1,12 +1,38 @@
 'use client'
 
-import { useState } from 'react'
+// Écran « Déplacements internes » (/internal-trips) : planifier, démarrer,
+// terminer, modifier et supprimer un déplacement de service, plus l'historique.
+//
+// Il reçoit tout du serveur (page.tsx) : la flotte, les déplacements, l'équipe,
+// le rôle. Il n'écrit qu'à travers les Server Actions de
+// `lib/actions/internal-trips` et ne lit jamais la base directement.
+//
+// Panneau de disponibilité (demande Jeff du 29/07/2026) : cliquer la barre de
+// recherche ouvre la liste de TOUTE la flotte sur une période « du … au … »,
+// libres d'abord, les pris avec leur heure de retour. Il interroge
+// `/api/vehicles/availability`, c'est-à-dire exactement le code qui refuse
+// l'enregistrement (`vehiculesIndisponibles`) : aucune règle de disponibilité
+// n'est réécrite ici, sinon l'écran dirait « libre » sur un véhicule que
+// l'enregistrement refuserait. Un clic sur une ligne ouvre « Planifier » avec
+// le véhicule et la période déjà remplis, y compris sur un véhicule pris (c'est
+// l'enregistrement qui tranche, pas l'affichage).
+//
+// Créneaux libres (30/07/2026) : un véhicule pris n'est plus un simple « occupé
+// jusqu'à 15h ». Le panneau affiche les TROUS réellement libres à l'intérieur de
+// la période demandée (une voiture rendue à 13h et reprise à 15h propose « Libre
+// 13:00 - 15:00 »), et toucher un créneau reprend ses heures dans le formulaire
+// plutôt que la période cherchée. Le calcul reste au même endroit
+// (`analyserDisponibilite`) : ici, uniquement de l'affichage.
+//
+// À ne pas casser : la barre de recherche reste visible même sans aucun
+// déplacement, c'est elle qui donne accès au panneau.
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { startTrip, endTrip, planTrip, startPlannedTrip, assignTrip, updateTrip, deleteTrip } from '@/lib/actions/internal-trips'
 import { useToast } from '@/components/Toast'
 import { formatDateTime, formatPrice } from '@/lib/utils'
 import { internalTripPurposeLabel } from '@/lib/vehicles/internalTrips'
-import { Plus, Navigation, Clock, CheckCircle2, CalendarClock, UserPlus, Play, Pencil, Trash2, User, Search } from 'lucide-react'
+import { Plus, Navigation, Clock, CheckCircle2, CalendarClock, UserPlus, Play, Pencil, Trash2, User, Search, X, Loader2 } from 'lucide-react'
 import Drawer from '@/components/Drawer'
 import DateTimeField from '@/components/ui/DateTimeField'
 
@@ -34,6 +60,33 @@ const PURPOSES = [
 ]
 
 const tripLabel = (t: Trip) => internalTripPurposeLabel(t.purpose, t.purpose_notes)
+
+/** Motifs d'indisponibilité renvoyés par /api/vehicles/availability. */
+const RAISON: Record<string, string> = {
+  reservation: 'en location',
+  garage: 'au garage',
+  deplacement: 'déplacement interne',
+}
+
+/**
+ * Même motif, mais quand personne ne sait quand le véhicule revient : location
+ * non rendue, déplacement non clôturé. Annoncer une heure de retour déjà passée
+ * ferait croire à une voiture disponible.
+ */
+const RAISON_RETOUR_INCONNU: Record<string, string> = {
+  reservation: 'retour non fait',
+  garage: 'au garage, sortie non connue',
+  deplacement: 'déplacement en cours, retour inconnu',
+}
+
+/** Un trou libre à l'intérieur de la période cherchée. */
+interface Creneau { debut: string; fin: string; libelle: string }
+interface Dispo {
+  raison: string | null
+  jusqua: string | null
+  retourInconnu: boolean
+  creneaux: Creneau[]
+}
 
 /**
  * Instant ISO → valeur d'un champ date+heure (« YYYY-MM-DDTHH:mm »), à l'heure
@@ -76,8 +129,19 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [search, setSearch] = useState('')
+  // Panneau de disponibilité ouvert par la barre de recherche.
+  const [showDispo, setShowDispo] = useState(false)
+  const [dispoFrom, setDispoFrom] = useState('')
+  const [dispoTo, setDispoTo] = useState('')
+  const [dispo, setDispo] = useState<Record<string, Dispo>>({})
+  const [dispoEtat, setDispoEtat] = useState<'vide' | 'chargement' | 'ok' | 'echec'>('vide')
   // Début saisi dans le formulaire de planification : borne basse du champ « Fin ».
   const [planStart, setPlanStart] = useState('')
+  // Véhicule et fin repris du panneau de disponibilité quand on planifie depuis
+  // une ligne. Le tiroir est démonté à la fermeture, donc un `defaultValue`
+  // suffit : il est relu à chaque ouverture.
+  const [planVehicleId, setPlanVehicleId] = useState('')
+  const [planEnd, setPlanEnd] = useState('')
   // Même rôle dans le formulaire de modification.
   const [editStart, setEditStart] = useState('')
   // Motif de chaque formulaire : « autre » fait apparaître un champ de précision
@@ -105,9 +169,68 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
     setEndingTrip(null); setStartingPlanned(null); setAssigningTrip(null); setDeletingTrip(null)
     setEditingTrip(null)
     setSelectedVehicle(null); setError(null); setLoading(false)
-    setPlanStart(''); setPlanPurpose('livraison'); setStartPurpose('livraison')
+    setPlanStart(''); setPlanEnd(''); setPlanVehicleId('')
+    setPlanPurpose('livraison'); setStartPurpose('livraison')
     setEditStart(''); setEditPurpose('livraison')
   }
+
+  // ── Panneau de disponibilité ───────────────────────────────────────────────
+  /** Période proposée à l'ouverture : de la prochaine demi-heure, pour deux heures. */
+  function periodeParDefaut(): [string, string] {
+    const debut = new Date()
+    debut.setMinutes(debut.getMinutes() > 30 ? 60 : 30, 0, 0)
+    const fin = new Date(debut.getTime() + 2 * 60 * 60 * 1000)
+    return [toDatetimeLocal(debut.toISOString()), toDatetimeLocal(fin.toISOString())]
+  }
+
+  function ouvrirDispo() {
+    if (!dispoFrom || !dispoTo) {
+      const [d, f] = periodeParDefaut()
+      setDispoFrom(d); setDispoTo(f)
+    }
+    setShowDispo(true)
+  }
+
+  /**
+   * Clic sur une ligne du panneau : « Planifier », véhicule et période repris.
+   * Sur un véhicule partiellement pris, `creneau` reprend les heures du trou
+   * libre plutôt que la période cherchée : c'est tout l'intérêt de l'afficher.
+   */
+  function planifierDepuisDispo(v: Vehicle, creneau?: Creneau) {
+    setPlanVehicleId(v.id)
+    setPlanStart(creneau ? toDatetimeLocal(creneau.debut) : dispoFrom)
+    setPlanEnd(creneau ? toDatetimeLocal(creneau.fin) : dispoTo)
+    setShowDispo(false)
+    setError(null)
+    setShowPlanForm(true)
+  }
+
+  // Disponibilité relue à chaque changement de période. La réponse vient de
+  // `analyserDisponibilite`, le même code que celui qui refuse l'enregistrement.
+  useEffect(() => {
+    if (!showDispo) return
+    if (!dispoFrom || !dispoTo || dispoFrom >= dispoTo) { setDispoEtat('vide'); return }
+    const ctrl = new AbortController()
+    setDispoEtat('chargement')
+    const params = new URLSearchParams({ start: dispoFrom, end: dispoTo })
+    fetch(`/api/vehicles/availability?${params}`, { signal: ctrl.signal })
+      .then(r => (r.ok ? r.json() : Promise.reject(new Error('indisponible'))))
+      .then(d => { setDispo(d.dispo ?? {}); setDispoEtat('ok') })
+      .catch(e => { if (e?.name !== 'AbortError') setDispoEtat('echec') })
+    return () => ctrl.abort()
+  }, [showDispo, dispoFrom, dispoTo])
+
+  /** Un véhicule sans entrée est considéré libre : la réponse ne l'a pas signalé. */
+  const estLibre = (id: string) => !dispo[id] || dispo[id].raison === null
+  const creneauxDe = (id: string) => dispo[id]?.creneaux ?? []
+
+  // Trois groupes dans cet ordre : libres sur toute la période, libres sur une
+  // partie seulement, pris de bout en bout. L'ordre de la flotte est conservé
+  // dans chaque groupe (tri stable).
+  const rang = (id: string) => (estLibre(id) ? 0 : creneauxDe(id).length > 0 ? 1 : 2)
+  const vehiculesTries = [...vehicles].sort((a, b) => rang(a.id) - rang(b.id))
+  const nbLibres = vehicles.filter(v => estLibre(v.id)).length
+  const nbPartiels = vehicles.filter(v => !estLibre(v.id) && creneauxDe(v.id).length > 0).length
 
   /** Ouvre le tiroir de modification sur un déplacement planifié ou en cours. */
   function openEdit(t: Trip) {
@@ -165,22 +288,131 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
         </button>
       </div>
 
-      {/* Recherche locale */}
-      {trips.length > 0 && (
+      {/* Recherche locale — toujours visible : c'est elle qui ouvre le panneau
+          de disponibilité, même quand aucun déplacement n'existe encore. */}
+      <div className="space-y-3">
         <div className="relative">
-          <label htmlFor="trips-search" className="sr-only">Rechercher un déplacement</label>
+          <label htmlFor="trips-search" className="sr-only">Rechercher un déplacement ou voir les véhicules disponibles</label>
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
           <input
             id="trips-search"
             type="search"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Véhicule, motif ou conducteur…"
+            onFocus={ouvrirDispo}
+            onClick={ouvrirDispo}
+            placeholder="Rechercher, ou voir les véhicules disponibles…"
             autoComplete="off"
             className="w-full bg-white border border-gray-100 shadow-sm rounded-xl pl-10 pr-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-black/10"
           />
         </div>
-      )}
+
+        {/* Disponibilité de la flotte sur une période */}
+        {showDispo && (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 space-y-3">
+            <div className="flex items-start gap-3">
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-gray-900">Véhicules disponibles</p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {dispoEtat === 'ok'
+                    ? `${nbLibres} libre${nbLibres > 1 ? 's' : ''}${nbPartiels > 0 ? ` · ${nbPartiels} avec un créneau` : ''} sur ${vehicles.length} · touchez pour planifier`
+                    : 'Choisissez la période du déplacement'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowDispo(false)}
+                aria-label="Fermer la disponibilité"
+                className="-mr-1 -mt-1 w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 flex-shrink-0"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="dispo-from" className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Du</label>
+                <DateTimeField id="dispo-from" value={dispoFrom} onChange={setDispoFrom} className="px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white" />
+              </div>
+              <div>
+                <label htmlFor="dispo-to" className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Au</label>
+                <DateTimeField id="dispo-to" value={dispoTo} onChange={setDispoTo} min={dispoFrom || undefined} className="px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white" />
+              </div>
+            </div>
+
+            {dispoEtat === 'vide' && (
+              <p className="text-xs text-gray-400">Renseignez une période complète pour voir la flotte.</p>
+            )}
+            {dispoEtat === 'chargement' && (
+              <p className="text-xs text-gray-400 flex items-center gap-1.5"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Vérification de la flotte…</p>
+            )}
+            {dispoEtat === 'echec' && (
+              <p className="text-xs text-red-600">Disponibilité indisponible pour le moment. Réessayez.</p>
+            )}
+            {dispoEtat === 'ok' && vehicles.length === 0 && (
+              <p className="text-xs text-gray-400">Aucun véhicule dans la flotte.</p>
+            )}
+            {dispoEtat === 'ok' && vehicles.length > 0 && (
+              <div className="border border-gray-100 rounded-xl divide-y divide-gray-50 overflow-hidden max-h-72 overflow-y-auto">
+                {vehiculesTries.map(v => {
+                  const d = dispo[v.id]
+                  const libre = estLibre(v.id)
+                  const creneaux = creneauxDe(v.id)
+                  // Trois cas, du meilleur au pire : libre partout, libre par
+                  // morceaux (on annonce le premier trou), pris de bout en bout.
+                  // Un retour non fait n'a pas d'heure à annoncer.
+                  const motif = d?.raison ? (RAISON[d.raison] ?? 'indisponible') : ''
+                  const detail = libre
+                    ? 'Libre sur la période'
+                    : creneaux.length > 0
+                      ? `Libre ${creneaux[0].libelle}${creneaux.length > 1 ? ` · +${creneaux.length - 1} autre créneau` : ''}`
+                      : d?.retourInconnu
+                        ? (d.raison ? RAISON_RETOUR_INCONNU[d.raison] ?? motif : 'retour inconnu')
+                        : d?.jusqua
+                          ? `${motif} jusqu'au ${d.jusqua}`
+                          : motif
+                  // Vert = utilisable tout de suite, ambre = à regarder de près.
+                  const couleurTexte = libre || creneaux.length > 0 ? 'text-green-600' : 'text-amber-600'
+                  const couleurPastille = libre ? 'bg-green-500' : creneaux.length > 0 ? 'bg-green-300' : 'bg-amber-400'
+                  return (
+                    <div key={v.id}>
+                      <button
+                        type="button"
+                        onClick={() => planifierDepuisDispo(v, creneaux[0])}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-gray-50 transition-colors"
+                      >
+                        <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${couleurPastille}`} aria-hidden />
+                        <span className="flex-1 min-w-0">
+                          <span className="block text-sm font-semibold text-gray-900 truncate">{v.plate} — {v.brand} {v.model}</span>
+                          <span className={`block text-xs truncate ${couleurTexte}`}>{detail}</span>
+                        </span>
+                        <CalendarClock className="w-4 h-4 text-gray-300 flex-shrink-0" />
+                      </button>
+                      {/* Plusieurs trous libres : un bouton par créneau, sinon le
+                          clic sur la ligne ne pourrait proposer que le premier.
+                          Rangée qui défile pour ne jamais déborder sur téléphone. */}
+                      {creneaux.length > 1 && (
+                        <div className="flex gap-2 overflow-x-auto px-3 pb-2.5 -mt-0.5">
+                          {creneaux.map(c => (
+                            <button
+                              key={c.debut}
+                              type="button"
+                              onClick={() => planifierDepuisDispo(v, c)}
+                              className="flex-shrink-0 px-2.5 py-1.5 rounded-lg bg-green-50 text-green-700 text-xs font-medium hover:bg-green-100 transition-colors"
+                            >
+                              {c.libelle}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Planned trips */}
       {plannedTrips.length > 0 && (
@@ -361,18 +593,18 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
         <form action={handlePlan} className="space-y-4">
           <div>
             <label htmlFor="plan-vehicle" className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Véhicule *</label>
-            <select id="plan-vehicle" name="vehicle_id" required className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white">
+            <select id="plan-vehicle" name="vehicle_id" required defaultValue={planVehicleId} className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white">
               <option value="">— Choisir —</option>
               {vehicles.map(v => <option key={v.id} value={v.id}>{v.plate} — {v.brand} {v.model}</option>)}
             </select>
           </div>
           <div>
             <label htmlFor="plan-start" className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Début *</label>
-            <DateTimeField id="plan-start" name="start_datetime" required onChange={setPlanStart} className="px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white" />
+            <DateTimeField id="plan-start" name="start_datetime" required defaultValue={planStart} onChange={setPlanStart} className="px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white" />
           </div>
           <div>
             <label htmlFor="plan-end" className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Fin *</label>
-            <DateTimeField id="plan-end" name="end_datetime" required min={planStart || undefined} className="px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white" />
+            <DateTimeField id="plan-end" name="end_datetime" required defaultValue={planEnd} min={planStart || undefined} className="px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white" />
             <p className="text-[11px] text-gray-400 mt-1">Le véhicule est indisponible sur ce créneau (flotte, calendrier, réservations).</p>
           </div>
           <div>
