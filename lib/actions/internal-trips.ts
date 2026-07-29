@@ -4,7 +4,8 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { syncTripToCalendar } from '@/lib/calendar/syncInternalTrip'
-import { instantDepuisSaisie } from '@/lib/format/heureAgence'
+import { instantDepuisSaisie, jourHeureAgence } from '@/lib/format/heureAgence'
+import { vehiculesIndisponibles, type RaisonIndisponibilite } from '@/lib/reservations/disponibilite'
 
 export async function startTrip(formData: FormData) {
   const supabase = await createClient()
@@ -265,6 +266,220 @@ export async function startPlannedTrip(tripId: string, formData: FormData) {
   await supabase.from('audit_logs').insert({
     user_id: user.id, action: 'internal_trip_started',
     entity_type: 'internal_trips', entity_id: tripId, metadata: { from: 'planifie' },
+  })
+
+  revalidatePath('/internal-trips')
+  revalidatePath('/calendrier')
+  revalidatePath('/')
+  return { success: true }
+}
+
+// Message affiché selon ce qui occupe déjà le véhicule. Les règles elles-mêmes
+// ne sont pas réécrites ici : elles viennent de `vehiculesIndisponibles`, le même
+// code que celui qui refuse une réservation ou une prolongation.
+const CONFLIT_MESSAGES: Record<RaisonIndisponibilite, string> = {
+  reservation: 'Ce véhicule est déjà réservé sur la période demandée — ajustez les dates.',
+  garage:      'Ce véhicule a un rendez-vous garage sur la période demandée — ajustez les dates.',
+  deplacement: 'Ce véhicule part sur un autre déplacement interne sur la période demandée — ajustez les dates.',
+}
+
+/**
+ * Modifie un déplacement PLANIFIÉ ou EN COURS.
+ *
+ * Ce qui s'ouvre dépend de ce que le statut permet réellement :
+ *  - planifié : début prévu, fin prévue, motif, précision, conducteur (managers).
+ *    Aucun km : il ne sera relevé qu'au démarrage (startPlannedTrip) ;
+ *  - en cours : heure de départ RÉELLE, retour prévu, motif, précision,
+ *    conducteur (managers) et km de départ déjà relevé.
+ *
+ * Ce qui reste fermé dans tous les cas : le véhicule (il est physiquement dehors,
+ * avec un relevé pris dessus — le changer libérerait une voiture qui roule et
+ * collerait le relevé sur la mauvaise), le statut, et tout ce qui se saisit à la
+ * clôture (km retour, carburant retour, péages, frais).
+ */
+export async function updateTrip(tripId: string, formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié' }
+
+  const isManager = isManagerRole(await getRole(supabase, user.id))
+
+  const { data: trip } = await supabase
+    .from('internal_trips')
+    .select('vehicle_id, user_id, start_datetime, end_datetime, status, km_start')
+    .eq('id', tripId)
+    .single()
+  if (!trip) return { error: 'Déplacement introuvable' }
+  if (trip.status !== 'planifie' && trip.status !== 'en_cours') {
+    return { error: 'Seul un déplacement planifié ou en cours peut être modifié' }
+  }
+  const enCours = trip.status === 'en_cours'
+
+  const purpose = formData.get('purpose') as string
+  const purposeNotes = ((formData.get('purpose_notes') as string) || '').trim()
+  if (!purpose) return { error: 'Motif requis' }
+  // Motif « autre » : le mot ne dit rien, la précision est donc obligatoire.
+  if (purpose === 'autre' && !purposeNotes) return { error: 'Précisez le motif du déplacement' }
+
+  // Départ et retour bornent l'indisponibilité du véhicule (calendrier, blocage
+  // de réservation) — même règle qu'à la planification, les deux sont exigés.
+  const startRaw = formData.get('start_datetime') as string
+  const endRaw = formData.get('end_datetime') as string
+  if (!startRaw) return { error: enCours ? 'Heure de départ requise' : 'Date de début requise' }
+  if (!endRaw) return { error: 'Date de fin requise' }
+
+  // Heures saisies dans le fuseau de l'agence, pas dans celui du serveur.
+  const debutSaisi = instantDepuisSaisie(startRaw)
+  const finSaisie = instantDepuisSaisie(endRaw)
+
+  // Toutes les dates sont ramenées au même format (instant UTC) avant d'être
+  // comparées : la base rend « +00:00 » et instantDepuisSaisie rend « Z », deux
+  // écritures du même moment qui ne se comparent pas en texte.
+  const ancienDebut = new Date(trip.start_datetime).toISOString()
+  const ancienFin = trip.end_datetime ? new Date(trip.end_datetime).toISOString() : null
+  // Les champs de saisie s'arrêtent à la minute : quand la minute n'a pas bougé,
+  // on garde la valeur d'origine au lieu d'en raboter les secondes, sinon chaque
+  // enregistrement décalerait légèrement le déplacement.
+  const debutIso = debutSaisi.slice(0, 16) === ancienDebut.slice(0, 16) ? ancienDebut : debutSaisi
+  const finIso = ancienFin && finSaisie.slice(0, 16) === ancienFin.slice(0, 16) ? ancienFin : finSaisie
+
+  if (finIso <= debutIso) return { error: 'Le retour doit être après le départ' }
+  // Un départ RÉEL dans le futur ferait repasser le véhicule « disponible » dans
+  // les compteurs de flotte alors qu'il est dehors (ils ne comptent que les
+  // déplacements déjà commencés).
+  if (enCours && new Date(debutIso).getTime() > Date.now()) {
+    return { error: 'L’heure de départ réelle ne peut pas être dans le futur' }
+  }
+
+  // Fenêtre AJOUTÉE par la modification, c'est-à-dire ce que ce déplacement ne
+  // bloquait pas déjà. Contrôler tout le créneau interdirait de corriger un
+  // déplacement qui chevauche déjà quelque chose (« Démarrer maintenant » ne
+  // contrôle rien à la création).
+  const fenetres: Array<[string, string]> = []
+  if (!ancienFin) {
+    // Sans retour renseigné (cas de « Démarrer maintenant »), ce déplacement
+    // n'avait aucune période de fin : la fenêtre posée aujourd'hui est entièrement
+    // nouvelle et se contrôle depuis la date de départ.
+    fenetres.push([debutIso, finIso])
+  } else {
+    if (debutIso < ancienDebut) fenetres.push([debutIso, finIso < ancienDebut ? finIso : ancienDebut])
+    if (finIso > ancienFin) fenetres.push([debutIso > ancienFin ? debutIso : ancienFin, finIso])
+  }
+
+  // Client admin : il ne sert QU'À LIRE, ici pour voir les conflits et plus bas
+  // pour nommer les conducteurs. L'enregistrement reste sur `supabase`, donc
+  // sous les règles d'accès de la personne connectée.
+  //
+  // Pourquoi la lecture ne peut pas rester sur `supabase` : hors gérant et
+  // associé, un salarié ne voit que SES déplacements (RLS `trips_own`) et que
+  // les rendez-vous garage qui lui sont affectés (RLS `calendar_events_select`).
+  // Le contrôle ne verrait alors que les réservations, et laisserait passer
+  // sans un mot un chevauchement avec le garage ou avec la sortie d'un collègue.
+  // Même détour que la synchronisation du calendrier (lib/calendar/).
+  const admin = createAdminClient()
+
+  for (const [debut, fin] of fenetres) {
+    const indispo = await vehiculesIndisponibles(admin, debut, fin, {
+      vehicleIds: [trip.vehicle_id],
+      ignorerDeplacementId: tripId,
+    })
+    const conflit = indispo.get(trip.vehicle_id)
+    if (conflit) return { error: CONFLIT_MESSAGES[conflit.raison] }
+  }
+
+  // Le conducteur désigne la personne à qui le logiciel impute une amende tombée
+  // à cette date (lib/utils/findDriverAtDate.ts) : seuls gérant et associé le
+  // changent, comme pour l'assignation d'un déplacement planifié.
+  let assignee = trip.user_id
+  if (isManager) {
+    const assigneeRaw = ((formData.get('user_id') as string | null) ?? '').trim()
+    assignee = assigneeRaw && assigneeRaw !== 'none' ? assigneeRaw : null
+  }
+  // Un déplacement en cours nomme forcément quelqu'un : le véhicule roule.
+  if (enCours && !assignee) return { error: 'Assignez un conducteur à ce déplacement en cours' }
+
+  const { data: vehicle } = await supabase
+    .from('vehicles')
+    .select('plate, current_km')
+    .eq('id', trip.vehicle_id)
+    .maybeSingle()
+
+  const payload: Record<string, unknown> = {
+    start_datetime: debutIso,
+    end_datetime: finIso,
+    user_id: assignee,
+    purpose,
+    purpose_notes: purposeNotes || null,
+  }
+
+  // KM de départ : seulement sur un déplacement en cours (sur un planifié, il
+  // n'a pas encore été relevé). Champ laissé vide = valeur inchangée.
+  let kmStart: number | null = null
+  if (enCours) {
+    const kmRaw = ((formData.get('km_start') as string | null) ?? '').trim()
+    if (kmRaw) {
+      kmStart = Number(kmRaw)
+      if (!Number.isFinite(kmStart) || kmStart < 0) return { error: 'KM de départ invalide' }
+      // Le compteur d'un véhicule ne recule jamais : un départ sous le compteur
+      // ferait reculer la flotte à la clôture, où le KM retour est recopié sur
+      // la fiche du véhicule (endTrip). Le compteur ayant pu monter entre-temps
+      // (un entretien enregistré depuis), le message dit la sortie : laisser la
+      // case vide enregistre le reste du formulaire.
+      if (vehicle?.current_km != null && kmStart < vehicle.current_km) {
+        return { error: `Le compteur de ce véhicule affiche ${vehicle.current_km.toLocaleString('fr-FR')} km : le KM de départ ne peut pas être inférieur. Laissez la case vide pour enregistrer le reste sans y toucher.` }
+      }
+      payload.km_start = kmStart
+    }
+  }
+
+  // Filtre sur le statut : une clôture ou une annulation arrivée entre la lecture
+  // et l'écriture ne doit pas se faire réécrire par le formulaire. `select` pour
+  // ne pas annoncer « modifié » quand aucune ligne n'a bougé.
+  const { data: updated, error } = await supabase
+    .from('internal_trips')
+    .update(payload)
+    .eq('id', tripId)
+    .eq('status', trip.status)
+    .select('id')
+  if (error) return { error: error.message }
+  if (!updated || updated.length === 0) {
+    return { error: 'Ce déplacement a changé entre-temps — rouvrez-le avant de le modifier' }
+  }
+
+  // Le calendrier porte le motif dans le titre du bloc, le conducteur dans son
+  // affectation et les dates dans sa position : sans cette resynchronisation,
+  // l'agenda garderait les anciennes valeurs.
+  await syncTripToCalendar(tripId)
+
+  // Journal d'activité : phrase lisible, avec le changement de conducteur nommé
+  // (ancien → nouveau). Les noms sont lus par le client admin — la table des
+  // profils n'est lisible que par le gérant (RLS), sans quoi la ligne du journal
+  // afficherait des identifiants à la place des personnes.
+  const idsConducteurs = [trip.user_id, assignee].filter(Boolean) as string[]
+  const { data: profils } = idsConducteurs.length
+    ? await admin.from('profiles').select('id, full_name').in('id', idsConducteurs)
+    : { data: [] as { id: string; full_name: string }[] }
+  const nomConducteur = (id: string | null) =>
+    id ? (profils?.find(p => p.id === id)?.full_name ?? 'conducteur inconnu') : 'non assigné'
+
+  const changements: string[] = []
+  if (debutIso !== ancienDebut) changements.push(`départ ${jourHeureAgence(debutIso)}`)
+  if (finIso !== ancienFin) changements.push(`retour ${jourHeureAgence(finIso)}`)
+  if (assignee !== trip.user_id) {
+    changements.push(`conducteur : ${nomConducteur(trip.user_id)} → ${nomConducteur(assignee)}`)
+  }
+  if (kmStart != null && kmStart !== trip.km_start) {
+    changements.push(`KM départ ${trip.km_start?.toLocaleString('fr-FR') ?? '—'} → ${kmStart.toLocaleString('fr-FR')}`)
+  }
+
+  await supabase.from('audit_logs').insert({
+    user_id: user.id, action: 'internal_trip_updated',
+    entity_type: 'internal_trips', entity_id: tripId,
+    metadata: {
+      summary: `Déplacement interne modifié${vehicle?.plate ? ` — ${vehicle.plate}` : ''}${changements.length ? ` · ${changements.join(' · ')}` : ''}`,
+      purpose, start_datetime: debutIso, end_datetime: finIso,
+      previous_user_id: trip.user_id, user_id: assignee,
+    },
   })
 
   revalidatePath('/internal-trips')

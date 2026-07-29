@@ -83,19 +83,26 @@ export async function fetchActiveInternalTrips(
  *    retour inconnu : on ne peut rien promettre) ;
  *  - planifié/terminé sans fin → repli d'une heure, sinon une ligne incomplète
  *    condamnerait le véhicule pour toujours.
+ *
+ * `ignorerTripId` sert à la modification d'un déplacement existant : sans lui, il
+ * se déclarerait en conflit avec lui-même (même rôle que `ignorerReservationId`
+ * côté réservation).
  */
 export async function findBlockingInternalTrip(
   supabase: Awaited<ReturnType<typeof createClient>>,
   vehicleId: string,
   startIso: string,
   endIso: string,
+  ignorerTripId?: string,
 ): Promise<{ id: string; start_datetime: string; end_datetime: string | null; status: string } | null> {
-  const { data } = await supabase
+  let q = supabase
     .from('internal_trips')
     .select('id, start_datetime, end_datetime, status')
     .eq('vehicle_id', vehicleId)
     .neq('status', 'annule')
     .lt('start_datetime', endIso)
+  if (ignorerTripId) q = q.neq('id', ignorerTripId)
+  const { data } = await q
 
   const blocking = (data ?? []).find(t => {
     if (!t.end_datetime) return t.status === 'en_cours' || plusFallback(t.start_datetime) > startIso

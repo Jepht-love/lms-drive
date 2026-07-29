@@ -34,7 +34,8 @@ export const RAISON_LABEL: Record<RaisonIndisponibilite, string> = {
  * Véhicules indisponibles sur une période, avec la raison de chacun.
  *
  * `ignorerReservationId` sert à la modification d'une réservation existante :
- * sans lui, elle se déclarerait en conflit avec elle-même.
+ * sans lui, elle se déclarerait en conflit avec elle-même. `ignorerDeplacementId`
+ * joue le même rôle pour la modification d'un déplacement interne.
  */
 export type Indisponibilite = {
   raison: RaisonIndisponibilite
@@ -49,7 +50,7 @@ export async function vehiculesIndisponibles(
   supabase: SupabaseClient,
   debutInstant: string,
   finInstant: string,
-  options?: { vehicleIds?: string[]; ignorerReservationId?: string },
+  options?: { vehicleIds?: string[]; ignorerReservationId?: string; ignorerDeplacementId?: string },
 ): Promise<Map<string, Indisponibilite>> {
   const indispo = new Map<string, Indisponibilite>()
   const cibles = options?.vehicleIds
@@ -108,7 +109,7 @@ export async function vehiculesIndisponibles(
   //    l'interroge que pour ceux encore déclarés libres.
   const aTester = cibles?.length ? cibles : (vehicules ?? []).map(v => v.id)
   await Promise.all(aTester.filter(Boolean).map(async vid => {
-    const trajet = await findBlockingInternalTrip(supabase, vid, debutInstant, finInstant)
+    const trajet = await findBlockingInternalTrip(supabase, vid, debutInstant, finInstant, options?.ignorerDeplacementId)
     // Un trajet « en cours » sans fin renseignée bloque sans horizon : la voiture
     // est dehors et personne ne sait quand elle revient.
     if (trajet) poser(vid, 'deplacement', trajet.end_datetime ?? null)

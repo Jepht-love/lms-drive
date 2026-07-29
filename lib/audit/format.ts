@@ -43,6 +43,7 @@ const ACTIONS: Record<string, ActionMeta> = {
   infraction_created:        { label: 'Infraction enregistrée',      tone: 'create' },
   // Déplacements internes
   internal_trip_started:     { label: 'Déplacement interne démarré', tone: 'create' },
+  internal_trip_updated:     { label: 'Déplacement interne modifié', tone: 'update' },
   internal_trip_ended:       { label: 'Déplacement interne terminé', tone: 'update' },
   // États des lieux (EDL)
   inspection_depart_created:  { label: 'État des lieux de départ',  tone: 'create' },

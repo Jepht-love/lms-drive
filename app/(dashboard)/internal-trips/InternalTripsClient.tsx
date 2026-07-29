@@ -2,11 +2,11 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { startTrip, endTrip, planTrip, startPlannedTrip, assignTrip, deleteTrip } from '@/lib/actions/internal-trips'
+import { startTrip, endTrip, planTrip, startPlannedTrip, assignTrip, updateTrip, deleteTrip } from '@/lib/actions/internal-trips'
 import { useToast } from '@/components/Toast'
 import { formatDateTime, formatPrice } from '@/lib/utils'
 import { internalTripPurposeLabel } from '@/lib/vehicles/internalTrips'
-import { Plus, Navigation, Clock, CheckCircle2, CalendarClock, UserPlus, Play, Trash2, User, Search } from 'lucide-react'
+import { Plus, Navigation, Clock, CheckCircle2, CalendarClock, UserPlus, Play, Pencil, Trash2, User, Search } from 'lucide-react'
 import Drawer from '@/components/Drawer'
 import DateTimeField from '@/components/ui/DateTimeField'
 
@@ -35,6 +35,17 @@ const PURPOSES = [
 
 const tripLabel = (t: Trip) => internalTripPurposeLabel(t.purpose, t.purpose_notes)
 
+/**
+ * Instant ISO → valeur d'un champ date+heure (« YYYY-MM-DDTHH:mm »), à l'heure
+ * du téléphone. Découper l'ISO à la main donnerait l'heure universelle, soit
+ * deux heures de moins qu'affiché sur la carte l'été.
+ */
+function toDatetimeLocal(iso: string): string {
+  const d = new Date(iso)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
 /** Créneau planifié : « 12/08 09:00 → 17:30 » (même jour) ou les deux dates. */
 function tripWindow(t: Trip) {
   if (!t.end_datetime) return formatDateTime(t.start_datetime)
@@ -59,6 +70,7 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
   const [endingTrip, setEndingTrip] = useState<Trip | null>(null)
   const [startingPlanned, setStartingPlanned] = useState<Trip | null>(null)
   const [assigningTrip, setAssigningTrip] = useState<Trip | null>(null)
+  const [editingTrip, setEditingTrip] = useState<Trip | null>(null)
   const [deletingTrip, setDeletingTrip] = useState<Trip | null>(null)
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -66,10 +78,13 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
   const [search, setSearch] = useState('')
   // Début saisi dans le formulaire de planification : borne basse du champ « Fin ».
   const [planStart, setPlanStart] = useState('')
+  // Même rôle dans le formulaire de modification.
+  const [editStart, setEditStart] = useState('')
   // Motif de chaque formulaire : « autre » fait apparaître un champ de précision
   // obligatoire (le mot « autre » seul ne dit rien au reste de l'équipe).
   const [planPurpose, setPlanPurpose] = useState('livraison')
   const [startPurpose, setStartPurpose] = useState('livraison')
+  const [editPurpose, setEditPurpose] = useState('livraison')
 
   // Filtre local : pas d'URL par trajet (gérés en drawer), donc recherche en mémoire.
   const q = search.trim().toLowerCase()
@@ -83,11 +98,23 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
 
   const vehicleById = (id: string) => vehicles.find(v => v.id === id) ?? null
   const canManageTrip = (t: Trip) => isManager || t.user_id === currentUserId
+  // Véhicule du déplacement en cours de modification : sert à rappeler son compteur.
+  const editVehicle = editingTrip ? vehicleById(editingTrip.vehicle_id) : null
   function reset() {
     setShowStartForm(false); setShowPlanForm(false)
     setEndingTrip(null); setStartingPlanned(null); setAssigningTrip(null); setDeletingTrip(null)
+    setEditingTrip(null)
     setSelectedVehicle(null); setError(null); setLoading(false)
     setPlanStart(''); setPlanPurpose('livraison'); setStartPurpose('livraison')
+    setEditStart(''); setEditPurpose('livraison')
+  }
+
+  /** Ouvre le tiroir de modification sur un déplacement planifié ou en cours. */
+  function openEdit(t: Trip) {
+    setEditingTrip(t)
+    setEditStart(toDatetimeLocal(t.start_datetime))
+    setEditPurpose(t.purpose)
+    setError(null)
   }
 
   async function run(fn: () => Promise<{ error?: string; success?: boolean } | undefined>, okMsg: string) {
@@ -107,6 +134,7 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
   const handlePlan          = (fd: FormData) => { run(() => planTrip(fd), 'Déplacement planifié') }
   const handleEnd           = (fd: FormData) => { if (endingTrip) run(() => endTrip(endingTrip.id, fd), 'Déplacement terminé') }
   const handleStartPlanned = (fd: FormData) => { if (startingPlanned) run(() => startPlannedTrip(startingPlanned.id, fd), 'Déplacement démarré') }
+  const handleUpdate       = (fd: FormData) => { if (editingTrip) run(() => updateTrip(editingTrip.id, fd), 'Déplacement modifié') }
 
   async function handleAssign(fd: FormData) {
     if (!assigningTrip) return
@@ -203,6 +231,15 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
                   )}
                   {canManageTrip(t) && (
                     <button type="button"
+                      onClick={() => openEdit(t)}
+                      className="px-3 py-2 border border-gray-200 text-gray-500 rounded-xl text-sm font-medium hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                      title="Modifier"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                  )}
+                  {canManageTrip(t) && (
+                    <button type="button"
                       onClick={() => { setDeletingTrip(t); setError(null) }}
                       className="px-3 py-2 border border-gray-200 text-gray-500 rounded-xl text-sm font-medium hover:bg-red-50 hover:text-red-600 hover:border-red-100 transition-colors"
                       title="Supprimer"
@@ -248,6 +285,13 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
                       className="flex-1 py-2 bg-[#111111] text-white rounded-xl text-sm font-medium hover:bg-gray-900 transition-colors"
                     >
                       Terminer le déplacement
+                    </button>
+                    <button type="button"
+                      onClick={() => openEdit(t)}
+                      className="px-3 py-2 border border-gray-200 text-gray-500 rounded-xl text-sm font-medium hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                      title="Modifier"
+                    >
+                      <Pencil className="w-4 h-4" />
                     </button>
                     <button type="button"
                       onClick={() => { setDeletingTrip(t); setError(null) }}
@@ -522,6 +566,127 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
           <p className="text-[11px] text-gray-400">* Champ obligatoire</p>
           <button type="submit" disabled={loading} className="w-full py-3 bg-[#111111] text-white rounded-xl font-semibold disabled:opacity-50 transition-colors active:scale-[.97]">
             {loading ? 'Enregistrement...' : 'Terminer le déplacement'}
+          </button>
+        </form>
+      </Drawer>
+
+      {/* Edit Drawer (déplacement planifié ou en cours) */}
+      <Drawer open={!!editingTrip} onClose={reset} title={`Modifier — ${editingTrip?.vehicle?.plate ?? ''}`}>
+        <form action={handleUpdate} className="space-y-4">
+          <p className="text-xs text-gray-500 bg-gray-50 rounded-xl px-3 py-2">
+            Le véhicule ne se change pas : il est engagé sur ce déplacement.
+            {/* Le carburant DE DÉPART a été saisi au démarrage, il n'est pas ici :
+                l'annoncer avec ceux de la clôture ferait croire au gérant qu'il
+                n'a rien relevé au départ. */}
+            {editingTrip?.status === 'en_cours' && ' Le KM de retour, le carburant au retour, les péages et les frais se saisissent à la clôture. Le carburant relevé au départ ne se corrige pas ici.'}
+          </p>
+          <div>
+            <label htmlFor="edit-start" className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">
+              {editingTrip?.status === 'en_cours' ? 'Départ réel *' : 'Début prévu *'}
+            </label>
+            {/* `key` : le tiroir reste monté d'un déplacement à l'autre, sans quoi
+                les champs garderaient les dates du déplacement précédemment ouvert. */}
+            <DateTimeField
+              key={`${editingTrip?.id}-start`}
+              id="edit-start"
+              name="start_datetime"
+              required
+              defaultValue={editingTrip ? toDatetimeLocal(editingTrip.start_datetime) : ''}
+              onChange={setEditStart}
+              className="px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white"
+            />
+          </div>
+          <div>
+            <label htmlFor="edit-end" className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Retour prévu *</label>
+            <DateTimeField
+              key={`${editingTrip?.id}-end`}
+              id="edit-end"
+              name="end_datetime"
+              required
+              defaultValue={editingTrip?.end_datetime ? toDatetimeLocal(editingTrip.end_datetime) : ''}
+              min={editStart || undefined}
+              className="px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white"
+            />
+            {/* Ce que cette date fait vraiment — et ce qu'elle ne fait pas : sur un
+                déplacement en cours, la flotte compte le véhicule dehors jusqu'à la
+                clôture, quelle que soit la date affichée ici. */}
+            <p className="text-[11px] text-gray-400 mt-1">
+              {editingTrip?.status === 'en_cours'
+                ? 'Cette date bloque le calendrier et les réservations. Le véhicule reste compté hors flotte jusqu’à ce que vous terminiez le déplacement, même après cette date.'
+                : 'Le véhicule est indisponible sur ce créneau (flotte, calendrier, réservations).'}
+            </p>
+          </div>
+          <div>
+            <label htmlFor="edit-purpose" className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Motif *</label>
+            <select
+              id="edit-purpose"
+              name="purpose"
+              required
+              value={editPurpose}
+              onChange={e => setEditPurpose(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white"
+            >
+              {PURPOSES.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="edit-notes" className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">
+              {editPurpose === 'autre' ? 'Préciser le motif *' : 'Notes'}
+            </label>
+            <input
+              key={`${editingTrip?.id}-notes`}
+              id="edit-notes"
+              type="text"
+              name="purpose_notes"
+              required={editPurpose === 'autre'}
+              defaultValue={editingTrip?.purpose_notes ?? ''}
+              placeholder={editPurpose === 'autre' ? 'Ex. campagne de pub, usage particulier…' : 'Détails...'}
+              enterKeyHint="done"
+              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm"
+            />
+          </div>
+          {isManager && (
+            <div>
+              <label htmlFor="edit-driver" className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">
+                Conducteur {editingTrip?.status === 'en_cours' && '*'}
+              </label>
+              <select
+                key={`${editingTrip?.id}-driver`}
+                id="edit-driver"
+                name="user_id"
+                defaultValue={editingTrip?.user_id ?? 'none'}
+                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white"
+              >
+                {editingTrip?.status !== 'en_cours' && <option value="none">— Non assigné —</option>}
+                {members.map(m => <option key={m.id} value={m.id}>{m.full_name}{m.id === currentUserId ? ' (moi)' : ''}</option>)}
+              </select>
+              <p className="text-[11px] text-gray-400 mt-1">C’est la personne désignée si une infraction tombe sur cette période.</p>
+            </div>
+          )}
+          {/* KM de départ : un déplacement planifié n'en a pas encore — il est
+              relevé au démarrage. */}
+          {editingTrip?.status === 'en_cours' && (
+            <div>
+              <label htmlFor="edit-km" className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">
+                KM départ {editVehicle && <span className="text-gray-400 font-normal">(compteur: {editVehicle.current_km?.toLocaleString('fr-FR') ?? '—'})</span>}
+              </label>
+              <input
+                key={`${editingTrip?.id}-km`}
+                id="edit-km"
+                type="number"
+                name="km_start"
+                min="0"
+                defaultValue={editingTrip?.km_start ?? undefined}
+                inputMode="numeric"
+                enterKeyHint="done"
+                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm"
+              />
+            </div>
+          )}
+          {error && <div className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{error}</div>}
+          <p className="text-[11px] text-gray-400">* Champ obligatoire</p>
+          <button type="submit" disabled={loading} className="w-full py-3 bg-[#111111] text-white rounded-xl font-semibold disabled:opacity-50 transition-colors active:scale-[.97]">
+            {loading ? 'Enregistrement...' : 'Enregistrer'}
           </button>
         </form>
       </Drawer>
