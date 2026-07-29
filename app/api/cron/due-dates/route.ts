@@ -38,16 +38,12 @@ export async function GET(request: NextRequest) {
 
   // Jour de la semaine à l'heure de l'agence : sur un serveur en temps universel,
   // le lundi 00h30 en France est encore dimanche en UTC.
-  // ⚠️ TEMPORAIRE — 28/07/2026. Permet à Jeff de déclencher l'envoi depuis le
-  // bouton de Vercel un mardi, pour vérifier la réception sur l'application iOS
-  // (les clés Apple n'existent qu'en production). Le bouton n'ajoute aucun
-  // paramètre à l'appel, d'où ce drapeau. À REMETTRE À `false` juste après
-  // l'essai : sinon le résumé partirait tous les jours.
-  const ESSAI_MANUEL = true
-
+  // Essai de réception validé le 29/07/2026 sur l'application iOS : le drapeau
+  // qui forçait un envoi quotidien est retiré, le résumé repart le lundi seul.
+  // Pour un nouvel essai, ajouter `?force=1` à l'appel plutôt que de rouvrir ici.
   const maintenant = businessNow()
   const estLundi = maintenant.getDay() === 1
-  const forcer = request.nextUrl.searchParams.get('force') === '1' || ESSAI_MANUEL
+  const forcer = request.nextUrl.searchParams.get('force') === '1'
   if (!estLundi && !forcer) {
     return NextResponse.json({ sent: 0, reason: 'Résumé envoyé le lundi' })
   }

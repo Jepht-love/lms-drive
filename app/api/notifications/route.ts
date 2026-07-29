@@ -7,7 +7,7 @@ import { ALERT_TYPE_TO_NOTIF } from '@/lib/push/notificationTypes'
 import { RESEND_FROM, resendTo } from '@/lib/email/config'
 import { supportContactBlock } from '@/lib/email/templates'
 import { businessNow } from '@/lib/calendar/dateUtils'
-import { heureAgence, jourHeureAgence } from '@/lib/format/heureAgence'
+import { heureAgence, jourHeureAgence, fmtAgence } from '@/lib/format/heureAgence'
 import { addHours, subMinutes } from 'date-fns'
 
 // POST: push immédiat depuis le client (ex : alerte clôture contrat après EDL retour)
@@ -284,34 +284,48 @@ export async function GET(request: NextRequest) {
           .order('due_datetime'),
         supabase.from('calendar_events')
           .select('title, start_at')
+          // Les copies d'alertes au calendrier (échéances, révisions, lavages
+          // automatiques) ont déjà leur propre notification : les reprendre ici
+          // faisait apparaître une échéance de paiement comme une tâche à 02:00.
+          .is('source_key', null)
           .in('event_type', ['tache', 'rdv_client', 'rdv_garage', 'rdv_autre', 'livraison', 'recuperation'])
           .in('status', ['a_faire', 'en_cours'])
           .gte('start_at', todayStart.toISOString()).lte('start_at', todayEnd.toISOString())
           .order('start_at'),
       ])
 
+      // Une seule liste, dans l'ordre des heures : la journée se lit comme elle
+      // se déroule. Les sections DÉPARTS / RETOURS / TÂCHES en capitales obligeaient
+      // à recomposer soi-même la chronologie (retour Jeff du 29/07).
+      const ligne = (quand: string, quoi: string) => ({
+        t: new Date(quand).getTime(),
+        line: `${fmtH(quand)}  ${quoi}`,
+      })
 
-      const depLines = (depRows.data ?? []).map((r: any) => `· ${fmtH(r.start_datetime)} — ${vehCli(r.vehicle, r.client)}`)
-      const retLines = (retRows.data ?? []).map((r: any) => `· ${fmtH(r.end_datetime)} — ${vehCli(r.vehicle, r.client)}`)
-      const taskLines = [
+      const programme = [
+        ...(depRows.data ?? []).map((r: any) =>
+          ligne(r.start_datetime, `Départ · ${vehCli(r.vehicle, r.client)}`)),
+        ...(retRows.data ?? []).map((r: any) =>
+          ligne(r.end_datetime, `Retour · ${vehCli(r.vehicle, r.client)}`)),
         ...(taskRows.data ?? []).map((t: any) => {
           const v = one<{ brand: string; model: string; plate: string }>(t.vehicle)
-          return { t: new Date(t.due_datetime).getTime(), line: `· ${fmtH(t.due_datetime)} — ${t.title}${v?.plate ? ` (${v.plate})` : ''}` }
+          return ligne(t.due_datetime, `${t.title}${v?.plate ? ` (${v.plate})` : ''}`)
         }),
-        ...(eventRows.data ?? []).map((ev: any) => ({ t: new Date(ev.start_at).getTime(), line: `· ${fmtH(ev.start_at)} — ${ev.title}` })),
+        ...(eventRows.data ?? []).map((ev: any) => ligne(ev.start_at, ev.title)),
       ].sort((a, b) => a.t - b.t).map(x => x.line)
 
-      const sections: string[] = []
-      if (depLines.length)  sections.push(`DÉPARTS\n${depLines.join('\n')}`)
-      if (retLines.length)  sections.push(`RETOURS\n${retLines.join('\n')}`)
-      if (taskLines.length) sections.push(`TÂCHES\n${taskLines.join('\n')}`)
-      const digestBody = sections.length ? sections.join('\n\n') : 'Rien de programmé aujourd\'hui'
+      const digestBody = programme.length
+        ? programme.join('\n')
+        : 'Rien de programmé aujourd\'hui'
+      const digestTitle = `Programme du jour · ${fmtAgence(now, {
+        weekday: 'long', day: 'numeric', month: 'long',
+      })}`
 
       await supabase.from('notifications').insert({
         user_id: null, type: 'daily_digest',
-        title: 'Programme du jour', body: digestBody,
+        title: digestTitle, body: digestBody,
       })
-      await broadcastPushToManagers({ title: 'Programme du jour', body: digestBody, url: '/' })
+      await broadcastPushToManagers({ title: digestTitle, body: digestBody, url: '/' })
       created.push('digest')
     }
 
@@ -376,9 +390,14 @@ export async function GET(request: NextRequest) {
     // Titre corrigé : « Tâche / RDV en retard » (et non « Retour en retard »).
     const lateEventFrom = addHours(now, -24).toISOString()
     const lateEventTo   = subMinutes(now, thresholdMin).toISOString()
+    // `source_key` non nul = copie d'une alerte au calendrier (échéance, révision,
+    // lavage…). Ce ne sont pas des tâches confiées à quelqu'un : sans ce filtre,
+    // une échéance de paiement remontait sous « Tâche / RDV en retard » alors
+    // qu'elle a déjà sa propre notification. Constaté le 29/07 sur l'iPhone.
     const { data: lateEvents } = await supabase
       .from('calendar_events')
       .select('id, title')
+      .is('source_key', null)
       .gte('end_at', lateEventFrom)
       .lt('end_at', lateEventTo)
       .not('status', 'in', '("termine","annule")')

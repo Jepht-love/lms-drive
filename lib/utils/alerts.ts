@@ -1,5 +1,12 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { differenceInDays } from 'date-fns'
+// Ces alertes partent en notification poussée sur le téléphone : leurs heures
+// sont donc mises en forme par le serveur, qui vit en temps universel. Sans ce
+// détour, un retour prévu à 13:00 s'annonce « à 11:00 » l'été.
+import { heureAgence, dateAgence, fmtAgence } from '@/lib/format/heureAgence'
+
+/** Jour et mois seuls : « 04/08 ». Assez pour une échéance à quelques jours. */
+const jourMois = (v: string) => fmtAgence(v, { day: '2-digit', month: '2-digit' })
 
 export interface AppAlert {
   id: string
@@ -70,7 +77,7 @@ export async function fetchAllAlerts(
       category: 'urgent',
       urgent: true,
       type: 'contrat',
-      label: 'CONTRAT À SIGNER',
+      label: 'Contrat à signer',
       sublabel: `${vLabel(v)} · ${cl?.first_name ?? ''} ${cl?.last_name ?? ''}`.trim(),
       href: `/contracts/${c.id}`,
       date: c.created_at,
@@ -97,7 +104,7 @@ export async function fetchAllAlerts(
       category: 'urgent',
       urgent: true,
       type: 'retard',
-      label: 'RETOUR EN RETARD',
+      label: 'Retour en retard',
       sublabel: `${vLabel(v)} · ${(c as any)?.first_name ?? ''} ${(c as any)?.last_name ?? ''} · ${lateHours}h de retard`,
       href: `/reservations/${r.id}?from=alerts`,
       date: r.end_datetime,
@@ -121,7 +128,7 @@ export async function fetchAllAlerts(
           category: days <= 7 ? 'urgent' : 'important',
           urgent: days <= 7,
           type: 'ct',
-          label: days < 0 ? 'CT EXPIRÉ' : 'CONTRÔLE TECHNIQUE',
+          label: days < 0 ? 'CT expiré' : 'Contrôle technique',
           sublabel: `${vLabel(v)} · ${days < 0 ? `expiré il y a ${Math.abs(days)}j` : `dans ${days}j`}`,
           href: `/vehicles/${v.id}`,
           date: v.ct_date,
@@ -138,7 +145,7 @@ export async function fetchAllAlerts(
           category: days <= 7 ? 'urgent' : 'important',
           urgent: days <= 7,
           type: 'assurance',
-          label: days < 0 ? 'ASSURANCE EXPIRÉE' : 'ASSURANCE À RENOUVELER',
+          label: days < 0 ? 'Assurance expirée' : 'Assurance à renouveler',
           sublabel: `${vLabel(v)} · ${days < 0 ? `expirée il y a ${Math.abs(days)}j` : `dans ${days}j`}`,
           href: `/vehicles/${v.id}`,
           date: v.insurance_expiry,
@@ -155,7 +162,7 @@ export async function fetchAllAlerts(
           category: days <= 3 ? 'important' : 'info',
           urgent: false,
           type: 'revision',
-          label: 'RÉVISION À PRÉVOIR',
+          label: 'Révision à prévoir',
           sublabel: `${vLabel(v)} · dans ${days} jour${days > 1 ? 's' : ''}`,
           href: `/vehicles/${v.id}`,
           date: v.next_service_date,
@@ -175,7 +182,7 @@ export async function fetchAllAlerts(
           category: overdue ? 'urgent' : 'important',
           urgent: imminent,
           type: 'revision',
-          label: overdue ? 'ENTRETIEN DÉPASSÉ' : imminent ? 'ENTRETIEN IMMINENT' : 'ENTRETIEN À PRÉVOIR',
+          label: overdue ? 'Entretien dépassé' : imminent ? 'Entretien imminent' : 'Entretien à prévoir',
           sublabel: `${vLabel(v)} · ${overdue
             ? `dépassé de ${Math.abs(kmLeft).toLocaleString('fr-FR')} km`
             : `encore ${kmLeft.toLocaleString('fr-FR')} km`}`,
@@ -205,7 +212,7 @@ export async function fetchAllAlerts(
       category: 'important',
       urgent: false,
       type: 'tache',
-      label: 'TÂCHE EN RETARD',
+      label: 'Tâche en retard',
       sublabel: `${t.title}${(v as any)?.plate ? ` · ${vLabel(v)}` : ''}${(a as any)?.full_name ? ` · ${(a as any).full_name}` : ''} · ${lateHours}h de retard`,
       // Clic → droit à l'action : la réservation liée, sinon la fiche tâche.
       href: t.reservation_id ? `/reservations/${t.reservation_id}` : `/calendar/tasks/${t.id}`,
@@ -260,7 +267,7 @@ export async function fetchAllAlerts(
       category: 'important',
       urgent: false,
       type: 'tache',
-      label: 'TÂCHE EN RETARD',
+      label: 'Tâche en retard',
       sublabel: `${ev.title}${(qui as any)?.full_name ? ` · ${(qui as any).full_name}` : ' · non assignée'} · ${retard}`,
       // Le clic ouvre la tâche elle-même : c'est là qu'on la passe en terminé.
       href: `/calendrier?event=${ev.id}`,
@@ -307,7 +314,7 @@ export async function fetchAllAlerts(
         category: 'important',
         urgent: false,
         type: 'lavage',
-        label: 'LAVAGE AVANT LOCATION',
+        label: 'Lavage avant location',
         sublabel: `${vLabel(v)} · départ dans ${hoursLeft}h`,
         // Le lavage est une TÂCHE de préparation, pas la réservation. Si la tâche
         // calendrier existe (syncWashTask), l'alerte l'ouvre (?event=<id>). Sinon
@@ -346,7 +353,7 @@ export async function fetchAllAlerts(
       category: 'important',
       urgent: false,
       type: 'infraction',
-      label: 'INFRACTION NON RÉGLÉE',
+      label: 'Infraction non réglée',
       sublabel: `${vLabel(v)} · ${inf.type} · il y a ${days}j`,
       href: `/incidents/infractions/${inf.id}`,
       date: inf.infraction_date,
@@ -368,8 +375,8 @@ export async function fetchAllAlerts(
       category: 'important',
       urgent: false,
       type: 'sinistre',
-      label: 'SINISTRE EN COURS',
-      sublabel: `${vLabel(v)} · ${new Date(acc.accident_date).toLocaleDateString('fr-FR')}`,
+      label: 'Sinistre en cours',
+      sublabel: `${vLabel(v)} · ${dateAgence(acc.accident_date)}`,
       href: `/incidents/sinistres/${acc.id}`,
       date: acc.accident_date,
       vehicleId: acc.vehicle_id ?? undefined,
@@ -405,13 +412,13 @@ export async function fetchAllAlerts(
   departuresToday?.forEach(r => {
     const v = Array.isArray(r.vehicles) ? r.vehicles[0] : r.vehicles
     const c = Array.isArray(r.clients)  ? r.clients[0]  : r.clients
-    const heure = new Date(r.start_datetime).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+    const heure = heureAgence(r.start_datetime)
     alerts.push({
       id: `depart-${r.id}`,
       category: 'important',
       urgent: false,
       type: 'depart_imminent',
-      label: 'DÉPART DU JOUR',
+      label: 'Départ du jour',
       sublabel: `${vLabel(v)} · ${(c as any)?.first_name ?? ''} ${(c as any)?.last_name ?? ''} · à ${heure}`,
       href: `/reservations/${r.id}?from=alerts`,
       date: r.start_datetime,
@@ -434,13 +441,13 @@ export async function fetchAllAlerts(
   returnsToday?.forEach(r => {
     const v = Array.isArray(r.vehicles) ? r.vehicles[0] : r.vehicles
     const c = Array.isArray(r.clients)  ? r.clients[0]  : r.clients
-    const heure = new Date(r.end_datetime).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+    const heure = heureAgence(r.end_datetime)
     alerts.push({
       id: `retour-jour-${r.id}`,
       category: 'important',
       urgent: false,
       type: 'retour_jour',
-      label: 'RETOUR DU JOUR',
+      label: 'Retour du jour',
       sublabel: `${vLabel(v)} · ${(c as any)?.first_name ?? ''} ${(c as any)?.last_name ?? ''} · à ${heure}`,
       href: `/reservations/${r.id}?from=alerts`,
       date: r.end_datetime,
@@ -464,7 +471,7 @@ export async function fetchAllAlerts(
       category: expired ? 'urgent' : 'important',
       urgent: expired,
       type: 'document',
-      label: expired ? 'DOCUMENT EXPIRÉ' : 'DOCUMENT EXPIRE BIENTÔT',
+      label: expired ? 'Document expiré' : 'Document expire bientôt',
       sublabel: `${doc.name} · ${expired ? `expiré il y a ${Math.abs(days)}j` : `dans ${days}j`}`,
       href: `/documents`,
       date: doc.expiry_date ?? undefined,
@@ -474,7 +481,7 @@ export async function fetchAllAlerts(
   // ── 10. Échéances financières courtes (J-2 et moins = urgent) ──────────────
   const { data: dueDatesRaw } = await supabase
     .from('financial_due_dates')
-    .select('*, vehicles(plate, brand, model)')
+    .select('*, vehicles(plate, brand, model), clients(first_name, last_name)')
     .eq('is_paid', false)
     .lte('due_date', new Date(now.getTime() + 7 * 24 * 3600 * 1000).toISOString().split('T')[0])
 
@@ -483,15 +490,32 @@ export async function fetchAllAlerts(
   const dueDates = (dueDatesRaw ?? []).filter((d: any) => !d.deleted_at)
   dueDates.forEach(d => {
     const v = Array.isArray(d.vehicles) ? d.vehicles[0] : d.vehicles
+    const cli = Array.isArray(d.clients) ? d.clients[0] : d.clients
     const days = differenceInDays(new Date(d.due_date), now)
     const overdue = days < 0
+
+    // Ces textes se lisent sur un écran de verrouillage : le nom du client
+    // d'abord, un montant en euros, et une échéance en français. « dans 0j » et
+    // « +150€ » y étaient illisibles (retour Jeff du 29/07).
+    const qui = [cli?.first_name, cli?.last_name].filter(Boolean).join(' ').trim()
+    const montant = Number(d.amount).toLocaleString('fr-FR', {
+      style: 'currency', currency: 'EUR',
+    })
+    const verbe = d.type === 'recette' ? 'à encaisser' : 'à payer'
+    const quand = overdue
+      ? `${verbe}, dépassée depuis le ${jourMois(d.due_date)}`
+      : days === 0
+        ? `${verbe} aujourd'hui`
+        : `${verbe} le ${jourMois(d.due_date)}`
+    const objet = qui || d.description
+
     alerts.push({
       id: `due-${d.id}`,
       category: overdue || days <= 2 ? 'urgent' : 'important',
       urgent: overdue || days <= 2,
       type: 'echeance',
-      label: overdue ? 'ÉCHÉANCE DÉPASSÉE' : 'ÉCHÉANCE PROCHE',
-      sublabel: `${d.description}${v ? ` · ${vLabel(v)}` : ''} · ${d.type === 'recette' ? '+' : '−'}${d.amount}€ · ${overdue ? `dépassée de ${Math.abs(days)}j` : `dans ${days}j`}`,
+      label: overdue ? 'Échéance dépassée' : 'Échéance proche',
+      sublabel: `${objet} · ${montant} ${quand}${v ? ` · ${vLabel(v)}` : ''}`,
       href: `/accounting/due-dates`,
       date: d.due_date,
       vehicleId: d.vehicle_id ?? undefined,
@@ -519,7 +543,7 @@ export async function fetchAllAlerts(
       category: 'urgent',
       urgent: true,
       type: 'recuperation_retard',
-      label: 'DÉPART EN RETARD',
+      label: 'Départ en retard',
       sublabel: `${vLabel(v)} · ${(c as any)?.first_name ?? ''} ${(c as any)?.last_name ?? ''} · ${daysLate > 0 ? `${daysLate}j de retard` : `${hoursLate}h de retard`}`,
       href: `/reservations/${r.id}?from=alerts`,
       date: r.start_datetime,
@@ -551,7 +575,7 @@ export async function fetchAllAlerts(
       category: 'urgent',
       urgent: true,
       type: 'partenaire_retard',
-      label: 'RETOUR PARTENAIRE EN RETARD',
+      label: 'Retour partenaire en retard',
       sublabel: `${vehLabel} · ${dirText} · ${daysLate}j de retard`,
       href: `/partnerships/${op.id}`,
       date: op.end_date_expected,
@@ -587,7 +611,7 @@ export async function fetchAllAlerts(
       category: daysLate >= 3 ? 'urgent' : 'important',
       urgent: daysLate >= 3,
       type: 'contrat_non_cloture',
-      label: 'CONTRAT NON CLÔTURÉ',
+      label: 'Contrat non clôturé',
       sublabel: `${vLabel(v)} · ${cl?.first_name ?? ''} ${cl?.last_name ?? ''} · location terminée depuis ${daysLate}j`.replace(/\s+·\s+·/g, ' ·').trim(),
       href: `/reservations/${r.id}?from=alerts`,
       date: r.end_datetime,

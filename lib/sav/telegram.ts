@@ -3,6 +3,7 @@
 // Non bloquant : si la config manque ou l'API échoue, on log et on continue.
 
 import 'server-only'
+import { jourHeureAgence } from '@/lib/format/heureAgence'
 
 interface TelegramTicket {
   module?: string | null
@@ -24,9 +25,9 @@ function buildCaption(t: TelegramTicket): string {
   const who = [t.reporterName, t.reporterRole && `(${t.reporterRole})`]
     .filter(Boolean)
     .join(' ') || 'Utilisateur'
-  const when = new Date().toLocaleString('fr-FR', {
-    day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
-  })
+  // À l'heure de l'agence : le serveur vit en temps universel, un ticket déposé
+  // à 14:00 arrivait horodaté 12:00 dans le canal du SAV.
+  const when = jourHeureAgence(new Date())
   return [
     '🐛 *Nouveau ticket SAV*',
     `📍 ${context}`,
