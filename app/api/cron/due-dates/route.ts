@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
 
   const enRetard = dues.filter((d: any) => d.due_date < todayStr)
   const aVenir   = dues.filter((d: any) => d.due_date >= todayStr)
-  const creances = dues.filter((d: any) => d.reservation_id)
+  const creances = dues.filter((d: any) => d.type === 'recette')
 
   const somme = (liste: any[]) => liste.reduce((s, d) => s + Number(d.amount ?? 0), 0)
 
@@ -93,8 +93,13 @@ export async function GET(request: NextRequest) {
   // ce qui traîne, ce qu'on doit payer, ce qu'on doit encaisser. Un téléphone
   // n'affiche qu'environ quatre lignes de notification avant de tronquer, et une
   // ligne qui empile trois informations ne se lit pas d'un coup d'œil.
-  const loyers = aVenir.filter((d: any) => !d.reservation_id)
-  const creancesAVenir = aVenir.filter((d: any) => d.reservation_id)
+  // Ce qui distingue une créance client d'un loyer de véhicule, c'est le SENS de
+  // l'argent : `recette` = on nous doit, `depense` = on doit. Le lien vers la
+  // réservation ne peut pas servir de critère, il se perd quand la réservation
+  // est supprimée (colonne remise à vide) et la créance basculait alors du côté
+  // « à payer ». Constaté le 29/07/2026 sur deux échéances de George Alex Romeo.
+  const loyers = aVenir.filter((d: any) => d.type !== 'recette')
+  const creancesAVenir = aVenir.filter((d: any) => d.type === 'recette')
 
   // Qui doit l'argent, et quand. « 2 créances client » ne dit pas qui relancer,
   // et c'est tout l'intérêt d'une créance. Regroupé PAR PERSONNE : le même client
