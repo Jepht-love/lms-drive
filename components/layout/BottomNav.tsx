@@ -28,6 +28,7 @@ export default function BottomNav({ allowedTabs }: { allowedTabs?: string[] | nu
     // stacking context (transform, sticky, opacity…), sinon elle pouvait paraître
     // « transparente »/recouverte sur certaines pages (ex. Disponibilités).
     <nav
+      data-bottom-nav
       className="shrink-0 bg-[#111111]"
       style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 8px)', position: 'relative', zIndex: 10 }}
     >
