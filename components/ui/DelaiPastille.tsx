@@ -57,12 +57,27 @@ interface DelaiPastilleProps {
   className?: string
 }
 
+// Largeur FIXE, et non une largeur minimale : empilées les unes sous les autres
+// dans la liste du tableau de bord, des pastilles de largeurs différentes
+// donnent un bord droit en dents de scie (retour Jeff du 29/07/2026).
+//
+// 84 px = le libellé le plus long possible, plus les 8 px de marge de chaque
+// côté. Mesuré le 29/07/2026 dans l'écran réel, police Inter grasse 10 px :
+// « Dans 30 jours » fait 68 px, c'est le maximum du lot — au-delà de 30 jours
+// `libelleDelai` écrit la date, plus courte. Si la police ou la taille du texte
+// change un jour, cette valeur est à remesurer.
+//
+// Première version calée à 100 px avec un texte de 11 px : trop large à l'écran
+// (retour Jeff du 29/07/2026). Le texte est descendu à 10 px et la marge
+// latérale réduite, ce qui rend 16 px à la ligne du véhicule à côté.
+const LARGEUR_PASTILLE = 'w-[84px]'
+
 export default function DelaiPastille({ jours, echeance, enRetard, famille = 'retour', className = '' }: DelaiPastilleProps) {
   const { libelle, ton } = libelleDelai(jours, echeance, enRetard)
   return (
-    <div className={`min-w-[64px] rounded-2xl px-3 py-2.5 flex flex-col items-center justify-center gap-1 flex-shrink-0 ${PALETTES[famille][ton]} ${className}`}>
-      <Clock className="w-5 h-5" />
-      <span className="text-[11px] font-bold leading-none whitespace-nowrap">{libelle}</span>
+    <div className={`${LARGEUR_PASTILLE} rounded-2xl px-2 py-2 flex flex-col items-center justify-center gap-1 flex-shrink-0 ${PALETTES[famille][ton]} ${className}`}>
+      <Clock className="w-4 h-4" />
+      <span className="text-[10px] font-bold leading-none whitespace-nowrap">{libelle}</span>
     </div>
   )
 }
