@@ -51,6 +51,27 @@ export const DOCUMENT_SUBCATEGORIES: Record<DocumentCategory, { id: string; labe
 
 export const SENSITIVE_SUBCATEGORIES = ['cni', 'permis', 'cni_permis', 'sejour_permis', 'passeport', 'titre_sejour']
 
+/**
+ * Types de pièces qui portent une date de fin de validité. Sert à l'écran
+ * « Import & tri » : le champ « expire le » ne s'affiche que là où il a un sens,
+ * demander une date d'expiration pour un RIB ou une carte grise n'apporte rien
+ * et ralentit le tri d'un lot. Ajouté le 30/07/2026.
+ *
+ * Une pièce absente de cette table peut toujours recevoir une date par la
+ * bibliothèque : c'est le tri rapide qui ne la propose pas, pas la base qui
+ * l'interdit.
+ */
+export const EXPIRING_SUBCATEGORIES: Record<DocumentCategory, string[]> = {
+  entreprise: ['kbis', 'attestation_assurance', 'contrats_fournisseurs'],
+  vehicule:   ['attestation_assurance', 'controle_technique', 'mise_a_disposition'],
+  client:     ['cni', 'titre_sejour', 'permis', 'cni_permis', 'sejour_permis', 'passeport'],
+  partenaire: ['contrat_partenariat', 'convention_mise_dispo', 'accord_commercial', 'contrat_prestation'],
+}
+
+export function subcategoryExpires(category: DocumentCategory, subcategoryId: string): boolean {
+  return (EXPIRING_SUBCATEGORIES[category] ?? []).includes(subcategoryId)
+}
+
 export function isExpiringSoon(date: string): boolean {
   const expiry = new Date(date)
   const in30Days = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)

@@ -1,32 +1,77 @@
 'use client'
 
-import { useMemo, useRef, useState } from 'react'
+/**
+ * Écran « Import & tri » — le tri à l'écran des pièces déposées en masse.
+ *
+ * À quoi il sert : le gérant reçoit ses pièces par messagerie, les enregistre en
+ * lot sur son téléphone, dépose tout ici, puis range. Une pile par famille
+ * (client, véhicule, société, partenaire) : on choisit la pile, on coche les
+ * pièces qui vont ensemble, on désigne la cible et le type, on classe. La pièce
+ * prend alors son nom canonique et apparaît sur la fiche de sa cible.
+ *
+ * Ce qu'il attend : les piles déjà chargées et signées par `page.tsx`, plus les
+ * listes de cibles. Il ne lit jamais la base lui-même.
+ * Ce qu'il produit : des appels à `stageTriageDocuments` (dépôt),
+ * `assignTriageDocuments` (classement), `moveTriageDocuments` (pile changée) et
+ * `deleteClientDocument` (pièce jetée).
+ *
+ * Ce qu'il ne faut pas casser :
+ *  - le dossier de dépôt et le type de cible viennent de `TRIAGE_FAMILIES`, pas
+ *    d'une valeur écrite ici : une cinquième famille ne doit rien demander à cet
+ *    écran ;
+ *  - changer de pile remet à zéro la sélection ET le type choisi. Sans ça, on
+ *    classerait une carte grise avec un type de pièce client ;
+ *  - la société ne se rattache à rien (`entityType: null`) : le bouton doit rester
+ *    actif sans cible pour cette pile, et seulement pour elle ;
+ *  - les bascules CNI / Séjour / Permis sont propres à la pile client : ce sont
+ *    les trois pièces qu'on trie par dizaines, le reste passe par la liste.
+ *
+ * Écrit le 29/07/2026 pour la seule pile client, étendu aux quatre familles le
+ * 30/07/2026 (remarque 15 de Jeff).
+ */
+
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  UploadCloud, Loader2, FileText, Image as ImageIcon, X, Check, Trash2,
-  Search, ArrowLeft, Users, UserPlus,
+  UploadCloud, Loader2, FileText, X, Check, Trash2,
+  Search, ArrowLeft, Layers, UserPlus, FolderInput, CalendarClock,
 } from 'lucide-react'
 import { uploadFileToSupabase } from '@/lib/upload'
 import {
-  stageClientDocuments, assignClientDocuments, deleteClientDocument,
+  stageTriageDocuments, assignTriageDocuments, moveTriageDocuments, deleteClientDocument,
 } from '@/lib/actions/documents'
 import { createClientQuick } from '@/lib/actions/clients'
-import { DOCUMENT_SUBCATEGORIES, getSubcategoryLabel } from '@/lib/documents/categories'
+import { getSubcategoryLabel, subcategoryExpires } from '@/lib/documents/categories'
+import {
+  TRIAGE_FAMILIES, getTriageFamily, triageSubcategories, type TriageFamily,
+} from '@/lib/documents/triage'
+import DatePickerField from '@/components/ui/DatePickerField'
 
 export interface StagedDoc {
   id: string
   name: string
   url: string | null
   fileType: string | null
+  /** Pile dans laquelle la pièce attend. */
+  family: TriageFamily
 }
 export interface ClientLite {
   id: string
   name: string
   phone: string | null
 }
+/** Cible de rattachement d'une pile : un véhicule (plaque), un partenaire (nom). */
+export interface TargetLite {
+  id: string
+  name: string
+  /** Précision affichée à droite du nom (marque et modèle, contact…). */
+  hint: string | null
+}
 
-const CLIENT_SUBCATS = DOCUMENT_SUBCATEGORIES.client
 const ACCEPT = '.pdf,.jpg,.jpeg,.png,.webp,.heic,image/*,application/pdf'
+
+/** Types d'identité gérés par les bascules de la pile client, donc retirés de la liste. */
+const CLIENT_QUICK_IDS = ['cni', 'titre_sejour', 'permis', 'cni_permis', 'sejour_permis']
 
 function isImage(type: string | null) {
   return !!type && type.startsWith('image/')
@@ -35,9 +80,13 @@ function isImage(type: string | null) {
 export default function ImportTriageClient({
   staged,
   clients,
+  vehicles,
+  partners,
 }: {
   staged: StagedDoc[]
   clients: ClientLite[]
+  vehicles: TargetLite[]
+  partners: TargetLite[]
 }) {
   const router = useRouter()
   const inputRef = useRef<HTMLInputElement>(null)
@@ -46,58 +95,102 @@ export default function ImportTriageClient({
   // (client dont les pièces sont là mais qui n'existait pas encore en base).
   const [clientList, setClientList] = useState<ClientLite[]>(clients)
   const [creating, setCreating] = useState(false)
-  const [showMoreTypes, setShowMoreTypes] = useState(false)
 
-  // ── Upload ──
+  // ── Pile active ──
+  // On ouvre sur la première pile qui a quelque chose à trier : le gérant arrive
+  // le plus souvent après un dépôt, il ne doit pas chercher où sont ses pièces.
+  const [family, setFamily] = useState<TriageFamily>(
+    () => TRIAGE_FAMILIES.find(f => staged.some(d => d.family === f.id))?.id ?? 'client',
+  )
+  const fam = getTriageFamily(family)!
+
+  const piles = useMemo(() => {
+    const m = new Map<TriageFamily, StagedDoc[]>(TRIAGE_FAMILIES.map(f => [f.id, [] as StagedDoc[]]))
+    for (const d of staged) m.get(d.family)?.push(d)
+    return m
+  }, [staged])
+  const pile = piles.get(family) ?? []
+
+  // ── Dépôt ──
   const [dragOver, setDragOver] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null)
   const [uploadError, setUploadError] = useState<string | null>(null)
 
-  // ── Tri / assignation ──
+  // ── Tri ──
   const [selected, setSelected] = useState<Set<string>>(new Set())
-  const [client, setClient] = useState<ClientLite | null>(null)
-  // Type de pièce : bascules CNI / Séjour / Permis. CNI et Séjour sont des pièces
-  // d'identité alternatives → mutuellement exclusives. Permis est indépendant et
-  // se combine avec l'une ou l'autre (photo contenant identité + permis) → types
-  // combinés « cni_permis » / « sejour_permis ». « Autre… » (otherSub) prend le
-  // dessus pour les cas rares (justif domicile, passeport…) et coupe les bascules.
+  const [target, setTarget] = useState<TargetLite | null>(null)
+  const [expiry, setExpiry] = useState('')
+  const [showMove, setShowMove] = useState(false)
+  const [moving, setMoving] = useState(false)
+
+  // Repère posé sur `body` tant que la barre de rangement est ouverte : la bulle
+  // « Signaler un bug » est fixée en bas à gauche et se retrouvait posée sur le
+  // bouton « Ranger en… » en largeur téléphone (vu le 30/07/2026). Le z-index ne
+  // peut rien : la bulle et la barre ne vivent pas dans le même empilement, la
+  // barre étant à l'intérieur d'un conteneur lui-même fixé. La règle est dans
+  // app/globals.css, à côté de celle qui efface la barre du bas pendant un tiroir.
+  const barOpen = selected.size > 0
+  useEffect(() => {
+    if (barOpen) document.body.dataset.sortingBar = 'true'
+    else delete document.body.dataset.sortingBar
+    return () => { delete document.body.dataset.sortingBar }
+  }, [barOpen])
+
+  // Type de pièce, pile client : bascules CNI / Séjour / Permis. CNI et Séjour
+  // sont des pièces d'identité alternatives → mutuellement exclusives. Permis est
+  // indépendant et se combine avec l'une ou l'autre (photo contenant identité +
+  // permis) → types combinés « cni_permis » / « sejour_permis ». La liste
+  // (`listSub`) prend le dessus pour les cas rares et coupe les bascules.
   const [quickCni, setQuickCni] = useState(true)
   const [quickSejour, setQuickSejour] = useState(false)
   const [quickPermis, setQuickPermis] = useState(false)
-  const [otherSub, setOtherSub] = useState<string | null>(null)
+  const [showMoreTypes, setShowMoreTypes] = useState(false)
+  // Type choisi dans la liste déroulante. Seul mode de choix hors pile client.
+  const [listSub, setListSub] = useState<string | null>(null)
+
   const idPart = quickCni ? 'cni' : quickSejour ? 'sejour' : ''
-  const subcategory =
-    otherSub ??
+  const clientSub =
+    listSub ??
     (idPart === 'cni'
       ? (quickPermis ? 'cni_permis' : 'cni')
       : idPart === 'sejour'
         ? (quickPermis ? 'sejour_permis' : 'titre_sejour')
         : quickPermis ? 'permis' : '')
+  const subcategory = family === 'client' ? clientSub : (listSub ?? '')
+  const needsExpiry = !!subcategory && subcategoryExpires(family, subcategory)
 
-  function pickType(kind: 'cni' | 'sejour' | 'permis') {
-    setOtherSub(null)
-    setShowMoreTypes(false)
-    if (kind === 'cni') { setQuickSejour(false); setQuickCni(v => !v) }
-    else if (kind === 'sejour') { setQuickCni(false); setQuickSejour(v => !v) }
-    else { setQuickPermis(v => !v) }
-  }
   const [assigning, setAssigning] = useState(false)
   const [assignError, setAssignError] = useState<string | null>(null)
 
   const [lightbox, setLightbox] = useState<StagedDoc | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
-  // Sélectionne un client (barre du bas OU zoom). Depuis le zoom (docId fourni),
-  // on ajoute la photo à la sélection et on referme le zoom → la barre du bas
-  // apparaît prête (type + Assigner).
-  function pickClient(c: ClientLite, docId?: string) {
+  // Cibles de la pile active. La société ne se rattache à rien → liste vide.
+  const targets: TargetLite[] = useMemo(() => {
+    if (family === 'client') return clientList.map(c => ({ id: c.id, name: c.name, hint: c.phone }))
+    if (family === 'vehicule') return vehicles
+    if (family === 'partenaire') return partners
+    return []
+  }, [family, clientList, vehicles, partners])
+
+  function pickType(kind: 'cni' | 'sejour' | 'permis') {
+    setListSub(null)
+    setShowMoreTypes(false)
+    if (kind === 'cni') { setQuickSejour(false); setQuickCni(v => !v) }
+    else if (kind === 'sejour') { setQuickCni(false); setQuickSejour(v => !v) }
+    else { setQuickPermis(v => !v) }
+  }
+
+  // Désigne la cible (barre du bas OU zoom). Depuis le zoom (docId fourni), on
+  // ajoute la pièce à la sélection et on referme → la barre du bas apparaît prête.
+  function pickTarget(t: TargetLite, docId?: string) {
     if (docId) setSelected(prev => new Set(prev).add(docId))
-    setClient(c)
+    setTarget(t)
     if (docId) setLightbox(null)
   }
 
-  // Crée une fiche à la volée puis l'utilise aussitôt (barre ou zoom).
+  // Crée une fiche client à la volée puis l'utilise aussitôt (barre ou zoom).
   async function createClientAndUse(name: string, docId?: string) {
     setAssignError(null)
     setCreating(true)
@@ -106,7 +199,7 @@ export default function ImportTriageClient({
     if (res?.error || !res?.client) { setAssignError(res?.error ?? 'Création impossible'); return }
     const c: ClientLite = { id: res.client.id, name: res.client.name, phone: null }
     setClientList(prev => [c, ...prev])
-    pickClient(c, docId)
+    pickTarget({ id: c.id, name: c.name, hint: null }, docId)
     router.refresh()
   }
 
@@ -120,12 +213,12 @@ export default function ImportTriageClient({
     const uploaded: { name: string; file_url: string; file_type: string; file_size: number }[] = []
     const failed: string[] = []
 
-    // `finally` : un rejet en cours d'upload laisserait sinon la progression
-    // figée et la zone de dépôt bloquée en état « téléversement ».
+    // `finally` : un rejet en cours de dépôt laisserait sinon la progression
+    // figée et la zone bloquée en état « téléversement ».
     try {
       for (let i = 0; i < files.length; i++) {
         const file = files[i]
-        const sent = await uploadFileToSupabase(file, 'client/a-trier', 'documents')
+        const sent = await uploadFileToSupabase(file, fam.folder, 'documents')
         if (sent) {
           uploaded.push({
             name: file.name,
@@ -141,7 +234,7 @@ export default function ImportTriageClient({
       }
 
       if (uploaded.length > 0) {
-        const res = await stageClientDocuments(uploaded)
+        const res = await stageTriageDocuments(family, uploaded)
         if (res?.error) setUploadError(res.error)
       }
       if (failed.length > 0) {
@@ -164,25 +257,55 @@ export default function ImportTriageClient({
       return next
     })
   }
+
   function clearSelection() {
     setSelected(new Set())
-    setClient(null)
+    setTarget(null)
     setQuickCni(true)
     setQuickSejour(false)
     setQuickPermis(false)
-    setOtherSub(null)
+    setListSub(null)
     setShowMoreTypes(false)
+    setExpiry('')
+    setShowMove(false)
     setAssignError(null)
   }
 
+  // Changer de pile efface la sélection et le type : une pièce d'une pile ne se
+  // classe jamais avec le type d'une autre.
+  function switchFamily(id: TriageFamily) {
+    if (id === family) return
+    setFamily(id)
+    clearSelection()
+    setUploadError(null)
+  }
+
   async function handleAssign() {
-    if (!client || selected.size === 0) return
+    if (selected.size === 0 || !subcategory) return
+    if (fam.entityType && !target) return
     setAssignError(null)
     setAssigning(true)
-    const res = await assignClientDocuments([...selected], client.id, subcategory)
+    const res = await assignTriageDocuments([...selected], {
+      family,
+      targetId: fam.entityType ? target!.id : null,
+      subcategory,
+      expiryDate: needsExpiry ? (expiry || null) : null,
+    })
     setAssigning(false)
     if (res?.error) { setAssignError(res.error); return }
     clearSelection()
+    router.refresh()
+  }
+
+  async function handleMove(to: TriageFamily) {
+    if (selected.size === 0) return
+    setAssignError(null)
+    setMoving(true)
+    const res = await moveTriageDocuments([...selected], to)
+    setMoving(false)
+    if (res?.error) { setAssignError(res.error); return }
+    clearSelection()
+    setFamily(to)
     router.refresh()
   }
 
@@ -194,6 +317,9 @@ export default function ImportTriageClient({
     setSelected(prev => { const n = new Set(prev); n.delete(id); return n })
     router.refresh()
   }
+
+  const typeList = triageSubcategories(family)
+    .filter(sc => family !== 'client' || !CLIENT_QUICK_IDS.includes(sc.id))
 
   return (
     <div className="space-y-4 pb-28">
@@ -210,13 +336,39 @@ export default function ImportTriageClient({
           <h1 className="text-xl font-black text-gray-900 leading-tight">Import &amp; tri</h1>
           <p className="text-[12px] text-gray-500">
             {staged.length > 0
-              ? `${staged.length} pièce${staged.length > 1 ? 's' : ''} à rattacher à un client`
-              : 'Déposez un lot de documents à rattacher'}
+              ? `${staged.length} pièce${staged.length > 1 ? 's' : ''} à ranger`
+              : 'Déposez un lot de documents à ranger'}
           </p>
         </div>
       </div>
 
-      {/* Zone de dépôt */}
+      {/* Piles : une par famille, défilables au doigt sur téléphone */}
+      <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+        {TRIAGE_FAMILIES.map(f => {
+          const n = piles.get(f.id)?.length ?? 0
+          const on = f.id === family
+          return (
+            <button type="button"
+              key={f.id}
+              onClick={() => switchFamily(f.id)}
+              className={`flex-shrink-0 inline-flex items-center gap-1.5 text-[12px] font-medium px-4 py-2.5 min-h-[44px] rounded-2xl transition-colors ${
+                on ? 'bg-[#111111] text-white' : 'bg-white border border-gray-200 text-gray-600'
+              }`}
+            >
+              {f.label}
+              {n > 0 && (
+                <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${
+                  on ? 'bg-white/20 text-white' : 'bg-amber-500 text-white'
+                }`}>
+                  {n}
+                </span>
+              )}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Zone de dépôt — dépose dans la pile active */}
       <div
         onDragOver={e => { e.preventDefault(); setDragOver(true) }}
         onDragLeave={() => setDragOver(false)}
@@ -240,7 +392,8 @@ export default function ImportTriageClient({
               Glissez tout le lot ici ou cliquez pour choisir
             </p>
             <p className="text-[11px] text-gray-400 mt-1">
-              Ouvrez votre dossier « telegram », sélectionnez tout (Ctrl/Cmd + A) et validez.<br />
+              Les pièces arrivent dans la pile <span className="font-semibold text-gray-500">{fam.label}</span>.
+              Une pièce tombée dans la mauvaise pile se déplace après coup.<br />
               PDF &amp; images · plusieurs fichiers à la fois
             </p>
           </>
@@ -259,20 +412,22 @@ export default function ImportTriageClient({
         <p className="text-xs text-red-600 bg-red-50 border border-red-100 px-3 py-2 rounded-lg">{uploadError}</p>
       )}
 
-      {/* Grille à trier */}
-      {staged.length === 0 ? (
+      {/* Grille de la pile active */}
+      {pile.length === 0 ? (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-10 text-center">
           <Check className="w-6 h-6 text-emerald-500 mx-auto mb-2" />
-          <p className="text-sm font-semibold text-gray-600">Rien à trier</p>
+          <p className="text-sm font-semibold text-gray-600">Rien à trier dans « {fam.label} »</p>
           <p className="text-[12px] text-gray-400 mt-0.5">
-            Les documents assignés apparaissent sur la fiche de chaque client.
+            {fam.entityType
+              ? `Les pièces rangées apparaissent sur la fiche de chaque ${fam.targetLabel}.`
+              : 'Les pièces rangées apparaissent dans la bibliothèque.'}
           </p>
         </div>
       ) : (
         <>
           <div className="flex items-center justify-between">
             <p className="text-[11px] font-bold uppercase tracking-wide text-gray-400">
-              À trier · {staged.length}
+              À trier · {pile.length}
             </p>
             {selected.size > 0 && (
               <button type="button" onClick={clearSelection} className="text-[12px] font-semibold text-gray-500 hover:text-gray-700">
@@ -282,7 +437,7 @@ export default function ImportTriageClient({
           </div>
 
           <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
-            {staged.map(d => {
+            {pile.map(d => {
               const isSel = selected.has(d.id)
               return (
                 <div
@@ -341,99 +496,156 @@ export default function ImportTriageClient({
         </>
       )}
 
-      {/* Barre d'assignation (visible dès qu'une pièce est cochée) */}
+      {/* Barre de rangement (visible dès qu'une pièce est cochée).
+          Ne pas chercher à monter ce z-index pour passer devant la bulle
+          « Signaler un bug » : cette barre vit dans un conteneur déjà fixé, donc
+          dans un autre empilement, et aucune valeur ne la fera passer devant.
+          C'est la bulle qui s'efface, via le repère posé sur `body` plus haut. */}
       {selected.size > 0 && (
-        <div className="fixed bottom-0 inset-x-0 z-30 bg-white border-t border-gray-200 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] p-3 space-y-2.5">
+        <div className="fixed bottom-0 inset-x-0 z-30 bg-white border-t border-gray-200 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] p-3 max-h-[70vh] overflow-y-auto">
           <div className="max-w-lg mx-auto space-y-2.5">
             <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-gray-400 flex-shrink-0" />
+              <Layers className="w-4 h-4 text-gray-400 flex-shrink-0" />
               <p className="text-sm font-bold text-gray-900">
-                {selected.size} pièce{selected.size > 1 ? 's' : ''} à rattacher
+                {selected.size} pièce{selected.size > 1 ? 's' : ''} à ranger
               </p>
-              {client && (
+              {target && (
                 <span className="ml-auto text-[12px] font-semibold text-emerald-600 truncate">
-                  → {client.name}
+                  {target.name}
                 </span>
               )}
             </div>
 
-            {/* Recherche client */}
-            {!client ? (
-              <ClientSearch
-                clients={clientList}
-                creating={creating}
-                autoFocus
-                onPick={c => pickClient(c)}
-                onCreate={name => createClientAndUse(name)}
-              />
-            ) : (
-              <button type="button"
-                onClick={() => setClient(null)}
-                className="w-full flex items-center justify-between px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-200"
-              >
-                <span className="text-[13px] font-semibold text-gray-900">{client.name}</span>
-                <span className="text-[12px] text-gray-400">Changer</span>
-              </button>
+            {/* Cible : club des piles qui se rattachent à une fiche. */}
+            {fam.entityType && (
+              !target ? (
+                <TargetPicker
+                  targets={targets}
+                  placeholder={
+                    family === 'client' ? 'Nom du client (ou téléphone)…'
+                      : family === 'vehicule' ? 'Plaque, marque ou modèle…'
+                        : 'Nom du partenaire…'
+                  }
+                  emptyHint={`Tapez pour rechercher un ${fam.targetLabel}`}
+                  creating={creating}
+                  autoFocus
+                  onPick={t => pickTarget(t)}
+                  onCreate={family === 'client' ? name => createClientAndUse(name) : undefined}
+                />
+              ) : (
+                <button type="button"
+                  onClick={() => setTarget(null)}
+                  className="w-full flex items-center justify-between px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-200"
+                >
+                  <span className="text-[13px] font-semibold text-gray-900 truncate">{target.name}</span>
+                  <span className="text-[12px] text-gray-400 flex-shrink-0 ml-2">Changer</span>
+                </button>
+              )
             )}
 
-            {/* Type de pièce : CNI / Séjour (identité, exclusives) + Permis
-                (indépendant, combinable). « Autre… » pour les cas rares. */}
             <div className="space-y-2">
-              <div className="grid grid-cols-3 gap-2">
-                {([
-                  { kind: 'cni' as const, label: 'CNI', on: !otherSub && quickCni },
-                  { kind: 'sejour' as const, label: 'Séjour', on: !otherSub && quickSejour },
-                  { kind: 'permis' as const, label: 'Permis', on: !otherSub && quickPermis },
-                ]).map(t => (
+              {/* Pile client : les trois pièces triées par dizaines passent par des
+                  bascules. CNI / Séjour exclusives, Permis combinable. */}
+              {family === 'client' && (
+                <>
+                  <div className="grid grid-cols-3 gap-2">
+                    {([
+                      { kind: 'cni' as const, label: 'CNI', on: !listSub && quickCni },
+                      { kind: 'sejour' as const, label: 'Séjour', on: !listSub && quickSejour },
+                      { kind: 'permis' as const, label: 'Permis', on: !listSub && quickPermis },
+                    ]).map(t => (
+                      <button type="button"
+                        key={t.kind}
+                        onClick={() => pickType(t.kind)}
+                        className={`py-2.5 rounded-xl text-sm font-bold border transition-colors ${
+                          t.on
+                            ? 'bg-[#111111] text-white border-[#111111]'
+                            : 'bg-gray-50 text-gray-600 border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
+
                   <button type="button"
-                    key={t.kind}
-                    onClick={() => pickType(t.kind)}
-                    className={`py-2.5 rounded-xl text-sm font-bold border transition-colors ${
-                      t.on
-                        ? 'bg-[#111111] text-white border-[#111111]'
-                        : 'bg-gray-50 text-gray-600 border-gray-200 hover:border-gray-300'
+                    onClick={() => setShowMoreTypes(v => !v)}
+                    className={`w-full py-2 rounded-xl text-[13px] font-semibold border transition-colors ${
+                      listSub
+                        ? 'bg-gray-900 text-white border-gray-900'
+                        : 'bg-gray-50 text-gray-500 border-gray-200'
                     }`}
                   >
-                    {t.label}
+                    Autre type…
                   </button>
-                ))}
-              </div>
+                </>
+              )}
 
-              <button type="button"
-                onClick={() => setShowMoreTypes(v => !v)}
-                className={`w-full py-2 rounded-xl text-[13px] font-semibold border transition-colors ${
-                  otherSub
-                    ? 'bg-gray-900 text-white border-gray-900'
-                    : 'bg-gray-50 text-gray-500 border-gray-200'
-                }`}
-              >
-                Autre type…
-              </button>
-
-              {showMoreTypes && (
+              {/* Liste des types : seul mode de choix hors pile client. */}
+              {(family !== 'client' || showMoreTypes) && (
                 <select
                   aria-label="Type de document"
-                  value={otherSub ?? ''}
-                  onChange={e => { setOtherSub(e.target.value || null); setQuickCni(false); setQuickSejour(false); setQuickPermis(false) }}
-                  className="w-full text-[13px] font-medium text-gray-700 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 outline-none focus:border-gray-400"
+                  value={listSub ?? ''}
+                  onChange={e => {
+                    setListSub(e.target.value || null)
+                    setQuickCni(false); setQuickSejour(false); setQuickPermis(false)
+                    setExpiry('')
+                  }}
+                  className="w-full text-[13px] font-medium text-gray-700 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 min-h-[44px] outline-none focus:border-gray-400"
                 >
                   <option value="">Choisir un type…</option>
-                  {CLIENT_SUBCATS
-                    .filter(sc => !['cni', 'titre_sejour', 'permis', 'cni_permis', 'sejour_permis'].includes(sc.id))
-                    .map(sc => (
-                      <option key={sc.id} value={sc.id}>{sc.label}</option>
-                    ))}
+                  {typeList.map(sc => (
+                    <option key={sc.id} value={sc.id}>{sc.label}</option>
+                  ))}
                 </select>
+              )}
+
+              {/* Date de fin de validité : seulement pour les types qui expirent. */}
+              {needsExpiry && (
+                <div className="flex items-center gap-2">
+                  <CalendarClock className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                  <span className="text-[12px] font-semibold text-gray-500 flex-shrink-0">Expire le</span>
+                  <DatePickerField
+                    value={expiry}
+                    onChange={setExpiry}
+                    aria-label="Date de fin de validité"
+                    className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 min-h-[44px] text-[13px]"
+                  />
+                </div>
               )}
 
               <button type="button"
                 onClick={handleAssign}
-                disabled={!client || assigning || !subcategory}
+                disabled={assigning || !subcategory || (!!fam.entityType && !target)}
                 className="w-full inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-[#111111] text-white text-sm font-bold hover:bg-black transition-colors disabled:opacity-50"
               >
                 {assigning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                {subcategory ? `Assigner en ${getSubcategoryLabel('client', subcategory)}` : 'Choisissez un type'}
+                {subcategory ? `Ranger en ${getSubcategoryLabel(family, subcategory)}` : 'Choisissez un type'}
               </button>
+
+              {/* Pièce tombée dans la mauvaise pile : elle change de pile sans être
+                  re-téléversée. */}
+              {!showMove ? (
+                <button type="button"
+                  onClick={() => setShowMove(true)}
+                  className="w-full inline-flex items-center justify-center gap-1.5 py-2 text-[12px] font-semibold text-gray-500 hover:text-gray-700"
+                >
+                  <FolderInput className="w-3.5 h-3.5" /> Déplacer vers une autre pile…
+                </button>
+              ) : (
+                <div className="grid grid-cols-3 gap-2 pt-1">
+                  {TRIAGE_FAMILIES.filter(f => f.id !== family).map(f => (
+                    <button type="button"
+                      key={f.id}
+                      onClick={() => handleMove(f.id)}
+                      disabled={moving}
+                      className="py-2.5 rounded-xl text-[13px] font-bold bg-gray-50 text-gray-600 border border-gray-200 hover:border-gray-300 disabled:opacity-50"
+                    >
+                      {moving ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : f.label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {assignError && (
@@ -443,7 +655,7 @@ export default function ImportTriageClient({
         </div>
       )}
 
-      {/* Lightbox : photo agrandie pour lire le nom + champ pour l'écrire aussitôt */}
+      {/* Zoom : pièce agrandie pour lire ce qu'il y a dessus, et désigner la cible aussitôt */}
       {lightbox && (
         <div
           className="fixed inset-0 z-50 bg-black/85 flex flex-col p-4"
@@ -482,24 +694,41 @@ export default function ImportTriageClient({
             ) : null}
           </div>
 
-          {/* Panneau : écrire le nom du client lu sur la pièce */}
+          {/* Panneau : désigner la cible lue sur la pièce */}
           <div
             className="mt-3 bg-white rounded-2xl p-3 w-full max-w-lg mx-auto space-y-2"
             onClick={e => e.stopPropagation()}
           >
-            <p className="text-[11px] font-bold uppercase tracking-wide text-gray-400">
-              Client sur cette pièce
-            </p>
-            <ClientSearch
-              clients={clientList}
-              creating={creating}
-              autoFocus
-              onPick={c => pickClient(c, lightbox.id)}
-              onCreate={name => createClientAndUse(name, lightbox.id)}
-            />
-            <p className="text-[11px] text-gray-400">
-              Choisir/créer le client sélectionne cette photo et ferme le zoom → choisissez le type et « Assigner ».
-            </p>
+            {fam.entityType ? (
+              <>
+                <p className="text-[11px] font-bold uppercase tracking-wide text-gray-400">
+                  {fam.label} sur cette pièce
+                </p>
+                <TargetPicker
+                  targets={targets}
+                  placeholder={
+                    family === 'client' ? 'Nom du client (ou téléphone)…'
+                      : family === 'vehicule' ? 'Plaque, marque ou modèle…'
+                        : 'Nom du partenaire…'
+                  }
+                  emptyHint={`Tapez pour rechercher un ${fam.targetLabel}`}
+                  creating={creating}
+                  autoFocus
+                  onPick={t => pickTarget(t, lightbox.id)}
+                  onCreate={family === 'client' ? name => createClientAndUse(name, lightbox.id) : undefined}
+                />
+                <p className="text-[11px] text-gray-400">
+                  Le choix sélectionne cette pièce et ferme le zoom : il ne reste que le type et « Ranger ».
+                </p>
+              </>
+            ) : (
+              <button type="button"
+                onClick={() => { setSelected(prev => new Set(prev).add(lightbox.id)); setLightbox(null) }}
+                className="w-full py-2.5 rounded-xl bg-[#111111] text-white text-sm font-bold"
+              >
+                Sélectionner cette pièce
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -508,68 +737,80 @@ export default function ImportTriageClient({
 }
 
 /**
- * Champ de recherche + création de client, réutilisé dans la barre d'assignation
- * ET dans le zoom (pour écrire le nom lu sur la pièce). Gère sa propre saisie ;
- * remonte la sélection (onPick) ou la création (onCreate) au parent.
+ * Recherche d'une cible (client, véhicule, partenaire), réutilisée dans la barre
+ * du bas ET dans le zoom. Gère sa propre saisie ; remonte le choix (onPick) ou la
+ * création (onCreate) au parent.
+ *
+ * `onCreate` n'est fourni que pour les clients : un véhicule ou un partenaire ne
+ * se crée pas depuis un écran de tri, ces fiches demandent des informations que
+ * la pièce ne porte pas.
  */
-function ClientSearch({
-  clients,
+function TargetPicker({
+  targets,
+  placeholder,
+  emptyHint,
   creating,
   autoFocus,
   onPick,
   onCreate,
 }: {
-  clients: ClientLite[]
+  targets: TargetLite[]
+  placeholder: string
+  emptyHint: string
   creating: boolean
   autoFocus?: boolean
-  onPick: (c: ClientLite) => void
-  onCreate: (name: string) => void
+  onPick: (t: TargetLite) => void
+  onCreate?: (name: string) => void
 }) {
   const [q, setQ] = useState('')
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase()
-    if (!s) return clients.slice(0, 8)
-    return clients
-      .filter(c => c.name.toLowerCase().includes(s) || (c.phone ?? '').includes(s))
+    if (!s) return targets.slice(0, 8)
+    return targets
+      .filter(t => t.name.toLowerCase().includes(s) || (t.hint ?? '').toLowerCase().includes(s))
       .slice(0, 8)
-  }, [clients, q])
+  }, [targets, q])
 
   const trimmed = q.trim()
-  const hasExact = clients.some(c => c.name.toLowerCase() === trimmed.toLowerCase())
-  const canCreate = trimmed.length >= 2 && !hasExact
+  const hasExact = targets.some(t => t.name.toLowerCase() === trimmed.toLowerCase())
+  const canCreate = !!onCreate && trimmed.length >= 2 && !hasExact
 
   return (
-    <div className="relative">
-      <label htmlFor="triage-client-search" className="sr-only">Rechercher un client</label>
-      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-      <input
-        id="triage-client-search"
-        autoFocus={autoFocus}
-        type="search"
-        value={q}
-        onChange={e => setQ(e.target.value)}
-        placeholder="Nom du client (ou téléphone)…"
-        className="w-full pl-9 pr-4 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-[13px] text-gray-800 placeholder-gray-400 outline-none focus:border-gray-400"
-      />
+    <div>
+      {/* La loupe est calée sur le champ seul : dans un cadre englobant la liste,
+          elle se retrouve dessinée au milieu des résultats. */}
+      <div className="relative">
+        <label htmlFor="triage-target-search" className="sr-only">{placeholder}</label>
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+        <input
+          id="triage-target-search"
+          autoFocus={autoFocus}
+          type="search"
+          value={q}
+          onChange={e => setQ(e.target.value)}
+          placeholder={placeholder}
+          className="w-full pl-9 pr-4 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-[13px] text-gray-800 placeholder-gray-400 outline-none focus:border-gray-400"
+        />
+      </div>
       {(trimmed !== '' || filtered.length > 0) && (
         <div className="mt-1.5 max-h-52 overflow-y-auto rounded-xl border border-gray-200 divide-y divide-gray-100 bg-white">
-          {filtered.map(c => (
+          {filtered.map(t => (
             <button type="button"
-              key={c.id}
-              onClick={() => { onPick(c); setQ('') }}
+              key={t.id}
+              onClick={() => { onPick(t); setQ('') }}
               className="w-full text-left px-3 py-2.5 hover:bg-gray-50"
             >
-              <span className="text-[13px] font-semibold text-gray-900">{c.name}</span>
-              {c.phone && <span className="text-[11px] text-gray-400 ml-2">{c.phone}</span>}
+              <span className="text-[13px] font-semibold text-gray-900">{t.name}</span>
+              {t.hint && <span className="text-[11px] text-gray-400 ml-2">{t.hint}</span>}
             </button>
           ))}
           {filtered.length === 0 && !canCreate && (
-            <p className="text-[12px] text-gray-400 px-3 py-2.5">Tapez un nom pour rechercher ou créer</p>
+            <p className="text-[12px] text-gray-400 px-3 py-2.5">{emptyHint}</p>
           )}
           {canCreate && (
             <button type="button"
-              onClick={() => { onCreate(trimmed); setQ('') }}
+              onClick={() => { onCreate!(trimmed); setQ('') }}
               disabled={creating}
               className="w-full text-left px-3 py-2.5 bg-emerald-50 hover:bg-emerald-100 flex items-center gap-2 disabled:opacity-60"
             >

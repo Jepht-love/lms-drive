@@ -1,12 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import DocumentsClient, { type ReservationDoc } from './DocumentsClient'
-
-// Pièces client importées en masse mais pas encore rattachées à un client
-// (entity_id vide) : elles ne vivent QUE dans l'écran d'import & tri, pas dans
-// la bibliothèque. On les compte pour le badge d'entrée « Import ».
-const isUntriagedClientDoc = (d: any) =>
-  d.category === 'client' && d.entity_type === 'client' && !d.entity_id && !d.is_auto_generated
+import { isPendingDoc } from '@/lib/documents/triage'
 
 export default async function DocumentsPage() {
   const supabase = await createClient()
@@ -152,10 +147,15 @@ export default async function DocumentsPage() {
       .sort((a, b) => (b.start_datetime ?? '').localeCompare(a.start_datetime ?? ''))
   }
 
-  const untriagedCount =(documents ?? []).filter(isUntriagedClientDoc).length
+  // Pièces déposées en masse et pas encore rangées, les quatre familles
+  // confondues (client, véhicule, société, partenaire) : elles ne vivent QUE dans
+  // l'écran « Import & tri », pas dans la bibliothèque. Le compte alimente le
+  // badge d'entrée « Import ». `isPendingDoc` est le seul juge : il reconnaît le
+  // tag « a-trier » et aussi les anciennes pièces client déposées avant lui.
+  const untriagedCount = (documents ?? []).filter(isPendingDoc).length
 
   const visibleDocuments = (documents ?? [])
-    .filter(d => visibleCategories.includes(d.category) && !isUntriagedClientDoc(d))
+    .filter(d => visibleCategories.includes(d.category) && !isPendingDoc(d))
 
   // URLs signées pour chaque document archivé. Deux formats coexistent :
   // - Ancien : URL publique complète (ex-getPublicUrl) → regex extrait bucket+path

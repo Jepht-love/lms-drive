@@ -4,6 +4,12 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import type { DocumentCategory } from '@/lib/documents/categories'
 import { DOCUMENT_SUBCATEGORIES } from '@/lib/documents/categories'
+import {
+  PENDING_SUBCATEGORY,
+  PENDING_TAG,
+  buildTriageDocName,
+  getTriageFamily,
+} from '@/lib/documents/triage'
 import { RESEND_FROM, resendTo } from '@/lib/email/config'
 import { dateAgence } from '@/lib/format/heureAgence'
 
@@ -99,31 +105,37 @@ export async function bulkCreateClientDocuments(
 }
 
 /**
- * Dépose un lot de pièces client « à trier » : lignes `documents` sans client
- * rattaché (entity_id vide), issues d'un import en masse (export Telegram…).
- * Les fichiers sont déjà téléversés côté navigateur dans le bucket `documents`.
- * L'écran d'import & tri les liste puis les assigne à un client via
- * `assignClientDocuments`. Persister dès l'import permet de reprendre le tri
- * plus tard sans re-téléverser.
+ * Dépose un lot de pièces « à trier » dans la pile d'une famille (client,
+ * véhicule, société, partenaire) : lignes `documents` marquées du tag `a-trier`,
+ * donc invisibles dans la bibliothèque tant qu'elles n'ont pas reçu leur type et
+ * leur cible. Les fichiers sont déjà téléversés côté navigateur dans le bucket
+ * `documents` (contourne la limite de payload Vercel). Persister dès le dépôt
+ * permet de reprendre le tri plus tard sans re-téléverser.
+ * Étendu aux quatre familles le 29/07/2026 ; c'était réservé aux clients avant.
  */
-export async function stageClientDocuments(
+export async function stageTriageDocuments(
+  family: string,
   docs: { name: string; file_url: string; file_type?: string | null; file_size?: number | null }[],
 ) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Non authentifié')
 
+  const fam = getTriageFamily(family)
+  if (!fam) return { error: 'Famille de documents inconnue' }
+
   const rows = (docs ?? [])
     .filter(d => d?.file_url && d?.name)
     .map(d => ({
-      category: 'client' as const,
-      subcategory: 'autres',
+      category: fam.id,
+      subcategory: PENDING_SUBCATEGORY,
       name: d.name.trim().slice(0, 200),
       file_url: d.file_url,
       file_type: d.file_type || null,
       file_size: typeof d.file_size === 'number' ? d.file_size : null,
+      tags: [PENDING_TAG],
       entity_id: null,
-      entity_type: 'client' as const,
+      entity_type: fam.entityType,
       is_auto_generated: false,
       created_by: user.id,
     }))
@@ -139,38 +151,106 @@ export async function stageClientDocuments(
 }
 
 /**
- * Assigne un lot de pièces « à trier » à UN client (avec un type commun). Sert
- * au tri visuel : on coche les pièces d'un même client (recto/verso/justif…) et
- * on les rattache d'un geste. Renseigne entity_id + subcategory.
+ * Classe un lot de pièces « à trier » : même type, même cible, même date
+ * d'expiration pour toutes celles qui sont cochées. C'est le geste central du
+ * tri (on coche le recto, le verso et le justificatif d'un même client, on
+ * rattache d'un coup). La pièce prend son nom canonique (« Carte grise
+ * AB-123-CD ») et perd son tag `a-trier`, donc elle entre dans la bibliothèque
+ * et apparaît aussitôt sur la fiche de la cible.
+ *
+ * `targetId` est obligatoire sauf pour la famille société, qui ne se rattache à
+ * rien. Le garde-fou `.is('entity_id', null)` empêche de détacher par erreur un
+ * document déjà classé sur une autre fiche.
  */
-export async function assignClientDocuments(
+export async function assignTriageDocuments(
   documentIds: string[],
-  clientId: string,
-  subcategory: string,
+  opts: { family: string; targetId?: string | null; subcategory: string; expiryDate?: string | null },
 ) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Non authentifié')
-  if (!clientId) return { error: 'Client requis' }
+
+  const fam = getTriageFamily(opts.family)
+  if (!fam) return { error: 'Famille de documents inconnue' }
+
   const ids = (documentIds ?? []).filter(Boolean)
   if (ids.length === 0) return { error: 'Aucune pièce sélectionnée' }
 
-  const allowed = new Set(DOCUMENT_SUBCATEGORIES.client.map(s => s.id))
-  const sub = allowed.has(subcategory) ? subcategory : 'autres'
+  const allowed = new Set((DOCUMENT_SUBCATEGORIES[fam.id] ?? []).map(s => s.id))
+  if (!allowed.has(opts.subcategory)) return { error: 'Type de document invalide' }
 
-  // On ne réassigne que des pièces réellement « à trier » (entity_id vide) pour
-  // éviter de détacher par erreur un document déjà rattaché à un autre client.
+  const targetId = opts.targetId || null
+  if (fam.entityType && !targetId) return { error: `Choisissez un ${fam.targetLabel}` }
+
+  // Libellé de la cible → nom automatique de la pièce.
+  let targetLabel: string | null = null
+  if (targetId) {
+    if (fam.id === 'client') {
+      const { data } = await supabase.from('clients').select('first_name, last_name').eq('id', targetId).single()
+      targetLabel = data ? `${data.first_name ?? ''} ${data.last_name ?? ''}`.trim() : null
+    } else if (fam.id === 'vehicule') {
+      const { data } = await supabase.from('vehicles').select('plate').eq('id', targetId).single()
+      targetLabel = data?.plate ?? null
+    } else {
+      const { data } = await supabase.from('partner_agencies').select('name').eq('id', targetId).single()
+      targetLabel = data?.name ?? null
+    }
+    if (!targetLabel) return { error: `Ce ${fam.targetLabel} est introuvable` }
+  }
+
   const { error } = await supabase
     .from('documents')
-    .update({ entity_id: clientId, subcategory: sub })
+    .update({
+      entity_id: targetId,
+      entity_type: fam.entityType,
+      category: fam.id,
+      subcategory: opts.subcategory,
+      expiry_date: opts.expiryDate || null,
+      name: buildTriageDocName(fam.id, opts.subcategory, targetLabel),
+      tags: null,
+    })
     .in('id', ids)
     .is('entity_id', null)
-    .eq('entity_type', 'client')
-  if (error) throw new Error(`Assignation échouée : ${error.message}`)
+  if (error) throw new Error(`Classement échoué : ${error.message}`)
 
   revalidatePath('/documents')
   revalidatePath('/documents/import')
-  revalidatePath(`/clients/${clientId}`)
+  if (targetId && fam.id === 'client')   revalidatePath(`/clients/${targetId}`)
+  if (targetId && fam.id === 'vehicule') revalidatePath(`/vehicles/${targetId}`)
+  if (targetId && fam.id === 'partenaire') revalidatePath('/partnerships')
+  return { success: true, count: ids.length }
+}
+
+/**
+ * Déplace des pièces mal déposées d'une pile vers une autre (ex. une carte grise
+ * tombée dans la pile Client). Rien n'est re-téléversé : seuls la famille et le
+ * type de rattachement changent, le fichier reste où il est dans le bucket.
+ */
+export async function moveTriageDocuments(documentIds: string[], family: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Non authentifié')
+
+  const fam = getTriageFamily(family)
+  if (!fam) return { error: 'Famille de documents inconnue' }
+
+  const ids = (documentIds ?? []).filter(Boolean)
+  if (ids.length === 0) return { error: 'Aucune pièce sélectionnée' }
+
+  const { error } = await supabase
+    .from('documents')
+    .update({
+      category: fam.id,
+      entity_type: fam.entityType,
+      subcategory: PENDING_SUBCATEGORY,
+      tags: [PENDING_TAG],
+    })
+    .in('id', ids)
+    .is('entity_id', null)
+  if (error) throw new Error(`Déplacement échoué : ${error.message}`)
+
+  revalidatePath('/documents/import')
+  revalidatePath('/documents')
   return { success: true, count: ids.length }
 }
 

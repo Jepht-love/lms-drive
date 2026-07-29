@@ -150,6 +150,13 @@ button, a, [role="button"] { min-height: 44px; }
   body[data-drawer-open] [data-bottom-nav] { visibility: hidden; }
 }
 
+/* Même principe pour la bulle « Signaler un bug » : tant qu'un écran ouvre une
+   barre d'action fixée en bas (repère posé sur `body` par « Import & tri »), la
+   bulle s'efface. Elle est fixée en bas à gauche et se posait sur le bouton de
+   rangement en largeur téléphone. Le z-index n'y change rien, la barre vivant
+   dans un conteneur fixé donc dans un autre empilement. Vu le 30/07/2026. */
+body[data-sorting-bar] [data-sav-fab] { display: none; }
+
 /* Scrollbar slim */
 ::-webkit-scrollbar        { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track  { background: transparent; }

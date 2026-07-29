@@ -121,6 +121,10 @@ export default function SavButton() {
         type="button"
         onClick={openForm}
         aria-label="Signaler un bug"
+        // Repère de sélection : un écran qui ouvre une barre d'action fixée en bas
+        // (« Import & tri ») efface la bulle le temps de l'action, sinon elle se
+        // pose sur ses boutons en largeur téléphone. Règle dans app/globals.css.
+        data-sav-fab
         className="fixed z-40 left-3 w-9 h-9 rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform opacity-90 hover:opacity-100"
         style={{
           // En bas à GAUCHE : les boutons d'action des pages (recherche, création…)
