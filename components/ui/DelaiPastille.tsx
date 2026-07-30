@@ -57,27 +57,28 @@ interface DelaiPastilleProps {
   className?: string
 }
 
-// Largeur FIXE, et non une largeur minimale : empilées les unes sous les autres
+// Taille FIXE, et non une largeur minimale : empilées les unes sous les autres
 // dans la liste du tableau de bord, des pastilles de largeurs différentes
 // donnent un bord droit en dents de scie (retour Jeff du 29/07/2026).
 //
-// 84 px = le libellé le plus long possible, plus les 8 px de marge de chaque
-// côté. Mesuré le 29/07/2026 dans l'écran réel, police Inter grasse 10 px :
-// « Dans 30 jours » fait 68 px, c'est le maximum du lot — au-delà de 30 jours
-// `libelleDelai` écrit la date, plus courte. Si la police ou la taille du texte
-// change un jour, cette valeur est à remesurer.
+// Carré de 68 px depuis le 30/07/2026 (remarque 21 : « la pastille doit être
+// carrée, pas un rectangle »). Pour y arriver sans toucher aux libellés qu'il a
+// validés, deux réglages : l'horloge descend de 16 à 14 px, le texte de 10 à
+// 9 px, et le libellé a le droit de passer sur deux lignes centrées
+// (« Dans 30 » / « jours »). Le mot le plus large du lot est « Aujourd'hui »,
+// ~52 px à cette taille, il tient dans les 60 px utiles.
 //
-// Première version calée à 100 px avec un texte de 11 px : trop large à l'écran
-// (retour Jeff du 29/07/2026). Le texte est descendu à 10 px et la marge
-// latérale réduite, ce qui rend 16 px à la ligne du véhicule à côté.
-const LARGEUR_PASTILLE = 'w-[84px]'
+// Les deux tailles précédentes, pour ne pas refaire le chemin : 100 px de large
+// avec un texte de 11 px (trop large), puis 84 px avec un texte de 10 px sur une
+// seule ligne. Si la police change, remesurer « Aujourd'hui ».
+const TAILLE_PASTILLE = 'w-[68px] h-[68px]'
 
 export default function DelaiPastille({ jours, echeance, enRetard, famille = 'retour', className = '' }: DelaiPastilleProps) {
   const { libelle, ton } = libelleDelai(jours, echeance, enRetard)
   return (
-    <div className={`${LARGEUR_PASTILLE} rounded-2xl px-2 py-2 flex flex-col items-center justify-center gap-1 flex-shrink-0 ${PALETTES[famille][ton]} ${className}`}>
-      <Clock className="w-4 h-4" />
-      <span className="text-[10px] font-bold leading-none whitespace-nowrap">{libelle}</span>
+    <div className={`${TAILLE_PASTILLE} rounded-2xl px-1 py-2 flex flex-col items-center justify-center gap-1 flex-shrink-0 ${PALETTES[famille][ton]} ${className}`}>
+      <Clock className="w-3.5 h-3.5" />
+      <span className="text-[9px] font-bold leading-tight text-center text-balance">{libelle}</span>
     </div>
   )
 }

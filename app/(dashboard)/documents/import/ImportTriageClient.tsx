@@ -502,7 +502,16 @@ export default function ImportTriageClient({
           dans un autre empilement, et aucune valeur ne la fera passer devant.
           C'est la bulle qui s'efface, via le repère posé sur `body` plus haut. */}
       {selected.size > 0 && (
-        <div className="fixed bottom-0 inset-x-0 z-30 bg-white border-t border-gray-200 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] p-3 max-h-[70vh] overflow-y-auto">
+        <div
+          className="fixed inset-x-0 z-30 bg-white border-t border-gray-200 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] p-3 max-h-[70vh] overflow-y-auto"
+          // Calée AU-DESSUS de la barre de navigation du bas, pas à `bottom: 0` :
+          // celle-ci mesure 60 px plus sa marge de zone sûre, et elle recouvrait
+          // le bas de la barre de rangement — sur iPhone le bouton « Ranger en… »
+          // disparaissait complètement (retour Jeff du 30/07/2026). La valeur
+          // reprend exactement celle de `components/layout/BottomNav.tsx` : si la
+          // hauteur du menu change là-bas, elle est à reporter ici.
+          style={{ bottom: 'calc(60px + max(env(safe-area-inset-bottom), 8px))' }}
+        >
           <div className="max-w-lg mx-auto space-y-2.5">
             <div className="flex items-center gap-2">
               <Layers className="w-4 h-4 text-gray-400 flex-shrink-0" />
@@ -514,6 +523,17 @@ export default function ImportTriageClient({
                   {target.name}
                 </span>
               )}
+              {/* Sortie de la barre. Sans elle, la seule façon de la refermer était
+                  de décocher la pièce, qui se trouve dans la liste AU-DESSUS, donc
+                  recouverte par la barre elle-même sur téléphone : on restait
+                  bloqué sur l'écran (remarque 22 du 30/07/2026). */}
+              <button type="button"
+                onClick={clearSelection}
+                aria-label="Fermer la barre de rangement"
+                className={`w-9 h-9 rounded-xl bg-gray-100 text-gray-500 flex items-center justify-center flex-shrink-0 active:scale-[.97] transition-transform ${target ? 'ml-2' : 'ml-auto'}`}
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
 
             {/* Cible : club des piles qui se rattachent à une fiche. */}
