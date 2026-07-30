@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import VehicleInspectionMap from '@/components/vehicle-schema/VehicleInspectionMap'
 import RecapSignatures, { type ContratInfo } from '@/components/inspection/RecapSignatures'
 import { MANDATORY_PHOTOS } from '@/components/vehicle-schema/zones'
-import { VEHICLE_ZONES as NEW_ZONES, INTERIOR_DAMAGE_ITEMS, graviteLabel, defaultDamagePrice, type DamageEntry } from '@/components/vehicle-schema/inspection-types'
+import { VEHICLE_ZONES as NEW_ZONES, INTERIOR_DAMAGE_ITEMS, graviteLabel, tarifDommage, type DamageEntry } from '@/components/vehicle-schema/inspection-types'
 import { useSavSection } from '@/lib/sav/context'
 import { createClient } from '@/lib/supabase/client'
 import { compressImageToBase64 } from '@/lib/utils'
@@ -258,11 +258,20 @@ export default function InspectionFlow({
   // Facturation EDL retour : TOUTE zone re-signalée comme dommage au retour ouvre
   // une ligne de tarification, qu'elle soit nouvelle ou déjà présente au départ et
   // quelle que soit la gravité (le gérant ajuste le montant, ou met 0 s'il ne
-  // facture pas). Prix par défaut de la grille, ajustable par zone.
+  // facture pas).
+  //
+  // Le montant proposé vient du CONTRAT SIGNÉ par le client, et suit donc la
+  // catégorie du véhicule : une rayure légère vaut 300 € en citadine, 500 € en
+  // sportif. Corrigé le 30/07/2026, la grille interne d'avant proposait 50 € pour
+  // tout le monde. Quand le contrat renvoie à un devis, rien n'est proposé et
+  // l'agent saisit le montant.
+  function tarifZone(zoneId: string) {
+    return tarifDommage(damages[zoneId]?.[0]?.type, zoneId, vehicleCategory)
+  }
   function priceForZone(zoneId: string): number {
     const stored = damagePrices[zoneId]
     if (stored !== undefined) return stored ?? 0
-    return defaultDamagePrice(damages[zoneId]?.[0]?.type)
+    return tarifZone(zoneId).montant ?? 0
   }
   const exteriorDamageFee = type === 'arrivee'
     ? currentDamagedZoneIds.reduce((sum, id) => sum + priceForZone(id), 0)
@@ -1004,6 +1013,15 @@ export default function InspectionFlow({
                           {entries[0].comment && (
                             <p className="text-xs text-gray-400 mt-0.5 truncate">{entries[0].comment}</p>
                           )}
+                          {/* La ligne du contrat qui fixe le montant, pour que l'agent
+                              sache d'où vient le prix et puisse la retrouver dans le
+                              tableau signé par le client. */}
+                          {type === 'arrivee' && tarifZone(zoneId).ligne && (
+                            <p className="text-[10px] text-gray-400 mt-0.5 truncate">
+                              Contrat : {tarifZone(zoneId).ligne}
+                              {tarifZone(zoneId).mention ? ` · ${tarifZone(zoneId).mention}` : ''}
+                            </p>
+                          )}
                         </div>
                         {type === 'arrivee' && (
                           <div className="flex items-center gap-1 flex-shrink-0">
@@ -1012,7 +1030,16 @@ export default function InspectionFlow({
                               type="number"
                               min={0}
                               step="0.01"
-                              value={damagePrices[zoneId] === null ? '' : priceForZone(zoneId)}
+                              // Champ laissé VIDE quand le contrat renvoie à un devis :
+                              // proposer 0 € ferait facturer zéro à qui valide sans lire.
+                              placeholder={tarifZone(zoneId).montant === null ? 'devis' : ''}
+                              value={
+                                damagePrices[zoneId] === null
+                                  ? ''
+                                  : damagePrices[zoneId] === undefined && tarifZone(zoneId).montant === null
+                                    ? ''
+                                    : priceForZone(zoneId)
+                              }
                               onChange={e => setDamagePrices(prev => ({
                                 ...prev,
                                 [zoneId]: e.target.value === '' ? null : Number(e.target.value),
