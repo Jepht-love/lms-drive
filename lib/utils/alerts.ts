@@ -36,14 +36,38 @@ export interface AppAlert {
    * titre de la notification, où la catégorie prime sur la date.
    */
   calendarTitle?: string
+  /**
+   * Corps de la NOTIFICATION poussée, sur trois lignes : qui, quel véhicule,
+   * quand. Format validé par Jeff le 30/07/2026 sur les retours, puis étendu à
+   * toutes les notifications. `sublabel` garde sa forme d'une seule ligne : il
+   * sert l'écran Alertes, où chaque ligne est une carte. Sans `pushBody`, la
+   * notification retombe sur `sublabel`.
+   */
+  pushBody?: string
 }
 
-/** Format véhicule uniforme : « marque modèle · plaque » (tolère marque/modèle absents) */
+/**
+ * Format véhicule uniforme : « marque modèle couleur · plaque ».
+ * La couleur y est depuis le 30/07/2026 (« rajouter la couleur tout le temps »,
+ * Jeff) : deux Smart Fortwo au parc ne se distinguent que par elle. Champ libre
+ * de la fiche véhicule, souvent vide : la ligne doit tenir sans.
+ */
 function vLabel(v: any): string {
   if (!v) return '—'
-  const bm = [v?.brand, v?.model].filter(Boolean).join(' ').trim()
+  const nom = [v?.brand, v?.model, v?.color].filter(Boolean).join(' ').trim()
   const plate = v?.plate ?? '—'
-  return bm ? `${bm} · ${plate}` : plate
+  return nom ? `${nom} · ${plate}` : plate
+}
+
+/**
+ * Le véhicule tel qu'il s'écrit dans une NOTIFICATION : « Smart Fortwo Noir
+ * (DQ-314-CV) ». Les parenthèses viennent du format que Jeff a validé sur les
+ * retours le 30/07/2026 ; le point médian reste pour l'affichage à l'écran.
+ */
+function vPush(v: any): string {
+  if (!v) return ''
+  const nom = [v?.brand, v?.model, v?.color].filter(Boolean).join(' ').trim()
+  return v?.plate ? `${nom} (${v.plate})`.trim() : nom
 }
 
 /**
@@ -93,7 +117,7 @@ export async function fetchAllAlerts(
   const { data: contracts } = await supabase
     .from('contracts')
     .select(`id, created_at,
-      reservations(id, vehicle_id, vehicles(plate, brand, model), clients(first_name, last_name))`)
+      reservations(id, vehicle_id, vehicles(plate, brand, model, color), clients(first_name, last_name))`)
     .eq('status', 'a_signer')
 
   contracts?.forEach(c => {
@@ -107,6 +131,11 @@ export async function fetchAllAlerts(
       type: 'contrat',
       label: 'Contrat à signer',
       sublabel: `${vLabel(v)} · ${cl?.first_name ?? ''} ${cl?.last_name ?? ''}`.trim(),
+      pushBody: [
+        [cl?.first_name, cl?.last_name].filter(Boolean).join(' ').trim(),
+        vPush(v),
+        'Contrat en attente de signature',
+      ].filter(Boolean).join('\n'),
       href: `/contracts/${c.id}`,
       date: c.created_at,
       vehicleId: r?.vehicle_id ?? undefined,
@@ -117,7 +146,7 @@ export async function fetchAllAlerts(
   // ── 2. Retours en retard ────────────────────────────────────────────────────
   const { data: lates } = await supabase
     .from('reservations')
-    .select('id, vehicle_id, end_datetime, vehicles(plate, brand, model), clients(first_name, last_name)')
+    .select('id, vehicle_id, end_datetime, vehicles(plate, brand, model, color), clients(first_name, last_name)')
     .eq('status', 'en_retard')
     .order('end_datetime', { ascending: true })
 
@@ -139,13 +168,18 @@ export async function fetchAllAlerts(
       vehicleId: r.vehicle_id,
       reservationId: r.id,
       personLabel: [(c as any)?.first_name, (c as any)?.last_name].filter(Boolean).join(' ').trim(),
+      pushBody: [
+        [(c as any)?.first_name, (c as any)?.last_name].filter(Boolean).join(' ').trim(),
+        vPush(v),
+        `Prévu le ${jourMois(r.end_datetime)} à ${heureAgence(r.end_datetime)}`,
+      ].filter(Boolean).join('\n'),
     })
   })
 
   // ── 3. Alertes véhicules (CT, assurance, entretien) ────────────────────────
   const { data: vehicles } = await supabase
     .from('vehicles')
-    .select('id, plate, brand, model, ct_date, insurance_expiry, next_service_date, next_service_km, current_km')
+    .select('id, plate, brand, model, color, ct_date, insurance_expiry, next_service_date, next_service_km, current_km')
     .eq('is_active', true)
 
   vehicles?.forEach(v => {
@@ -159,6 +193,11 @@ export async function fetchAllAlerts(
           type: 'ct',
           label: days < 0 ? 'CT expiré' : 'Contrôle technique',
           sublabel: `${vLabel(v)} · ${days < 0 ? `expiré il y a ${Math.abs(days)}j` : `dans ${days}j`}`,
+          pushBody: [
+            vPush(v),
+            days < 0 ? `Expiré il y a ${Math.abs(days)} jours` : `Dans ${days} jours`,
+            `Échéance le ${dateAgence(v.ct_date)}`,
+          ].join('\n'),
           href: `/vehicles/${v.id}`,
           date: v.ct_date,
           vehicleId: v.id,
@@ -176,6 +215,11 @@ export async function fetchAllAlerts(
           type: 'assurance',
           label: days < 0 ? 'Assurance expirée' : 'Assurance à renouveler',
           sublabel: `${vLabel(v)} · ${days < 0 ? `expirée il y a ${Math.abs(days)}j` : `dans ${days}j`}`,
+          pushBody: [
+            vPush(v),
+            days < 0 ? `Expirée il y a ${Math.abs(days)} jours` : `Dans ${days} jours`,
+            `Échéance le ${dateAgence(v.insurance_expiry)}`,
+          ].join('\n'),
           href: `/vehicles/${v.id}`,
           date: v.insurance_expiry,
           vehicleId: v.id,
@@ -193,6 +237,11 @@ export async function fetchAllAlerts(
           type: 'revision',
           label: 'Révision à prévoir',
           sublabel: `${vLabel(v)} · dans ${days} jour${days > 1 ? 's' : ''}`,
+          pushBody: [
+            vPush(v),
+            `Dans ${days} jour${days > 1 ? 's' : ''}`,
+            `Prévue le ${dateAgence(v.next_service_date)}`,
+          ].join('\n'),
           href: `/vehicles/${v.id}`,
           date: v.next_service_date,
           vehicleId: v.id,
@@ -215,6 +264,13 @@ export async function fetchAllAlerts(
           sublabel: `${vLabel(v)} · ${overdue
             ? `dépassé de ${Math.abs(kmLeft).toLocaleString('fr-FR')} km`
             : `encore ${kmLeft.toLocaleString('fr-FR')} km`}`,
+          pushBody: [
+            vPush(v),
+            overdue
+              ? `Dépassé de ${Math.abs(kmLeft).toLocaleString('fr-FR')} km`
+              : `Encore ${kmLeft.toLocaleString('fr-FR')} km`,
+            `Révision prévue à ${v.next_service_km?.toLocaleString('fr-FR')} km`,
+          ].join('\n'),
           href: `/vehicles/${v.id}`,
           vehicleId: v.id,
         })
@@ -228,7 +284,7 @@ export async function fetchAllAlerts(
   const { data: overdueTasks } = await supabase
     .from('tasks')
     .select(`id, title, type, due_datetime, vehicle_id, reservation_id,
-      vehicles(plate, brand, model),
+      vehicles(plate, brand, model, color),
       profiles!tasks_assigned_to_fkey(full_name)`)
     .eq('status', 'a_faire')
     .lt('due_datetime', minuitCeMatin.toISOString())
@@ -245,6 +301,12 @@ export async function fetchAllAlerts(
       type: 'tache',
       label: 'Tâche en retard',
       sublabel: `${t.title}${(v as any)?.plate ? ` · ${vLabel(v)}` : ''}${(a as any)?.full_name ? ` · ${(a as any).full_name}` : ''} · ${lateHours}h de retard`,
+      pushBody: [
+        t.title,
+        vPush(v),
+        (a as any)?.full_name ? `Confiée à ${(a as any).full_name}` : 'Non attribuée',
+        `${lateHours}h de retard`,
+      ].filter(Boolean).join('\n'),
       // Clic → droit à l'action : la réservation liée, sinon la fiche tâche.
       href: t.reservation_id ? `/reservations/${t.reservation_id}` : `/calendar/tasks/${t.id}`,
       date: t.due_datetime,
@@ -347,6 +409,12 @@ export async function fetchAllAlerts(
         (qui as any)?.full_name ?? 'non assignée',
         retard,
       ].filter(Boolean).join(' · '),
+      pushBody: [
+        intitule,
+        veh ? vPush(veh) : null,
+        (qui as any)?.full_name ? `Confiée à ${(qui as any).full_name}` : 'Non attribuée',
+        retard.charAt(0).toUpperCase() + retard.slice(1),
+      ].filter(Boolean).join('\n'),
       // Le clic ouvre la tâche elle-même : c'est là qu'on la passe en terminé.
       href: `/calendrier?event=${ev.id}`,
       date: ev.end_at,
@@ -359,7 +427,7 @@ export async function fetchAllAlerts(
   const in24h = new Date(now.getTime() + 24 * 3600 * 1000)
   const { data: upcomingDeparts } = await supabase
     .from('reservations')
-    .select('id, vehicle_id, start_datetime, vehicles(plate, brand, model, last_wash_date)')
+    .select('id, vehicle_id, start_datetime, vehicles(plate, brand, model, color, last_wash_date)')
     .eq('status', 'confirmee')
     .gte('start_datetime', now.toISOString())
     .lte('start_datetime', in24h.toISOString())
@@ -394,6 +462,11 @@ export async function fetchAllAlerts(
         type: 'lavage',
         label: 'Lavage avant location',
         sublabel: `${vLabel(v)} · départ dans ${hoursLeft}h`,
+        pushBody: [
+          vPush(v),
+          `Départ dans ${hoursLeft}h`,
+          `Prévu le ${jourMois(r.start_datetime)} à ${heureAgence(r.start_datetime)}`,
+        ].join('\n'),
         // Le lavage est une TÂCHE de préparation, pas la réservation. Si la tâche
         // calendrier existe (syncWashTask), l'alerte l'ouvre (?event=<id>). Sinon
         // — cas d'une voiture devenue « à laver » APRÈS la dernière synchro de la
@@ -419,7 +492,7 @@ export async function fetchAllAlerts(
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 3600 * 1000)
   const { data: infractions } = await supabase
     .from('infractions')
-    .select('id, vehicle_id, infraction_date, type, vehicles(plate, brand, model)')
+    .select('id, vehicle_id, infraction_date, type, vehicles(plate, brand, model, color)')
     .not('status', 'in', '("regle","cloture")')
     .lt('infraction_date', thirtyDaysAgo.toISOString().split('T')[0])
 
@@ -433,6 +506,11 @@ export async function fetchAllAlerts(
       type: 'infraction',
       label: 'Infraction non réglée',
       sublabel: `${vLabel(v)} · ${inf.type} · il y a ${days}j`,
+      pushBody: [
+        vPush(v),
+        inf.type,
+        `Constatée le ${dateAgence(inf.infraction_date)} · il y a ${days} jours`,
+      ].filter(Boolean).join('\n'),
       href: `/incidents/infractions/${inf.id}`,
       date: inf.infraction_date,
       vehicleId: inf.vehicle_id ?? undefined,
@@ -442,7 +520,7 @@ export async function fetchAllAlerts(
   // ── 7. Sinistres en cours ──────────────────────────────────────────────────
   const { data: accidents } = await supabase
     .from('accidents')
-    .select('id, vehicle_id, accident_date, vehicles(plate, brand, model)')
+    .select('id, vehicle_id, accident_date, vehicles(plate, brand, model, color)')
     .not('status', 'eq', 'cloture')
     .order('accident_date', { ascending: false })
 
@@ -455,6 +533,11 @@ export async function fetchAllAlerts(
       type: 'sinistre',
       label: 'Sinistre en cours',
       sublabel: `${vLabel(v)} · ${dateAgence(acc.accident_date)}`,
+      pushBody: [
+        vPush(v),
+        'Dossier non clôturé',
+        `Sinistre du ${dateAgence(acc.accident_date)}`,
+      ].join('\n'),
       href: `/incidents/sinistres/${acc.id}`,
       date: acc.accident_date,
       vehicleId: acc.vehicle_id ?? undefined,
@@ -481,7 +564,7 @@ export async function fetchAllAlerts(
   // option n'étant qu'un pré-blocage qui peut ne jamais se concrétiser.
   const { data: departuresToday } = await supabase
     .from('reservations')
-    .select('id, vehicle_id, start_datetime, vehicles(plate, brand, model), clients(first_name, last_name)')
+    .select('id, vehicle_id, start_datetime, vehicles(plate, brand, model, color), clients(first_name, last_name)')
     .eq('status', 'confirmee')
     .gte('start_datetime', now.toISOString())
     .lte('start_datetime', finDeJournee.toISOString())
@@ -498,6 +581,11 @@ export async function fetchAllAlerts(
       type: 'depart_imminent',
       label: 'Départ du jour',
       sublabel: `${vLabel(v)} · ${(c as any)?.first_name ?? ''} ${(c as any)?.last_name ?? ''} · à ${heure}`,
+      pushBody: [
+        [(c as any)?.first_name, (c as any)?.last_name].filter(Boolean).join(' ').trim(),
+        vPush(v),
+        `Prévu à ${heure}`,
+      ].filter(Boolean).join('\n'),
       href: `/reservations/${r.id}?from=alerts`,
       date: r.start_datetime,
       vehicleId: r.vehicle_id,
@@ -510,7 +598,7 @@ export async function fetchAllAlerts(
   // section 2 qui la reprend en rouge.
   const { data: returnsToday } = await supabase
     .from('reservations')
-    .select('id, vehicle_id, end_datetime, vehicles(plate, brand, model), clients(first_name, last_name)')
+    .select('id, vehicle_id, end_datetime, vehicles(plate, brand, model, color), clients(first_name, last_name)')
     .eq('status', 'en_cours')
     .gte('end_datetime', now.toISOString())
     .lte('end_datetime', finDeJournee.toISOString())
@@ -527,6 +615,11 @@ export async function fetchAllAlerts(
       type: 'retour_jour',
       label: 'Retour du jour',
       sublabel: `${vLabel(v)} · ${(c as any)?.first_name ?? ''} ${(c as any)?.last_name ?? ''} · à ${heure}`,
+      pushBody: [
+        [(c as any)?.first_name, (c as any)?.last_name].filter(Boolean).join(' ').trim(),
+        vPush(v),
+        `Prévu à ${heure}`,
+      ].filter(Boolean).join('\n'),
       href: `/reservations/${r.id}?from=alerts`,
       date: r.end_datetime,
       vehicleId: r.vehicle_id,
@@ -551,6 +644,17 @@ export async function fetchAllAlerts(
       type: 'document',
       label: expired ? 'Document expiré' : 'Document expire bientôt',
       sublabel: `${doc.name} · ${expired ? `expiré il y a ${Math.abs(days)}j` : `dans ${days}j`}`,
+      // Pas de véhicule ici, et ce n'est pas un oubli : la table `documents` ne
+      // porte aucun lien vers un véhicule (vérifié le 30/07/2026, elle n'a que
+      // `reservation_id` et `category`). Le jour où ce lien existera, ajouter
+      // vPush(v) en première ligne et faire pointer le clic sur la fiche.
+      pushBody: [
+        doc.name,
+        doc.category ?? null,
+        expired
+          ? `Expiré depuis le ${dateAgence(doc.expiry_date!)}`
+          : `Expire le ${dateAgence(doc.expiry_date!)}`,
+      ].filter(Boolean).join('\n'),
       href: `/documents`,
       date: doc.expiry_date ?? undefined,
     })
@@ -559,7 +663,7 @@ export async function fetchAllAlerts(
   // ── 10. Échéances financières courtes (J-2 et moins = urgent) ──────────────
   const { data: dueDatesRaw } = await supabase
     .from('financial_due_dates')
-    .select('*, vehicles(plate, brand, model), clients(first_name, last_name)')
+    .select('*, vehicles(plate, brand, model, color), clients(first_name, last_name)')
     .eq('is_paid', false)
     .lte('due_date', new Date(now.getTime() + 7 * 24 * 3600 * 1000).toISOString().split('T')[0])
 
@@ -606,6 +710,11 @@ export async function fetchAllAlerts(
       vehicleId: d.vehicle_id ?? undefined,
       amountLabel: montant,
       personLabel: objet,
+      pushBody: [
+        objet,
+        v ? vPush(v) : null,
+        `${montant} ${quand}`,
+      ].filter(Boolean).join('\n'),
       // Ce qu'on attend et pour quand : « À encaisser le 30/07 », ou
       // « Encaissement en retard depuis le 29/07 » quand la date est passée.
       // Le nom du geste change avec le sens de l'échéance : on encaisse une
@@ -628,7 +737,7 @@ export async function fetchAllAlerts(
   // qu'un départ des jours précédents traînait).
   const { data: overduePickups } = await supabase
     .from('reservations')
-    .select('id, vehicle_id, start_datetime, vehicles(plate, brand, model), clients(first_name, last_name)')
+    .select('id, vehicle_id, start_datetime, vehicles(plate, brand, model, color), clients(first_name, last_name)')
     .in('status', ['confirmee', 'option'])
     .lt('start_datetime', now.toISOString())
     .order('start_datetime', { ascending: true })
@@ -645,6 +754,12 @@ export async function fetchAllAlerts(
       type: 'recuperation_retard',
       label: 'Départ en retard',
       sublabel: `${vLabel(v)} · ${(c as any)?.first_name ?? ''} ${(c as any)?.last_name ?? ''} · ${daysLate > 0 ? `${daysLate}j de retard` : `${hoursLate}h de retard`}`,
+      pushBody: [
+        [(c as any)?.first_name, (c as any)?.last_name].filter(Boolean).join(' ').trim(),
+        vPush(v),
+        `Prévu le ${jourMois(r.start_datetime)} à ${heureAgence(r.start_datetime)}`,
+        daysLate > 0 ? `${daysLate} jours de retard` : `${hoursLate}h de retard`,
+      ].filter(Boolean).join('\n'),
       href: `/reservations/${r.id}?from=alerts`,
       date: r.start_datetime,
       vehicleId: r.vehicle_id,
@@ -658,7 +773,7 @@ export async function fetchAllAlerts(
   // retours clients, appliquée à l'inter-agence.
   const { data: latePartnerOps } = await supabase
     .from('inter_agency_rentals')
-    .select('id, direction, end_date_expected, vehicle_id, external_vehicle_description, partner_agencies(name), vehicles(plate, brand, model)')
+    .select('id, direction, end_date_expected, vehicle_id, external_vehicle_description, partner_agencies(name), vehicles(plate, brand, model, color)')
     .eq('status', 'en_cours')
     .lt('end_date_expected', now.toISOString().split('T')[0])
     .order('end_date_expected', { ascending: true })
@@ -677,6 +792,12 @@ export async function fetchAllAlerts(
       type: 'partenaire_retard',
       label: 'Retour partenaire en retard',
       sublabel: `${vehLabel} · ${dirText} · ${daysLate}j de retard`,
+      pushBody: [
+        agency,
+        v ? vPush(v) : (op.external_vehicle_description || ''),
+        `${dirText.charAt(0).toUpperCase()}${dirText.slice(1)} · prévu le ${dateAgence(op.end_date_expected)}`,
+        `${daysLate} jour${daysLate > 1 ? 's' : ''} de retard`,
+      ].filter(Boolean).join('\n'),
       href: `/partnerships/${op.id}`,
       date: op.end_date_expected,
       vehicleId: op.vehicle_id ?? undefined,
@@ -694,7 +815,7 @@ export async function fetchAllAlerts(
   const { data: openContracts } = await supabase
     .from('contracts')
     .select(`id, reservation_id,
-      reservations(id, status, end_datetime, vehicle_id, vehicles(plate, brand, model), clients(first_name, last_name))`)
+      reservations(id, status, end_datetime, vehicle_id, vehicles(plate, brand, model, color), clients(first_name, last_name))`)
     .eq('status', 'signe')
 
   // Les réservations qui ont DÉJÀ une tâche de clôture ouverte au calendrier
@@ -730,6 +851,11 @@ export async function fetchAllAlerts(
       type: 'contrat_non_cloture',
       label: 'Contrat non clôturé',
       sublabel: `${vLabel(v)} · ${cl?.first_name ?? ''} ${cl?.last_name ?? ''} · location terminée depuis ${daysLate}j`.replace(/\s+·\s+·/g, ' ·').trim(),
+      pushBody: [
+        [cl?.first_name, cl?.last_name].filter(Boolean).join(' ').trim(),
+        vPush(v),
+        `Location terminée le ${dateAgence(r.end_datetime)} · depuis ${daysLate} jour${daysLate > 1 ? 's' : ''}`,
+      ].filter(Boolean).join('\n'),
       href: `/reservations/${r.id}?from=alerts`,
       date: r.end_datetime,
       vehicleId: r.vehicle_id ?? undefined,

@@ -428,7 +428,7 @@ export async function createReservation(formData: FormData) {
 
   const { data: vehicle } = await supabase
     .from('vehicles')
-    .select('daily_price, weekly_price, price_day_weekend, price_weekend_full, km_included_daily, extra_km_price, brand, model, color')
+    .select('daily_price, weekly_price, price_day_weekend, price_weekend_full, km_included_daily, extra_km_price, brand, model, color, plate')
     .eq('id', vehicleId)
     .single()
 
@@ -528,13 +528,19 @@ export async function createReservation(formData: FormData) {
 
   await syncReservationToCalendar(data.id)
 
-  const startFmt = jourHeureAgence(startInstant)
+  // Trois lignes : qui, quelle voiture, quand. Format commun à toutes les
+  // notifications depuis le 30/07/2026. La plaque s'ajoute au véhicule : deux
+  // voitures du même modèle ne se distinguent que par elle.
   const vehLabel = vehicle
-    ? `${vehicle.brand} ${vehicle.model}${vehicle.color ? ' ' + vehicle.color : ''}`
+    ? `${[vehicle.brand, vehicle.model, vehicle.color].filter(Boolean).join(' ')}${vehicle.plate ? ` (${vehicle.plate})` : ''}`
     : ''
   await broadcastPushToManagers({
     title: 'Nouvelle réservation',
-    body: `${clientName || payload.reservation_number}${vehLabel ? ' — ' + vehLabel : ''} · départ le ${startFmt}`,
+    body: [
+      clientName || payload.reservation_number,
+      vehLabel,
+      `Départ le ${jourHeureAgence(startInstant)}`,
+    ].filter(Boolean).join('\n'),
     url: `/reservations/${data.id}`,
   }, 'new_reservation_alert')
 
@@ -673,11 +679,14 @@ export async function updateReservationStatus(id: string, status: ReservationSta
   const departFmt = fmtDate(reservation.start_datetime)
   const retourFmt = fmtDate(reservation.end_datetime)
 
+  // Trois lignes partout : qui, quelle voiture, quand (Jeff, 30/07/2026).
+  const troisLignes = (derniere: string) =>
+    [pushClientName, pushVehicle, derniere].filter(Boolean).join('\n')
   const PUSH_LABELS: Partial<Record<ReservationStatus, { title: string; body: string }>> = {
-    confirmee:  { title: 'Réservation confirmée', body: `${pushClientName}${pushVehicle ? ' — ' + pushVehicle : ''}${departFmt ? ' · départ le ' + departFmt : ''}` },
-    en_cours:   { title: 'Départ effectué',        body: `${pushClientName} — ${pushVehicle}${retourFmt ? ' · retour prévu le ' + retourFmt : ''}` },
-    en_retard:  { title: 'Retour en retard',       body: `${pushClientName} — ${pushVehicle}${retourFmt ? ' · prévu le ' + retourFmt : ''}` },
-    terminee:   { title: 'Retour effectué',        body: `${pushClientName} — ${pushVehicle} rendu` },
+    confirmee:  { title: 'Réservation confirmée', body: troisLignes(departFmt ? `Départ le ${departFmt}` : '') },
+    en_cours:   { title: 'Départ effectué',        body: troisLignes(retourFmt ? `Retour prévu le ${retourFmt}` : '') },
+    en_retard:  { title: 'Retour en retard',       body: troisLignes(retourFmt ? `Prévu le ${retourFmt}` : '') },
+    terminee:   { title: 'Retour effectué',        body: troisLignes('Véhicule rendu') },
   }
   const PUSH_TYPES: Partial<Record<ReservationStatus, NotificationType>> = {
     confirmee: 'departure_alert',

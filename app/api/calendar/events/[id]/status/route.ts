@@ -16,7 +16,9 @@ export async function PATCH(
 
   const [{ data: caller }, { data: event }] = await Promise.all([
     supabase.from('profiles').select('role, full_name').eq('id', user.id).single(),
-    supabase.from('calendar_events').select('assigned_to, title').eq('id', id).single(),
+    supabase.from('calendar_events')
+      .select('assigned_to, title, vehicle_ids, assignee:profiles!assigned_to(full_name)')
+      .eq('id', id).single(),
   ])
 
   const isManager = caller?.role === 'gerant' || caller?.role === 'associe'
@@ -53,10 +55,26 @@ export async function PATCH(
 
   if (verbe) {
     const auteur = caller?.full_name?.trim() || 'Un membre de l’équipe'
+    // Trois lignes : ce qu'il y a à faire, la voiture, à qui la tâche est
+    // confiée (Jeff, 30/07/2026). C'est cette notification qui reste, celle
+    // qui disait « Tâche · Terminé » a été supprimée le même jour.
+    const idVeh = ((event as any)?.vehicle_ids as string[] | null)?.[0]
+    let ligneVehicule = ''
+    if (idVeh) {
+      const { data: veh } = await supabase
+        .from('vehicles').select('brand, model, color, plate').eq('id', idVeh).maybeSingle()
+      if (veh) ligneVehicule = `${[veh.brand, veh.model, veh.color].filter(Boolean).join(' ')} (${veh.plate})`
+    }
+    const aQui = Array.isArray((event as any)?.assignee)
+      ? (event as any).assignee[0] : (event as any)?.assignee
     await broadcastPushToManagers(
       {
         title: `${auteur} ${verbe} une tâche`,
-        body: eventTitle,
+        body: [
+          eventTitle,
+          ligneVehicule,
+          aQui?.full_name ? `Confiée à ${aQui.full_name}` : 'Non attribuée',
+        ].filter(Boolean).join('\n'),
         url: '/calendrier',
       },
       'task_progress_alert',

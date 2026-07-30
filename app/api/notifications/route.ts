@@ -87,9 +87,13 @@ export async function GET(request: NextRequest) {
       const veh = r.vehicle as any
       const clientLabel = clt ? `${clt.first_name} ${clt.last_name}` : r.reservation_number
       const vehLabel = veh ? `${veh.brand} ${veh.model}${veh.color ? ' ' + veh.color : ''} (${veh.plate})` : ''
-      const departFmt = jourHeureAgence(r.start_datetime)
       const title = `Départ dans ${stage.lead}`
-      const body = `${clientLabel}${vehLabel ? ' — ' + vehLabel : ''} · départ le ${departFmt}`
+      // Trois lignes, comme toutes les notifications depuis le 30/07/2026.
+      const body = [
+        clientLabel,
+        vehLabel,
+        `Prévu le ${fmtAgence(r.start_datetime, { day: '2-digit', month: '2-digit' })} à ${heureAgence(r.start_datetime)}`,
+      ].filter(Boolean).join('\n')
       await supabase.from('notifications').insert({
         user_id: null, type: stage.type,
         title, body,
@@ -107,7 +111,7 @@ export async function GET(request: NextRequest) {
 
     const { data: soonTasks } = await supabase
       .from('tasks')
-      .select('id, title, due_datetime, vehicle:vehicles(plate, brand, model)')
+      .select('id, title, due_datetime, vehicle:vehicles(plate, brand, model, color)')
       .not('status', 'in', '("termine","annule")')
       .gte('due_datetime', now.toISOString())
       .lte('due_datetime', inLead)
@@ -118,9 +122,12 @@ export async function GET(request: NextRequest) {
         .select('id').eq('type', stage.type).eq('entity_id', t.id).limit(1)
       if (exists && exists.length) continue
       const veh = t.vehicle as any
-      const heure = heureAgence(t.due_datetime)
       const title = `Tâche dans ${stage.lead}`
-      const body = `${t.title}${veh?.plate ? ` — ${veh.brand} ${veh.model} (${veh.plate})` : ''} · prévu à ${heure}`
+      const body = [
+        t.title,
+        veh?.plate ? `${[veh.brand, veh.model, veh.color].filter(Boolean).join(' ')} (${veh.plate})` : '',
+        `Prévu à ${heureAgence(t.due_datetime)}`,
+      ].filter(Boolean).join('\n')
       await supabase.from('notifications').insert({
         user_id: null, type: stage.type, title, body,
         entity_type: 'tasks', entity_id: t.id,
@@ -131,20 +138,36 @@ export async function GET(request: NextRequest) {
 
     const { data: soonEvents } = await supabase
       .from('calendar_events')
-      .select('id, title, start_at')
+      .select('id, title, start_at, vehicle_ids')
       .in('event_type', ['tache', 'rdv_client', 'rdv_garage', 'rdv_autre', 'livraison', 'recuperation'])
       .in('status', ['a_faire', 'en_cours'])
       .gte('start_at', now.toISOString())
       .lte('start_at', inLead)
+    // Le véhicule de ces rendez-vous vit dans `vehicle_ids` : on le résout en une
+    // fois pour pouvoir l'écrire dans le rappel. Sans lui, « Rappel dans 1 h —
+    // Pneus » ne disait pas de quelle voiture il s'agissait (Jeff, 30/07/2026).
+    const idsVehiculesRappels = [...new Set(
+      (soonEvents ?? []).flatMap(e => (e.vehicle_ids as string[] | null) ?? []).filter(Boolean),
+    )]
+    const vehiculeDesRappels = new Map<string, any>()
+    if (idsVehiculesRappels.length) {
+      const { data: vs } = await supabase
+        .from('vehicles').select('id, brand, model, color, plate').in('id', idsVehiculesRappels)
+      vs?.forEach(v => vehiculeDesRappels.set(v.id, v))
+    }
     for (const ev of soonEvents ?? []) {
       const minutesUntil = (new Date(ev.start_at).getTime() - now.getTime()) / 60000
       const stage = minutesUntil > 60 ? { type: 'task_soon', lead: '2 h' } : { type: 'task_soon_1h', lead: '1 h' }
       const { data: exists } = await supabase.from('notifications')
         .select('id').eq('type', stage.type).eq('entity_id', ev.id).limit(1)
       if (exists && exists.length) continue
-      const heure = heureAgence(ev.start_at)
+      const vh = vehiculeDesRappels.get(((ev.vehicle_ids as string[] | null) ?? [])[0])
       const title = `Rappel dans ${stage.lead}`
-      const body = `${ev.title} · prévu à ${heure}`
+      const body = [
+        ev.title,
+        vh ? `${[vh.brand, vh.model, vh.color].filter(Boolean).join(' ')} (${vh.plate})` : '',
+        `Prévu à ${heureAgence(ev.start_at)}`,
+      ].filter(Boolean).join('\n')
       await supabase.from('notifications').insert({
         user_id: null, type: stage.type, title, body,
         entity_type: 'calendar_events', entity_id: ev.id,
@@ -407,11 +430,21 @@ export async function GET(request: NextRequest) {
     // qu'elle a déjà sa propre notification. Constaté le 29/07 sur l'iPhone.
     const { data: lateEvents } = await supabase
       .from('calendar_events')
-      .select('id, title')
+      .select('id, title, end_at, vehicle_ids, assigned_to, assignee:profiles!assigned_to(full_name)')
       .is('source_key', null)
       .gte('end_at', lateEventFrom)
       .lt('end_at', lateEventTo)
       .not('status', 'in', '("termine","annule")')
+
+    const idsVehiculesRetards = [...new Set(
+      (lateEvents ?? []).flatMap(e => (e.vehicle_ids as string[] | null) ?? []).filter(Boolean),
+    )]
+    const vehiculeDesRetards = new Map<string, any>()
+    if (idsVehiculesRetards.length) {
+      const { data: vs } = await supabase
+        .from('vehicles').select('id, brand, model, color, plate').in('id', idsVehiculesRetards)
+      vs?.forEach(v => vehiculeDesRetards.set(v.id, v))
+    }
 
     for (const ev of lateEvents ?? []) {
       const { data: existing } = await supabase
@@ -422,7 +455,16 @@ export async function GET(request: NextRequest) {
         .limit(1)
       if (existing && existing.length) continue
 
-      const body = `« ${ev.title} » aurait dû être terminé`
+      // Trois lignes : ce qu'il y a à faire, la voiture, qui en a la charge et
+      // depuis quand ça traîne (Jeff, 30/07/2026).
+      const vhr = vehiculeDesRetards.get(((ev.vehicle_ids as string[] | null) ?? [])[0])
+      const quiFait = Array.isArray((ev as any).assignee) ? (ev as any).assignee[0] : (ev as any).assignee
+      const body = [
+        ev.title,
+        vhr ? `${[vhr.brand, vhr.model, vhr.color].filter(Boolean).join(' ')} (${vhr.plate})` : '',
+        quiFait?.full_name ? `Confiée à ${quiFait.full_name}` : 'Non attribuée',
+        `Aurait dû être terminé le ${fmtAgence(ev.end_at, { day: '2-digit', month: '2-digit' })} à ${heureAgence(ev.end_at)}`,
+      ].filter(Boolean).join('\n')
       await supabase.from('notifications').insert({
         user_id: null, type: 'event_return_late',
         title: 'Tâche / RDV en retard', body,
@@ -462,13 +504,17 @@ export async function GET(request: NextRequest) {
         .gte('created_at', todayStart.toISOString())
         .limit(1)
       if (alreadyPushed && alreadyPushed.length > 0) continue
+      // `pushBody` écrit sur trois lignes (qui, quel véhicule, quand) — format
+      // arrêté par Jeff le 30/07/2026. `sublabel` reste le repli pour les rares
+      // alertes qui n'en portent pas encore.
+      const corps = a.pushBody ?? a.sublabel
       await supabase.from('notifications').insert({
         user_id: null, type: dedupType,
-        title: a.label, body: a.sublabel,
+        title: a.label, body: corps,
         entity_type: a.vehicleId ? 'vehicles' : 'reservations',
         entity_id: entityId,
       })
-      await broadcastPushToManagers({ title: a.label, body: a.sublabel, url: a.href }, notifType)
+      await broadcastPushToManagers({ title: a.label, body: corps, url: a.href }, notifType)
       created.push(entityId)
     }
 

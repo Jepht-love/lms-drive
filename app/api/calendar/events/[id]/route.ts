@@ -118,7 +118,8 @@ async function notifierPersonneAssignee(
 
   const quand = event.start_at ? jourHeureAgence(event.start_at) : null
   const title = 'Nouvelle tâche pour vous'
-  const body = [event.title ?? 'Tâche', quand && `le ${quand}`].filter(Boolean).join(' · ')
+  // Deux lignes au moins : ce qu'il y a à faire, puis quand (Jeff, 30/07/2026).
+  const body = [event.title ?? 'Tâche', quand && `Prévu le ${quand}`].filter(Boolean).join('\n')
 
   // Trace dans la cloche de l'application, en plus du push : si le téléphone
   // n'a pas les notifications activées, la tâche reste visible quelque part.
@@ -173,7 +174,10 @@ async function notifierAvancement(
 
   const auteur = actorName?.trim() || 'Un membre de l’équipe'
   const title = `${auteur} ${verbe} une tâche`
-  const body = event.title ?? 'Tâche'
+  const body = [
+    event.title ?? 'Tâche',
+    (event as any).assigned_to ? null : 'Non attribuée',
+  ].filter(Boolean).join('\n')
 
   if (event.created_by && event.created_by !== actorId) {
     // Même raison que ci-dessus : on écrit pour le créateur de la tâche, pas

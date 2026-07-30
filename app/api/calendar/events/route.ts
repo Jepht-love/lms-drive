@@ -100,7 +100,16 @@ export async function POST(request: NextRequest) {
   if (assigned_to && assigned_to !== user.id) {
     const quand = start_at ? jourHeureAgence(start_at) : null
     const pushTitle = 'Nouvelle tâche pour vous'
-    const pushBody = [title ?? 'Tâche', quand && `le ${quand}`].filter(Boolean).join(' · ')
+    // Trois lignes : ce qu'il y a à faire, la voiture, quand (Jeff, 30/07/2026).
+    let ligneVehicule = ''
+    const premierVehicule = (vehicle_ids as string[] | null)?.[0]
+    if (premierVehicule) {
+      const { data: veh } = await createAdminClient()
+        .from('vehicles').select('brand, model, color, plate').eq('id', premierVehicule).maybeSingle()
+      if (veh) ligneVehicule = `${[veh.brand, veh.model, veh.color].filter(Boolean).join(' ')} (${veh.plate})`
+    }
+    const pushBody = [title ?? 'Tâche', ligneVehicule, quand && `Prévu le ${quand}`]
+      .filter(Boolean).join('\n')
     // Connexion d'administration : la règle d'accès de `notifications` n'autorise
     // chacun qu'à écrire pour lui-même, donc écrire au nom du destinataire était
     // refusé en silence. Constaté le 28/07/2026.

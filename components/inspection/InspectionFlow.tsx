@@ -531,7 +531,8 @@ export default function InspectionFlow({
           const veh = (ctInfo?.reservation as any)?.vehicle
           const clientLabel = clt ? `${clt.first_name} ${clt.last_name}` : ''
           const vehLabel   = veh ? `${veh.brand} ${veh.model} (${veh.plate})` : ''
-          const notifBody  = [clientLabel, vehLabel].filter(Boolean).join(' — ')
+          // Trois lignes sur l'écran de verrouillage (Jeff, 30/07/2026).
+          const notifBody  = [clientLabel, vehLabel, 'Contrat à clôturer'].filter(Boolean).join('\n')
 
           await Promise.all([
             supabase.from('notifications').insert({

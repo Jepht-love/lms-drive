@@ -39,20 +39,13 @@ async function updateTask(id: string, formData: FormData) {
     completed_at: status === 'termine' ? new Date().toISOString() : null,
   }
   if (formData.has('notes')) update.notes = (formData.get('notes') as string)?.trim() || null
-  const { data: updated } = await supabase
+  await supabase
     .from('tasks')
     .update(update)
     .eq('id', id)
-    .select('title')
-    .single()
 
-  // Notifie les managers du nouveau statut (en précisant le libellé).
-  const statusLabel = STATUSES.find(s => s.id === status)?.label ?? status
-  await broadcastPushToManagers({
-    title: `Tâche · ${statusLabel}`,
-    body: `${updated?.title ?? 'Tâche'} — statut : ${statusLabel}`,
-    url: '/calendar/tasks',
-  })
+  // Plus de notification « Tâche · Terminé » depuis le 30/07/2026 (Jeff) : elle
+  // doublonnait « X a terminé une tâche », qui dit en plus qui a agi.
 
   revalidatePath('/calendar/tasks')
   revalidatePath('/')

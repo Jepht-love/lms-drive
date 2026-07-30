@@ -40,7 +40,8 @@ async function createTask(formData: FormData) {
   // concernée n'était pas prévenue, et les autres l'étaient pour rien.
   if (assigned_to && assigned_to !== user.id) {
     const pushTitle = 'Nouvelle tâche pour vous'
-    const pushBody = `${title} · le ${dueDate}`
+    // Trois lignes, comme partout depuis le 30/07/2026 (Jeff).
+    const pushBody = [title, `Prévu le ${dueDate}`].filter(Boolean).join('\n')
     // Connexion d'administration : la règle d'accès de `notifications` n'autorise
     // chacun qu'à écrire pour lui-même, donc écrire au nom du destinataire était
     // refusé en silence. Constaté le 28/07/2026.
@@ -57,7 +58,7 @@ async function createTask(formData: FormData) {
     // Tâche sans personne désignée : l'équipe doit la voir pour s'en saisir.
     await broadcastPushToManagers({
       title: 'Nouvelle tâche créée',
-      body: `${title} — prévu le ${dueDate}`,
+      body: [title, 'Non attribuée', `Prévu le ${dueDate}`].join('\n'),
       url: '/calendar/tasks',
     }, 'new_task_alert')
   }

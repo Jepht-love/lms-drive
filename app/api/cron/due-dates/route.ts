@@ -186,9 +186,11 @@ export async function GET(request: NextRequest) {
     // Au-delà de deux échéances, on ne déroule plus : un paiement échelonné en
     // dix fois donnerait dix dates. On dit combien et à partir de quand, le
     // détail est sur l'écran des créances où mène le clic.
+    // Une échéance par ligne (Jeff, 30/07/2026) : deux dates collées par un
+    // point médian se lisaient mal sur un écran de verrouillage.
     const quand = triees.length > MAX_DATES
       ? `${triees.length} échéances dès ${jourCourt(triees[0].date)}`
-      : triees.map(l => `${jourCourt(l.date)} ${formatAmount(l.montant)}`).join(' · ')
+      : triees.map(l => `${jourCourt(l.date)} · ${formatAmount(l.montant)}`).join('\n')
 
     const title = `💶 ${nom} doit ${formatAmount(total)}`
     await supabase.from('notifications').insert({
