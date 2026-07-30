@@ -3,8 +3,9 @@
 import { format, isSameDay } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { ArrowLeft, CalendarDays } from 'lucide-react'
-import type { CalendarEvent, CalendarResource } from '@/types/calendar'
+import type { CalendarEvent, CalendarResource, EventType } from '@/types/calendar'
 import { EVENT_COLORS, EVENT_TYPE_LABELS, EVENT_STATUS_LABELS } from '@/lib/calendar/constants'
+import { roleLabel } from '@/lib/roles'
 
 interface Props {
   currentDate: Date
@@ -13,6 +14,14 @@ interface Props {
   onEventClick: (e: CalendarEvent) => void
   onBack: () => void
 }
+
+// Les types d'évènement qui attendent quelqu'un. Un blocage ou une indisponibilité
+// n'est porté par personne : lui écrire « Non attribué » serait un faux manque.
+// Même liste que la vue semaine du tableau de bord, à garder identique.
+const ASSIGNABLE: EventType[] = [
+  'depart_vehicule', 'retour_vehicule', 'tache',
+  'rdv_client', 'rdv_garage', 'rdv_autre', 'livraison', 'recuperation',
+]
 
 export default function DayEventsPanel({ currentDate, events, resources, onEventClick, onBack }: Props) {
   const dayEvents = events
@@ -89,13 +98,28 @@ export default function DayEventsPanel({ currentDate, events, resources, onEvent
                             {ev.vehicles.map(v => `${v.brand} ${v.model} · ${v.plate}`).join(', ')}
                           </p>
                         )}
-                        {(ev.client || assignee) && (
+                        {ev.client && (
                           <p className="text-xs text-gray-500 mt-0.5 truncate">
-                            {ev.client ? `${ev.client.first_name} ${ev.client.last_name}` : ''}
-                            {ev.client && assignee ? ' · ' : ''}
-                            {assignee ? assignee.full_name : ''}
+                            {ev.client.first_name} {ev.client.last_name}
                           </p>
                         )}
+                        {/* Qui porte la tâche, sur sa propre ligne et avec son poste :
+                            sans le poste, un nom collé à celui du client ne disait pas
+                            lequel des deux était le salarié (remarque 19 de Jeff, point
+                            4, corrigée le 30/07/2026). Personne dessus se dit en gras,
+                            c'est une action à prendre, pas une information. */}
+                        {assignee ? (
+                          <p className="text-xs text-gray-500 mt-0.5 truncate">
+                            {assignee.full_name}
+                            {assignee.role && (
+                              <span className="text-gray-400"> · {roleLabel(assignee.role)}</span>
+                            )}
+                          </p>
+                        ) : ASSIGNABLE.includes(ev.event_type) && !ev.assigned_team_id ? (
+                          <p className="text-xs font-bold text-amber-600 mt-0.5 truncate">
+                            Non attribué
+                          </p>
+                        ) : null}
                       </div>
 
                       {/* Time */}

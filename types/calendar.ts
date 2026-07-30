@@ -39,7 +39,9 @@ export interface CalendarEvent {
   // Joins enrichis (colonnes réelles : vehicles.brand/model, clients.first_name/last_name)
   vehicles?: { id: string; plate: string; brand: string; model: string; color?: string | null }[]
   client?: { id: string; first_name: string; last_name: string } | null
-  assigned_profile?: { id: string; full_name: string } | null
+  // `role` sert à écrire le poste à côté du nom, pour qu'on ne confonde pas la
+  // personne qui porte la tâche avec le client de la réservation (30/07/2026).
+  assigned_profile?: { id: string; full_name: string; role?: string | null } | null
   team?: { id: string; name: string; color: string | null } | null
 }
 

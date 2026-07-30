@@ -139,7 +139,9 @@ export default function CalendarPage() {
         const meInResources = body.resources.some(r => r.id === meId)
         const unassigned: CalendarResource = {
           id: UNASSIGNED_RESOURCE_ID,
-          full_name: 'Non assigné',
+          // « Non attribué » et non « Non assigné » : c'est le mot que Jeff emploie,
+          // et la colonne doit se lire pareil que la ligne du panneau du jour (30/07/2026).
+          full_name: 'Non attribué',
           role: null,
           type: 'profile',
           color: '#94A3B8',
@@ -238,7 +240,12 @@ export default function CalendarPage() {
 
   const handleNavigate = (dir: 'prev' | 'next' | 'today') => {
     if (dir === 'today') {
+      // « Aujourd'hui » ramène à la journée du jour ET bascule sur la vue jour :
+      // depuis la vue mois, se contenter de déplacer la date ne montrait rien de
+      // plus qu'avant, alors qu'on appuie sur ce bouton pour voir ce qu'il y a à
+      // faire maintenant, tâches comprises. Corrigé le 30/07/2026.
       setCurrentDate(new Date())
+      setView('day')
       return
     }
     setCurrentDate(d => {

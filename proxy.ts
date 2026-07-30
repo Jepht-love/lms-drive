@@ -98,12 +98,14 @@ export async function proxy(request: NextRequest) {
 }
 
 // `simulateur.html` et `simulateur.js` sont laissés passer sans session : c'est
-// l'outil de test de Jeff, qui ouvre l'application dans un cadre de la taille
-// d'un téléphone. Sans cette exception, l'adresse partait sur /login, la
+// l'outil de travail de l'éditeur, qui ouvre l'application dans un cadre de la
+// taille d'un téléphone. Sans cette exception, l'adresse partait sur /login, la
 // connexion ramenait à l'accueil, et l'outil ne s'ouvrait jamais (constaté le
-// 30/07/2026 sur son navigateur de test). Rien n'est exposé pour autant :
-// l'application affichée DANS le cadre reste protégée, et ces deux fichiers ne
-// sont pas suivis par git — ils ne partent donc sur aucun déploiement client.
+// 30/07/2026 sur le navigateur de test). Rien n'est exposé pour autant :
+// l'application affichée DANS le cadre reste protégée, et ces deux fichiers sont
+// ignorés par git — ils n'existent sur aucun déploiement client, où l'adresse ne
+// mène donc à rien. Le lien vers l'outil est dans le menu, section « Éditeur »,
+// visible uniquement en développement.
 export const config = {
   matcher: ['/((?!_next/static|_next/image|favicon.ico|manifest.json|robots.txt|sw.js|offline|apple-touch-icon.png|simulateur\\.html|simulateur\\.js|api/health|api/notifications|api/cron|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
 }

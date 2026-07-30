@@ -42,3 +42,11 @@ next-env.d.ts
 
 # éditeur de zones EDL (dev-only) — fichier généré, se régénère via npm run edl:editor
 /edl-editor.local.html
+
+# Outils de travail de l'éditeur, jamais livrés à un client (règle du 30/07/2026).
+# Le simulateur ouvre l'application dans un cadre de la taille d'un téléphone et
+# permet d'écrire des remarques ; l'aperçu sert à relire toutes les notifications.
+# Ils ne fonctionnent qu'en local : le menu ne montre leur lien qu'en développement.
+/public/simulateur.html
+/public/simulateur.js
+/public/apercu-notifications.html
