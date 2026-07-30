@@ -118,6 +118,32 @@ function AssigneeLine({ name }: { name: string | null }) {
   )
 }
 
+/**
+ * Ligne « BMW Série 1 Blanche · GE-226-EZ » : le véhicule et sa couleur d'abord,
+ * la plaque ensuite, en gris (remarque 20 de Jeff, 30/07/2026 — sur le terrain on
+ * reconnaît une voiture à sa couleur bien avant de lire sa plaque).
+ *
+ * La couleur est un champ libre de la fiche du véhicule : elle manque souvent, et
+ * la ligne doit tenir sans elle. Le ton de la plaque change d'une liste à l'autre
+ * (plus pâle sur fond blanc), d'où le réglage.
+ */
+function LigneVehicule({
+  v,
+  tonPlaque = 'text-gray-400',
+}: {
+  v?: { brand?: string | null; model?: string | null; color?: string | null; plate?: string | null } | null
+  tonPlaque?: string
+}) {
+  if (!v) return null
+  const nom = [v.brand, v.model, v.color].filter(Boolean).join(' ')
+  return (
+    <>
+      {nom}
+      {v.plate && <span className={`${tonPlaque} font-mono`}> · {v.plate}</span>}
+    </>
+  )
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 // Une réservation « à partir » (départ) = confirmée OU en option (juste créée)
@@ -172,7 +198,7 @@ export default async function DashboardPage() {
   const [{ data: vehiclesRaw }, { data: externalRows }] = await Promise.all([
     supabase
       .from('vehicles')
-      .select('id, plate, brand, model, status, insurance_expiry, ct_date, next_service_date, next_service_km, current_km')
+      .select('id, plate, brand, model, color, status, insurance_expiry, ct_date, next_service_date, next_service_km, current_km')
       .eq('is_active', true),
     // Exclut les véhicules partenaires temporaires (inter-agences) des KPI flotte.
     // Requête séparée et tolérante : avant la migration 035 (colonne is_external
@@ -233,7 +259,7 @@ export default async function DashboardPage() {
     .from('reservations')
     .select(`
       id, status, start_datetime, end_datetime, total_price,
-      vehicles ( id, plate, brand, model ),
+      vehicles ( id, plate, brand, model, color ),
       clients  ( id, first_name, last_name, phone )
     `)
     .in('status', ['option', 'confirmee', 'en_cours', 'en_retard'])
@@ -331,7 +357,7 @@ export default async function DashboardPage() {
     .from('reservations')
     .select(`
       id, status, start_datetime, end_datetime,
-      vehicles ( id, plate, brand, model ),
+      vehicles ( id, plate, brand, model, color ),
       clients  ( id, first_name, last_name, phone )
     `)
     .in('status', ['option', 'confirmee', 'en_cours', 'en_retard'])
@@ -387,7 +413,7 @@ export default async function DashboardPage() {
       .from('inter_agency_rentals')
       .select(`
         id, vehicle_id, start_date, end_date_expected, status,
-        vehicles ( id, plate, brand, model ),
+        vehicles ( id, plate, brand, model, color ),
         partner_agencies ( name ),
         clients ( first_name, last_name )
       `)
@@ -481,7 +507,7 @@ export default async function DashboardPage() {
     .from('tasks')
     .select(`
       id, title, type, status, due_datetime, reservation_id,
-      vehicles ( plate ),
+      vehicles ( plate, brand, model, color ),
       profiles!tasks_assigned_to_fkey ( full_name )
     `)
     .gte('due_datetime', tasksLowerBound.toISOString())
@@ -651,7 +677,7 @@ export default async function DashboardPage() {
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <span className="text-base font-black text-gray-900">{v?.brand} {v?.model}</span>
+                          <span className="text-base font-black text-gray-900">{[v?.brand, v?.model, v?.color].filter(Boolean).join(' ')}</span>
                           <span className="text-xs text-gray-400">{v?.plate}</span>
                           <span className="text-[9px] font-black uppercase tracking-wide text-white bg-green-600 px-2 py-0.5 rounded-full">
                             Loué
@@ -704,7 +730,7 @@ export default async function DashboardPage() {
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <span className="text-base font-black text-gray-900">{v?.brand} {v?.model}</span>
+                          <span className="text-base font-black text-gray-900">{[v?.brand, v?.model, v?.color].filter(Boolean).join(' ')}</span>
                           <span className="text-xs text-gray-400">{v?.plate}</span>
                           {isDeparted && (
                             <span className="text-[9px] font-black uppercase tracking-wide text-white bg-green-600 px-2 py-0.5 rounded-full">
@@ -861,7 +887,7 @@ export default async function DashboardPage() {
                         {c?.first_name} {c?.last_name}
                       </p>
                       <p className="text-xs text-gray-500 mt-0.5">
-                        {v?.brand} {v?.model} <span className="text-gray-400 font-mono">· {v?.plate}</span>
+                        <LigneVehicule v={v} />
                       </p>
                       <AssigneeLine name={retourAssigneeByRes.get(r.id) ?? null} />
                     </div>
@@ -898,7 +924,7 @@ export default async function DashboardPage() {
                         {c?.first_name} {c?.last_name}
                       </p>
                       <p className="text-xs text-gray-500 mt-0.5">
-                        {v?.brand} {v?.model} <span className="text-gray-400 font-mono">· {v?.plate}</span>
+                        <LigneVehicule v={v} />
                       </p>
                       {isToPrepare(r.id) && (
                         <p className="text-[10px] font-bold text-amber-600 mt-1">
@@ -944,7 +970,7 @@ export default async function DashboardPage() {
                         {c?.first_name} {c?.last_name}
                       </p>
                       <p className="text-xs text-gray-400 mt-0.5">
-                        {v?.brand} {v?.model} <span className="text-gray-300 font-mono">· {v?.plate}</span>
+                        <LigneVehicule v={v} tonPlaque="text-gray-300" />
                       </p>
                       <AssigneeLine name={departAssigneeByRes.get(r.id) ?? null} />
                       {new Date(r.start_datetime) < now && (
@@ -998,7 +1024,7 @@ export default async function DashboardPage() {
                         {c?.first_name} {c?.last_name}
                       </p>
                       <p className="text-xs text-gray-400 mt-0.5">
-                        {v?.brand} {v?.model} <span className="text-gray-300 font-mono">· {v?.plate}</span>
+                        <LigneVehicule v={v} tonPlaque="text-gray-300" />
                       </p>
                       <AssigneeLine name={retourAssigneeByRes.get(r.id) ?? null} />
                       {isQuickTurnaround && (
@@ -1030,7 +1056,7 @@ export default async function DashboardPage() {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-bold text-gray-900 truncate">{task.title}</p>
                       <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                        {tv && <span className="text-[10px] text-gray-400">{(tv as any).plate}</span>}
+                        {tv && <span className="text-[10px] text-gray-400"><LigneVehicule v={tv as any} /></span>}
                         {assignee
                           ? <span className="text-[10px] text-gray-400">{tv ? '· ' : ''}{(assignee as any).full_name}</span>
                           : <span className="text-[10px] font-semibold text-amber-600">{tv ? '· ' : ''}À assigner</span>}
@@ -1052,7 +1078,7 @@ export default async function DashboardPage() {
                 .map((id: string) => vehicleById.get(id))
                 .filter(Boolean)
               const vehicleLabel = taskVehicles
-                .map((tv: any) => `${tv.brand} ${tv.model}`)
+                .map((tv: any) => [tv.brand, tv.model, tv.color].filter(Boolean).join(' '))
                 .join(', ')
               const plates = taskVehicles.map((tv: any) => tv.plate).join(', ')
               const assignee = assigneeLabel(t)
