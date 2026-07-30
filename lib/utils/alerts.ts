@@ -4,6 +4,8 @@ import { differenceInDays } from 'date-fns'
 // sont donc mises en forme par le serveur, qui vit en temps universel. Sans ce
 // détour, un retour prévu à 13:00 s'annonce « à 11:00 » l'été.
 import { heureAgence, dateAgence, fmtAgence } from '@/lib/format/heureAgence'
+import { getColumnWindow } from '@/lib/calendar/dateUtils'
+import { CALENDAR_START_HOUR } from '@/lib/calendar/constants'
 
 /** Jour et mois seuls : « 04/08 ». Assez pour une échéance à quelques jours. */
 const jourMois = (v: string) => fmtAgence(v, { day: '2-digit', month: '2-digit' })
@@ -19,6 +21,23 @@ export interface AppAlert {
   urgent: boolean
   vehicleId?: string
   reservationId?: string
+  // Les deux champs ci-dessous existent pour le TABLEAU DE BORD, qui écrit une
+  // tâche sur trois lignes (véhicule · plaque / type et montant / la personne)
+  // au lieu de la phrase collée de `sublabel`. Demande de Jeff du 30/07/2026.
+  // `sublabel` ne bouge pas : c'est lui qui part sur l'écran de verrouillage du
+  // téléphone (app/api/notifications/route.ts), où la phrase entière a du sens.
+  /** Montant seul, déjà mis en forme : « 30,00 € ». */
+  amountLabel?: string
+  /** La personne concernée : le client d'une échéance, le locataire d'un retour. */
+  personLabel?: string
+  /**
+   * Intitulé pour le CALENDRIER et « Tâches du jour », quand `label` ne suffit
+   * pas. « Échéance proche » ne disait pas quel jour l'argent doit rentrer :
+   * ici on écrit « À encaisser le 30/07 ». Demande de Jeff du 30/07/2026.
+   * `label` ne bouge pas : c'est l'étiquette rouge de l'écran Alertes et le
+   * titre de la notification, où la catégorie prime sur la date.
+   */
+  calendarTitle?: string
 }
 
 /** Format véhicule uniforme : « marque modèle · plaque » (tolère marque/modèle absents) */
@@ -60,6 +79,21 @@ export async function fetchAllAlerts(
   const alerts: AppAlert[] = []
   const tolerance = await seuilRetardMinutes(supabase)
   const limiteRetard = new Date(now.getTime() - tolerance * 60_000)
+
+  /**
+   * Début de la journée métier en cours (7h→3h le lendemain, même découpage que
+   * le calendrier et que le tableau de bord). Sert de frontière aux « tâches en
+   * retard » : une tâche du jour même n'est PAS une alerte, elle reste dans
+   * « Tâches du jour » tant que la journée dure (règle de Jeff du 30/07/2026,
+   * qui remplace la tolérance de 30 minutes appliquée jusque-là). Ne remontent
+   * ici que les tâches des journées précédentes, jamais faites.
+   */
+  const debutJourneeMetier = (() => {
+    const ref = now.getHours() < CALENDAR_START_HOUR
+      ? new Date(now.getTime() - 24 * 3600 * 1000)
+      : now
+    return getColumnWindow(ref).start
+  })()
 
   // ── 1. Contrats non signés ──────────────────────────────────────────────────
   const { data: contracts } = await supabase
@@ -110,6 +144,7 @@ export async function fetchAllAlerts(
       date: r.end_datetime,
       vehicleId: r.vehicle_id,
       reservationId: r.id,
+      personLabel: [(c as any)?.first_name, (c as any)?.last_name].filter(Boolean).join(' ').trim(),
     })
   })
 
@@ -194,13 +229,15 @@ export async function fetchAllAlerts(
   })
 
   // ── 4. Tâches en retard ─────────────────────────────────────────────────────
+  // Seulement celles des journées PRÉCÉDENTES : une tâche du jour même reste
+  // dans « Tâches du jour », en rouge, jusqu'au bout de la journée.
   const { data: overdueTasks } = await supabase
     .from('tasks')
     .select(`id, title, type, due_datetime, vehicle_id, reservation_id,
       vehicles(plate, brand, model),
       profiles!tasks_assigned_to_fkey(full_name)`)
     .eq('status', 'a_faire')
-    .lt('due_datetime', limiteRetard.toISOString())
+    .lt('due_datetime', debutJourneeMetier.toISOString())
     .order('due_datetime', { ascending: true })
 
   overdueTasks?.forEach(t => {
@@ -242,19 +279,45 @@ export async function fetchAllAlerts(
   // Ces copies ont déjà leur propre alerte, il n'y a donc rien à perdre.
   const { data: overdueEvents } = await supabase
     .from('calendar_events')
-    .select('id, title, event_type, end_at, reservation_id, vehicle_ids, assignee:profiles!assigned_to(full_name)')
+    .select('id, title, event_type, end_at, reservation_id, vehicle_ids, vehicle_id, assignee:profiles!assigned_to(full_name)')
     .in('event_type', ['tache', 'rdv_client', 'rdv_garage', 'rdv_autre', 'livraison', 'recuperation'])
     .in('status', ['a_faire', 'en_cours'])
     .is('source_key', null)
-    // Seulement les tâches confiées par QUELQU'UN. Celles que l'application
-    // fabrique elle-même (lavage avant location, révision, clôture de contrat,
-    // échéance proche) n'ont pas d'auteur, et elles ont déjà leur propre alerte :
-    // les reprendre ici affichait tout en double, une fois sous son vrai nom et
-    // une fois en « TÂCHE EN RETARD ». Signalé par Jeff le 28/07/2026.
-    .not('created_by', 'is', null)
+    // Les tâches que l'application fabrique elle-même (lavage avant location,
+    // rendez-vous garage) remontent ICI AUSSI depuis le 30/07/2026. Avant cette
+    // date, seules les tâches confiées par quelqu'un remontaient (`created_by`
+    // non nul), pour éviter un doublon avec leur alerte propre.
+    // Pourquoi ça a changé : l'alerte propre du lavage (section 5) ne vit que
+    // tant que le DÉPART est à venir. Départ passé, elle s'éteint — et la tâche
+    // avait déjà quitté « Tâches du jour ». Un lavage jamais fait disparaissait
+    // donc des deux écrans. Constaté sur les données réelles le 30/07/2026.
+    // Le doublon qu'évitait l'ancien filtre est désormais traité en fin de
+    // fonction, réservation par réservation.
     .gte('end_at', retard7j.toISOString())
-    .lt('end_at', limiteRetard.toISOString())
+    // Frontière : le début de la journée métier, pas une tolérance en minutes.
+    // Une tâche du jour même appartient à « Tâches du jour » (Jeff, 30/07/2026).
+    .lt('end_at', debutJourneeMetier.toISOString())
     .order('end_at', { ascending: true })
+
+  // Le véhicule d'une tâche vit à DEUX endroits selon qui l'a créée :
+  // `vehicle_ids` (tableau) pour les tâches du calendrier, `vehicle_id` (seul)
+  // pour celles que l'état des lieux de retour fabrique (« Clôturer contrat »,
+  // components/inspection/InspectionFlow.tsx). Lire les deux, sinon l'alerte
+  // sort sans voiture alors que toutes les autres en portent une.
+  const idsVehiculesDesTaches = [...new Set(
+    (overdueEvents ?? []).flatMap(ev => [
+      ...(((ev as any).vehicle_ids as string[] | null) ?? []),
+      (ev as any).vehicle_id,
+    ]).filter(Boolean) as string[],
+  )]
+  const vehiculeParId = new Map<string, any>()
+  if (idsVehiculesDesTaches.length > 0) {
+    const { data: vehiculesDesTaches } = await supabase
+      .from('vehicles')
+      .select('id, plate, brand, model')
+      .in('id', idsVehiculesDesTaches)
+    vehiculesDesTaches?.forEach(v => vehiculeParId.set(v.id, v))
+  }
 
   for (const ev of overdueEvents ?? []) {
     const qui = Array.isArray(ev.assignee) ? ev.assignee[0] : ev.assignee
@@ -262,17 +325,38 @@ export async function fetchAllAlerts(
     const retard = minutes < 60
       ? `${minutes} min de retard`
       : `${Math.round(minutes / 60)}h de retard`
+    const idVehicule = ((ev as any).vehicle_ids as string[] | null)?.[0]
+      ?? (ev as any).vehicle_id ?? undefined
+    const veh = idVehicule ? vehiculeParId.get(idVehicule) : null
+    // Le véhicule passe DEVANT, comme dans toutes les autres alertes (demande
+    // de Jeff du 30/07/2026 : la voiture et sa plaque en premier, partout).
+    // Beaucoup de titres finissent déjà par le véhicule (« Lavage avant
+    // location — BMW Série 1 Blanc ») : on coupe cette fin, sinon la ligne
+    // écrivait la voiture deux fois de suite. Un titre qui nomme le client
+    // (« Clôturer contrat — Mohamed-amine Baazaoui ») reste entier.
+    const finDuTitre = ev.title.split(' — ').slice(1).join(' — ')
+    const finRepeteLeVehicule = Boolean(
+      veh && finDuTitre && [veh.brand, veh.model].filter(Boolean).some(
+        (mot: string) => finDuTitre.toLowerCase().includes(String(mot).toLowerCase()),
+      ),
+    )
+    const intitule = finRepeteLeVehicule ? ev.title.split(' — ')[0] : ev.title
     alerts.push({
       id: `event-${ev.id}`,
       category: 'important',
       urgent: false,
       type: 'tache',
       label: 'Tâche en retard',
-      sublabel: `${ev.title}${(qui as any)?.full_name ? ` · ${(qui as any).full_name}` : ' · non assignée'} · ${retard}`,
+      sublabel: [
+        veh ? vLabel(veh) : null,
+        intitule,
+        (qui as any)?.full_name ?? 'non assignée',
+        retard,
+      ].filter(Boolean).join(' · '),
       // Le clic ouvre la tâche elle-même : c'est là qu'on la passe en terminé.
       href: `/calendrier?event=${ev.id}`,
       date: ev.end_at,
-      vehicleId: (ev.vehicle_ids as string[] | null)?.[0] ?? undefined,
+      vehicleId: idVehicule,
       reservationId: ev.reservation_id ?? undefined,
     })
   }
@@ -514,22 +598,44 @@ export async function fetchAllAlerts(
       category: overdue || days <= 2 ? 'urgent' : 'important',
       urgent: overdue || days <= 2,
       type: 'echeance',
-      label: overdue ? 'Échéance dépassée' : 'Échéance proche',
+      // Trois cas distincts, séparés le 30/07/2026 : « Échéance proche » servait
+      // aussi bien pour aujourd'hui que pour dans quatre jours, et laissait
+      // croire que l'argent n'était pas encore dû alors que le détail disait
+      // « à encaisser aujourd'hui ». C'est ce libellé qui titre la notification
+      // sur le téléphone, il doit se suffire à lui-même.
+      label: overdue
+        ? 'Échéance dépassée'
+        : days === 0 ? 'Échéance du jour' : 'Échéance proche',
       sublabel: `${objet} · ${montant} ${quand}${v ? ` · ${vLabel(v)}` : ''}`,
       href: `/accounting/due-dates`,
       date: d.due_date,
       vehicleId: d.vehicle_id ?? undefined,
+      amountLabel: montant,
+      personLabel: objet,
+      // Ce qu'on attend et pour quand : « À encaisser le 30/07 », ou
+      // « Encaissement en retard depuis le 29/07 » quand la date est passée.
+      // Le nom du geste change avec le sens de l'échéance : on encaisse une
+      // recette, on paie une dépense. Formulation arrêtée par Jeff le
+      // 30/07/2026 — « À encaisser depuis le 29/07 » ne voulait rien dire.
+      calendarTitle: overdue
+        ? `${d.type === 'recette' ? 'Encaissement' : 'Paiement'} en retard depuis le ${jourMois(d.due_date)}`
+        : `${verbe.charAt(0).toUpperCase()}${verbe.slice(1)} le ${jourMois(d.due_date)}`,
     })
   })
 
-  // ── 11. DÉPARTS EN RETARD (confirmée, heure de départ dépassée, non traitée) ──
+  // ── 11. DÉPARTS EN RETARD (heure de départ dépassée, client pas venu) ────────
   // Prend le relais de « DÉPART DU JOUR » (section 9) dès l'heure passée. Deux
   // suites possibles pour le gérant : faire l'état des lieux de départ si le
   // client est là, ou déclarer « client non présenté » sur la fiche.
+  // Les OPTIONS sont ici depuis le 30/07/2026, en même temps que « Tâches du
+  // jour » a cessé d'afficher ce qui date d'un jour passé. Sans elles, une
+  // option jamais récupérée ne serait plus nulle part : c'est exactement le
+  // ticket que le gérant avait remonté le 21/07/2026 (« Aucune mission » alors
+  // qu'un départ des jours précédents traînait).
   const { data: overduePickups } = await supabase
     .from('reservations')
     .select('id, vehicle_id, start_datetime, vehicles(plate, brand, model), clients(first_name, last_name)')
-    .eq('status', 'confirmee')
+    .in('status', ['confirmee', 'option'])
     .lt('start_datetime', now.toISOString())
     .order('start_datetime', { ascending: true })
 
@@ -620,7 +726,29 @@ export async function fetchAllAlerts(
     })
   })
 
-  return alerts.sort((a, b) => {
+  // ── Dédoublonnage final ─────────────────────────────────────────────────────
+  // Un contrat qui traîne se disait DEUX fois : « Contrat non clôturé » (section
+  // 13) et « Tâche en retard — Clôturer contrat » (section 4 bis), pour la même
+  // réservation et le même client.
+  // Arbitrage tranché par Jeff le 30/07/2026 : la TÂCHE gagne, l'alerte de
+  // contrat s'efface. Motif : la tâche dit ce qu'il reste à faire, qui en a la
+  // charge et depuis combien de temps elle traîne, et son clic ouvre l'écran où
+  // on la termine. L'alerte de contrat, elle, décrit un état.
+  // Le contrat garde son alerte tant qu'aucune tâche n'est en retard sur lui :
+  // rien ne disparaît, y compris dans la demi-heure de tolérance après le
+  // retour, ni si l'état des lieux n'a jamais créé la tâche.
+  const reservationsAvecTacheEnRetard = new Set(
+    alerts
+      .filter(a => a.id.startsWith('event-') && a.reservationId)
+      .map(a => a.reservationId),
+  )
+  const sansDoublon = alerts.filter(a => !(
+    a.type === 'contrat_non_cloture' &&
+    a.reservationId &&
+    reservationsAvecTacheEnRetard.has(a.reservationId)
+  ))
+
+  return sansDoublon.sort((a, b) => {
     const order = { urgent: 0, important: 1, info: 2 }
     return order[a.category] - order[b.category]
   })

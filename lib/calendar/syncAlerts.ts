@@ -1,7 +1,10 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { AppAlert } from '@/lib/utils/alerts'
+import { CALENDAR_START_HOUR } from '@/lib/calendar/constants'
 
 const ALERT_DURATION_MINUTES = 60
+/** Heure d'ouverture : là où se pose une tâche qui n'a qu'une date, sans heure. */
+const HEURE_OUVERTURE = CALENDAR_START_HOUR
 
 /**
  * Reflète les alertes urgentes/importantes du tableau de bord (/alertes) sur le
@@ -47,11 +50,33 @@ export async function syncAlertsToCalendar(
 
   for (const alert of actionable) {
     seenKeys.add(alert.id)
-    const startAt = alert.date ? new Date(alert.date) : new Date()
+    // Une alerte peut porter une DATE SEULE (« 2026-07-30 » pour une échéance de
+    // paiement) ou un instant précis (l'heure d'un retour). Une date seule se lit
+    // comme minuit en temps universel, soit 2h du matin en France : la tâche
+    // atterrissait au milieu de la nuit, donc dans la journée de travail de la
+    // VEILLE (7h→3h), et « Tâches du jour » ne la montrait jamais alors qu'elle
+    // annonçait « à encaisser aujourd'hui ». Constaté le 30/07/2026.
+    // On la pose donc au début de la journée de travail, à l'heure d'ouverture.
+    const dateSeule = typeof alert.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(alert.date)
+    let startAt: Date
+    if (dateSeule) {
+      const [a, m, j] = (alert.date as string).split('-').map(Number)
+      startAt = new Date(a, m - 1, j, HEURE_OUVERTURE, 0, 0, 0)
+    } else {
+      startAt = alert.date ? new Date(alert.date) : new Date()
+    }
     const endAt = new Date(startAt.getTime() + ALERT_DURATION_MINUTES * 60_000)
 
     const payload = {
-      title: `${alert.label} — ${alert.sublabel}`,
+      // Titre court : « Échéance proche · 30,00 € ». Avant le 30/07/2026 il
+      // collait le libellé et la phrase entière (« Échéance proche — George
+      // Alex Romeo · 30,00 € à encaisser aujourd'hui · Smart Fortwo · DQ-314-CV »),
+      // illisible dans une case de calendrier et dans « Tâches du jour ».
+      // Le détail n'est pas perdu : la personne passe en `description`, et la
+      // phrase entière continue de partir sur le téléphone depuis l'alerte
+      // elle-même (app/api/notifications/route.ts), pas depuis cette ligne.
+      title: [alert.calendarTitle ?? alert.label, alert.amountLabel].filter(Boolean).join(' · '),
+      description: alert.personLabel ?? alert.sublabel,
       event_type: 'tache' as const,
       status: 'a_faire' as const,
       start_at: startAt.toISOString(),

@@ -179,9 +179,13 @@ export async function GET(request: NextRequest) {
       const veh = r.vehicle as any
       const clientLabel = clt ? `${clt.first_name} ${clt.last_name}` : r.reservation_number
       const vehLabel = veh ? `${veh.brand} ${veh.model} (${veh.plate})` : ''
-      const heureFmt = heureAgence(r.end_datetime)
       const title = 'Retour dans 1 h'
-      const body = `${clientLabel}${vehLabel ? ' — ' + vehLabel : ''} · retour prévu à ${heureFmt}`
+      // Mêmes trois lignes que le retour en retard (Jeff, 30/07/2026).
+      const body = [
+        clientLabel,
+        vehLabel,
+        `Prévu à ${heureAgence(r.end_datetime)}`,
+      ].filter(Boolean).join('\n')
       await supabase.from('notifications').insert({
         user_id: null, type: 'return_soon_1h',
         title, body,
@@ -222,8 +226,15 @@ export async function GET(request: NextRequest) {
         const veh = r.vehicle as any
         const clientLabel = clt ? `${clt.first_name} ${clt.last_name}` : r.reservation_number
         const vehLabel = veh ? `${veh.brand} ${veh.model}${veh.color ? ' ' + veh.color : ''} (${veh.plate})` : ''
-        const retourFmt = jourHeureAgence(r.end_datetime)
-        const body = `${clientLabel}${vehLabel ? ' — ' + vehLabel : ''} · prévu le ${retourFmt}`
+        // Trois lignes sur l'écran de verrouillage — demande de Jeff du
+        // 30/07/2026 : qui, quelle voiture, quand le retour était prévu.
+        // Avant, tout tenait sur une seule ligne collée par des tirets, et le
+        // téléphone la coupait avant l'heure, l'information la plus utile.
+        const body = [
+          clientLabel,
+          vehLabel,
+          `Prévu le ${fmtAgence(r.end_datetime, { day: '2-digit', month: '2-digit' })} à ${heureAgence(r.end_datetime)}`,
+        ].filter(Boolean).join('\n')
         await supabase.from('notifications').insert({
           user_id: null, type: 'return_late',
           title: 'Retour en retard', body,

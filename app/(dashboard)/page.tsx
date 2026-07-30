@@ -139,7 +139,10 @@ function LigneVehicule({
   return (
     <>
       {nom}
-      {v.plate && <span className={`${tonPlaque} font-mono`}> · {v.plate}</span>}
+      {/* Espace insécable entre le point et la plaque : sur téléphone la ligne
+          se coupe AVANT le point, et « · GP-977-KZ » descend d'un bloc au lieu
+          de laisser un point tout seul en bout de ligne. */}
+      {v.plate && <span className={`${tonPlaque} font-mono`}> ·&nbsp;{v.plate}</span>}
     </>
   )
 }
@@ -312,25 +315,13 @@ export default async function DashboardPage() {
     )
     .sort((a, b) => a.end_datetime.localeCompare(b.end_datetime)) // plus en retard en premier
 
-  // ── RÉCUPÉRATIONS EN RETARD (départ dépassé, client pas venu chercher) ──────
-  // Une réservation en OPTION dont l'heure de départ est passée sans que le client
-  // soit venu reste une action à réaliser : on la remonte tout en haut des tâches,
-  // comme pour un retour en retard. Le véhicule, lui, est toujours au parking.
-  // Ticket SAV 21/07 : sans cette liste, un départ passé des jours précédents
-  // (client pas venu, contrat pas signé) disparaissait des « Tâches du jour »
-  // alors que les alertes le signalaient — le gérant voyait « Aucune mission ».
-  // Les CONFIRMÉES au départ dépassé ne sont plus ici (décision 27/07,
-  // cf. isSortiSansEdl) : elles comptent comme sorties et s'affichent dans
-  // « En location » avec le badge « Départ en retard ».
-  const hoursLateOf = (r: { start_datetime: string }) =>
-    Math.max(1, Math.floor((now.getTime() - new Date(r.start_datetime).getTime()) / 36e5))
-  const recuperationsEnRetard = (reservations ?? [])
-    .filter(r =>
-      isDepart(r.status) &&
-      !isSortiSansEdl(r) &&
-      new Date(r.start_datetime) < businessDayStart
-    )
-    .sort((a, b) => a.start_datetime.localeCompare(b.start_datetime)) // plus ancien en premier
+  // Les RÉCUPÉRATIONS EN RETARD (option dont l'heure de départ est passée, client
+  // jamais venu) ne sont plus listées ici depuis le 30/07/2026 : « Tâches du
+  // jour » ne parle que d'aujourd'hui, décision de Jeff. Elles remontent en
+  // alerte « Départ en retard » (lib/utils/alerts.ts, section 11, qui accepte
+  // les options depuis cette même date). Cette bascule a été faite dans le même
+  // mouvement, sans quoi elles ne seraient plus nulle part — le ticket du
+  // gérant du 21/07/2026 (« Aucune mission » alors qu'un départ traînait).
   // Même véhicule avec un départ ET un retour aujourd'hui (rotation rapide) —
   // à signaler clairement : peu de marge pour laver/préparer entre les deux.
   const departVehicleIds = new Set(departsAujourdhui.map(r => getVehicle(r)?.id).filter(Boolean))
@@ -516,20 +507,20 @@ export default async function DashboardPage() {
     .order('due_datetime', { ascending: true })
   // « Tâches du jour » = journée métier courante (7h→3h, comme le calendrier)
   // OU jour civil (rétro-compatibilité, ne masque rien de ce qui s'affichait).
-  // Une tâche dépassée et non faite QUITTE « Tâches du jour » et devient une
-  // alerte (fetchAllAlerts). Sans ça elle restait dans la liste du jour, noyée
-  // parmi celles encore à l'heure, et personne ne voyait qu'elle était en
-  // souffrance. Tolérance : le seuil des paramètres, 30 minutes par défaut,
-  // pour ne pas basculer une tâche pendant qu'on est en train de la faire.
-  const toleranceMin = await seuilRetardMinutes(supabase)
-  const limiteRetard = new Date(now.getTime() - toleranceMin * 60_000)
-
+  //
+  // RÈGLE ARRÊTÉE PAR JEFF LE 30/07/2026, elle remplace celle du 28/07 :
+  // on voit ici ce qui doit être fait aujourd'hui ET qui ne l'est pas encore.
+  // Une tâche dont l'heure est passée RESTE donc dans la liste, marquée en
+  // rouge, jusqu'à la fin de la journée : elle est toujours à faire, la sortir
+  // revenait à la faire oublier. Elle ne devient une alerte que le lendemain,
+  // quand elle n'appartient plus à la journée en cours (lib/utils/alerts.ts,
+  // sections 4 et 4 bis, qui s'arrêtent au début de la journée métier).
+  // Une tâche terminée disparaît, elle n'est plus « à faire ».
   const todayTasks = (weekTasks ?? []).filter(t => {
     const d = new Date(t.due_datetime)
     const dansLaJournee = (d >= businessDayStart && d <= businessDayEnd) || (d >= todayStart && d <= todayEnd)
     if (!dansLaJournee) return false
-    // Terminée : elle disparaît d'elle-même. En retard et pas faite : en alerte.
-    return !(t.status === 'a_faire' && d < limiteRetard)
+    return t.status !== 'termine'
   })
 
   // ── Tâches calendrier du jour (lavage, CT, assurance, révision, infraction,
@@ -544,21 +535,19 @@ export default async function DashboardPage() {
   // la section Semaine ci-dessous (qui veut voir, par jour, qui fait quoi).
   const { data: rawCalendarTasks } = await supabase
     .from('calendar_events')
-    .select('id, title, status, start_at, end_at, event_type, vehicle_ids, source_key, assigned_to, assigned_team_id, assignee:profiles!assigned_to(full_name), team:calendar_teams!assigned_team_id(name, color)')
+    .select('id, title, description, status, start_at, end_at, event_type, vehicle_ids, source_key, assigned_to, assigned_team_id, assignee:profiles!assigned_to(full_name), team:calendar_teams!assigned_team_id(name, color)')
     .in('event_type', ['tache', 'rdv_client', 'rdv_garage', 'rdv_autre', 'livraison', 'recuperation'])
     .gte('start_at', businessDayStart.toISOString())
     .lte('start_at', in7Days.toISOString())
     .in('status', ['a_faire', 'en_cours'])
     .order('start_at', { ascending: true })
   const weekCalendarTasks = (rawCalendarTasks ?? []).filter(t => !t.source_key?.startsWith('task-'))
-  // Même règle que pour les tâches ci-dessus : dépassée et non faite, elle part
-  // en alerte. On juge sur la FIN de l'événement, pas sur son début : un lavage
-  // prévu de 9h à 10h n'est pas en retard à 9h05.
+  // Même règle que pour les tâches ci-dessus (Jeff, 30/07/2026) : tout ce qui
+  // est prévu dans la journée et pas encore terminé reste ici, l'heure passée
+  // ou non. Le statut est déjà filtré à la lecture ('a_faire' / 'en_cours').
   const todayCalendarTasks = weekCalendarTasks.filter(t => {
     const debut = new Date(t.start_at)
-    if (!(debut >= businessDayStart && debut <= businessDayEnd)) return false
-    const fin = t.end_at ? new Date(t.end_at) : debut
-    return !(fin < limiteRetard)
+    return debut >= businessDayStart && debut <= businessDayEnd
   })
   const vehicleById = new Map((vehicles ?? []).map(v => [v.id, v]))
 
@@ -819,30 +808,22 @@ export default async function DashboardPage() {
               </Link>
             </div>
           </div>
-          {(retoursEnRetard.length > 0 || recuperationsEnRetard.length > 0 || aPreparerAujourdhui.length > 0) && (
+          {/* « Tâches du jour » ne parle QUE d'aujourd'hui — règle de Jeff du
+              30/07/2026. Ce qui date d'un jour passé (retour non rendu, client
+              jamais venu chercher) a quitté cette liste : c'est un état qui
+              dure, pas une mission du jour, et il vit maintenant dans les
+              alertes, juste en dessous. Les deux pastilles de comptage sont
+              parties avec, elles annonçaient ces lignes-là. */}
+          {aPreparerAujourdhui.length > 0 && (
             <div className="flex items-center gap-2 mt-2 flex-wrap">
-              {retoursEnRetard.length > 0 && (
-                <span className="inline-flex items-center gap-1 text-[10px] font-black text-white bg-red-600 px-2.5 py-1 rounded-full animate-pulse whitespace-nowrap">
-                  <AlertTriangle className="w-3 h-3" />
-                  {retoursEnRetard.length} retour{retoursEnRetard.length > 1 ? 's' : ''} en retard
-                </span>
-              )}
-              {recuperationsEnRetard.length > 0 && (
-                <span className="inline-flex items-center gap-1 text-[10px] font-black text-white bg-orange-600 px-2.5 py-1 rounded-full whitespace-nowrap">
-                  <AlertTriangle className="w-3 h-3" />
-                  {recuperationsEnRetard.length} récupération{recuperationsEnRetard.length > 1 ? 's' : ''} en retard
-                </span>
-              )}
-              {aPreparerAujourdhui.length > 0 && (
-                <span className="text-[10px] font-bold text-amber-600 bg-amber-50 border border-amber-100 px-2.5 py-1 rounded-full whitespace-nowrap">
-                  {aPreparerAujourdhui.length} à préparer
-                </span>
-              )}
+              <span className="text-[10px] font-bold text-amber-600 bg-amber-50 border border-amber-100 px-2.5 py-1 rounded-full whitespace-nowrap">
+                {aPreparerAujourdhui.length} à préparer
+              </span>
             </div>
           )}
         </div>
 
-        {retoursEnRetard.length === 0 && recuperationsEnRetard.length === 0 && departsAujourdhui.length === 0 && retoursAujourdhui.length === 0 && (todayTasks?.length ?? 0) === 0 && todayCalendarTasks.length === 0 ? (
+        {departsAujourdhui.length === 0 && retoursAujourdhui.length === 0 && (todayTasks?.length ?? 0) === 0 && todayCalendarTasks.length === 0 ? (
           <div className="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm text-center">
             <CheckCircle2 className="w-10 h-10 text-gray-200 mx-auto mb-3" />
             <p className="text-sm text-gray-400 font-medium">Aucune mission aujourd'hui</p>
@@ -852,93 +833,6 @@ export default async function DashboardPage() {
           </div>
         ) : (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden divide-y divide-gray-50">
-            {/* ⚠️ Retours EN RETARD — tout en haut, rouge vif, voyant bien visible */}
-            {retoursEnRetard.map(r => {
-              const v = getVehicle(r); const c = getClient(r)
-              const daysLate = daysLateOf(r)
-              // « À assigner » → tiroir de l'événement retour, sinon création
-              // pré-remplie d'une tâche de préparation retour à affecter.
-              const retourAssignee = retourAssigneeByRes.get(r.id) ?? null
-              const retourEventId  = retourEventByRes.get(r.id)
-              const lateHref = retourAssignee
-                ? `/reservations/${r.id}?from=accueil`
-                : retourEventId
-                  ? `/calendrier?event=${retourEventId}`
-                  : assignCreateHref(`Préparer retour — ${v ? `${v.brand} ${v.model}` : ''}`.trim(), r.end_datetime, v?.id, c?.id)
-              return (
-                <Link key={`late-${r.id}`} href={lateHref}>
-                  <div className="flex items-center gap-4 px-4 py-4 bg-red-50 hover:bg-red-100 border-l-4 border-red-600 transition-colors">
-                    <span className="w-12 flex flex-col items-center flex-shrink-0 leading-tight">
-                      <span className="text-[10px] font-bold text-red-500 capitalize">
-                        {format(new Date(r.end_datetime), 'd MMM', { locale: fr })}
-                      </span>
-                      <span className="text-sm font-black text-red-700 font-mono">
-                        {format(new Date(r.end_datetime), 'HH:mm')}
-                      </span>
-                    </span>
-                    <span className="inline-flex items-center justify-center gap-1 min-w-[92px] text-[10px] font-black uppercase px-2.5 py-1.5 rounded-full flex-shrink-0 bg-red-600 text-white">
-                      <AlertTriangle className="w-3 h-3" /> {daysLate} j
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[11px] font-black uppercase tracking-wide text-red-600">
-                        Retour en retard de {daysLate} jour{daysLate > 1 ? 's' : ''}
-                      </p>
-                      <p className="text-sm font-bold text-gray-900 truncate">
-                        {c?.first_name} {c?.last_name}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        <LigneVehicule v={v} />
-                      </p>
-                      <AssigneeLine name={retourAssigneeByRes.get(r.id) ?? null} />
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-red-300 flex-shrink-0" />
-                  </div>
-                </Link>
-              )
-            })}
-
-            {/* 🚗 RÉCUPÉRATIONS EN RETARD — départ passé un jour précédent, client pas venu */}
-            {recuperationsEnRetard.map(r => {
-              const v = getVehicle(r); const c = getClient(r)
-              const hLate = hoursLateOf(r)
-              const lateLabel = hLate >= 48 ? `${Math.floor(hLate / 24)} j` : `${hLate} h`
-              return (
-                <Link key={`recup-${r.id}`} href={`/reservations/${r.id}?from=accueil`}>
-                  <div className="flex items-center gap-4 px-4 py-4 bg-orange-50 hover:bg-orange-100 border-l-4 border-orange-600 transition-colors">
-                    <span className="w-12 flex flex-col items-center flex-shrink-0 leading-tight">
-                      <span className="text-[10px] font-bold text-orange-500 capitalize">
-                        {format(new Date(r.start_datetime), 'd MMM', { locale: fr })}
-                      </span>
-                      <span className="text-sm font-black text-orange-700 font-mono">
-                        {format(new Date(r.start_datetime), 'HH:mm')}
-                      </span>
-                    </span>
-                    <span className="inline-flex items-center justify-center gap-1 min-w-[92px] text-[10px] font-black uppercase px-2.5 py-1.5 rounded-full flex-shrink-0 bg-orange-600 text-white">
-                      <AlertTriangle className="w-3 h-3" /> {lateLabel}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[11px] font-black uppercase tracking-wide text-orange-600">
-                        Départ en retard de {lateLabel}
-                      </p>
-                      <p className="text-sm font-bold text-gray-900 truncate">
-                        {c?.first_name} {c?.last_name}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        <LigneVehicule v={v} />
-                      </p>
-                      {isToPrepare(r.id) && (
-                        <p className="text-[10px] font-bold text-amber-600 mt-1">
-                          Contrat à signer au départ
-                        </p>
-                      )}
-                      <AssigneeLine name={departAssigneeByRes.get(r.id) ?? null} />
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-orange-300 flex-shrink-0" />
-                  </div>
-                </Link>
-              )
-            })}
-
             {/* Départs */}
             {departsAujourdhui.map(r => {
               const v = getVehicle(r); const c = getClient(r)
@@ -960,17 +854,19 @@ export default async function DashboardPage() {
                     <span className="w-12 text-sm font-black text-gray-900 font-mono text-center flex-shrink-0">
                       {format(new Date(r.start_datetime), 'HH:mm')}
                     </span>
-                    <span className={`text-[10px] font-black uppercase px-2.5 py-1.5 rounded-full flex-shrink-0 inline-flex items-center justify-center min-w-[92px] ${
+                    <span className={`text-[10px] font-black uppercase px-2.5 py-1.5 rounded-full flex-shrink-0 inline-flex items-center justify-center min-w-[64px] sm:min-w-[92px] ${
                       isQuickTurnaround ? 'bg-orange-500 text-white' : isToPrepare(r.id) ? 'bg-amber-500 text-white' : 'bg-black text-white'
                     }`}>
                       {isToPrepare(r.id) ? 'À PRÉPARER' : 'DÉPART'}
                     </span>
+                    {/* La voiture d'abord, le client ensuite : la pastille de
+                        gauche dit déjà s'il s'agit d'un départ ou d'un retour. */}
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-gray-900 truncate">
-                        {c?.first_name} {c?.last_name}
+                      <p className="text-sm font-bold text-gray-900 sm:truncate">
+                        <LigneVehicule v={v} />
                       </p>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        <LigneVehicule v={v} tonPlaque="text-gray-300" />
+                      <p className="text-xs text-gray-500 truncate">
+                        {c?.first_name} {c?.last_name}
                       </p>
                       <AssigneeLine name={departAssigneeByRes.get(r.id) ?? null} />
                       {new Date(r.start_datetime) < now && (
@@ -1014,17 +910,17 @@ export default async function DashboardPage() {
                     <span className="w-12 text-sm font-black text-gray-900 font-mono text-center flex-shrink-0">
                       {format(new Date(r.end_datetime), 'HH:mm')}
                     </span>
-                    <span className={`text-[10px] font-black uppercase px-2.5 py-1.5 rounded-full flex-shrink-0 inline-flex items-center justify-center min-w-[92px] ${
+                    <span className={`text-[10px] font-black uppercase px-2.5 py-1.5 rounded-full flex-shrink-0 inline-flex items-center justify-center min-w-[64px] sm:min-w-[92px] ${
                       isLate ? 'bg-red-600 text-white' : isQuickTurnaround ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-600'
                     }`}>
                       {isLate ? 'RETOUR EN RETARD' : 'RETOUR'}
                     </span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-gray-900 truncate">
-                        {c?.first_name} {c?.last_name}
+                      <p className="text-sm font-bold text-gray-900 sm:truncate">
+                        <LigneVehicule v={v} />
                       </p>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        <LigneVehicule v={v} tonPlaque="text-gray-300" />
+                      <p className="text-xs text-gray-500 truncate">
+                        {c?.first_name} {c?.last_name}
                       </p>
                       <AssigneeLine name={retourAssigneeByRes.get(r.id) ?? null} />
                       {isQuickTurnaround && (
@@ -1050,7 +946,7 @@ export default async function DashboardPage() {
                     <span className="w-12 text-sm font-mono font-bold text-gray-600 text-center flex-shrink-0">
                       {format(new Date(task.due_datetime), 'HH:mm')}
                     </span>
-                    <span className="text-[10px] font-black uppercase px-2.5 py-1.5 rounded-full flex-shrink-0 inline-flex items-center justify-center min-w-[92px] bg-gray-100 text-gray-600">
+                    <span className="text-[10px] font-black uppercase px-2.5 py-1.5 rounded-full flex-shrink-0 inline-flex items-center justify-center min-w-[64px] sm:min-w-[92px] bg-gray-100 text-gray-600">
                       {TASK_TYPE_LABELS[task.type ?? 'autre']}
                     </span>
                     <div className="flex-1 min-w-0">
@@ -1074,40 +970,62 @@ export default async function DashboardPage() {
 
             {/* Tâches calendrier (lavage, CT, assurance, révision, infraction, sinistre, contrat à signer...) */}
             {todayCalendarTasks.map(t => {
+              // Trois lignes, dans cet ordre — format arrêté par Jeff le
+              // 30/07/2026, le même que la vue semaine et que les cartes du
+              // haut : la voiture et sa plaque, ce qu'il y a à faire, puis la
+              // personne. Le titre de la tâche porte déjà son montant quand il
+              // y en a un (« Échéance proche · 30,00 € »), écrit à la synchro
+              // des alertes ; il ne se recompose pas ici.
               const taskVehicles = (t.vehicle_ids ?? [])
                 .map((id: string) => vehicleById.get(id))
                 .filter(Boolean)
-              const vehicleLabel = taskVehicles
-                .map((tv: any) => [tv.brand, tv.model, tv.color].filter(Boolean).join(' '))
-                .join(', ')
-              const plates = taskVehicles.map((tv: any) => tv.plate).join(', ')
               const assignee = assigneeLabel(t)
+              // La personne concernée : le client d'une échéance (rangé en
+              // description à la synchro), sinon celui qui a la tâche en charge.
+              const personne = (t as any).description || assignee
+              // En retard = l'heure de FIN est passée. Pas le début : un lavage
+              // prévu de 9h à 10h n'est pas en retard à 9h05.
+              const enRetard = new Date(t.end_at ?? t.start_at) < now
               return (
                 <Link key={`caltask-${t.id}`} href={`/calendrier?event=${t.id}`}>
                   <div className="flex items-center gap-4 px-4 py-4 transition-colors hover:bg-gray-50">
                     <span className="w-12 text-sm font-mono font-bold text-gray-600 text-center flex-shrink-0">
                       {format(new Date(t.start_at), 'HH:mm')}
                     </span>
-                    <span className="text-[10px] font-black uppercase px-2.5 py-1.5 rounded-full flex-shrink-0 inline-flex items-center justify-center min-w-[92px] bg-gray-100 text-gray-600">
+                    <span className="text-[10px] font-black uppercase px-2.5 py-1.5 rounded-full flex-shrink-0 inline-flex items-center justify-center min-w-[64px] sm:min-w-[92px] bg-gray-100 text-gray-600">
                       TÂCHE
                     </span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-gray-900 truncate">{t.title}</p>
-                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                        {vehicleLabel && (
-                          <span className="text-xs text-gray-400">
-                            {vehicleLabel} <span className="text-gray-300 font-mono">· {plates}</span>
-                          </span>
-                        )}
-                        {assignee
-                          ? <span className="text-[10px] text-gray-400">{vehicleLabel ? '· ' : ''}{assignee}</span>
-                          : <span className="text-[10px] font-semibold text-amber-600">{vehicleLabel ? '· ' : ''}Non attribué</span>}
-                      </div>
+                      {taskVehicles.length > 0 && (
+                        <p className="text-sm font-bold text-gray-900 sm:truncate">
+                          {taskVehicles.map((tv: any, i: number) => (
+                            <span key={tv.id ?? i}>
+                              {i > 0 && ', '}
+                              <LigneVehicule v={tv} tonPlaque="text-gray-400" />
+                            </span>
+                          ))}
+                        </p>
+                      )}
+                      <p className={`sm:truncate ${taskVehicles.length > 0 ? 'text-xs text-gray-500 mt-0.5' : 'text-sm font-bold text-gray-900'}`}>
+                        {t.title}
+                      </p>
+                      <p className="sm:truncate mt-0.5">
+                        {personne
+                          ? <span className="text-[11px] text-gray-400">{personne}</span>
+                          : <span className="text-[11px] font-semibold text-amber-600">Non attribué</span>}
+                        {/* Sur téléphone l'état passe ici, faute de place à droite. */}
+                        {enRetard && <span className="sm:hidden text-[10px] font-black uppercase text-red-600"> · En retard</span>}
+                      </p>
                     </div>
-                    <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-full flex-shrink-0 ${
-                      t.status === 'en_cours' ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-600'
+                    {/* L'heure est passée mais la tâche est toujours à faire :
+                        elle reste dans la liste (Jeff, 30/07/2026) et le dit en
+                        rouge, pour ne pas se confondre avec celles à l'heure. */}
+                    <span className={`hidden sm:inline-flex text-[10px] font-black uppercase px-2 py-1 rounded-full flex-shrink-0 ${
+                      enRetard ? 'bg-red-600 text-white'
+                      : t.status === 'en_cours' ? 'bg-blue-50 text-blue-700'
+                      : 'bg-gray-100 text-gray-600'
                     }`}>
-                      {t.status === 'en_cours' ? 'En cours' : 'À faire'}
+                      {enRetard ? 'En retard' : t.status === 'en_cours' ? 'En cours' : 'À faire'}
                     </span>
                     <ChevronRight className="w-4 h-4 text-gray-200 flex-shrink-0" />
                   </div>

@@ -50,17 +50,41 @@ function assigneeName(e: CalendarEvent): string | null {
 function needsAssignee(e: CalendarEvent): boolean {
   return ASSIGNABLE.includes(e.event_type) && !e.assigned_to && !e.assigned_team_id
 }
-function eventTitle(e: CalendarEvent): string {
-  if (e.client) return `${e.client.first_name} ${e.client.last_name}`.trim()
-  return e.title
-}
 // Le véhicule et sa couleur d'abord, la plaque ensuite (remarque 20 de Jeff,
 // 30/07/2026). La couleur est un champ libre de la fiche : elle manque souvent,
 // la ligne doit tenir sans elle.
-function eventSubtitle(e: CalendarEvent): string | null {
+function eventVehicule(e: CalendarEvent): string | null {
   const v = e.vehicles?.[0]
   if (!v) return null
   return `${[v.brand, v.model, v.color].filter(Boolean).join(' ')} · ${v.plate}`
+}
+
+/**
+ * Ce qu'il y a à faire, sans répéter ce qui est déjà à l'écran.
+ * Beaucoup de titres finissent par leur véhicule (« Départ — BMW Série 1
+ * Blanc ») alors que la ligne du dessus le nomme déjà, et la pastille de gauche
+ * annonce déjà « Départ ». On ne garde donc que ce que ces deux-là ne disent
+ * pas. Retourne null quand il ne reste rien : la ligne disparaît au lieu de
+ * répéter. Format arrêté par Jeff le 30/07/2026.
+ */
+function eventIntitule(e: CalendarEvent, libellePastille: string): string | null {
+  const v = e.vehicles?.[0]
+  const finDuTitre = e.title.split(' — ').slice(1).join(' — ')
+  const finRepeteLeVehicule = Boolean(
+    v && finDuTitre && [v.brand, v.model].filter(Boolean).some(
+      mot => finDuTitre.toLowerCase().includes(String(mot).toLowerCase()),
+    ),
+  )
+  const intitule = (finRepeteLeVehicule ? e.title.split(' — ')[0] : e.title).trim()
+  if (!intitule) return null
+  if (intitule.toLowerCase() === libellePastille.toLowerCase()) return null
+  return intitule
+}
+
+/** La personne concernée : le client, sinon celui que la synchro a écrit en description. */
+function eventPersonne(e: CalendarEvent): string | null {
+  if (e.client) return `${e.client.first_name} ${e.client.last_name}`.trim()
+  return e.description?.trim() || null
 }
 
 export default function DashboardCalendar() {
@@ -285,7 +309,9 @@ export default function DashboardCalendar() {
               const meta = metaFor(e.event_type)
               const name = assigneeName(e)
               const toAssign = !name && needsAssignee(e)
-              const subtitle = eventSubtitle(e)
+              const vehicule = eventVehicule(e)
+              const intitule = eventIntitule(e, meta.label)
+              const personne = eventPersonne(e)
               return (
                 <Link
                   key={e.id}
@@ -295,17 +321,38 @@ export default function DashboardCalendar() {
                   <span className="w-10 text-[11px] font-mono font-bold text-gray-500 flex-shrink-0 text-center">
                     {format(new Date(e.start_at), 'HH:mm')}
                   </span>
-                  <span className={`text-[9px] font-black uppercase px-2 py-1 rounded-full flex-shrink-0 inline-flex items-center justify-center min-w-[76px] ${meta.badge}`}>
+                  {/* La pastille rétrécit sur téléphone : à 390 px, ses 76 px
+                      fixes plus la colonne de droite mangeaient la place et
+                      coupaient la plaque (« Smart Fortwo · DQ… »). */}
+                  <span className={`text-[9px] font-black uppercase px-2 py-1 rounded-full flex-shrink-0 inline-flex items-center justify-center min-w-[52px] sm:min-w-[76px] ${meta.badge}`}>
                     {meta.label}
                   </span>
+                  {/* Trois lignes : la voiture et sa plaque, ce qu'il y a à
+                      faire, la personne concernée. Sans véhicule (un rendez-vous
+                      client, par exemple), l'intitulé remonte en première ligne
+                      pour ne pas laisser un blanc. */}
                   <div className="flex-1 min-w-0">
-                    <span className="text-xs text-gray-900 font-semibold block truncate">{eventTitle(e)}</span>
-                    {subtitle && <span className="text-[10px] text-gray-400 block truncate">{subtitle}</span>}
+                    {vehicule
+                      ? <span className="text-xs text-gray-900 font-semibold block truncate">{vehicule}</span>
+                      : intitule && <span className="text-xs text-gray-900 font-semibold block truncate">{intitule}</span>}
+                    {vehicule && intitule && (
+                      <span className="text-[11px] text-gray-500 block truncate">{intitule}</span>
+                    )}
+                    <span className="block truncate">
+                      {personne && <span className="text-[10px] text-gray-400">{personne}</span>}
+                      {/* Qui s'en occupe : sous les trois lignes sur téléphone,
+                          dans sa colonne de droite dès qu'il y a la place. */}
+                      {name ? (
+                        <span className="text-[10px] text-gray-400 sm:hidden">{personne ? ' · ' : ''}{name}</span>
+                      ) : toAssign ? (
+                        <span className="text-[10px] font-bold text-amber-600 sm:hidden">{personne ? ' · ' : ''}À assigner</span>
+                      ) : null}
+                    </span>
                   </div>
                   {name ? (
-                    <span className="text-[10px] text-gray-400 flex-shrink-0 max-w-[64px] truncate">{name}</span>
+                    <span className="hidden sm:block text-[10px] text-gray-400 flex-shrink-0 max-w-[64px] truncate">{name}</span>
                   ) : toAssign ? (
-                    <span className="text-[10px] font-bold text-amber-600 flex-shrink-0">À assigner</span>
+                    <span className="hidden sm:block text-[10px] font-bold text-amber-600 flex-shrink-0">À assigner</span>
                   ) : null}
                 </Link>
               )

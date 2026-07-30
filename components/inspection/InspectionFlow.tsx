@@ -551,6 +551,10 @@ export default function InspectionFlow({
               end_at: new Date(now.getTime() + 60 * 60 * 1000).toISOString(),
               reservation_id: reservationId,
               vehicle_id: vehicleId,
+              // Le calendrier et les alertes lisent `vehicle_ids` (le tableau),
+              // pas `vehicle_id`. Sans cette ligne la tâche s'affichait sans sa
+              // voiture, seule de son espèce. Ajouté le 30/07/2026.
+              vehicle_ids: vehicleId ? [vehicleId] : null,
             }),
           ])
 
