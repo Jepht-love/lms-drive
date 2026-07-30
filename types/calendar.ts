@@ -37,7 +37,7 @@ export interface CalendarEvent {
   // reservation_id, sert à verrouiller les champs structurels (voir EventDrawer).
   source_key?: string | null
   // Joins enrichis (colonnes réelles : vehicles.brand/model, clients.first_name/last_name)
-  vehicles?: { id: string; plate: string; brand: string; model: string }[]
+  vehicles?: { id: string; plate: string; brand: string; model: string; color?: string | null }[]
   client?: { id: string; first_name: string; last_name: string } | null
   assigned_profile?: { id: string; full_name: string } | null
   team?: { id: string; name: string; color: string | null } | null

@@ -21,7 +21,7 @@ export async function enrichEvents(rows: any[]): Promise<CalendarEvent[]> {
 
   const [vehiclesRes, clientsRes, profilesRes, teamsRes] = await Promise.all([
     vehicleIds.length
-      ? admin.from('vehicles').select('id, plate, brand, model').in('id', vehicleIds)
+      ? admin.from('vehicles').select('id, plate, brand, model, color').in('id', vehicleIds)
       : Promise.resolve({ data: [] as any[] }),
     clientIds.length
       ? admin.from('clients').select('id, first_name, last_name').in('id', clientIds)

@@ -54,9 +54,13 @@ function eventTitle(e: CalendarEvent): string {
   if (e.client) return `${e.client.first_name} ${e.client.last_name}`.trim()
   return e.title
 }
+// Le véhicule et sa couleur d'abord, la plaque ensuite (remarque 20 de Jeff,
+// 30/07/2026). La couleur est un champ libre de la fiche : elle manque souvent,
+// la ligne doit tenir sans elle.
 function eventSubtitle(e: CalendarEvent): string | null {
   const v = e.vehicles?.[0]
-  return v ? `${v.brand} ${v.model} · ${v.plate}` : null
+  if (!v) return null
+  return `${[v.brand, v.model, v.color].filter(Boolean).join(' ')} · ${v.plate}`
 }
 
 export default function DashboardCalendar() {
