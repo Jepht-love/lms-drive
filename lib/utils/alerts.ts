@@ -198,7 +198,7 @@ export async function fetchAllAlerts(
             days < 0 ? `Expiré il y a ${Math.abs(days)} jours` : `Dans ${days} jours`,
             `Échéance le ${dateAgence(v.ct_date)}`,
           ].join('\n'),
-          href: `/vehicles/${v.id}`,
+          href: `/vehicles/${v.id}/edit`,
           date: v.ct_date,
           vehicleId: v.id,
         })
@@ -220,7 +220,7 @@ export async function fetchAllAlerts(
             days < 0 ? `Expirée il y a ${Math.abs(days)} jours` : `Dans ${days} jours`,
             `Échéance le ${dateAgence(v.insurance_expiry)}`,
           ].join('\n'),
-          href: `/vehicles/${v.id}`,
+          href: `/vehicles/${v.id}/edit`,
           date: v.insurance_expiry,
           vehicleId: v.id,
         })
@@ -242,7 +242,7 @@ export async function fetchAllAlerts(
             `Dans ${days} jour${days > 1 ? 's' : ''}`,
             `Prévue le ${dateAgence(v.next_service_date)}`,
           ].join('\n'),
-          href: `/vehicles/${v.id}`,
+          href: `/vehicles/${v.id}/edit`,
           date: v.next_service_date,
           vehicleId: v.id,
         })
@@ -271,7 +271,7 @@ export async function fetchAllAlerts(
               : `Encore ${kmLeft.toLocaleString('fr-FR')} km`,
             `Révision prévue à ${v.next_service_km?.toLocaleString('fr-FR')} km`,
           ].join('\n'),
-          href: `/vehicles/${v.id}`,
+          href: `/vehicles/${v.id}/edit`,
           vehicleId: v.id,
         })
       }
