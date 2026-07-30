@@ -6,7 +6,7 @@
 import { fmtEntier } from '@/lib/pdf/nombres'
 
 export interface LegalArticlesParams {
-  franchise: number   // 15000 partout, sauf Smart Fortwo : 6000
+  franchise: number   // 21000 en sportif, 15000 en citadine, 6000 pour la Smart Fortwo
   retardHeure: number // 150 sport / 50 citadine
   caution: number     // montant réel de la réservation
 }
@@ -91,12 +91,13 @@ export const VIDEO_CLAUSE = `L'état des lieux du véhicule mis à disposition s
  */
 export function getFeesTable(category: string, isSmartFortwo = false) {
   const isSport = category === 'sportif'
-  // Franchise : 15 000 € pour tous les véhicules, sauf la Smart Fortwo à 6 000 €.
-  // Le contrat papier « sportif » se contredisait — son article 3 annonçait
-  // 15 000 € et son tableau des frais 21 000 €. Arbitré par Jeff le 26/07/2026 :
-  // c'est 15 000 € qui fait foi. Le montant ne dépend donc PAS de la catégorie ;
-  // seuls le retard horaire et les frais de remise en état la suivent.
-  const franchise = isSmartFortwo ? 6000 : 15000
+  // Franchise : 21 000 € en sportif, 15 000 € en citadine, 6 000 € pour la Smart
+  // Fortwo. Le contrat papier « sportif » se contredit — son article 3 annonce
+  // 15 000 € quand son tableau des frais dit 21 000 €. Arbitré une première fois
+  // le 26/07/2026 en faveur de 15 000 €, PUIS REPRIS PAR JEFF LE 30/07/2026 :
+  // c'est le tableau qui fait foi, 21 000 €, et c'est l'article 3 du contrat
+  // papier qui est faux. Ne pas revenir à 15 000 € sans le lui redemander.
+  const franchise = isSmartFortwo ? 6000 : isSport ? 21000 : 15000
   const retard = isSport ? 150 : 50
 
   // Côté citadine, le contrat mentionne l'exception Smart Fortwo dans la case
@@ -105,7 +106,7 @@ export function getFeesTable(category: string, isSmartFortwo = false) {
   const franchiseTxt = isSmartFortwo
     ? '6 000 €'
     : isSport
-      ? '15 000 €'
+      ? '21 000 €'
       : '15 000 € (sauf Smart Fortwo : 6 000 €)'
 
   const rows = isSport
