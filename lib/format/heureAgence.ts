@@ -68,3 +68,21 @@ export function jourHeureAgence(value: string | number | Date): string {
 export function dateAgence(value: string | number | Date): string {
   return fmtAgence(value, { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
+
+/**
+ * Bornes de la journée en cours, de minuit à minuit, à l'heure de l'agence.
+ *
+ * C'est la frontière qui décide de tout sur le tableau de bord : ce qui est
+ * dedans est une « tâche du jour », ce qui est avant devient une alerte. Règle
+ * de Jeff du 30/07/2026 : « à minuit une, ça bascule en alerte. »
+ *
+ * Pourquoi ne pas se contenter de `startOfDay(new Date())` : Vercel tourne en
+ * temps universel. Minuit y arrive deux heures avant minuit en France l'été,
+ * et le tableau de bord du gérant changerait de jour à 22h.
+ */
+export function bornesDuJourAgence(reference: Date = new Date()): { debut: Date; fin: Date } {
+  const [jour, mois, annee] = dateAgence(reference).split('/')
+  const debut = new Date(instantDepuisSaisie(`${annee}-${mois}-${jour}T00:00`))
+  const fin = new Date(debut.getTime() + 24 * 3600 * 1000 - 1)
+  return { debut, fin }
+}

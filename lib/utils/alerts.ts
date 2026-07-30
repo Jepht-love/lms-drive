@@ -3,9 +3,7 @@ import { differenceInDays } from 'date-fns'
 // Ces alertes partent en notification poussée sur le téléphone : leurs heures
 // sont donc mises en forme par le serveur, qui vit en temps universel. Sans ce
 // détour, un retour prévu à 13:00 s'annonce « à 11:00 » l'été.
-import { heureAgence, dateAgence, fmtAgence } from '@/lib/format/heureAgence'
-import { getColumnWindow } from '@/lib/calendar/dateUtils'
-import { CALENDAR_START_HOUR } from '@/lib/calendar/constants'
+import { heureAgence, dateAgence, fmtAgence, bornesDuJourAgence } from '@/lib/format/heureAgence'
 
 /** Jour et mois seuls : « 04/08 ». Assez pour une échéance à quelques jours. */
 const jourMois = (v: string) => fmtAgence(v, { day: '2-digit', month: '2-digit' })
@@ -81,19 +79,15 @@ export async function fetchAllAlerts(
   const limiteRetard = new Date(now.getTime() - tolerance * 60_000)
 
   /**
-   * Début de la journée métier en cours (7h→3h le lendemain, même découpage que
-   * le calendrier et que le tableau de bord). Sert de frontière aux « tâches en
-   * retard » : une tâche du jour même n'est PAS une alerte, elle reste dans
-   * « Tâches du jour » tant que la journée dure (règle de Jeff du 30/07/2026,
-   * qui remplace la tolérance de 30 minutes appliquée jusque-là). Ne remontent
-   * ici que les tâches des journées précédentes, jamais faites.
+   * Minuit ce matin, à l'heure française. C'est LA frontière : tout ce qui est
+   * daté d'aujourd'hui appartient aux « Tâches du jour » du tableau de bord et
+   * n'a rien à faire ici ; tout ce qui date d'hier ou avant, et qui n'est
+   * toujours pas fait, devient une alerte. Règle de Jeff du 30/07/2026 :
+   * « à minuit une, ça bascule ». Elle remplace la tolérance de 30 minutes du
+   * 28/07, qui sortait une tâche de la liste du jour alors qu'elle était encore
+   * à faire dans la journée.
    */
-  const debutJourneeMetier = (() => {
-    const ref = now.getHours() < CALENDAR_START_HOUR
-      ? new Date(now.getTime() - 24 * 3600 * 1000)
-      : now
-    return getColumnWindow(ref).start
-  })()
+  const minuitCeMatin = bornesDuJourAgence(now).debut
 
   // ── 1. Contrats non signés ──────────────────────────────────────────────────
   const { data: contracts } = await supabase
@@ -237,7 +231,7 @@ export async function fetchAllAlerts(
       vehicles(plate, brand, model),
       profiles!tasks_assigned_to_fkey(full_name)`)
     .eq('status', 'a_faire')
-    .lt('due_datetime', debutJourneeMetier.toISOString())
+    .lt('due_datetime', minuitCeMatin.toISOString())
     .order('due_datetime', { ascending: true })
 
   overdueTasks?.forEach(t => {
@@ -296,7 +290,7 @@ export async function fetchAllAlerts(
     .gte('end_at', retard7j.toISOString())
     // Frontière : le début de la journée métier, pas une tolérance en minutes.
     // Une tâche du jour même appartient à « Tâches du jour » (Jeff, 30/07/2026).
-    .lt('end_at', debutJourneeMetier.toISOString())
+    .lt('end_at', minuitCeMatin.toISOString())
     .order('end_at', { ascending: true })
 
   // Le véhicule d'une tâche vit à DEUX endroits selon qui l'a créée :
@@ -703,10 +697,27 @@ export async function fetchAllAlerts(
       reservations(id, status, end_datetime, vehicle_id, vehicles(plate, brand, model), clients(first_name, last_name))`)
     .eq('status', 'signe')
 
+  // Les réservations qui ont DÉJÀ une tâche de clôture ouverte au calendrier
+  // (créée par l'état des lieux de retour). Tant que cette tâche existe, le
+  // contrat se dit par elle et pas ici : elle est dans « Tâches du jour » le
+  // jour même, puis devient l'alerte « Tâche en retard » le lendemain.
+  // Règle de Jeff du 30/07/2026 : un seul message pour un seul sujet.
+  const { data: tachesDeCloture } = await supabase
+    .from('calendar_events')
+    .select('reservation_id')
+    .eq('event_type', 'tache')
+    .in('status', ['a_faire', 'en_cours'])
+    .not('reservation_id', 'is', null)
+    .like('title', 'Clôturer contrat%')
+  const reservationsAvecTacheDeCloture = new Set(
+    (tachesDeCloture ?? []).map(t => t.reservation_id),
+  )
+
   openContracts?.forEach(c => {
     const r = c.reservations as any
     if (!r?.end_datetime) return
     if (r.status === 'en_retard') return // déjà couvert par RETOUR EN RETARD
+    if (reservationsAvecTacheDeCloture.has(r.id)) return // la tâche s'en charge
     const end = new Date(r.end_datetime)
     if (end.getTime() >= now.getTime()) return // location encore en cours → normal
     const v  = Array.isArray(r.vehicles) ? r.vehicles[0] : r.vehicles

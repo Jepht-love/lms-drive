@@ -7,6 +7,7 @@ import {
   startOfDay, endOfDay, addDays, subDays,
 } from 'date-fns'
 import { getColumnWindow, businessNow } from '@/lib/calendar/dateUtils'
+import { bornesDuJourAgence } from '@/lib/format/heureAgence'
 import { taskActionHref } from '@/lib/utils'
 import { CALENDAR_START_HOUR } from '@/lib/calendar/constants'
 import { fr } from 'date-fns/locale'
@@ -166,8 +167,12 @@ export default async function DashboardPage() {
   // Heure de l'agence (BUSINESS_TZ), pas l'heure serveur UTC : sinon, selon
   // l'heure de consultation, un départ du jour bascule à tort dans "à venir".
   const now        = businessNow()
-  const todayStart = startOfDay(now)
-  const todayEnd   = endOfDay(now)
+  // Minuit à minuit, à l'heure française et non à celle du serveur. C'est la
+  // frontière du tableau de bord depuis le 30/07/2026 : ce qui est daté
+  // d'aujourd'hui est une mission du jour, ce qui est avant est une alerte.
+  // Vercel tourne en temps universel : `startOfDay(new Date())` y changeait de
+  // journée à 22h l'été, deux heures avant le gérant.
+  const { debut: todayStart, fin: todayEnd } = bornesDuJourAgence(now)
   const in7Days    = addDays(now, 7)
 
   // "Journée métier" (7h → 3h le lendemain), même fenêtre que le calendrier
@@ -518,8 +523,7 @@ export default async function DashboardPage() {
   // Une tâche terminée disparaît, elle n'est plus « à faire ».
   const todayTasks = (weekTasks ?? []).filter(t => {
     const d = new Date(t.due_datetime)
-    const dansLaJournee = (d >= businessDayStart && d <= businessDayEnd) || (d >= todayStart && d <= todayEnd)
-    if (!dansLaJournee) return false
+    if (d < todayStart || d > todayEnd) return false
     return t.status !== 'termine'
   })
 
@@ -537,7 +541,9 @@ export default async function DashboardPage() {
     .from('calendar_events')
     .select('id, title, description, status, start_at, end_at, event_type, vehicle_ids, source_key, assigned_to, assigned_team_id, assignee:profiles!assigned_to(full_name), team:calendar_teams!assigned_team_id(name, color)')
     .in('event_type', ['tache', 'rdv_client', 'rdv_garage', 'rdv_autre', 'livraison', 'recuperation'])
-    .gte('start_at', businessDayStart.toISOString())
+    // Borne basse : la plus ancienne des deux fenêtres, pour ne rien perdre de
+    // ce que la journée métier du calendrier capte avant minuit.
+    .gte('start_at', (businessDayStart < todayStart ? businessDayStart : todayStart).toISOString())
     .lte('start_at', in7Days.toISOString())
     .in('status', ['a_faire', 'en_cours'])
     .order('start_at', { ascending: true })
@@ -547,7 +553,7 @@ export default async function DashboardPage() {
   // ou non. Le statut est déjà filtré à la lecture ('a_faire' / 'en_cours').
   const todayCalendarTasks = weekCalendarTasks.filter(t => {
     const debut = new Date(t.start_at)
-    return debut >= businessDayStart && debut <= businessDayEnd
+    return debut >= todayStart && debut <= todayEnd
   })
   const vehicleById = new Map((vehicles ?? []).map(v => [v.id, v]))
 
