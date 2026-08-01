@@ -2,7 +2,9 @@
 
 import { startOfWeek } from 'date-fns'
 import type { CalendarEvent, CalendarResource } from '@/types/calendar'
-import { EVENT_COLORS, UNASSIGNED_RESOURCE_ID } from '@/lib/calendar/constants'
+import { EVENT_COLORS, UNASSIGNED_RESOURCE_ID ,
+  couleurEvenement,
+} from '@/lib/calendar/constants'
 import { getMonthDates, isSameDay } from '@/lib/calendar/dateUtils'
 
 interface MonthViewProps {
@@ -70,7 +72,7 @@ export default function MonthView({ currentDate, events, resources, onEventClick
                     key={ev.id}
                     onClick={e => { e.stopPropagation(); onEventClick(ev) }}
                     className="text-[10px] px-2 py-[1px] rounded-full text-white truncate"
-                    style={{ backgroundColor: ev.color_override ?? EVENT_COLORS[ev.event_type] }}
+                    style={{ backgroundColor: couleurEvenement(ev) }}
                   >
                     {ev.title}
                   </span>

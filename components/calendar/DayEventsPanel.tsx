@@ -4,7 +4,9 @@ import { format, isSameDay } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { ArrowLeft, CalendarDays } from 'lucide-react'
 import type { CalendarEvent, CalendarResource, EventType } from '@/types/calendar'
-import { EVENT_COLORS, EVENT_TYPE_LABELS, EVENT_STATUS_LABELS } from '@/lib/calendar/constants'
+import { EVENT_COLORS, EVENT_TYPE_LABELS, EVENT_STATUS_LABELS ,
+  couleurEvenement,
+} from '@/lib/calendar/constants'
 import { roleLabel } from '@/lib/roles'
 
 interface Props {
@@ -59,7 +61,7 @@ export default function DayEventsPanel({ currentDate, events, resources, onEvent
           </div>
         ) : (
           dayEvents.map(ev => {
-            const color = ev.color_override ?? EVENT_COLORS[ev.event_type] ?? '#94A3B8'
+            const color = couleurEvenement(ev)
             const assignee = ev.assigned_to ? resourceMap.get(ev.assigned_to) : null
             const startTime = format(new Date(ev.start_at), 'HH:mm')
             const endTime = format(new Date(ev.end_at), 'HH:mm')

@@ -3,7 +3,9 @@
 import type { CSSProperties } from 'react'
 import { CheckCircle2, X, Clock, User } from 'lucide-react'
 import type { CalendarEvent } from '@/types/calendar'
-import { EVENT_COLORS } from '@/lib/calendar/constants'
+import { EVENT_COLORS ,
+  couleurEvenement,
+} from '@/lib/calendar/constants'
 
 interface EventBlockProps {
   event: CalendarEvent
@@ -21,7 +23,7 @@ const STATUS_ICON = {
 } as const
 
 export default function EventBlock({ event, top, height, width, left, onClick }: EventBlockProps) {
-  const fullColor = event.color_override ?? EVENT_COLORS[event.event_type]
+  const fullColor = couleurEvenement(event)
   const isDisponibilite = event.event_type === 'disponibilite'
   const textColor = isDisponibilite ? '#64748B' : 'white'
   // Départ/retour synchronisés : le titre contient déjà le modèle du véhicule

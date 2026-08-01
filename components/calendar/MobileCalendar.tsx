@@ -8,9 +8,9 @@ import type { CalendarEvent, CalendarResource, CalendarView } from '@/types/cale
 import {
   CALENDAR_END_HOUR,
   CALENDAR_START_HOUR,
-  EVENT_COLORS,
   HOUR_HEIGHT_PX,
   UNASSIGNED_RESOURCE_ID,
+  couleurEvenement,
 } from '@/lib/calendar/constants'
 import MonthView from './MonthView'
 
@@ -44,7 +44,7 @@ function eventColor(ev: CalendarEvent, resources: CalendarResource[]): string {
   if (ev.color_override) return ev.color_override
   if (ev.assigned_to) return resources.find(r => r.id === ev.assigned_to)?.color ?? ''
   if (ev.assigned_team_id) return resources.find(r => r.id === ev.assigned_team_id)?.color ?? ''
-  return EVENT_COLORS[ev.event_type] ?? '#94A3B8'
+  return couleurEvenement(ev)
 }
 
 function initials(name: string) {

@@ -71,6 +71,35 @@ export const RESOURCE_PALETTE = [
 // depuis une réservation, avant attribution manuelle à un collaborateur/équipe).
 export const UNASSIGNED_RESOURCE_ID = '__unassigned__'
 
+/** Gris des missions que personne n'a prises. Même valeur que la colonne « Non attribué ». */
+export const UNASSIGNED_COLOR = '#94A3B8'
+
+/**
+ * Couleur d'un événement du calendrier. **La seule règle, partagée par tous les
+ * affichages** : vue mois, vue jour, grille, panneau du jour, mini calendrier.
+ *
+ * Une mission que personne n'a prise s'affiche en GRIS, quel que soit son type
+ * (demande de Jeff du 01/08/2026). Avant, elle prenait la couleur de son type et
+ * se confondait avec une mission attribuée : impossible de repérer d'un coup d'œil
+ * ce qui n'a pas encore de responsable.
+ *
+ * Une couleur choisie à la main sur l'événement (`color_override`) l'emporte
+ * toujours : c'est une décision explicite de l'utilisateur.
+ *
+ * Ne pas contourner cette fonction en lisant EVENT_COLORS directement, sinon un
+ * écran affichera une couleur et son voisin une autre pour le même événement.
+ */
+export function couleurEvenement(ev: {
+  event_type: EventType
+  color_override?: string | null
+  assigned_to?: string | null
+  assigned_team_id?: string | null
+}): string {
+  if (ev.color_override) return ev.color_override
+  if (!ev.assigned_to && !ev.assigned_team_id) return UNASSIGNED_COLOR
+  return EVENT_COLORS[ev.event_type] ?? UNASSIGNED_COLOR
+}
+
 // Plage horaire visible dans la grille — 07:00 jusqu'à 03:00 le lendemain
 // (échelle continue, 27 = 24+3 ; chaque colonne représente une "journée
 // métier" de 7h à 3h du matin suivant, pas une journée calendaire stricte).

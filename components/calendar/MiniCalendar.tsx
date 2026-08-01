@@ -5,7 +5,9 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { format, addMonths, subMonths } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import type { CalendarEvent } from '@/types/calendar'
-import { EVENT_COLORS } from '@/lib/calendar/constants'
+import { EVENT_COLORS ,
+  couleurEvenement,
+} from '@/lib/calendar/constants'
 import { getMonthDates, isSameDay } from '@/lib/calendar/dateUtils'
 
 interface MiniCalendarProps {
@@ -28,7 +30,7 @@ export default function MiniCalendar({ selectedDate, onSelectDate, events }: Min
 
   const dotColorFor = (day: Date) => {
     const ev = events.find(e => isSameDay(new Date(e.start_at), day))
-    return ev ? EVENT_COLORS[ev.event_type] : null
+    return ev ? couleurEvenement(ev) : null
   }
 
   return (
