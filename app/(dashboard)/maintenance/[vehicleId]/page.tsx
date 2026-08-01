@@ -6,6 +6,7 @@ import BackButton from '@/components/ui/BackButton'
 import { formatPrice } from '@/lib/utils'
 import type { MaintenanceRecord } from '@/lib/maintenance'
 import type { MaintenanceFlag } from '@/types/database'
+import { isManagerRole } from '@/lib/auth/roles'
 import MaintenanceHistory from './MaintenanceHistory'
 import VehicleFacts from './VehicleFacts'
 
@@ -24,6 +25,15 @@ export default async function VehicleMaintenancePage({
     .single()
 
   if (!vehicle) notFound()
+
+  // Les montants facturés au client ne se montrent qu'au gérant et aux associés
+  // (décision de Jeff du 30/07/2026, même règle que le tableau de bord). Un employé
+  // ou un prestataire voit le dégât et son type, jamais l'argent.
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: profile } = user
+    ? await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle()
+    : { data: null }
+  const canSeeAmounts = isManagerRole((profile as { role?: string } | null)?.role)
 
   const { data: records } = await supabase
     .from('maintenance_records')
@@ -70,7 +80,15 @@ export default async function VehicleMaintenancePage({
         </div>
       </div>
 
-      {/* Ajouter */}
+      {/* Les dommages AVANT l'intervention : on constate d'abord, on planifie le
+          garage ensuite (ordre demandé par Jeff le 01/08/2026). */}
+      <VehicleFacts
+        vehicleId={vehicleId}
+        flags={(vehicle.maintenance_flags ?? []) as MaintenanceFlag[]}
+        canSeeAmounts={canSeeAmounts}
+      />
+
+      {/* Planifier le passage au garage */}
       <Link
         href={`/maintenance/${vehicleId}/new`}
         className="flex items-center justify-center gap-2 w-full py-3.5 bg-[#111111] text-white rounded-2xl font-bold text-sm hover:bg-gray-800 transition-colors active:scale-[.99]"
@@ -78,11 +96,9 @@ export default async function VehicleMaintenancePage({
         <Plus className="w-4 h-4" /> Ajouter une intervention
       </Link>
 
-      {/* Faits saisis à la main (usure, points à surveiller) */}
-      <VehicleFacts vehicleId={vehicleId} flags={(vehicle.maintenance_flags ?? []) as MaintenanceFlag[]} />
-
-      {/* Historique filtrable */}
-      <MaintenanceHistory records={list} />
+      {/* Historique filtrable. Les dégâts lui sont passés pour que le règlement
+          d'une réparation se saisisse dégât par dégât (règle du 01/08/2026). */}
+      <MaintenanceHistory records={list} flags={(vehicle.maintenance_flags ?? []) as MaintenanceFlag[]} />
 
     </div>
   )

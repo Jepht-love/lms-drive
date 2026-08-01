@@ -6,16 +6,50 @@ import { FileText, Check, BadgeEuro, Trash2 } from 'lucide-react'
 import { formatPrice, formatDate } from '@/lib/utils'
 import { MAINTENANCE_TYPES, MAINTENANCE_ANGLES, maintenanceType, angleOfType, type MaintenanceRecord } from '@/lib/maintenance'
 import { PAYMENT_METHODS, paymentMethodLabel } from '@/lib/accounting/categories'
-import { markMaintenancePaid, deleteMaintenanceRecord } from '@/lib/actions/maintenance'
+import { markMaintenancePaid, deleteMaintenanceRecord, settleIntervention } from '@/lib/actions/maintenance'
 import { useToast } from '@/components/Toast'
+import { damageOriginLabel } from '@/lib/vehicles/damage-catalog'
+import type { MaintenanceFlag } from '@/types/database'
 
-export default function MaintenanceHistory({ records }: { records: MaintenanceRecord[] }) {
+/**
+ * Historique d'entretien d'un véhicule.
+ *
+ * `flags` porte les dégâts du véhicule : depuis le 01/08/2026 une intervention
+ * peut en réparer plusieurs, et son règlement se saisit alors DÉGÂT PAR DÉGÂT,
+ * chacun avec le montant réellement facturé par le garage. C'est ce qui permet à
+ * la comptabilité de distinguer ce que le client a remboursé de ce que la société
+ * a payé de sa poche. Une intervention sans dégât (vidange, contrôle technique)
+ * garde l'ancien règlement en un seul montant.
+ */
+export default function MaintenanceHistory({
+  records,
+  flags = [],
+}: {
+  records: MaintenanceRecord[]
+  flags?: MaintenanceFlag[]
+}) {
   const router = useRouter()
   const { show: toast } = useToast()
   const [filter, setFilter] = useState<string>('tous')
   const [openPay, setOpenPay] = useState<string | null>(null)
   const [confirmDel, setConfirmDel] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
+  /** flagId → montant facturé par le garage, saisi à l'écran. */
+  const [reels, setReels] = useState<Record<string, string>>({})
+
+  function regler(recordId: string, degats: MaintenanceFlag[], method: string) {
+    const lignes = degats.map(d => ({
+      flagId: d.id,
+      amount: parseFloat((reels[d.id] ?? '').replace(',', '.')) || 0,
+    }))
+    startTransition(async () => {
+      const r = await settleIntervention(recordId, lignes, method)
+      if (r?.error) { toast(r.error, 'error'); return }
+      setOpenPay(null)
+      router.refresh()
+      toast('Réparation réglée et comptabilisée')
+    })
+  }
 
   const presentTypes = new Set(records.map(r => r.type))
   const filtered =
@@ -60,7 +94,7 @@ export default function MaintenanceHistory({ records }: { records: MaintenanceRe
   return (
     <div className="space-y-3">
 
-      {/* Budget par angle — Réparation / Usure / Entretien, cliquable pour filtrer */}
+      {/* Budget par angle · Réparation / Usure / Entretien, cliquable pour filtrer */}
       {byAngle.length > 0 && (
         <div className="grid grid-cols-2 gap-2">
           {byAngle.map(a => {
@@ -116,6 +150,8 @@ export default function MaintenanceHistory({ records }: { records: MaintenanceRe
         {filtered.map(r => {
           const t = maintenanceType(r.type)
           const amount = r.amount ?? 0
+          const degats = flags.filter(f => f.intervention_id === r.id)
+          const aRegler = degats.filter(f => !f.repaired_at)
           return (
             <div key={r.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
               <div className="flex items-start justify-between gap-3 mb-2">
@@ -168,13 +204,72 @@ export default function MaintenanceHistory({ records }: { records: MaintenanceRe
                 </a>
               )}
 
-              {/* Règlement → comptabilité (booké au paiement) */}
-              {amount > 0 && (
+              {/* Réparation de dégâts : le règlement se saisit ligne par ligne, et
+                  c'est LUI qui crée les écritures comptables. Rien n'a été écrit
+                  au devis. */}
+              {aRegler.length > 0 && !r.paid_at && (
+                <div className="mt-3 pt-3 border-t border-gray-100">
+                  {openPay === r.id ? (
+                    <div className="space-y-2.5">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                        Montant facturé par le garage
+                      </p>
+                      {aRegler.map(d => (
+                        <div key={d.id} className="flex items-center gap-2">
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-xs font-semibold text-gray-900 truncate">{d.label}</span>
+                            <span className="block text-[11px] text-gray-400">
+                              {damageOriginLabel(d.origin)}
+                              {d.quote_amount != null && <> · devis {formatPrice(d.quote_amount)}</>}
+                            </span>
+                          </span>
+                          <input
+                            type="number" step="0.01" min="0" inputMode="decimal"
+                            value={reels[d.id] ?? ''}
+                            onChange={e => setReels(prev => ({ ...prev, [d.id]: e.target.value }))}
+                            placeholder={d.quote_amount != null ? String(d.quote_amount) : 'montant'}
+                            className="w-28 text-sm border border-gray-200 rounded-lg px-2 py-1.5 text-gray-900 focus:outline-none focus:border-gray-400"
+                          />
+                          <span className="text-xs text-gray-400">€</span>
+                        </div>
+                      ))}
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 pt-1">Mode de règlement</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {PAYMENT_METHODS.map(m => (
+                          <button type="button"
+                            key={m.id}
+                            disabled={pending}
+                            onClick={() => regler(r.id, aRegler, m.id)}
+                            className="px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+                          >
+                            {m.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs text-gray-400">
+                        {aRegler.length} dégât{aRegler.length > 1 ? 's' : ''} au garage, pas encore facturé
+                      </span>
+                      <button type="button"
+                        onClick={() => setOpenPay(r.id)}
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-600 border border-gray-200 rounded-lg px-2.5 py-1.5 hover:bg-gray-50 shrink-0"
+                      >
+                        <BadgeEuro className="w-3.5 h-3.5" /> Saisir la facture
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Entretien courant : règlement en un seul montant (inchangé) */}
+              {amount > 0 && aRegler.length === 0 && (
                 <div className="mt-3 pt-3 border-t border-gray-100">
                   {r.paid_at ? (
                     <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-green-600">
                       <Check className="w-3.5 h-3.5" />
-                      Payé{r.paid_method ? ` · ${paymentMethodLabel(r.paid_method)}` : ''} — comptabilisé
+                      Payé{r.paid_method ? ` · ${paymentMethodLabel(r.paid_method)}` : ''}, comptabilisé
                     </span>
                   ) : openPay === r.id ? (
                     <div>

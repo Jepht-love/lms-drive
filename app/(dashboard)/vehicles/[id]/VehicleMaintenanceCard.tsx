@@ -6,7 +6,7 @@ import { Wrench, Check, ShieldAlert, RotateCcw } from 'lucide-react'
 import { NEED_BADGE, type VehicleNeed } from '@/lib/maintenance-health'
 import type { MaintenanceFlag } from '@/types/database'
 import { setVehicleRepairStatus } from '@/lib/actions/vehicle-issues'
-import ResolveDamageRow from '@/components/vehicles/ResolveDamageRow'
+import DamageRow from '@/components/vehicles/DamageRow'
 
 export default function VehicleMaintenanceCard({
   vehicleId,
@@ -62,14 +62,14 @@ export default function VehicleMaintenanceCard({
             </div>
           )}
 
-          {/* Dommages actifs — chacun soldé individuellement avec son coût de réparation */}
+          {/* Dommages actifs, chacun soldé individuellement avec son coût de réparation */}
           {flags.length > 0 && (
             <div className="space-y-1.5">
               <p className="text-[11px] font-bold uppercase tracking-wide text-gray-400">
                 Dommages à solder ({flags.length})
               </p>
               {flags.map(f => (
-                <ResolveDamageRow key={f.id} vehicleId={vehicleId} flag={f} />
+                <DamageRow key={f.id} flag={f} />
               ))}
             </div>
           )}

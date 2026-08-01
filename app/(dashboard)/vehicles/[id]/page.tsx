@@ -87,7 +87,10 @@ export default async function VehiclePage({ params }: { params: Promise<{ id: st
   ])
 
   const needs = computeVehicleNeeds(vehicle, buildLastByType(maintRecords ?? []), new Date())
-  const flags = (vehicle.maintenance_flags ?? []) as MaintenanceFlag[]
+  // Seuls les dégâts NON réparés remontent ici : depuis le 30/07/2026 un dégât
+  // réparé reste enregistré sur le véhicule pour l'historique, mais il n'a plus
+  // rien à faire dans la carte « à traiter » de la fiche.
+  const flags = ((vehicle.maintenance_flags ?? []) as MaintenanceFlag[]).filter(f => !f.repaired_at)
   const lastKmRecord = (maintRecords ?? []).find(r => r.km_at_intervention != null)
   const kmSinceService = lastKmRecord && vehicle.current_km != null
     ? vehicle.current_km - (lastKmRecord.km_at_intervention as number)

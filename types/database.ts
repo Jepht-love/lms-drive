@@ -34,6 +34,16 @@ export interface Profile {
 }
 
 /** Dégradation active signalée sur un véhicule (stockée dans vehicles.maintenance_flags). */
+// Un dégât constaté sur un véhicule. Rangé dans `vehicles.maintenance_flags`
+// (colonne JSONB, migration 016) : ajouter un champ ne demande donc AUCUNE
+// migration, mais un champ retiré ou renommé rend illisibles les dégâts déjà
+// enregistrés.
+//
+// Tous les champs ajoutés le 30/07/2026 sont OPTIONNELS : les dégâts saisis avant
+// n'en ont aucun et doivent rester lisibles. Un dégât sans `origin` se lit comme
+// « non communiquée », un dégât sans `damage_type` comme « type non précisé ».
+//
+// Le vocabulaire des types et des origines vit dans lib/vehicles/damage-catalog.ts.
 export interface MaintenanceFlag {
   id: string
   category: string          // zone/type de problème (carrosserie, pneus, vitrage…)
@@ -42,6 +52,36 @@ export interface MaintenanceFlag {
   source: 'inspection' | 'manuel'
   source_id: string | null  // id de l'inspection d'origine, le cas échéant
   created_at: string
+
+  // ─── Ajoutés le 30/07/2026 ───
+  /** Identifiant du catalogue (DAMAGE_TYPES_ALL) : ce que c'est, précisément. */
+  damage_type?: string | null
+  /** D'où ça vient, donc qui paie : location, usure, usage_interne, non_communiquee. */
+  origin?: string | null
+  /** Réservation d'où le dégât provient, quand l'origine est « location ». */
+  reservation_id?: string | null
+  /** Ce qui a été facturé au client. `null` quand rien ne l'a été. */
+  billed_amount?: number | null
+  /** Pourquoi rien n'a été facturé alors que le dégât vient d'une location. */
+  not_billed_reason?: string | null
+  /** Qui a déclaré le dégât (id du profil). */
+  reported_by?: string | null
+  /** Devis du garage, avant réparation. N'écrit RIEN en comptabilité : tant que la
+   *  réparation n'est pas faite, aucune dépense n'existe. Ajouté le 30/07/2026 sur
+   *  remarque de Jeff, le garage ne facturant qu'après avoir réparé. */
+  quote_amount?: number | null
+  /** Date de la réparation. Un dégât réparé RESTE dans la liste, il ne disparaît pas :
+   *  c'est ce qui permet de comparer encaissé et dépensé, et d'empêcher qu'un même
+   *  dégât soit réparé deux fois. */
+  repaired_at?: string | null
+  /** Ce que la réparation a coûté. */
+  repair_cost?: number | null
+
+  // ─── Ajouté le 01/08/2026 ───
+  /** Intervention au garage qui prend ce dégât en charge (maintenance_records.id).
+   *  Tant qu'il est rempli, le dégât ne se propose plus à une autre intervention :
+   *  c'est ce qui empêche qu'une même réparation soit payée deux fois. */
+  intervention_id?: string | null
 }
 
 export interface Vehicle {

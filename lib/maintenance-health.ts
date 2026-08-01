@@ -99,7 +99,10 @@ export function computeVehicleNeeds(
   }
 
   // ── DÉGRADATIONS actives — un besoin par drapeau ──
-  for (const f of vehicle.maintenance_flags ?? []) {
+  // Depuis le 30/07/2026 un dégât réparé RESTE dans la liste du véhicule (pour
+  // l'historique et la comparaison encaissé/dépensé). Il ne doit donc plus compter
+  // ici, sinon le badge « Intervenir » ne s'éteindrait jamais.
+  for (const f of (vehicle.maintenance_flags ?? []).filter(f => !f.repaired_at)) {
     needs.push({
       key: 'degradation',
       label: 'Intervenir',
@@ -172,18 +175,29 @@ export function buildLastByType(
   return out
 }
 
-/** Catégorise un flag de dégradation pour un libellé lisible (zone → famille). */
+/**
+ * Fabrique le dégât enregistré sur le véhicule à partir d'une zone de l'état des
+ * lieux.
+ *
+ * `extra` porte ce qui a été ajouté le 30/07/2026 et qui n'existe que sur un état
+ * des lieux de RETOUR : le type du catalogue, l'origine, la réservation en cause
+ * et ce qui a été facturé au client. Un état des lieux de départ ne les remplit
+ * pas, et les champs restent alors vides — c'est voulu, un dégât constaté au
+ * départ n'est imputable à personne.
+ */
 export function buildDamageFlag(
   zoneId: string,
   zoneLabel: string,
   severity: MaintenanceFlag['severity'],
   inspectionId: string | null,
+  extra?: Pick<MaintenanceFlag, 'damage_type' | 'origin' | 'reservation_id' | 'billed_amount'>,
 ): Omit<MaintenanceFlag, 'id' | 'created_at'> {
   return {
     category: zoneId,
-    label: `${zoneLabel} — ${severity}`,
+    label: `${zoneLabel} · ${severity}`,
     severity,
     source: 'inspection',
     source_id: inspectionId,
+    ...extra,
   }
 }
