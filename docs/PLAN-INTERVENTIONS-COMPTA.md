@@ -110,7 +110,23 @@ intervention qui mélange une rayure de location et une usure produit donc deux
 - L'immobilisation automatique du véhicule et le rendez-vous au calendrier existent :
   les garder tels quels.
 
-## Lot 3 — La rubrique de comptabilité
+## Lot 3 — La rubrique de comptabilité — ÉCRIT LE 01/08/2026
+
+`app/(dashboard)/accounting/degats/page.tsx`, plus sa tuile sur `/accounting`.
+
+**Deux décisions prises le jour de l'écriture, qui modifient ce qui suit :**
+
+- **Périmètre limité aux dégâts et réparations.** L'idée d'un onglet « Chiffre
+  d'affaires prestations annexes » couvrant aussi carburant, kilomètres et
+  nettoyage a été écartée par Jeff : le carburant et les kilomètres restent où ils
+  sont.
+- **Rien avant la clôture de l'intervention.** La ligne « Devis validé » prévue
+  ci-dessous n'existe pas : l'onglet ne montre que ce qui est réellement payé.
+
+**Limite connue, à dire au gérant :** les réparations enregistrées avant le
+01/08/2026 par l'ancien chemin (`resolveVehicleIssue`, un dégât soldé isolément)
+ne portent pas d'origine et n'apparaissent donc pas dans le tableau. Seules les
+réparations passées par une intervention y entrent.
 
 Nouvel onglet dans Comptabilité : **« Dégâts et réparations »**.
 
