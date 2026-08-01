@@ -1,45 +1,128 @@
 # Les modifications à effectuer
 
 Liste tenue au fil de l'eau, ouverte le 01/08/2026. Chaque ligne dit ce qui change
-pour l'utilisateur, pas comment c'est fabriqué. Une ligne livrée est barrée et
-porte son commit.
+pour l'utilisateur, pas comment c'est fabriqué. L'ordre de traitement suit celui
+que Jeff donne, pas celui de cette liste.
 
-L'ordre de traitement suit celui que Jeff donne, pas celui de cette liste.
+**État du dépôt au moment d'écrire : tout est poussé sur `main` jusqu'à `2f45274`.**
+Rien n'attend dans l'arbre de travail.
 
 ---
 
-## 1. Les remarques du simulateur
+## 1. Où en sont les remarques du simulateur
 
-Elles vivent dans son outil d'annotation (`localhost:3100/simulateur.html`), clé
-`lms_remarques`. **38 posées, 20 livrées, 18 ouvertes.** Chaque remarque livrée est marquée
-`✅ FAIT (<commit>)` en tête de son texte, dans l'outil : c'est comme ça qu'il voit
-ce qui reste.
+Elles vivent dans son outil d'annotation (`/simulateur.html`, clé `lms_remarques`
+du navigateur). **42 posées, 22 livrées, 20 ouvertes.** Chaque remarque livrée est
+marquée `✅ FAIT (<commit>)` en tête de son texte, dans l'outil : c'est comme ça
+qu'il voit ce qui reste, il ne faut pas attendre qu'il le demande.
 
-| N° | Ce qu'il demande | État |
+⚠️ **Les remarques ne suivent pas d'un navigateur à l'autre.** Elles sont rangées
+dans le navigateur qui les écrit. Celles du simulateur en ligne et celles du
+simulateur local sont deux listes différentes.
+
+### Livrées le 01/08/2026
+
+| N° | Ce qui a changé | Commit |
 |---|---|---|
-| 35 | Modifier une déclaration de dommage déjà faite | ✅ FAIT (`b56dbdf`), pas encore poussé |
-| 36 | L'application est lente à réagir : voir §2 | **reporté à plus tard, décision de Jeff du 01/08/2026** |
-| 37 | Défilement coulissant des jours, façon Google Agenda, dans le calendrier et sur l'accueil | en cours |
-| 38 | Le chantier des interventions au garage : voir §3 | à faire |
+| 35 | Un dommage déjà déclaré se corrige, par un crayon sur sa ligne | `b56dbdf` |
+| 37 | La bande des jours se pousse librement, calendrier et accueil | `3014373` |
 
-**L'ordre décidé le 01/08/2026 : 35, puis 37, puis 38, puis le lot 3 du chantier
-comptable.** La fluidité (36) attend une prochaine session.
+### Le chantier en cours : la remarque 38
 
-Les 14 autres remarques ouvertes restent à reprendre une par une.
+Le gros morceau des interventions au garage. **Décidé avec Jeff, à exécuter d'un
+seul tenant** (il ne veut pas de livraison par morceaux) :
 
-## 2. Rendre l'application instantanée
+- **A. L'heure du rendez-vous.** Toute intervention est aujourd'hui posée à 8 h du
+  matin, écrit en dur dans `lib/actions/maintenance.ts`. Ajouter l'heure à côté de
+  la date ; le créneau « RDV garage » du calendrier la reprend. Aucun changement de
+  base.
+- **B. L'intervention en cours, puis clôturée.** Deux états remplacent le couple
+  devis/facture, **qui disparaît du vocabulaire de l'écran** (décision de Jeff).
+  Tant qu'elle est en cours, tout se modifie : date, heure, garage, kilométrage,
+  montants, dégâts rattachés. **La clôture verrouille et écrit la comptabilité**,
+  ce que fait aujourd'hui `settleIntervention` à la saisie du montant. Demande une
+  migration : la contrainte de `maintenance_records.quote_status` n'accepte que
+  `brouillon`, `valide`, `annule`.
+- **C. Plusieurs véhicules dans un rendez-vous.** Un « + » ouvre la liste des
+  véhicules avec leurs dégâts déclarés. **Arbitrage de Jeff du 01/08/2026, après
+  proposition contraire à son premier choix : une seule ligne dans le calendrier
+  portant les N voitures, et une intervention séparée par véhicule dans Suivi
+  véhicule.** Chacune se clôture quand son garage a fini. Sans ça, un garage qui
+  rend une voiture le mardi et les trois autres le vendredi bloquerait la
+  comptabilité jusqu'au vendredi. `calendar_events.vehicle_ids` est déjà un
+  tableau, il n'y a rien à inventer côté calendrier.
+- **D. Quatre rendez-vous sur le même créneau, en vue jour.** **À vérifier avant de
+  coder** : `layoutEvents` (`components/calendar/MobileCalendar.tsx`) place déjà les
+  événements en colonnes quand ils se chevauchent. Si c'est le cas, il n'y a rien à
+  faire. Sur téléphone la vue jour est une liste depuis la remarque 30, la question
+  ne s'y pose pas.
 
-**Ce qu'il constate :** un changement de statut de tâche fait attendre, deux fois.
-Mesuré en local le 01/08/2026 : 6 secondes entre le clic sur « Enregistrer » et la
-ligne qui se met à jour. En ligne ce sera moins, mais perceptible.
+### Les quatre remarques du soir
+
+- **39 — Les immobilisations.** Pouvoir mettre un véhicule en immobilisation depuis
+  l'onglet Immobilisations, par un « + » et un petit formulaire sur le type. Le
+  statut du véhicule suit tout seul : maintenance, réservé, hors service, fourrière,
+  non restitué, déplacement professionnel. Même automatisme que le retour d'une
+  location. Sa phrase à garder en tête : « créer une fluidité et pas complexifier la
+  tâche via 50 onglets remplis de technologie qui ne seront jamais utilisés ».
+- **40 — Les déplacements**, cinq demandes en une :
+  1. Choisir le véhicule comme sur une réservation : voir s'il est libre, et les
+     créneaux entre deux locations pour caser un déplacement d'une heure. Placé
+     juste sous « Démarrer maintenant », un mois de visibilité, au-delà le calendrier.
+  2. Le libellé « HK-347-GV Rdv pro Marich Toulassi · 28/07/2026 23:01 » : modèle en
+     grand, plaque en petit, et les autres informations en dessous.
+  3. Modifier un déplacement, et lui ajouter une date de fin.
+  4. **Le gérant peut modifier un déplacement, Jeff non, sur le même écran.** Cause
+     à chercher, sans doute une différence de rôle.
+  5. **Bug, marqué urgent par lui, remonté par le gérant : un véhicule en
+     déplacement reste affiché disponible sur sa fiche.** C'est le seul point de la
+     40 qui fait mentir un chiffre montré au gérant.
+- **41 — Les notifications, à reprendre en entier.** Une notification annonçait un
+  rendez-vous en retard alors qu'il s'agissait d'un **départ** en retard. Il ne veut
+  pas la correction de ce cas seul : **rouvrir les 35 notifications du logiciel et
+  les revérifier une par une**, comme cela avait été fait le 30/07/2026 pour leur
+  format à trois lignes. Une capture est jointe à la remarque.
+- **42 — Le paiement d'une réservation**, deux points :
+  1. En bas de la fiche, après la saisie du montant versé par le client, afficher
+     **« Reste à payer x € »** ou **« Paiement effectué x € »**. Le calcul se fait à
+     la saisie, et le message dit si le client a tout réglé. Ses mots : « quelque
+     chose de simple ». Remontée par le canal SAV depuis
+     `/reservations/f7280e1b-fd4b-48f7-bbf0-82f4868ba110`.
+  2. **La confirmation d'une réservation redemande l'acompte**, alors qu'il a déjà
+     été saisi et calculé à la création. **À retirer de l'écran de confirmation.**
+
+### Les 15 autres remarques ouvertes
+
+**Suivi véhicule et interventions**
+- **#2** l'état mécanique du véhicule sans les montants, juste le dommage
+- **#3** l'intervention n'est pas modifiable et ne dit rien du véhicule (recoupe la 38)
+- **#23** le pneu rangé en carrosserie, et les tirets anglais à supprimer
+
+**Calendrier**
+- **#19** la vue tablette sur mobile quand on sélectionne une date
+- **#25** sur iPhone 17 Pro Max, un écran mal ajusté et la barre « LMS Drive » devant
+- **#29** supprimer le code couleur lié au type
+- **#30** le format de la liste quand on clique un jour en vue mois
+- **#31** taille à réduire de moitié (sa deuxième partie, le défilement, est livrée)
+
+**Une par onglet**
+- **#7** véhicules : sur iPhone, réduire la taille pour voir les autres colonnes
+- **#8** réservations : l'acompte bloque la voiture sur une période
+- **#9** infractions : envoyer la facture au responsable identifié
+- **#11** infractions : envoi par e-mail avec aperçu de la facture avant envoi
+- **#10** documents : page d'erreur au clic, à remettre au format des autres
+- **#12** accueil : la barre du logo et de la date doit rester en haut
+- **#36** la fluidité, **reportée par Jeff à une prochaine session**
+
+## 2. Rendre l'application instantanée — REPORTÉ
+
+**Ce qu'il constate :** un changement de statut de tâche fait attendre. Mesuré en
+local le 01/08/2026 : 6 secondes entre le clic sur « Enregistrer » et la ligne qui
+se met à jour. En ligne ce sera moins, mais perceptible.
 
 **La cause :** partout, l'écran attend la réponse du serveur avant de se redessiner.
 
-**Ce qui change :** l'écran affiche le résultat tout de suite et laisse le serveur
-suivre derrière, comme les applications grand public. Si le serveur refuse, l'écran
-remet la ligne en arrière et le dit clairement.
-
-**La règle décidée avec Jeff le 01/08/2026, à ne pas déborder :**
+**La règle décidée avec Jeff, à ne pas déborder le jour où on s'y met :**
 
 > Instantané uniquement sur ce qui est réversible et sans conséquence financière :
 > un statut, une case, un libellé. **Jamais sur l'argent ni sur les pièces qui font
@@ -48,52 +131,24 @@ remet la ligne en arrière et le dit clairement.
 
 **Ce qui rend l'opération sûre ici :** les notifications d'avancement de tâche
 partent du serveur, après écriture réussie, et seulement si le statut a réellement
-changé. Peindre l'écran en avance ne peut donc pas déclencher une fausse
-notification à l'équipe, et c'est aussi ce qui prévient tout le monde quand deux
-personnes touchent la même tâche.
+changé (`app/api/calendar/events/[id]/route.ts`). Peindre l'écran en avance ne peut
+donc pas déclencher une fausse notification à l'équipe, et c'est aussi ce qui
+prévient tout le monde quand deux personnes touchent la même tâche.
 
-**Périmètre retenu pour commencer :** le calendrier et les tâches, ses deux
-exemples. Ensuite la même règle s'applique à chaque écran rouvert, sans chantier
-séparé. Tout reprendre d'un coup touche une quarantaine d'écrans déjà validés par
-le gérant : écarté avant le point du mardi.
+**Périmètre prévu :** le calendrier et les tâches d'abord, ses deux exemples.
+Ensuite la même règle à chaque écran rouvert, sans chantier séparé. Tout reprendre
+d'un coup touche une quarantaine d'écrans déjà validés par le gérant.
 
-## 3. Le chantier des interventions au garage (remarque 38)
+## 3. Ce qui a été livré aujourd'hui, pour mémoire
 
-Ce que Jeff décrit, dans l'ordre où il l'a écrit :
+- **Lot 2 du chantier comptable** : l'intervention porte ses dégâts, une écriture
+  comptable par dégât réparé, avec son origine et son type.
+- **Lot 3** : l'onglet « Dégâts et réparations » en comptabilité (`83feeb6`), qui
+  met le facturé au client face au payé au garage, ventilé par origine.
+- **Le simulateur** entre dans le dépôt et s'ouvre en ligne (`2f45274`), visible du
+  seul super-administrateur.
 
-1. **Poser un rendez-vous pour plusieurs véhicules à la fois.** Une fenêtre où on
-   coche les véhicules, puis un rendez-vous par véhicule, chacun avec ses dommages
-   déclarés.
-2. **Une heure sur l'intervention**, qui crée le créneau « RDV garage » dans le
-   calendrier pour ce véhicule.
-3. **Vocabulaire des montants** à revoir sur les interventions (devis, facture).
-   *Sa phrase est coupée à cet endroit, question posée, en attente.*
-4. **Une intervention modifiable tant qu'elle est en cours**, avec deux états :
-   « intervention en cours » et « intervention clôturée ».
-5. **Quatre rendez-vous sur le même créneau** en vue jour du calendrier.
-
-Le cadrage déjà validé du volet comptable est dans `PLAN-INTERVENTIONS-COMPTA.md`.
-
-### Ce que Jeff a tranché le 01/08/2026
-
-- **Plus de « devis » ni de « facture » sur une intervention.** Un seul montant,
-  sans dire d'où il vient. *Conséquence : le vocabulaire actuel de l'écran et de la
-  base (`quote_amount`, `quote_status`) doit disparaître de l'affichage.*
-- **Un seul rendez-vous porte plusieurs véhicules.** Quatre voitures chez le même
-  garage à la même heure, c'est une ligne dans le calendrier, pas quatre. *Mais la
-  vue jour doit savoir empiler quatre rendez-vous sur le même créneau, c'est une
-  demande distincte de la remarque 38.*
-- **La comptabilité attend la CLÔTURE de l'intervention.** Tant qu'elle est « en
-  cours », rien n'apparaît dans les chiffres, même si le montant est déjà saisi.
-  *Changement par rapport à aujourd'hui : l'écriture part actuellement dès la
-  saisie du montant payé (`settleIntervention`). À déplacer sur la clôture.*
-- **Le défilement de la bande des jours (remarque 37)** : **jour par jour, façon
-  Google Agenda, et pas semaine par semaine façon Apple.** La bande roule d'une
-  case et se retrouve donc à cheval sur deux semaines, c'est voulu. Le geste ne
-  marche que sur la bande des dates : la liste des tâches en dessous reste inerte.
-  *Le calendrier du tableau de bord garde, lui, la pagination par semaine.*
-
-## 4. Le ménage repéré en passant
+## 4. Le ménage repéré, pas encore fait
 
 - **Deux chemins pour changer le statut d'une tâche**, chacun avec son envoi de
   notification : `app/api/calendar/events/[id]/route.ts` (utilisé) et
@@ -101,22 +156,31 @@ Le cadrage déjà validé du volet comptable est dans `PLAN-INTERVENTIONS-COMPTA
   aujourd'hui ; le jour où quelqu'un rebranche le second, une seule action enverra
   deux notifications. **À supprimer**, quand Jeff le dit.
 - **`resolveVehicleIssue` et `setDamageQuote`** ne sont plus appelés depuis que la
-  réparation passe obligatoirement par une intervention. À supprimer une fois le
-  chantier des interventions fini.
+  réparation passe par une intervention. À supprimer une fois la 38 finie.
 - **Le bloc « tarifs par défaut » des paramètres ne pilote rien.** Les six champs
   sont enregistrés et réaffichés, mais aucune facture ne les lit : le prix vient du
   véhicule. Le gérant peut croire changer ses tarifs sans aucun effet. Défaut réel,
-  non corrigé, qui touchera aussi Smart Loc.
+  qui touchera aussi Smart Loc.
 
 ## 5. Ce qui reste ouvert et ne se corrige pas tout seul
 
-- **Balayer les fenêtres de l'application.** Celle du calendrier était enfermée
-  dans la bande du milieu de l'écran et impossible à fermer sur iPhone, corrigé le
-  01/08/2026. Toutes les fenêtres bâties sur le même modèle ont probablement le
-  même défaut. **Non balayé.**
-- **Le tableau « Chiffre d'affaires prestations annexes »**, lot 3 du chantier
-  comptable : combien les factures de restitution amortissent les réparations, par
-  véhicule et par période.
-- **L'onglet « Mises à jour »**, où le client voit chaque dimanche ce qui a changé
-  et choisit d'appliquer maintenant ou de reporter d'une semaine. Chantier de 4 à
+- **Balayer les fenêtres de l'application.** Celle du calendrier était enfermée dans
+  la bande du milieu de l'écran et impossible à fermer sur iPhone, corrigé le
+  01/08/2026. Toutes les fenêtres bâties sur le même modèle ont probablement le même
+  défaut. **Non balayé.**
+- **Les réparations d'avant le 01/08/2026 sont absentes du nouvel onglet compta.**
+  Elles ont été soldées dégât par dégât, sans intervention, donc sans origine. Leur
+  en poser une à la main toucherait des écritures existantes : Jeff n'a rien
+  demandé.
+- **L'onglet « Mises à jour »**, où le client voit chaque dimanche ce qui a changé et
+  choisit d'appliquer maintenant ou de reporter d'une semaine. Chantier de 4 à
   6 jours, placé après la livraison de Smart Loc.
+
+## 6. À signaler à Jeff, toujours ouvert
+
+- **Ses recettes « Km supplémentaires » totalisent 119 326 €** contre 6 450 € de
+  locations, sur la réservation RES-2607-2595 (59 661 km facturés à 2 €). **Il a
+  refusé le ménage en base le 01/08/2026** : ne rien supprimer sans qu'il le
+  redemande.
+- **Une dépense de 320 € du 01/08** vient d'un test de bout en bout sur le dégât
+  d'essai « Porte avant droite ». Même décision : on n'y touche pas.
