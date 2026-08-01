@@ -144,8 +144,12 @@ export default function CalendarPage() {
           full_name: 'Non attribué',
           role: null,
           type: 'profile',
+          // Gris volontaire : une mission sans personne ne prend la couleur de
+          // personne, elle doit se distinguer d'un coup d'œil des missions confiées.
           color: '#94A3B8',
-          visible: false,
+          // Visible dès l'ouverture depuis le 01/08/2026 : masquée, elle cachait les
+          // missions que personne n'a prises, celles qu'il faut justement voir.
+          visible: true,
         }
         setResources([
           unassigned,
@@ -265,8 +269,16 @@ export default function CalendarPage() {
 
   // Clic sur le nom d'un collaborateur : vue exclusive (son planning détaillé
   // seul), distincte du clic sur la pastille couleur (ajout/retrait au comparatif).
+  //
+  // « Non attribué » RESTE visible dans cette vue (01/08/2026, demande de Jeff) :
+  // celui qui regarde son planning doit voir en même temps ce qui n'a été confié à
+  // personne, sinon les missions orphelines n'apparaissent que si on pense à les
+  // afficher, et elles se perdent.
   const handleSelectOnlyResource = (id: string) => {
-    setResources(rs => rs.map(r => ({ ...r, visible: r.id === id })))
+    setResources(rs => rs.map(r => ({
+      ...r,
+      visible: r.id === id || r.id === UNASSIGNED_RESOURCE_ID,
+    })))
   }
 
   const handleCreateTeam = async (name: string, color: string) => {

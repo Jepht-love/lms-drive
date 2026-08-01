@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { ExternalLink, ClipboardCheck, User, Car, Lock, Check } from 'lucide-react'
@@ -263,8 +264,25 @@ export default function EventDrawer({ open, event, slotContext, resources, prese
     }
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:items-stretch md:justify-end md:p-0">
+  // La fenêtre se pose DIRECTEMENT dans la page, hors de la grille du tableau de
+  // bord. Corrigé le 01/08/2026 sur capture de Jeff : la mise en page est une
+  // grille à trois bandes (barre du haut · contenu · barre du bas), et cette
+  // fenêtre s'ouvrait dans la bande du milieu. Son « au premier plan » ne valait
+  // donc qu'à l'intérieur de cette bande : les deux barres, qui sont ses voisines
+  // et non ses parentes, passaient par-dessus. Sur iPhone, le titre et la croix de
+  // fermeture disparaissaient sous la barre du haut, et le bouton de suppression
+  // sous celle du bas : la fenêtre ne pouvait même plus être fermée.
+  //
+  // Ne jamais la remettre dans le flux : augmenter le niveau de premier plan ne
+  // suffit pas, c'est la grille qui l'enferme.
+  if (typeof document === 'undefined') return null
+
+  return createPortal(
+    <div className="
+      fixed inset-0 z-[100] flex items-center justify-center
+      p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]
+      md:items-stretch md:justify-end md:p-0
+    ">
       {/* Backdrop */}
       <button type="button" aria-label="Fermer" onClick={onClose} className="absolute inset-0 bg-black/30" />
 
@@ -274,10 +292,15 @@ export default function EventDrawer({ open, event, slotContext, resources, prese
                     formulaire long passait sous le pli)
         Ordinateur : tiroir à droite, pleine hauteur, volontairement conservé,
                     c'est la mise en page de l'agenda sur grand écran
+
+        La hauteur suit maintenant le rembourrage du parent, zones sûres comprises
+        (01/08/2026). Avant, `100dvh-64px` ignorait l'encoche et la barre de gestes
+        d'un iPhone récent : sur un Pro Max, le bouton de suppression arrivait
+        collé au bas de l'écran, sous la zone atteignable au pouce.
       */}
       <div className="
         relative flex flex-col bg-white shadow-sm border-gray-100
-        w-full max-h-[calc(100dvh-64px)] rounded-2xl
+        w-full max-h-full rounded-2xl
         md:rounded-none md:border-l md:max-h-none md:h-full md:w-full md:max-w-[380px]
       ">
         {/* Header */}
@@ -549,6 +572,7 @@ export default function EventDrawer({ open, event, slotContext, resources, prese
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
