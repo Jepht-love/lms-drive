@@ -144,9 +144,11 @@ export default function CalendarPage() {
           full_name: 'Non attribué',
           role: null,
           type: 'profile',
-          // Gris volontaire : une mission sans personne ne prend la couleur de
-          // personne, elle doit se distinguer d'un coup d'œil des missions confiées.
-          color: '#94A3B8',
+          // Noir, et non gris : cette pastille se lit à côté de celles des membres
+          // de l'équipe, et un gris passait pour la couleur de quelqu'un (remarque 31
+          // de Jeff, 01/08/2026). Les TÂCHES non attribuées, elles, restent grises :
+          // voir UNASSIGNED_COLOR dans lib/calendar/constants.ts.
+          color: '#111111',
           // Visible dès l'ouverture depuis le 01/08/2026 : masquée, elle cachait les
           // missions que personne n'a prises, celles qu'il faut justement voir.
           visible: true,

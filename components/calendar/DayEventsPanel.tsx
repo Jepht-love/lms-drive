@@ -111,10 +111,14 @@ export default function DayEventsPanel({ currentDate, events, resources, onEvent
                             4, corrigée le 30/07/2026). Personne dessus se dit en gras,
                             c'est une action à prendre, pas une information. */}
                         {assignee ? (
-                          <p className="text-xs text-gray-500 mt-0.5 truncate">
+                          // Le nom porte la COULEUR DE CALENDRIER de la personne
+                          // (01/08/2026, remarque 31 de Jeff) : sur une journée à dix
+                          // tâches, on repère d'un coup d'œil qui a quoi sans lire
+                          // chaque ligne. Le poste reste en gris, il n'identifie personne.
+                          <p className="text-xs mt-0.5 truncate font-semibold" style={{ color: assignee.color }}>
                             {assignee.full_name}
                             {assignee.role && (
-                              <span className="text-gray-400"> · {roleLabel(assignee.role)}</span>
+                              <span className="text-gray-400 font-normal"> · {roleLabel(assignee.role)}</span>
                             )}
                           </p>
                         ) : ASSIGNABLE.includes(ev.event_type) && !ev.assigned_team_id ? (
