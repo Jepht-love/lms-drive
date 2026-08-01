@@ -1,29 +1,34 @@
 'use client'
 
 /**
- * Calendrier du tableau de bord — bande de jours qui roule, façon Google Agenda.
+ * Calendrier du tableau de bord — bande de jours qu'on pousse librement.
  *
- * La bande avance JOUR PAR JOUR sous le doigt, elle n'est donc pas alignée sur une
- * semaine et se retrouve à cheval sur deux : c'est voulu. Jeff a tranché le
- * 01/08/2026 (remarque 37) entre les deux gestes possibles — Google, retenu ici,
- * contre Apple, qui paginait par semaine entière et que cet écran faisait avant.
- * Ne pas revenir à la semaine en croyant corriger un défaut d'alignement.
+ * Trois règles posées par Jeff le 01/08/2026 (remarque 37), à ne pas défaire :
+ *   1. Le geste DÉPLACE LA BANDE, il ne change pas la journée affichée. La liste
+ *      du bas ne bouge que si on tape une date. C'est ce qui distingue Google
+ *      Agenda du calendrier Apple, que cet écran faisait avant : il paginait par
+ *      semaine entière et emmenait l'agenda avec le doigt.
+ *   2. Le doigt emmène la bande, avec son inertie, et elle se recale sur une
+ *      colonne en s'arrêtant. Aucun pas imposé : ni jour, ni semaine.
+ *   3. Les flèches ‹ ›, elles, changent bien de jour : c'est leur rôle.
  *
- * Le jour choisi reste au milieu des sept cases visibles. Les flèches ‹ › avancent
- * d'un jour, comme le geste. Un clic sur un jour affiche, en dessous, les tâches de
- * ce jour (à faire / à assigner). Chaque tâche ouvre le tiroir de l'événement
- * (/calendrier?event=<id>) : attribuer un membre PUIS ouvrir la résa.
+ * Les jours sont dessinés autour d'une ANCRE, pas autour du jour choisi : taper
+ * une date ne doit pas faire sauter la bande sous le doigt. L'ancre ne bouge que
+ * sur une navigation venue d'ailleurs (flèches, retour sur aujourd'hui).
+ *
+ * Un clic sur un jour affiche, en dessous, les tâches de ce jour (à faire / à
+ * assigner). Chaque tâche ouvre le tiroir de l'événement (/calendrier?event=<id>) :
+ * attribuer un membre PUIS ouvrir la résa.
  *
  * Même mécanisme que la bande de la page Calendrier (`MobileCalendar`) : si l'un
  * change, changer l'autre, deux gestes différents pour la même bande se verraient.
  *
- * Auto-alimenté : charge les 21 jours dessinés via
+ * Auto-alimenté : charge les jours autour de la semaine affichée via
  * GET /api/calendar/events?start&end (même source que la page Calendrier).
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
-import { motion, useMotionValue, animate } from 'framer-motion'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import {
   addDays, addWeeks, startOfWeek, isSameDay, isToday, format,
@@ -96,57 +101,48 @@ function eventPersonne(e: CalendarEvent): string | null {
   return e.description?.trim() || null
 }
 
-// La bande dessine 21 jours autour du jour choisi, qui reste à la 4ᵉ des 7 cases
+// La bande dessine 121 jours autour de l'ancre, qui se pose à la 4ᵉ des 7 cases
 // visibles. Mêmes valeurs que la page Calendrier : les deux bandes doivent bouger
 // pareil.
-const RAYON_JOURS = 10
+const RAYON_JOURS = 60
 const PLACE_DU_JOUR_CHOISI = 3
 
 export default function DashboardCalendar() {
   const [selected, setSelected] = useState<Date>(() => new Date())
+  const [ancre, setAncre] = useState<Date>(() => new Date())
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [loading, setLoading] = useState(true)
   const [loadFailed, setLoadFailed] = useState(false)
   // Incrémenté par « Réessayer » : relance le chargement des jours affichés.
   const [reloadKey, setReloadKey] = useState(0)
 
-  // Piste : largeur mesurée du conteneur, puis position (px) de la piste de 21 jours.
   const [w, setW] = useState(0)
-  const x = useMotionValue(0)
   const largeurCase = w / 7
-  const xRepos = -(RAYON_JOURS - PLACE_DU_JOUR_CHOISI) * largeurCase
+  const bandeEl = useRef<HTMLDivElement | null>(null)
 
   const containerRef = useCallback((el: HTMLDivElement | null) => {
+    bandeEl.current = el
     if (!el) return
     setW(el.offsetWidth)
     const ro = new ResizeObserver(() => setW(el.offsetWidth))
     ro.observe(el)
   }, [])
 
-  useEffect(() => { x.set(xRepos) }, [xRepos, x])
+  // Repositionne le défilement sur l'ancre. Uniquement quand l'ancre change :
+  // taper une date ne doit pas faire sauter la bande sous le doigt.
+  useLayoutEffect(() => {
+    const el = bandeEl.current
+    if (!el || !largeurCase) return
+    el.scrollLeft = (RAYON_JOURS - PLACE_DU_JOUR_CHOISI) * largeurCase
+  }, [ancre, largeurCase])
 
-  // Fait rouler la bande de n jours (spring), puis change le jour choisi et remet
-  // la piste au repos : les 21 jours sont alors redessinés autour de la nouvelle
-  // date, donc rien ne saute à l'œil.
-  const glisseDeJours = useCallback((n: number) => {
-    if (!largeurCase) return
-    if (n === 0) {
-      animate(x, xRepos, { type: 'spring', stiffness: 550, damping: 45 })
-      return
-    }
-    animate(x, xRepos - n * largeurCase, {
-      type: 'spring', stiffness: 550, damping: 45,
-      onComplete: () => {
-        setSelected(s => addDays(s, n))
-        x.set(xRepos)
-      },
-    })
-  }, [largeurCase, xRepos, x])
+  // Les flèches, elles, changent bien de jour, et ramènent la bande sur lui.
+  const vaAuJour = useCallback((d: Date) => {
+    setSelected(d)
+    setAncre(d)
+  }, [])
 
-  const goToday = useCallback(() => {
-    setSelected(new Date())
-    x.set(xRepos)
-  }, [xRepos, x])
+  const goToday = useCallback(() => vaAuJour(new Date()), [vaAuJour])
 
   // Fenêtre chargée : de quoi couvrir les 21 jours dessinés quelle que soit la
   // position du jour choisi dans sa semaine. On s'accroche au lundi plutôt qu'au
@@ -206,7 +202,7 @@ export default function DashboardCalendar() {
         type="button"
         style={{ width: largeurCase }}
         onClick={() => setSelected(day)}
-        className="shrink-0 flex flex-col items-center gap-1 py-1 select-none"
+        className="shrink-0 snap-start flex flex-col items-center gap-1 py-1 select-none"
       >
         <span className={`text-[9px] font-bold uppercase capitalize ${selectedDay ? 'text-gray-900' : 'text-gray-400'}`}>
           {format(day, 'EEE', { locale: fr })}
@@ -242,7 +238,7 @@ export default function DashboardCalendar() {
       <div className="flex items-center justify-between mb-3">
         <button
           type="button"
-          onClick={() => glisseDeJours(-1)}
+          onClick={() => vaAuJour(addDays(selected, -1))}
           className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-50 hover:text-gray-700 transition-colors"
           aria-label="Jour précédent"
         >
@@ -262,7 +258,7 @@ export default function DashboardCalendar() {
         </div>
         <button
           type="button"
-          onClick={() => glisseDeJours(1)}
+          onClick={() => vaAuJour(addDays(selected, 1))}
           className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-50 hover:text-gray-700 transition-colors"
           aria-label="Jour suivant"
         >
@@ -270,28 +266,15 @@ export default function DashboardCalendar() {
         </button>
       </div>
 
-      {/* La bande roule jour par jour sous le doigt (voir l'en-tête du fichier) */}
-      <div ref={containerRef} className="overflow-hidden">
-        <motion.div
-          className="flex"
-          style={{ x, width: largeurCase * (2 * RAYON_JOURS + 1) }}
-          drag={largeurCase > 0 ? 'x' : false}
-          dragConstraints={{
-            left: xRepos - RAYON_JOURS * largeurCase,
-            right: xRepos + RAYON_JOURS * largeurCase,
-          }}
-          dragElastic={0.08}
-          onDragEnd={(_, info) => {
-            // Combien de cases le doigt a-t-il parcourues ? Un geste court mais
-            // lancé compte quand même pour un jour, sinon un « flick » rapide ne
-            // fait rien et la bande a l'air bloquée.
-            let n = Math.round((xRepos - x.get()) / largeurCase)
-            if (n === 0 && Math.abs(info.velocity.x) > 450) n = info.velocity.x < 0 ? 1 : -1
-            glisseDeJours(Math.max(-RAYON_JOURS, Math.min(RAYON_JOURS, n)))
-          }}
-        >
-          {Array.from({ length: 2 * RAYON_JOURS + 1 }, (_, i) => addDays(selected, i - RAYON_JOURS)).map(renderDay)}
-        </motion.div>
+      {/* La bande se pousse librement (voir l'en-tête du fichier) */}
+      <div
+        ref={containerRef}
+        className="overflow-x-auto overflow-y-hidden snap-x snap-mandatory"
+        style={{ scrollbarWidth: 'none' }}
+      >
+        <div className="flex" style={{ width: largeurCase * (2 * RAYON_JOURS + 1) }}>
+          {Array.from({ length: 2 * RAYON_JOURS + 1 }, (_, i) => addDays(ancre, i - RAYON_JOURS)).map(renderDay)}
+        </div>
       </div>
 
       {/* Détail du jour sélectionné */}

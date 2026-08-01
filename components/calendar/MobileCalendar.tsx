@@ -1,7 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { motion, useMotionValue, animate } from 'framer-motion'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { addDays, addMonths, subMonths, format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { Bell, ChevronLeft, ChevronRight, Plus, SlidersHorizontal, Users } from 'lucide-react'
@@ -169,39 +168,43 @@ export default function MobileCalendar({
   const scrollRef = useRef<HTMLDivElement>(null)
   const today = new Date()
 
-  // ── La bande des jours roule JOUR PAR JOUR ──────────────────────────────────
-  // Demande de Jeff du 01/08/2026 (remarque 37), reprécisée le même jour : il veut
-  // le geste de Google Agenda, PAS celui du calendrier Apple.
+  // ── La bande des jours se pousse librement ──────────────────────────────────
+  // Remarque 37 de Jeff, cadrée le 01/08/2026 après deux essais à côté. Ce qu'il
+  // veut, mot pour mot : « le mouvement doit être libre ».
   //
-  // La différence, et il faut la garder en tête avant de « simplifier » ce code :
-  //   · Apple, c'est ce que fait le calendrier du tableau de bord : on pagine par
-  //     semaine entière, la bande reste alignée du lundi au dimanche.
-  //   · Google, c'est ici : la bande roule d'une case à la fois. Elle se retrouve
-  //     donc à cheval sur deux semaines, et c'est voulu.
+  // Les trois règles, à ne pas défaire :
+  //   1. Le geste DÉPLACE LA BANDE, il ne change pas la journée affichée. On
+  //      pousse la bande pour aller voir plus loin dans le mois ; la liste du bas
+  //      ne bouge que si on tape une date. C'est ce qui distingue Google Agenda du
+  //      calendrier Apple, qui paginait et faisait avancer l'agenda avec le doigt.
+  //   2. Le doigt emmène la bande, avec son inertie, et elle se recale sur une
+  //      colonne en s'arrêtant. Aucun pas imposé : ni jour, ni semaine.
+  //   3. Le geste ne vaut que sur la bande. La liste en dessous reste inerte.
   //
-  // Le geste ne marche que sur la bande. La liste des tâches en dessous reste
-  // inerte, demande explicite de Jeff : elle défile verticalement, un glissement
-  // horizontal dessus n'est pas un geste de navigation.
+  // Comment c'est fabriqué : un simple défilement horizontal du navigateur, avec
+  // le recalage assuré par le navigateur lui-même. C'est ce qui donne l'inertie de
+  // l'appareil, impossible à imiter correctement à la main.
   //
-  // Comment c'est fabriqué : on dessine 21 jours autour de la date choisie et on
-  // déplace la piste d'un multiple de la largeur d'une case. Au relâcher, on
-  // arrondit au jour le plus proche, on prévient l'écran, et on remet la piste au
-  // repos — les 21 jours sont alors recalculés autour de la nouvelle date, donc
-  // rien ne saute à l'œil.
-  const RAYON_JOURS = 10          // jours dessinés de chaque côté
-  const PLACE_DU_JOUR_CHOISI = 3  // il reste au milieu des 7 cases visibles
+  // Les jours sont dessinés autour d'une ANCRE, pas autour de la date choisie :
+  // taper une date ne doit pas faire sauter la bande sous le doigt. L'ancre ne
+  // bouge que sur une navigation venue d'ailleurs (flèches, vue mois, retour sur
+  // aujourd'hui), et c'est là seulement qu'on repositionne le défilement.
+  const RAYON_JOURS = 60          // jours dessinés de chaque côté de l'ancre
+  const PLACE_DU_JOUR_CHOISI = 3  // l'ancre se pose au milieu des 7 cases visibles
 
+  const [ancre, setAncre] = useState(currentDate)
   const [largeurBande, setLargeurBande] = useState(0)
-  const x = useMotionValue(0)
   const largeurCase = largeurBande / 7
-  const xRepos = -(RAYON_JOURS - PLACE_DU_JOUR_CHOISI) * largeurCase
+  const tapDansLaBande = useRef(false)
 
   // La mesure se fait au moment où la bande apparaît, pas au premier affichage de
   // l'écran : en vue mois elle n'existe pas encore. Mesurée trop tôt, elle valait
-  // zéro et le glissement ne partait jamais.
+  // zéro et le positionnement retombait sur le premier jour dessiné.
+  const bandeEl = useRef<HTMLDivElement | null>(null)
   const surveillant = useRef<ResizeObserver | null>(null)
   const bandeRef = useCallback((el: HTMLDivElement | null) => {
     surveillant.current?.disconnect()
+    bandeEl.current = el
     if (!el) return
     setLargeurBande(el.offsetWidth)
     const ro = new ResizeObserver(() => setLargeurBande(el.offsetWidth))
@@ -209,22 +212,16 @@ export default function MobileCalendar({
     surveillant.current = ro
   }, [])
 
-  useEffect(() => { x.set(xRepos) }, [xRepos, x])
+  useEffect(() => {
+    if (tapDansLaBande.current) { tapDansLaBande.current = false; return }
+    setAncre(currentDate)
+  }, [currentDate])
 
-  const glisseDeJours = useCallback((n: number) => {
-    if (!largeurCase) return
-    if (n === 0) {
-      animate(x, xRepos, { type: 'spring', stiffness: 550, damping: 45 })
-      return
-    }
-    animate(x, xRepos - n * largeurCase, {
-      type: 'spring', stiffness: 550, damping: 45,
-      onComplete: () => {
-        onSelectDate(addDays(currentDate, n))
-        x.set(xRepos)
-      },
-    })
-  }, [largeurCase, xRepos, x, currentDate, onSelectDate])
+  useLayoutEffect(() => {
+    const el = bandeEl.current
+    if (!el || !largeurCase) return
+    el.scrollLeft = (RAYON_JOURS - PLACE_DU_JOUR_CHOISI) * largeurCase
+  }, [ancre, largeurCase])
 
   const { start: dayStart, end: dayEnd } = dayBounds(currentDate)
   const visibleIds = getVisibleIds(resources)
@@ -386,26 +383,13 @@ export default function MobileCalendar({
       ) : (
         <>
           {/* ── Date strip ───────────────────────────────────────────────── */}
-          <div ref={bandeRef} className="flex-shrink-0 bg-white border-b border-gray-100 py-0.5 overflow-hidden">
-            <motion.div
-              className="flex"
-              style={{ x, width: largeurCase * (2 * RAYON_JOURS + 1) }}
-              drag={largeurCase > 0 ? 'x' : false}
-              dragConstraints={{
-                left: xRepos - RAYON_JOURS * largeurCase,
-                right: xRepos + RAYON_JOURS * largeurCase,
-              }}
-              dragElastic={0.08}
-              onDragEnd={(_, info) => {
-                // Combien de cases le doigt a-t-il parcourues ? Un geste court mais
-                // lancé compte quand même pour un jour, sinon un « flick » rapide
-                // ne fait rien et donne l'impression que la bande est bloquée.
-                let n = Math.round((xRepos - x.get()) / largeurCase)
-                if (n === 0 && Math.abs(info.velocity.x) > 450) n = info.velocity.x < 0 ? 1 : -1
-                glisseDeJours(Math.max(-RAYON_JOURS, Math.min(RAYON_JOURS, n)))
-              }}
-            >
-              {Array.from({ length: 2 * RAYON_JOURS + 1 }, (_, i) => addDays(currentDate, i - RAYON_JOURS)).map(day => {
+          <div
+            ref={bandeRef}
+            className="flex-shrink-0 bg-white border-b border-gray-100 py-0.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory"
+            style={{ scrollbarWidth: 'none' }}
+          >
+            <div className="flex" style={{ width: largeurCase * (2 * RAYON_JOURS + 1) }}>
+              {Array.from({ length: 2 * RAYON_JOURS + 1 }, (_, i) => addDays(ancre, i - RAYON_JOURS)).map(day => {
                 const isTd = sameDay(day, today)
                 const isSel = sameDay(day, currentDate)
                 return (
@@ -413,8 +397,8 @@ export default function MobileCalendar({
                     key={day.toISOString()}
                     type="button"
                     style={{ width: largeurCase }}
-                    onClick={() => onSelectDate(day)}
-                    className="shrink-0 flex flex-col items-center gap-0.5 select-none"
+                    onClick={() => { tapDansLaBande.current = true; onSelectDate(day) }}
+                    className="shrink-0 snap-start flex flex-col items-center gap-0.5 select-none"
                   >
                     <span className={`text-[10px] font-medium ${isSel ? 'text-[#111111]' : 'text-gray-400'}`}>
                       {lettreJour(day)}
@@ -430,7 +414,7 @@ export default function MobileCalendar({
                   </button>
                 )
               })}
-            </motion.div>
+            </div>
           </div>
 
           {/* ── Resource chips ───────────────────────────────────────────── */}
