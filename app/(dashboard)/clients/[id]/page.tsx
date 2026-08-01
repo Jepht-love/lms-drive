@@ -243,14 +243,14 @@ export default async function ClientPage({
           <div className="flex items-start gap-3 bg-orange-50 border border-orange-200 rounded-2xl px-4 py-3">
             <AlertTriangle className="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-bold text-orange-800">Dossier incomplet — impossibilité de louer</p>
+              <p className="text-sm font-bold text-orange-800">Dossier incomplet, impossibilité de louer</p>
               <p className="text-xs text-orange-600 mt-0.5">Manque : {missing.join(' · ')}</p>
             </div>
           </div>
         )
       })()}
 
-      {/* Coordonnées manquantes (tél / email) — bandeau bleu distinct : n'empêche
+      {/* Coordonnées manquantes (tél / email), bandeau bleu distinct : n'empêche
           pas de louer, mais utile pour joindre le client / envoyer les liens. */}
       {(() => {
         const missing: string[] = []
@@ -597,7 +597,7 @@ export default async function ClientPage({
             />
           </div>
         )}
-        {/* Pièces importées (import en masse / photo) — vignettes */}
+        {/* Pièces importées (import en masse / photo), vignettes */}
         <div className="mt-3">
           <ClientDocuments clientId={id} docs={clientDocs} />
         </div>

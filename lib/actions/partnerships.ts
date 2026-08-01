@@ -243,18 +243,18 @@ async function bookOperationTransaction(supabase: Awaited<ReturnType<typeof crea
     if ((op.rental_cost ?? 0) > 0) lines.push({
       reference: id, type: 'recette', category: 'mise_a_disposition_sortante',
       amount: op.rental_cost, vehicle_id: op.vehicle_id,
-      notes: `Inter-agences sortant — ${partnerName}`,
+      notes: `Inter-agences sortant · ${partnerName}`,
     })
   } else {
     if ((op.rental_cost ?? 0) > 0) lines.push({
       reference: id, type: 'depense', category: 'location_vehicule_partenaire',
       amount: op.rental_cost, vehicle_id: null,
-      notes: `Inter-agences entrant (coût partenaire) — ${partnerName}`,
+      notes: `Inter-agences entrant (coût partenaire) · ${partnerName}`,
     })
     if ((op.client_price ?? 0) > 0) lines.push({
       reference: `${id}:client`, type: 'recette', category: 'location',
       amount: op.client_price, vehicle_id: null,
-      notes: `Inter-agences entrant (facturé client) — ${partnerName}`,
+      notes: `Inter-agences entrant (facturé client) · ${partnerName}`,
     })
   }
   if (lines.length === 0) return
@@ -401,7 +401,7 @@ export async function startEntrantRental(operationId: string) {
     daily_price: dailyPrice,
     total_price: clientPrice,
     deposit_amount: op.deposit_amount ?? null,
-    internal_notes: `Opération inter-agences entrante — véhicule de l'agence partenaire.`,
+    internal_notes: `Opération inter-agences entrante, véhicule de l'agence partenaire.`,
     created_by: user.id,
   }).select('id').single()
   if (rErr || !reservation) return { error: rErr?.message ?? 'Création de la réservation impossible' }

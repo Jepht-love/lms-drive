@@ -30,17 +30,17 @@ export async function GET(req: NextRequest) {
   let from: string, to: string, periodLabel: string, fileLabel: string
   if (fromParam && toParam) {                       // période libre
     from = fromParam; to = toParam
-    periodLabel = `Bilan — ${fromParam} au ${toParam}`
+    periodLabel = `Bilan · ${fromParam} au ${toParam}`
     fileLabel = `${fromParam}_${toParam}`
   } else if (monthParam) {
     const month = Number(monthParam)
     from = `${year}-${String(month).padStart(2, '0')}-01`
     to = toYMD(new Date(year, month, 0))
-    periodLabel = `Bilan mensuel — ${MONTHS[month - 1]} ${year}`
+    periodLabel = `Bilan mensuel · ${MONTHS[month - 1]} ${year}`
     fileLabel = `${year}-${String(month).padStart(2, '0')}`
   } else {
     from = `${year}-01-01`; to = `${year}-12-31`
-    periodLabel = `Bilan annuel — ${year}`
+    periodLabel = `Bilan annuel · ${year}`
     fileLabel = `${year}`
   }
 

@@ -106,7 +106,7 @@ export async function createReceivable(formData: FormData) {
 
   const notes = (formData.get('notes') as string)?.trim() || null
   const rows = toInsert.map(e => ({
-    description: `Location ${resa.reservation_number} — ${clientName}`,
+    description: `Location ${resa.reservation_number} · ${clientName}`,
     type: 'recette',
     category: 'location',
     amount: e.amount,

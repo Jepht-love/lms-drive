@@ -43,7 +43,7 @@ export async function sendPushToSubscription(
     const service = (() => { try { return new URL(sub.endpoint).host } catch { return 'inconnu' } })()
     const code = err?.statusCode ?? 'sans code'
     if (expired) {
-      console.log(`[push] abonnement périmé (${code}) sur ${service} — il sera retiré`)
+      console.log(`[push] abonnement périmé (${code}) sur ${service}, il sera retiré`)
     } else {
       console.error(`[push] envoi refusé par ${service} (${code}) : ${err?.body ?? err?.message ?? 'raison inconnue'}`)
     }

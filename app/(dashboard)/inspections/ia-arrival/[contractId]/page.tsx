@@ -65,7 +65,7 @@ export default async function IaArrivalInspectionPage({ params }: { params: Prom
         <div>
           <h1 className="text-2xl font-bold text-gray-900">État des lieux de retour</h1>
           <p className="text-gray-500">
-            {vehicle?.brand} {vehicle?.model} — {vehicle?.plate} · retour de {agency?.name ?? 'partenaire'}
+            {vehicle?.brand} {vehicle?.model} · {vehicle?.plate} · retour de {agency?.name ?? 'partenaire'}
           </p>
         </div>
       </div>

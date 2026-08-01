@@ -75,7 +75,7 @@ export default async function AnnualClosingPage({
 
       {isClosed && (
         <div className="flex items-center gap-2 py-3 px-4 bg-green-50 border border-green-100 rounded-2xl text-sm font-semibold text-green-700">
-          <CheckCircle2 className="w-4 h-4" /> Année {year} clôturée — figée
+          <CheckCircle2 className="w-4 h-4" /> Année {year} clôturée, figée
         </div>
       )}
 
@@ -128,7 +128,7 @@ export default async function AnnualClosingPage({
       {!isClosed && (
         closedCount < 12 ? (
           <div className="flex items-center gap-2 py-3 px-4 bg-orange-50 border border-orange-100 rounded-2xl text-sm font-medium text-orange-700">
-            <AlertTriangle className="w-4 h-4 flex-shrink-0" /> {12 - closedCount} mois non clôturé(s) — clôture annuelle indisponible
+            <AlertTriangle className="w-4 h-4 flex-shrink-0" /> {12 - closedCount} mois non clôturé(s), clôture annuelle indisponible
           </div>
         ) : (
           <CloseButton mode="annual" year={year} />
@@ -137,7 +137,7 @@ export default async function AnnualClosingPage({
 
       {isClosed && <ReopenClosingButton mode="annual" year={year} />}
 
-      {/* Mouvements — marquer une ligne transparente la déduit du bilan et des exports ci-dessus */}
+      {/* Mouvements, marquer une ligne transparente la déduit du bilan et des exports ci-dessus */}
       {!isClosed && all.length > 0 && (
         <div>
           <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 px-1">

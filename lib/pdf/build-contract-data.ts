@@ -221,10 +221,10 @@ export async function buildContractPdfData(
   ])
 
   const clientDocs = [
-    idFrontUrl  ? { url: idFrontUrl,  label: 'CNI / Passeport — Recto' } : null,
-    idBackUrl   ? { url: idBackUrl,   label: 'CNI / Passeport — Verso' } : null,
-    licFrontUrl ? { url: licFrontUrl, label: 'Permis de conduire — Recto' } : null,
-    licBackUrl  ? { url: licBackUrl,  label: 'Permis de conduire — Verso' } : null,
+    idFrontUrl  ? { url: idFrontUrl,  label: 'CNI / Passeport · Recto' } : null,
+    idBackUrl   ? { url: idBackUrl,   label: 'CNI / Passeport · Verso' } : null,
+    licFrontUrl ? { url: licFrontUrl, label: 'Permis de conduire · Recto' } : null,
+    licBackUrl  ? { url: licBackUrl,  label: 'Permis de conduire · Verso' } : null,
   ].filter(Boolean) as { url: string; label: string }[]
 
   // Historique des prolongations (depuis l'audit) — détail à rappeler dans le contrat.

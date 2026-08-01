@@ -13,10 +13,10 @@ interface Props {
 }
 
 const DOCS = [
-  { key: 'idFront',  label: "CNI / Passeport — Recto" },
-  { key: 'idBack',   label: "CNI / Passeport — Verso" },
-  { key: 'licFront', label: "Permis de conduire — Recto" },
-  { key: 'licBack',  label: "Permis de conduire — Verso" },
+  { key: 'idFront',  label: "CNI / Passeport · Recto" },
+  { key: 'idBack',   label: "CNI / Passeport · Verso" },
+  { key: 'licFront', label: "Permis de conduire · Recto" },
+  { key: 'licBack',  label: "Permis de conduire · Verso" },
   { key: 'address',  label: "Justificatif de domicile" },
 ] as const
 

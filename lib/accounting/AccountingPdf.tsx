@@ -60,7 +60,7 @@ export function AccountingPdf({ data }: { data: AccountingPdfData }) {
           <View key={i} style={s.row}><Text>{c.label}</Text><Text style={{ fontFamily: 'Helvetica-Bold', color: '#dc2626' }}>{fmt(c.amount)}</Text></View>
         ))}
 
-        <Text style={s.footer}>Document généré le {data.generatedAt} — {data.agencyName}</Text>
+        <Text style={s.footer}>Document généré le {data.generatedAt} · {data.agencyName}</Text>
       </Page>
     </Document>
   )

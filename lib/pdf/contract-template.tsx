@@ -363,7 +363,7 @@ function DamageListMini({ zones }: { zones: DamagedZone[] }) {
           <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: dot(z.severity), marginTop: 2 }} />
           <Text style={{ fontSize: 7, color: '#1e293b', flex: 1 }}>
             <Text style={{ fontFamily: 'Helvetica-Bold' }}>{z.label}</Text>
-            <Text style={{ color: '#64748b' }}>{`  ·  ${sevLabelMini(z.severity)}${z.description ? ` — ${z.description}` : ''}`}</Text>
+            <Text style={{ color: '#64748b' }}>{`  ·  ${sevLabelMini(z.severity)}${z.description ? ` · ${z.description}` : ''}`}</Text>
           </Text>
         </View>
       ))}
@@ -429,7 +429,7 @@ function InspectionPage({ insp, contractNumber, clientName, vehiclePlate, vehicl
             État des lieux de {isDepart ? 'DÉPART' : 'RETOUR'}
           </Text>
           <Text style={s.edlSubtitle}>
-            {vehicleModel} — {vehiclePlate} · Client : {clientName}
+            {vehicleModel} · {vehiclePlate} · Client : {clientName}
           </Text>
         </View>
         <View style={{ textAlign: 'right' }}>
@@ -512,7 +512,7 @@ function InspectionPage({ insp, contractNumber, clientName, vehiclePlate, vehicl
       </View>
 
       <Text fixed style={{ position: 'absolute', bottom: 18, left: 36, right: 36, fontSize: 7, color: '#cbd5e1', textAlign: 'center' }}>
-        {contractNumber} — État des lieux {isDepart ? 'départ' : 'retour'} — LMS Drive
+        {contractNumber} · État des lieux {isDepart ? 'départ' : 'retour'} · LMS Drive
       </Text>
     </Page>
   )
@@ -590,8 +590,8 @@ function EDLComparePage({ dep, arr, contractNumber, clientName, vehiclePlate, ve
     <Page size="A4" style={s.edlPage}>
       <View style={[s.edlHeader, { borderBottomColor: '#0f172a' }]}>
         <View>
-          <Text style={[s.edlTitle, { color: '#0f172a' }]}>Comparatif état des lieux — Départ / Retour</Text>
-          <Text style={s.edlSubtitle}>{vehicleModel} — {vehiclePlate} · Client : {clientName}</Text>
+          <Text style={[s.edlTitle, { color: '#0f172a' }]}>Comparatif état des lieux · Départ / Retour</Text>
+          <Text style={s.edlSubtitle}>{vehicleModel} · {vehiclePlate} · Client : {clientName}</Text>
         </View>
         <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 9, color: '#1e293b' }}>{contractNumber}</Text>
       </View>
@@ -615,7 +615,7 @@ function EDLComparePage({ dep, arr, contractNumber, clientName, vehiclePlate, ve
           → jamais coupées, jamais rejetées seules sur une page). */}
       <View wrap={false} style={{ flexDirection: 'row', gap: 14, marginTop: 8, paddingTop: 6, borderTop: '1px solid #e2e8f0' }}>
         <View style={{ flex: 1, alignItems: 'center' }}>
-          <Text style={{ fontSize: 6, color: '#94a3b8', marginBottom: 1 }}>Signature client — EDL départ</Text>
+          <Text style={{ fontSize: 6, color: '#94a3b8', marginBottom: 1 }}>Signature client · EDL départ</Text>
           {dep.clientSignature ? (
             <Image src={dep.clientSignature} style={{ height: 28, objectFit: 'contain' }} />
           ) : (
@@ -624,7 +624,7 @@ function EDLComparePage({ dep, arr, contractNumber, clientName, vehiclePlate, ve
         </View>
         <View style={{ width: 1, backgroundColor: '#e2e8f0' }} />
         <View style={{ flex: 1, alignItems: 'center' }}>
-          <Text style={{ fontSize: 6, color: '#94a3b8', marginBottom: 1 }}>Signature client — EDL retour</Text>
+          <Text style={{ fontSize: 6, color: '#94a3b8', marginBottom: 1 }}>Signature client · EDL retour</Text>
           {arr.clientSignature ? (
             <Image src={arr.clientSignature} style={{ height: 28, objectFit: 'contain' }} />
           ) : (
@@ -634,7 +634,7 @@ function EDLComparePage({ dep, arr, contractNumber, clientName, vehiclePlate, ve
       </View>
 
       <Text fixed style={{ position: 'absolute', bottom: 14, left: 36, right: 36, fontSize: 7, color: '#cbd5e1', textAlign: 'center' }}>
-        {contractNumber} — Comparatif état des lieux départ / retour — LMS Drive
+        {contractNumber} · Comparatif état des lieux départ / retour · LMS Drive
       </Text>
     </Page>
   )
@@ -649,7 +649,7 @@ function EDLPhotosCompareColumn({ insp }: { insp: InspectionPDFData }) {
     <View style={{ flex: 1 }}>
       <View style={{ backgroundColor: color, borderRadius: 4, paddingVertical: 5, paddingHorizontal: 8, marginBottom: 8 }}>
         <Text style={{ color: '#ffffff', fontFamily: 'Helvetica-Bold', fontSize: 12 }}>
-          {isDepart ? 'DÉPART' : 'RETOUR'} — Photos ({insp.photos.length})
+          {isDepart ? 'DÉPART' : 'RETOUR'} · Photos ({insp.photos.length})
         </Text>
       </View>
       {insp.photos.length > 0 ? (
@@ -672,7 +672,7 @@ function EDLPhotosCompareColumn({ insp }: { insp: InspectionPDFData }) {
           {insp.damagedZones.filter(z => (z.photos?.length ?? 0) > 0).map((z, i) => (
             <View key={i} wrap={false} style={{ marginBottom: 5 }}>
               <Text style={{ fontSize: 6, color: '#1e293b', fontFamily: 'Helvetica-Bold', marginBottom: 1 }}>
-                {z.label}{z.description ? ` — ${z.description}` : ''}
+                {z.label}{z.description ? ` · ${z.description}` : ''}
               </Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 3 }}>
                 {z.photos!.map((url, j) => (
@@ -700,8 +700,8 @@ function EDLPhotosComparePage({ dep, arr, contractNumber, clientName, vehiclePla
     <Page size="A4" style={s.edlPage}>
       <View style={[s.edlHeader, { borderBottomColor: '#0f172a' }]}>
         <View>
-          <Text style={[s.edlTitle, { color: '#0f172a' }]}>Photos — Départ / Retour</Text>
-          <Text style={s.edlSubtitle}>{vehicleModel} — {vehiclePlate} · Client : {clientName}</Text>
+          <Text style={[s.edlTitle, { color: '#0f172a' }]}>Photos · Départ / Retour</Text>
+          <Text style={s.edlSubtitle}>{vehicleModel} · {vehiclePlate} · Client : {clientName}</Text>
         </View>
         <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 9, color: '#1e293b' }}>{contractNumber}</Text>
       </View>
@@ -713,7 +713,7 @@ function EDLPhotosComparePage({ dep, arr, contractNumber, clientName, vehiclePla
       </View>
 
       <Text fixed style={{ position: 'absolute', bottom: 18, left: 36, right: 36, fontSize: 7, color: '#cbd5e1', textAlign: 'center' }}>
-        {contractNumber} — Photos état des lieux départ / retour — LMS Drive
+        {contractNumber} · Photos état des lieux départ / retour · LMS Drive
       </Text>
     </Page>
   )
@@ -746,7 +746,7 @@ export function ContractPDF({ data }: { data: ContractData }) {
         {/* Titre central du document, tout en haut */}
         <Text style={s.docTitle}>Contrat de location</Text>
         {/* Header épuré : logo seul à gauche, référence contrat à droite
-            (SIRET / adresse / sous-titre retirés — ils restent dans l'encart Loueur). */}
+            (SIRET / adresse / sous-titre retirés, ils restent dans l'encart Loueur). */}
         <View style={s.header}>
           <View>
             {logoUrl ? (
@@ -854,7 +854,7 @@ export function ContractPDF({ data }: { data: ContractData }) {
             )}
           </View>
 
-          {/* Le DÉTAIL du prix facturé — c'est lui qui rend le total opposable :
+          {/* Le DÉTAIL du prix facturé, c'est lui qui rend le total opposable :
               le client signe des journées identifiées, pas un montant global. */}
           {(data.priceBreakdown?.length ?? 0) > 0 && (
             <View style={[s.box, { marginTop: 4 }]}>
@@ -863,14 +863,14 @@ export function ContractPDF({ data }: { data: ContractData }) {
               </Text>
               {data.priceBreakdown!.map((l, i) => (
                 <View key={i} style={s.row}>
-                  <Text style={s.label}>{l.label} — {l.detail}</Text>
+                  <Text style={s.label}>{l.label} · {l.detail}</Text>
                   <Text style={s.value}>{fmtMoney(l.amount)}</Text>
                 </View>
               ))}
             </View>
           )}
 
-          {/* Barème du véhicule — les 4 formules des contrats papier 2026.
+          {/* Barème du véhicule, les 4 formules des contrats papier 2026.
               Purement informatif : le montant facturé est le Total TTC ci-dessous. */}
           {(data.priceDayWeek || data.priceDayWeekend || data.priceWeekendFull || data.priceWeek) && (
             <View style={[s.box, { marginTop: 4 }]}>
@@ -914,7 +914,7 @@ export function ContractPDF({ data }: { data: ContractData }) {
             <Text style={s.totalValue}>{fmtMoney(data.totalPrice)}</Text>
           </View>
 
-          {/* Prolongation(s) — mise à jour du prix sans nouvelle signature */}
+          {/* Prolongation(s), mise à jour du prix sans nouvelle signature */}
           {(data.prolongations?.length ?? 0) > 0 && (
             <View style={{ backgroundColor: '#eff6ff', borderRadius: 4, padding: 8, marginTop: 4 }}>
               <Text style={[s.sectionTitle, { color: '#1d4ed8', borderBottom: '1px solid #bfdbfe' }]}>
@@ -1027,7 +1027,7 @@ export function ContractPDF({ data }: { data: ContractData }) {
               )}
               {!arrInsp && (
                 <View style={{ flex: 1, backgroundColor: '#fefce8', borderRadius: 3, padding: 6 }}>
-                  <Text style={{ fontSize: 8, color: '#92400e' }}>ÉTAT DES LIEUX RETOUR — En attente</Text>
+                  <Text style={{ fontSize: 8, color: '#92400e' }}>ÉTAT DES LIEUX RETOUR · En attente</Text>
                 </View>
               )}
             </View>
@@ -1069,7 +1069,7 @@ export function ContractPDF({ data }: { data: ContractData }) {
           </Text>
         </View>
 
-        {/* ══ Conditions générales — 14 articles ══ */}
+        {/* ══ Conditions générales · 14 articles ══ */}
         <View style={s.section}>
           <Text style={s.sectionTitle}>Conditions générales de location</Text>
           {articles.map((art, i) => (
@@ -1083,17 +1083,17 @@ export function ContractPDF({ data }: { data: ContractData }) {
         {/* ══ Clause photo horodatée ══ */}
         <View style={{ backgroundColor: '#eff6ff', borderRadius: 4, padding: 8, marginBottom: 12 }}>
           <Text style={{ fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#1d4ed8', marginBottom: 3 }}>
-            Clause photo horodatée — État des lieux
+            Clause photo horodatée · État des lieux
           </Text>
           <Text style={{ fontSize: 7.5, color: '#1e40af', lineHeight: 1.4 }}>
             {VIDEO_CLAUSE}
           </Text>
         </View>
 
-        {/* ══ Signatures contrat — départ + retour ══ */}
+        {/* ══ Signatures contrat, départ + retour ══ */}
         <View style={s.signaturesRow}>
           <View style={[s.sigBox, hasReturnSig ? { width: '31%' } : {}]}>
-            <Text style={s.sigLabel}>Signature locataire — Départ</Text>
+            <Text style={s.sigLabel}>Signature locataire · Départ</Text>
             {data.clientSignature
               ? <Image src={data.clientSignature} style={s.sigImage} />
               : <View style={{ height: 55 }} />}
@@ -1101,7 +1101,7 @@ export function ContractPDF({ data }: { data: ContractData }) {
           </View>
           {hasReturnSig && (
             <View style={[s.sigBox, { width: '31%' }]}>
-              <Text style={s.sigLabel}>Signature locataire — Retour</Text>
+              <Text style={s.sigLabel}>Signature locataire · Retour</Text>
               <Image src={arrInsp!.clientSignature!} style={s.sigImage} />
               {arrInsp?.signedAt && <Text style={s.sigDate}>Le {fmtDT(arrInsp.signedAt)}</Text>}
             </View>
@@ -1114,7 +1114,7 @@ export function ContractPDF({ data }: { data: ContractData }) {
         </View>
 
         <Text style={{ fontSize: 7, color: '#cbd5e1', textAlign: 'center', marginTop: 16 }}>
-          {data.contractNumber} — LMS Drive — Contrat de location de véhicule
+          {data.contractNumber} · LMS Drive · Contrat de location de véhicule
         </Text>
       </Page>
 

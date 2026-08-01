@@ -94,8 +94,8 @@ export default function IncidentsClient({ incidents, vehicles }: { incidents: In
           <div>
             <label htmlFor="incidentsclient-vehicle_id" className="block text-sm font-medium text-gray-700 mb-1.5">Véhicule *</label>
             <select id="incidentsclient-vehicle_id" name="vehicle_id" required className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white">
-              <option value="">— Choisir —</option>
-              {vehicles.map(v => <option key={v.id} value={v.id}>{v.brand} {v.model} — {v.plate}</option>)}
+              <option value="">· Choisir ·</option>
+              {vehicles.map(v => <option key={v.id} value={v.id}>{v.brand} {v.model} · {v.plate}</option>)}
             </select>
           </div>
           <div>

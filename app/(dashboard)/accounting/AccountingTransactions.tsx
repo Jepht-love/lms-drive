@@ -107,7 +107,7 @@ export default function AccountingTransactions({ transactions }: { transactions:
 
   return (
     <div className="space-y-3">
-      {/* Recherche — filtre la liste de la période affichée */}
+      {/* Recherche, filtre la liste de la période affichée */}
       <div className="relative">
         <label htmlFor="tx-search" className="sr-only">Rechercher une transaction</label>
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300 pointer-events-none" />

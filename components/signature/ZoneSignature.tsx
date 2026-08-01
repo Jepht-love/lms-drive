@@ -45,7 +45,7 @@ export default function ZoneSignature({ label, value, onChange }: Props) {
         <div className="rounded-xl border-2 border-green-200 bg-green-50/60 p-3">
           <div className="flex items-center justify-between mb-1.5">
             <p className="text-xs font-bold text-green-700 flex items-center gap-1.5 uppercase tracking-wide">
-              <Check className="w-3.5 h-3.5" /> {label} — signé
+              <Check className="w-3.5 h-3.5" /> {label}, signé
             </p>
             <button
               type="button"
@@ -70,7 +70,7 @@ export default function ZoneSignature({ label, value, onChange }: Props) {
         </button>
       )}
 
-      {/* Bulle de signature — overlay plein écran, fond verrouillé, zéro
+      {/* Bulle de signature, overlay plein écran, fond verrouillé, zéro
           interférence avec le texte de la page (portail vers <body> pour ne pas
           être piégée par un conteneur en overflow/transform). */}
       {open && typeof document !== 'undefined' && createPortal(

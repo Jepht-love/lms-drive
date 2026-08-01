@@ -82,7 +82,7 @@ export default function DepositInfoEditor({ reservationId, depositMethod, deposi
           onChange={e => setMethod(e.target.value)}
           className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20 bg-white"
         >
-          <option value="">— Non renseigné —</option>
+          <option value="">· Non renseigné ·</option>
           <option value="especes">Espèces</option>
           <option value="virement">Virement</option>
           <option value="cb">Carte bancaire</option>

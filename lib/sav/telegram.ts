@@ -48,7 +48,7 @@ export async function sendSavTelegram(
   const token = process.env.TELEGRAM_BOT_TOKEN?.trim()
   const chatId = process.env.TELEGRAM_CHAT_ID?.trim()
   if (!token || !chatId) {
-    console.warn('[SAV] Telegram non configuré (TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID manquants) — ticket enregistré sans notification.')
+    console.warn('[SAV] Telegram non configuré (TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID manquants), ticket enregistré sans notification.')
     return
   }
 

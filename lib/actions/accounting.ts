@@ -64,7 +64,7 @@ export async function deleteTransaction(transactionId: string) {
     .eq('id', transactionId)
     .single()
   if (!tx) return { error: 'Écriture introuvable' }
-  if (tx.reservation_id) return { error: 'Écriture liée à une réservation — à gérer depuis la réservation.' }
+  if (tx.reservation_id) return { error: 'Écriture liée à une réservation, à gérer depuis la réservation.' }
 
   const locked = await assertPeriodOpen(supabase, tx.date)
   if (locked) return { error: locked }

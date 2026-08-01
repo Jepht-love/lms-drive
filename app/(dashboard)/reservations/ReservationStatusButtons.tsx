@@ -193,7 +193,7 @@ export default function ReservationStatusButtons({
           className="w-full py-2.5 px-3 rounded-xl text-sm font-semibold bg-[#111111] text-white hover:bg-gray-900 flex items-center justify-center gap-2 transition-colors"
         >
           <ClipboardList className="w-4 h-4" />
-          État des lieux retour — rendre le véhicule
+          État des lieux retour, rendre le véhicule
         </button>
       )}
 
@@ -209,7 +209,7 @@ export default function ReservationStatusButtons({
             className="w-full py-2.5 px-3 rounded-xl text-sm font-semibold bg-[#111111] text-white hover:bg-gray-900 flex items-center justify-center gap-2 transition-colors"
           >
             <ClipboardList className="w-4 h-4" />
-            État des lieux retour — rendre le véhicule
+            État des lieux retour, rendre le véhicule
           </button>
         </>
       )}
@@ -229,7 +229,7 @@ export default function ReservationStatusButtons({
           </div>
         ) : (
           <p className="text-xs text-gray-400 text-center py-1">
-            Véhicule rendu — validez le contrat ci-dessous pour libérer la caution
+            Véhicule rendu, validez le contrat ci-dessous pour libérer la caution
           </p>
         )
       )}
@@ -289,7 +289,7 @@ export default function ReservationStatusButtons({
         </div>
       )}
 
-      {/* Panneau acompte — via Drawer : une fenêtre collée en bas avec
+      {/* Panneau acompte, via Drawer : une fenêtre collée en bas avec
           `fixed inset-0` passait SOUS la barre de navigation sur iPhone, et le
           bouton Confirmer devenait inatteignable (ticket « Défaillance » du
           gérant, 27/07/2026). Drawer borne la hauteur, fait défiler le contenu

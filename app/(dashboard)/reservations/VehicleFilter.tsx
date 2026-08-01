@@ -60,7 +60,7 @@ export default function VehicleFilter({
         <option value="">Tous les véhicules</option>
         {vehicles.map(v => (
           <option key={v.id} value={v.id}>
-            {[v.brand, v.model].filter(Boolean).join(' ')} — {v.plate}
+            {[v.brand, v.model].filter(Boolean).join(' ')} · {v.plate}
           </option>
         ))}
       </select>

@@ -65,7 +65,7 @@ export default function SortantConventionFlow({
     {
       icon: <ShieldCheck className="w-4 h-4" />,
       label: 'Convention clôturée',
-      sub: closed ? 'Clôturée — véhicule remis disponible' : canValidate ? 'Les 2 états des lieux sont signés' : 'Requiert les 2 états des lieux signés',
+      sub: closed ? 'Clôturée, véhicule remis disponible' : canValidate ? 'Les 2 états des lieux sont signés' : 'Requiert les 2 états des lieux signés',
       done: closed,
       active: canValidate,
       locked: !canValidate && !closed,

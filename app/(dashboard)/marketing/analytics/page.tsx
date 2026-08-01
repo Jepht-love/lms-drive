@@ -184,7 +184,7 @@ export default async function AnalyticsPage() {
         <h1 className="text-xl font-black text-gray-900">Profil clientèle</h1>
       </div>
 
-      {/* C1 — Tranches d'âge */}
+      {/* C1 · Tranches d'âge */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
         <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-4">Tranches d'âge</p>
         {totalWithAge === 0 ? (
@@ -196,7 +196,7 @@ export default async function AnalyticsPage() {
         )}
       </div>
 
-      {/* C2 — Véhicules les plus demandés */}
+      {/* C2 · Véhicules les plus demandés */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
         <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-4">Top véhicules demandés</p>
         {topVehicles.length === 0 ? (
@@ -214,7 +214,7 @@ export default async function AnalyticsPage() {
         )}
       </div>
 
-      {/* C3 — Activité mensuelle */}
+      {/* C3 · Activité mensuelle */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
         <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-4">Activité mensuelle (12 mois)</p>
         {monthLabels.map((m, i) => (
@@ -222,7 +222,7 @@ export default async function AnalyticsPage() {
         ))}
       </div>
 
-      {/* C4 — Canaux d'acquisition */}
+      {/* C4 · Canaux d'acquisition */}
       {topChannels.length > 0 && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
           <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-4">Canaux d'acquisition</p>
@@ -237,7 +237,7 @@ export default async function AnalyticsPage() {
         </div>
       )}
 
-      {/* C5 — Clients fidèles */}
+      {/* C5 · Clients fidèles */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
         <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-4">Clients fidèles (≥ 3 locations)</p>
         {loyalClients.length === 0 ? (
@@ -263,7 +263,7 @@ export default async function AnalyticsPage() {
         )}
       </div>
 
-      {/* C6 — Segmentation niveaux fidélité */}
+      {/* C6 · Segmentation niveaux fidélité */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
         <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1">Niveaux de fidélité</p>
         <p className="text-[11px] text-gray-400 mb-4">Basé sur le nombre de locations par client</p>
@@ -296,7 +296,7 @@ export default async function AnalyticsPage() {
         <p className="text-[10px] text-gray-400 mt-2">{totalScored} clients avec au moins 1 location</p>
       </div>
 
-      {/* C7 — Secteurs géographiques les plus rentables */}
+      {/* C7 · Secteurs géographiques les plus rentables */}
       {topCities.length > 0 && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
           <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-4">Secteurs géographiques rentables</p>
@@ -315,7 +315,7 @@ export default async function AnalyticsPage() {
         </div>
       )}
 
-      {/* C8b — Coût d'acquisition par canal */}
+      {/* C8b · Coût d'acquisition par canal */}
       {acqCostByChannel.length > 0 && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
           <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1">Coût d'acquisition par canal</p>
@@ -336,7 +336,7 @@ export default async function AnalyticsPage() {
         </div>
       )}
 
-      {/* C9 — CA par canal d'acquisition */}
+      {/* C9 · CA par canal d'acquisition */}
       {roiByChannel.length > 0 && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
           <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1">CA par canal d'acquisition</p>
@@ -358,7 +358,7 @@ export default async function AnalyticsPage() {
         </div>
       )}
 
-      {/* C8 — Habitudes de consommation */}
+      {/* C8 · Habitudes de consommation */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
         <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-4">Habitudes de consommation</p>
         <div className="grid grid-cols-2 gap-3">

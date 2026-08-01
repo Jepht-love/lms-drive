@@ -81,7 +81,7 @@ export default function DailyCloseReconcile({
           Math.abs(v) < 0.01 ? 'bg-green-50 border-green-100 text-green-700' : 'bg-amber-50 border-amber-200 text-amber-800'
         }`}>
           {Math.abs(v) < 0.01
-            ? (<><CheckCircle2 className="w-4 h-4" /> Aucun écart de saisie — caisse juste</>)
+            ? (<><CheckCircle2 className="w-4 h-4" /> Aucun écart de saisie, caisse juste</>)
             : (<><AlertTriangle className="w-4 h-4" /> Écart de saisie : {v > 0 ? '+' : ''}{formatPrice(v)} {v > 0 ? '(réel supérieur au saisi : recette à enregistrer ?)' : '(réel inférieur au saisi : sortie non comptée ?)'}</>)}
         </div>
         <button type="button" onClick={onReopen} disabled={pending}
@@ -98,7 +98,7 @@ export default function DailyCloseReconcile({
     <div className="space-y-3">
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
         <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Rapprochement de caisse</p>
-        <p className="text-xs text-gray-400 mb-3">Saisis l'encaissement réellement compté par mode — l'écart avec le logiciel apparaît en bas.</p>
+        <p className="text-xs text-gray-400 mb-3">Saisis l'encaissement réellement compté par mode, l'écart avec le logiciel apparaît en bas.</p>
         <div className="space-y-2">
           {methods.map(m => (
             <div key={m} className="flex items-center justify-between gap-3">
@@ -107,7 +107,7 @@ export default function DailyCloseReconcile({
                 <span className="text-xs text-gray-400 w-20 text-right">{formatPrice(software[m] ?? 0)}</span>
                 <div className="relative">
                   <input
-                    aria-label={`Montant compté — ${paymentMethodLabel(m)}`}
+                    aria-label={`Montant compté · ${paymentMethodLabel(m)}`}
                     inputMode="decimal"
                     value={counted[m] ?? ''}
                     onChange={e => setCounted(c => ({ ...c, [m]: e.target.value }))}

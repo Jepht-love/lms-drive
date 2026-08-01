@@ -37,7 +37,7 @@ export default function PaymentCountdown({ reservationId, deadline }: Props) {
     return (
       <div className="rounded-2xl bg-red-600 p-5 text-white text-center">
         <p className="text-lg font-extrabold">⏳ Délai dépassé</p>
-        <p className="text-sm mt-1 text-red-100">Acompte non reçu dans les 2 h — à traiter (relancer ou annuler).</p>
+        <p className="text-sm mt-1 text-red-100">Acompte non reçu dans les 2 h, à traiter (relancer ou annuler).</p>
       </div>
     )
   }
@@ -50,7 +50,7 @@ export default function PaymentCountdown({ reservationId, deadline }: Props) {
     <div className={`rounded-2xl p-5 ${urgent ? 'bg-red-600' : 'bg-orange-500'}`}>
       {/* Label */}
       <p className={`text-xs font-bold uppercase tracking-widest mb-3 ${urgent ? 'text-red-200' : 'text-orange-100'}`}>
-        ⏳ Délai de paiement — réservation en attente
+        ⏳ Délai de paiement, réservation en attente
       </p>
 
       {/* Chiffres */}

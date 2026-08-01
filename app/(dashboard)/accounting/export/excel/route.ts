@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
 
   let from: string, to: string, periodLabel: string
   if (fromParam && toParam) {
-    from = fromParam; to = toParam; periodLabel = `${fromParam} — ${toParam}`
+    from = fromParam; to = toParam; periodLabel = `${fromParam} · ${toParam}`
   } else if (monthParam) {
     const month = Number(monthParam)
     from = `${year}-${String(month).padStart(2, '0')}-01`
@@ -70,7 +70,7 @@ export async function GET(req: NextRequest) {
 
   // ── Synthèse — compte de résultat simplifié ───────────────────────────────
   const synth: Row[] = [
-    ['Bilan comptable — LMS Drive'],
+    ['Bilan comptable · LMS Drive'],
     ['Période', periodLabel],
     [],
     ["CHIFFRE D'AFFAIRES", totalRev],
@@ -96,7 +96,7 @@ export async function GET(req: NextRequest) {
 
   // ── Feuille Recettes — sous-totaux par catégorie + détail ─────────────────
   const buildRevenue = (): Row[] => {
-    const aoa: Row[] = [[`Recettes — ${periodLabel}`], [], ['RÉSUMÉ PAR CATÉGORIE'], ['Catégorie', 'Montant (€)']]
+    const aoa: Row[] = [[`Recettes · ${periodLabel}`], [], ['RÉSUMÉ PAR CATÉGORIE'], ['Catégorie', 'Montant (€)']]
     for (const c of REVENUE_CATEGORIES) {
       const t = sum(rev.filter(r => r.category === c.id))
       if (t !== 0) aoa.push([c.label, t])
@@ -117,7 +117,7 @@ export async function GET(req: NextRequest) {
     const list = nature === 'fixe' ? expFixe : expVar
     const fams = EXPENSE_FAMILIES.filter(f => f.nature === nature)
     const title = nature === 'fixe' ? 'CHARGES FIXES' : 'CHARGES VARIABLES'
-    const aoa: Row[] = [[`${title} — ${periodLabel}`], [], ['RÉSUMÉ PAR POSTE'], ['Famille', 'Poste', 'Montant (€)']]
+    const aoa: Row[] = [[`${title} · ${periodLabel}`], [], ['RÉSUMÉ PAR POSTE'], ['Famille', 'Poste', 'Montant (€)']]
     let grand = 0
     for (const fam of fams) {
       const famTxs = list.filter(t => expenseFamily(t.category)?.id === fam.id)

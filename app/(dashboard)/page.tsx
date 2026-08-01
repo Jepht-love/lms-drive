@@ -579,7 +579,7 @@ export default async function DashboardPage() {
             </Link>
           </div>
 
-          {/* PARC TOTAL — noir */}
+          {/* PARC TOTAL, noir */}
           <Link href="/vehicles" className="block active:scale-[.99] transition-transform">
             <div className="bg-[#111111] rounded-3xl p-4">
               <div className="flex items-end justify-between">
@@ -814,7 +814,7 @@ export default async function DashboardPage() {
               </Link>
             </div>
           </div>
-          {/* « Tâches du jour » ne parle QUE d'aujourd'hui — règle de Jeff du
+          {/* « Tâches du jour » ne parle QUE d'aujourd'hui, règle de Jeff du
               30/07/2026. Ce qui date d'un jour passé (retour non rendu, client
               jamais venu chercher) a quitté cette liste : c'est un état qui
               dure, pas une mission du jour, et il vit maintenant dans les
@@ -905,7 +905,7 @@ export default async function DashboardPage() {
                 ? `/reservations/${r.id}?from=accueil`
                 : retourEventId
                   ? `/calendrier?event=${retourEventId}`
-                  : assignCreateHref(`Préparer retour — ${v ? `${v.brand} ${v.model}` : ''}`.trim(), r.end_datetime, v?.id, c?.id)
+                  : assignCreateHref(`Préparer retour · ${v ? `${v.brand} ${v.model}` : ''}`.trim(), r.end_datetime, v?.id, c?.id)
               return (
                 <Link key={r.id} href={retourHref}>
                   <div className={`flex items-center gap-4 px-4 py-4 transition-colors ${
@@ -1042,8 +1042,8 @@ export default async function DashboardPage() {
         )}
       </section>
 
-      {/* ═══ 2a. ALERTES — résumé compact + lien vers la page complète ══════ */}
-      {/* B — alertes toujours visibles */}
+      {/* ═══ 2a. ALERTES, résumé compact + lien vers la page complète ══════ */}
+      {/* B, alertes toujours visibles */}
       {(()=>{
         if (alerts.length === 0) return (
           <section>

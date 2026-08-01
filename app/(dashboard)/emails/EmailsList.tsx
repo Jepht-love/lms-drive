@@ -72,11 +72,11 @@ export default function EmailsList({ logs }: { logs: EmailLog[] }) {
               </div>
               <p className="text-sm font-semibold text-gray-900 truncate">{log.subject}</p>
               <p className="text-xs text-gray-400 mt-0.5">
-                {c ? `${c.first_name} ${c.last_name} — ` : ''}{log.recipient}
+                {c ? `${c.first_name} ${c.last_name} · ` : ''}{log.recipient}
               </p>
               {failed && (
                 <p className="text-xs text-red-500 mt-1.5 flex items-center gap-1">
-                  <MailWarning className="w-3.5 h-3.5" /> Échec d'envoi{log.error ? ` — ${log.error}` : ''}
+                  <MailWarning className="w-3.5 h-3.5" /> Échec d'envoi{log.error ? ` · ${log.error}` : ''}
                 </p>
               )}
             </button>
@@ -90,7 +90,7 @@ export default function EmailsList({ logs }: { logs: EmailLog[] }) {
                 <Detail
                   icon={failed ? MailWarning : Mail}
                   label="Statut"
-                  value={failed ? `Échec${log.error ? ` — ${log.error}` : ''}` : 'Envoyé avec succès'}
+                  value={failed ? `Échec${log.error ? ` · ${log.error}` : ''}` : 'Envoyé avec succès'}
                   valueClass={failed ? 'text-red-600' : 'text-emerald-600'}
                 />
                 <div>

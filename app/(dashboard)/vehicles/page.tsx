@@ -308,7 +308,7 @@ export default async function VehiclesPage({
         })}
       </div>
 
-      {/* Filtres maintenance — quoi faire passer au garage / vidange / pneus / dégradé */}
+      {/* Filtres maintenance, quoi faire passer au garage / vidange / pneus / dégradé */}
       {hasNeeds && (
         <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}>
           {MAINTENANCE_CATEGORIES.map(cat => {

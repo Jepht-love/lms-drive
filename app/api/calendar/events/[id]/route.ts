@@ -48,7 +48,7 @@ async function logDeniedTaskChange(
     action,
     entityType: 'calendar_events',
     entityId: eventId,
-    summary: `Tentative de ${attempt} d'une tâche refusée (employé) — « ${ev?.title ?? 'tâche'} »`,
+    summary: `Tentative de ${attempt} d'une tâche refusée (employé) · « ${ev?.title ?? 'tâche'} »`,
   })
   return NextResponse.json(
     { error: "Cette action n'est pas autorisée : seul le gérant ou un associé peut modifier, déplacer ou supprimer une tâche." },

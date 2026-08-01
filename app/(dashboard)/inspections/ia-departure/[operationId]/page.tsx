@@ -73,7 +73,7 @@ export default async function IaDepartureInspectionPage({ params }: { params: Pr
         <div>
           <h1 className="text-2xl font-bold text-gray-900">État des lieux de départ</h1>
           <p className="text-gray-500">
-            {vehicle?.brand} {vehicle?.model} — {vehicle?.plate} · mise à disposition {agency?.name ?? 'partenaire'}
+            {vehicle?.brand} {vehicle?.model} · {vehicle?.plate} · mise à disposition {agency?.name ?? 'partenaire'}
           </p>
         </div>
       </div>

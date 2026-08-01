@@ -27,7 +27,7 @@ export default function LmsLogo({ size = 'md', variant = 'full' }: LmsLogoProps)
 
   return (
     <svg width={Math.round(120 * s)} height={Math.round(40 * s)} viewBox="0 0 120 40" fill="none">
-      {/* Texte "lms" en style cursif — tracé SVG */}
+      {/* Texte "lms" en style cursif, tracé SVG */}
       {/* L */}
       <path
         d="M4 8 Q3.5 8 3 9 L3 28 Q3 30 5 30 L12 30"
@@ -54,7 +54,7 @@ export default function LmsLogo({ size = 'md', variant = 'full' }: LmsLogoProps)
       {/* Séparateur */}
       <line x1="40" y1="10" x2="40" y2="32" stroke="#2A2A2A" strokeWidth="1"/>
 
-      {/* DRIVE — lettrage propre */}
+      {/* DRIVE, lettrage propre */}
       <text
         x="46" y="25"
         fill="white"

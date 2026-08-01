@@ -519,7 +519,7 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
                   ) : (
                     <span className="text-[11px] text-gray-300 italic">
                       {r.contract_number
-                        ? `${r.contract_number} — PDF non généré`
+                        ? `${r.contract_number} · PDF non généré`
                         : (r.kind === 'convention' ? 'Aucune convention' : 'Aucun contrat')}
                     </span>
                   )}
@@ -762,7 +762,7 @@ export default function DocumentsClient({ documents, vehicles, clients, partners
         </div>
       </Drawer>
 
-      {/* Visualiseur intégré — fenêtre centrée : on voit le document sans quitter
+      {/* Visualiseur intégré, fenêtre centrée : on voit le document sans quitter
           l'app, la liste reste visible derrière, et le X referme la
           prévisualisation. Centrée (et non collée en bas) depuis le 29/07/2026,
           comme toutes les fenêtres de l'application. */}

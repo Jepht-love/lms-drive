@@ -103,7 +103,7 @@ export default function MemberTabsEditor({
           })}
         </div>
         {tabs.length === 0 && (
-          <p className="text-xs font-semibold text-amber-600">Aucun onglet coché — le membre n&apos;aura accès à aucune section.</p>
+          <p className="text-xs font-semibold text-amber-600">Aucun onglet coché, le membre n&apos;aura accès à aucune section.</p>
         )}
       </div>
 

@@ -74,14 +74,14 @@ export async function POST(req: Request) {
   // la migration 017 n'est pas exécutée (n'empêche pas la création du membre).
   try {
     await admin.from('profiles').update({ allowed_tabs: allowedTabs }).eq('id', data.user.id)
-  } catch { /* colonne allowed_tabs absente — ignoré */ }
+  } catch { /* colonne allowed_tabs absente, ignoré */ }
 
   // Permissions fines (catégories documents + bloc flotte) — best-effort (migration 020).
   try {
     await admin.from('profiles')
       .update({ allowed_doc_categories: allowedDocCats, can_view_fleet: canViewFleet })
       .eq('id', data.user.id)
-  } catch { /* colonnes absentes — ignoré */ }
+  } catch { /* colonnes absentes, ignoré */ }
 
   // Envoi de l'invitation via Resend. Le lien pointe directement sur notre
   // route /auth/confirm avec le token haché : vérification côté serveur

@@ -70,7 +70,7 @@ async function deleteTask(id: string) {
       action: 'task_delete_denied',
       entityType: 'tasks',
       entityId: id,
-      summary: `Tentative de suppression d'une tâche refusée (employé) — « ${t?.title ?? 'tâche'} »`,
+      summary: `Tentative de suppression d'une tâche refusée (employé) · « ${t?.title ?? 'tâche'} »`,
     })
     redirect(`/calendar/tasks/${id}?denied=suppression`)
   }

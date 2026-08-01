@@ -48,7 +48,7 @@ export default function SavList({ tickets }: { tickets: Ticket[] }) {
           <Bug className="w-4 h-4 text-white" />
         </div>
         <div>
-          <h1 className="text-xl font-black text-[#111111] leading-none">SAV — Tickets</h1>
+          <h1 className="text-xl font-black text-[#111111] leading-none">SAV · Tickets</h1>
           <p className="text-xs text-gray-400 mt-1">{newCount} nouveau{newCount > 1 ? 'x' : ''} · {tickets.length} au total</p>
         </div>
       </div>

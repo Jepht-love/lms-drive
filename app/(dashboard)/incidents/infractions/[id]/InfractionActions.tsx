@@ -115,7 +115,7 @@ export default function InfractionActions({
         </div>
       )}
 
-      {/* Recouvrement — amende avancée par l'agence à récupérer sur le client */}
+      {/* Recouvrement, amende avancée par l'agence à récupérer sur le client */}
       {paidBy === 'agence' && hasDebtor && (
         <div className="rounded-2xl border border-gray-100 bg-white p-3 space-y-2.5">
           <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Recouvrement client</p>

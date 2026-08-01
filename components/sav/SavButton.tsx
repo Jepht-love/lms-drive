@@ -116,7 +116,7 @@ export default function SavButton() {
 
   return (
     <>
-      {/* Bouton flottant — présent sur toutes les pages */}
+      {/* Bouton flottant, présent sur toutes les pages */}
       <button
         type="button"
         onClick={openForm}

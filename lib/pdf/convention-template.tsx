@@ -48,12 +48,12 @@ function fmtPrice(n?: number | null) {
 // Clauses de mise à disposition inter-agences — mêmes termes que l'aperçu écran.
 function conventionClauses(partnerName: string, depositAmount: number) {
   return [
-    { title: '1 — Objet', body: `Le propriétaire met le véhicule désigné ci-dessus à la disposition de ${partnerName} (le bénéficiaire) pour la période indiquée, dans le cadre d'une coopération inter-agences.` },
-    { title: "2 — Restitution dans l'état", body: `Le bénéficiaire s'engage à restituer le véhicule dans l'état constaté à l'état des lieux de départ, propre et avec le même niveau de carburant, sauf usure normale.` },
-    { title: '3 — Responsabilité & sinistres', body: `Pendant toute la durée de la mise à disposition, le bénéficiaire est responsable du véhicule. Tout dommage, infraction ou sinistre survenu durant cette période est à sa charge et constaté à l'état des lieux de retour.` },
-    { title: '4 — Assurance', body: `Le bénéficiaire garantit que le véhicule est couvert par une assurance valide pendant la mise à disposition, et fait son affaire de toute déclaration nécessaire en cas de sinistre.` },
-    { title: '5 — Caution', body: `Une caution de ${fmtPrice(depositAmount)} peut être retenue en garantie de la bonne restitution du véhicule et de la couverture d'éventuels frais (dommages, carburant, kilométrage).` },
-    { title: '6 — États des lieux', body: `Les états des lieux de départ et de retour, photos horodatées à l'appui, font foi entre les parties pour constater l'état du véhicule à la remise et à la reprise.` },
+    { title: '1 · Objet', body: `Le propriétaire met le véhicule désigné ci-dessus à la disposition de ${partnerName} (le bénéficiaire) pour la période indiquée, dans le cadre d'une coopération inter-agences.` },
+    { title: "2 · Restitution dans l'état", body: `Le bénéficiaire s'engage à restituer le véhicule dans l'état constaté à l'état des lieux de départ, propre et avec le même niveau de carburant, sauf usure normale.` },
+    { title: '3 · Responsabilité & sinistres', body: `Pendant toute la durée de la mise à disposition, le bénéficiaire est responsable du véhicule. Tout dommage, infraction ou sinistre survenu durant cette période est à sa charge et constaté à l'état des lieux de retour.` },
+    { title: '4 · Assurance', body: `Le bénéficiaire garantit que le véhicule est couvert par une assurance valide pendant la mise à disposition, et fait son affaire de toute déclaration nécessaire en cas de sinistre.` },
+    { title: '5 · Caution', body: `Une caution de ${fmtPrice(depositAmount)} peut être retenue en garantie de la bonne restitution du véhicule et de la couverture d'éventuels frais (dommages, carburant, kilométrage).` },
+    { title: '6 · États des lieux', body: `Les états des lieux de départ et de retour, photos horodatées à l'appui, font foi entre les parties pour constater l'état du véhicule à la remise et à la reprise.` },
   ]
 }
 

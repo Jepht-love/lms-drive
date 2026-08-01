@@ -27,7 +27,7 @@ export default function TaskTypeField({ inputClassName, labelClassName }: { inpu
       <div>
         <label htmlFor="tasktypefield-type" className={labelClassName}>Type</label>
         <select id="tasktypefield-type" name="type" className={inputClassName} value={type} onChange={e => setType(e.target.value)}>
-          <option value="">— Sélectionner —</option>
+          <option value="">· Sélectionner ·</option>
           {TYPES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
         </select>
       </div>

@@ -302,7 +302,7 @@ export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, onD
                     {z.label}
                   </text>
                 )}
-                {/* Badge DÉPART — cercle orange « D » */}
+                {/* Badge DÉPART, cercle orange « D » */}
                 {(style.badgeType === 'departure' || style.badgeType === 'both') && (
                   <g style={{ pointerEvents: 'none' }}>
                     <circle cx={dCx} cy={by} r={13} fill="#F97316" stroke="white" strokeWidth={2} />
@@ -311,7 +311,7 @@ export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, onD
                     </text>
                   </g>
                 )}
-                {/* Badge RETOUR — cercle rouge « R » */}
+                {/* Badge RETOUR, cercle rouge « R » */}
                 {(style.badgeType === 'return' || style.badgeType === 'both') && (
                   <g style={{ pointerEvents: 'none' }}>
                     <circle cx={bx} cy={by} r={13} fill="#EF4444" stroke="white" strokeWidth={2} />
@@ -340,7 +340,7 @@ export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, onD
           )}
         </div>
 
-        {/* Légende couleurs — visible dès qu'un dommage départ ou retour existe */}
+        {/* Légende couleurs, visible dès qu'un dommage départ ou retour existe */}
         {(anyDep || anyRet) && (
           <div style={{
             display: 'flex',
@@ -389,7 +389,7 @@ export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, onD
             )}
           </div>
 
-          {/* Photos de l'élément — constat d'état indépendant d'un dommage. Au
+          {/* Photos de l'élément, constat d'état indépendant d'un dommage. Au
               RETOUR : comparaison Départ | Retour côte à côte, en grand sur
               iPad/ordinateur. */}
           <div className="rounded-xl border border-gray-100 bg-gray-50/70 p-3">
@@ -507,12 +507,12 @@ export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, onD
             </div>
           )}
 
-          {/* Dommages existants — appuyer sur un dommage recharge ses options dans
+          {/* Dommages existants, appuyer sur un dommage recharge ses options dans
               le formulaire pour le corriger (retour en arrière sur la gravité, etc.). */}
           {existing.length > 0 && (
             <div className="space-y-2">
               <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
-                Dommages saisis — appuyez pour modifier
+                Dommages saisis, appuyez pour modifier
               </p>
               {existing.map((e, i) => {
                 const g = GRAVITES.find(g => g.id === e.severity)
@@ -643,11 +643,11 @@ export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, onD
         </div>
       )}
 
-      {/* Input photo de l'élément — monté en permanence pour être accessible
+      {/* Input photo de l'élément, monté en permanence pour être accessible
           depuis le bouton de la barre (vue zoomée) comme du panneau. */}
       <input ref={zoneFileRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={onZonePhotoInput} />
 
-      {/* Lightbox plein écran — photo de départ agrandie */}
+      {/* Lightbox plein écran, photo de départ agrandie */}
       <PhotoLightbox
         src={lightboxSrc ?? ''}
         open={!!lightboxSrc}

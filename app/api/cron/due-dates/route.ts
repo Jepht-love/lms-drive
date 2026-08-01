@@ -141,7 +141,7 @@ export async function GET(request: NextRequest) {
   }
   if (loyers.length) {
     const quand = nomsJours.join(', ') + (joursNonCites > 0 ? `, +${joursNonCites}` : '')
-    lignes.push(`À payer : ${loyers.length} · ${formatAmount(somme(loyers))} — ${quand}`)
+    lignes.push(`À payer : ${loyers.length} · ${formatAmount(somme(loyers))} · ${quand}`)
   }
   // Les créances ne sont PLUS dans ce message : chacune part dans sa propre
   // notification, nominative (décision de Jeff du 28/07/2026). Le résumé global
@@ -152,7 +152,7 @@ export async function GET(request: NextRequest) {
   // 1. Le résumé de ce que l'agence doit payer. Il n'est envoyé que s'il a
   //    quelque chose à dire : une semaine sans loyer ni retard ne produit rien.
   if (lignes.length) {
-    const title = enRetard.length ? '📅 Échéances — dont des retards' : '📅 Échéances de la semaine'
+    const title = enRetard.length ? '📅 Échéances, dont des retards' : '📅 Échéances de la semaine'
     const body = lignes.join('\n')
     await supabase.from('notifications').insert({
       user_id: null,

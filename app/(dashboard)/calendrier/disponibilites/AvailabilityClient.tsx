@@ -319,7 +319,7 @@ function AvailabilityScheduler({ profiles }: { profiles: Profile[] }) {
         </button>
       </div>
 
-      {/* M — navigateur rapide : saut à une date */}
+      {/* M, navigateur rapide : saut à une date */}
       <div className="flex items-center gap-2 mb-3">
         <DatePickerField
           value={format(weekStart, 'yyyy-MM-dd')}

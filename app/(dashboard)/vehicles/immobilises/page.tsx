@@ -124,7 +124,7 @@ export default async function ImmobilisesPage() {
             if (trip && !IMMOBILISES_STATUSES.includes(v.status)) {
               href = '/internal-trips'
               reasonIcon = <Briefcase className="w-4 h-4 text-indigo-500" />
-              reasonText = `Déplacement — ${internalTripPurposeLabel(trip.purpose, trip.purposeNotes)}`
+              reasonText = `Déplacement · ${internalTripPurposeLabel(trip.purpose, trip.purposeNotes)}`
               reasonSub = trip.endAt ? `retour prévu le ${formatDate(trip.endAt, "dd/MM 'à' HH:mm")}` : 'en cours'
             }
 
@@ -132,7 +132,7 @@ export default async function ImmobilisesPage() {
               href = `/incidents/sinistres/${accident.id}`
               reasonIcon = <AlertTriangle className="w-4 h-4 text-red-500" />
               reasonText = 'Sinistre en cours'
-              reasonSub = `${formatDate(accident.accident_date)} — ${(accident.description ?? '').slice(0, 60)}`
+              reasonSub = `${formatDate(accident.accident_date)} · ${(accident.description ?? '').slice(0, 60)}`
             } else if (maint) {
               href = `/maintenance/${v.id}`
               reasonIcon = <Wrench className="w-4 h-4 text-amber-500" />
@@ -150,7 +150,7 @@ export default async function ImmobilisesPage() {
                     {v.brand} {v.model} <span className="text-gray-300 font-mono text-xs">· {v.plate}</span>
                   </p>
                   <p className="text-xs text-gray-400 mt-0.5 truncate">
-                    {reasonText}{reasonSub ? ` — ${reasonSub}` : ''}
+                    {reasonText}{reasonSub ? ` · ${reasonSub}` : ''}
                   </p>
                 </div>
                 <ChevronRight className="w-4 h-4 text-gray-200 flex-shrink-0" />

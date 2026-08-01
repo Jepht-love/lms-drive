@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
       .limit(1)
       .maybeSingle()
 
-    if (!contract) return NextResponse.json({ error: 'Convention introuvable — ouvrez d\'abord la convention' }, { status: 404 })
+    if (!contract) return NextResponse.json({ error: 'Convention introuvable, ouvrez d\'abord la convention' }, { status: 404 })
 
     const vehicle = Array.isArray(op.vehicles) ? op.vehicles[0] : op.vehicles
     const partner = Array.isArray(op.partner_agencies) ? op.partner_agencies[0] : op.partner_agencies

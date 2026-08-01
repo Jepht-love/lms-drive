@@ -45,7 +45,7 @@ export async function deleteClient(id: string) {
 
   const { error } = await supabase.from('clients').delete().eq('id', id)
   if (error) {
-    if (error.code === '23503') return { error: 'Ce client a des réservations ou documents associés — suppression impossible. Archivez ou supprimez-les d\'abord.' }
+    if (error.code === '23503') return { error: 'Ce client a des réservations ou documents associés, suppression impossible. Archivez ou supprimez-les d\'abord.' }
     return { error: error.message }
   }
 

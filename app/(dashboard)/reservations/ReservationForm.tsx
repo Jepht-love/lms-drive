@@ -208,7 +208,7 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
                 required
                 className={selectClass}
               >
-                <option value="">— Choisir un véhicule —</option>
+                <option value="">· Choisir un véhicule ·</option>
                 {vehicles.map(v => {
                   const pris = datesSaisies ? busy[v.id] : undefined
                   // « Pris » ne suffit pas : le gérant a besoin de savoir QUAND la
@@ -222,8 +222,8 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
                   return (
                     <option key={v.id} value={v.id}>
                       {pris ? '● ' : datesSaisies ? '○ ' : ''}
-                      {v.brand} {v.model} — {v.plate} {v.daily_price ? `(${v.daily_price}€/j)` : ''}
-                      {detail ? ` — ${detail}` : ''}
+                      {v.brand} {v.model} · {v.plate} {v.daily_price ? `(${v.daily_price}€/j)` : ''}
+                      {detail ? ` · ${detail}` : ''}
                     </option>
                   )
                 })}
@@ -286,7 +286,7 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
                     id="client_search"
                     type="text"
                     placeholder="Rechercher par nom ou téléphone..."
-                    value={selectedClient ? `${selectedClient.first_name} ${selectedClient.last_name} — ${selectedClient.phone}` : clientQuery}
+                    value={selectedClient ? `${selectedClient.first_name} ${selectedClient.last_name} · ${selectedClient.phone}` : clientQuery}
                     onChange={e => { setSelectedClientId(''); setClientQuery(e.target.value); setShowClientResults(true) }}
                     onFocus={() => setShowClientResults(true)}
                     onBlur={() => setTimeout(() => {
@@ -306,7 +306,7 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
                           onClick={() => { setSelectedClientId(c.id); setClientQuery(''); setShowClientResults(false) }}
                           className="w-full px-3 py-2 text-left text-sm hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                         >
-                          {c.status === 'blackliste' ? '⚠ ' : ''}{c.first_name} {c.last_name} — {c.phone}
+                          {c.status === 'blackliste' ? '⚠ ' : ''}{c.first_name} {c.last_name} · {c.phone}
                         </button>
                       ))}
                     </div>
@@ -315,12 +315,12 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
               )}
             </div>
 
-            {/* Dossier incomplet — alerte + confirmation avant création (client existant) */}
+            {/* Dossier incomplet, alerte + confirmation avant création (client existant) */}
             {missingFields.length > 0 && (
               <div className="flex items-start gap-3 rounded-md border border-orange-200 bg-orange-50 px-3 py-2.5">
                 <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-orange-500" />
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-bold text-orange-800">Dossier incomplet — impossibilité de louer</p>
+                  <p className="text-xs font-bold text-orange-800">Dossier incomplet, impossibilité de louer</p>
                   <p className="mt-0.5 text-[11px] text-orange-600">Manquant : {missingFields.join(', ')}</p>
                   <label className="mt-2 flex cursor-pointer select-none items-start gap-2">
                     <input
@@ -449,7 +449,7 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
             <div>
               <Label htmlFor="deposit_method" className={labelClass}>Mode caution</Label>
               <select id="deposit_method" name="deposit_method" className={selectClass}>
-                <option value="">— Choisir —</option>
+                <option value="">· Choisir ·</option>
                 <option value="especes">Espèces</option>
                 <option value="virement">Virement</option>
                 <option value="cb">Carte bancaire</option>
@@ -477,7 +477,7 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
             </div>
           </div>
 
-          {/* Rappel des règles tarifaires — repris de « Modifier les dates & tarif ». */}
+          {/* Rappel des règles tarifaires, repris de « Modifier les dates & tarif ». */}
           {(rates?.price_day_weekend || rates?.price_weekend_full || rates?.weekly_price) && (
             <div className="mt-4 space-y-1">
               {!!rates?.price_day_weekend && (

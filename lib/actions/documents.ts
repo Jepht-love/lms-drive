@@ -407,7 +407,7 @@ export async function sendDocumentByEmail(
   await resend.emails.send({
     from: RESEND_FROM,
     to: resendTo(recipientEmail),
-    subject: `Document LMS Agency — ${doc.name}`,
+    subject: `Document LMS Agency · ${doc.name}`,
     html: `
       <p>Bonjour,</p>
       ${message ? `<p>${message}</p>` : ''}
@@ -439,7 +439,7 @@ export async function archiveContractDocument(opts: {
   await supabase.from('documents').insert({
     category: 'client',
     subcategory: 'contrat_location',
-    name: `Contrat ${opts.contractNumber} — ${opts.clientName}`,
+    name: `Contrat ${opts.contractNumber} · ${opts.clientName}`,
     file_url: opts.fileUrl,
     file_type: 'application/pdf',
     entity_id: opts.clientId,
@@ -467,7 +467,7 @@ export async function archiveInfractionDocument(opts: {
   await supabase.from('documents').insert({
     category: 'vehicule',
     subcategory: 'autres',
-    name: `Infraction ${dateAgence(opts.infractionDate)} — ${opts.vehiclePlate}`,
+    name: `Infraction ${dateAgence(opts.infractionDate)} · ${opts.vehiclePlate}`,
     file_url: opts.documentUrl,
     entity_id: opts.vehicleId,
     entity_type: 'vehicle',

@@ -57,7 +57,7 @@ export default async function CreancesPage() {
     const arrondi = (n: number) => Math.round(n * 100) / 100
     return {
       id: r.id,
-      label: `${r.reservation_number} — ${client}${veh ? ` · ${veh}` : ''}`,
+      label: `${r.reservation_number} · ${client}${veh ? ` · ${veh}` : ''}`,
       remaining: arrondi(Math.max(0, totalPrice - paid - enCreance)),
       totalPrice: arrondi(totalPrice),
       paid: arrondi(paid),
@@ -134,7 +134,7 @@ export default async function CreancesPage() {
                     </div>
                     <p className={`text-[11px] mt-1 flex items-center gap-1 font-semibold ${isOverdue ? 'text-red-500' : 'text-gray-500'}`}>
                       <CalendarDays className="w-3 h-3" />
-                      Échéance {formatDate(d.due_date)}{isOverdue ? ' — dépassée' : ''}
+                      Échéance {formatDate(d.due_date)}{isOverdue ? ', dépassée' : ''}
                     </p>
                   </div>
                   <p className="text-sm font-black text-gray-900 flex-shrink-0">{formatPrice(d.amount)}</p>

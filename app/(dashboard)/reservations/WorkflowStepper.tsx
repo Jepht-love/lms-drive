@@ -118,9 +118,9 @@ export default function WorkflowStepper({
       icon: <ShieldCheck className="w-4 h-4" />,
       label: 'Contrat validé & clôturé',
       sublabel: step4Done
-        ? 'Contrat clôturé — caution libérable'
+        ? 'Contrat clôturé, caution libérable'
         : canValidate
-          ? 'Les 2 états des lieux sont signés — vous pouvez valider'
+          ? 'Les 2 états des lieux sont signés, vous pouvez valider'
           : 'Requiert les 2 états des lieux signés',
       done: step4Done,
       active: canValidate,
@@ -165,7 +165,7 @@ export default function WorkflowStepper({
                 }`}>
                   {step.label}
                 </p>
-                {/* Bouton corriger EDL — pattern idle → confirm */}
+                {/* Bouton corriger EDL, pattern idle → confirm */}
                 {step.resetTarget && (
                   confirmReset === step.num ? (
                     <div className="flex items-center gap-1.5">
@@ -226,7 +226,7 @@ export default function WorkflowStepper({
       {step4Done && (
         <div className="mt-4 pt-4 border-t border-gray-100 flex items-center gap-2 text-emerald-700">
           <ShieldCheck className="w-4 h-4 flex-shrink-0" />
-          <p className="text-xs font-medium">Contrat clôturé — la caution peut être libérée</p>
+          <p className="text-xs font-medium">Contrat clôturé, la caution peut être libérée</p>
         </div>
       )}
     </div>

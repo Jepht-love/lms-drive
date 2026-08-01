@@ -71,7 +71,7 @@ export default async function MarketingDashboardPage() {
         <h1 className="text-xl font-black text-gray-900">Dashboard performances</h1>
       </div>
 
-      {/* D3 — KPIs image de marque */}
+      {/* D3 · KPIs image de marque */}
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 text-center">
           <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1">Clients actifs</p>
@@ -94,10 +94,10 @@ export default async function MarketingDashboardPage() {
         </div>
       </div>
 
-      {/* Charts — client component */}
+      {/* Charts, client component */}
       <MarketingCharts monthlyData={monthlyData} channelData={channelData} />
 
-      {/* D2 — Tableau canaux */}
+      {/* D2 · Tableau canaux */}
       {channelData.length > 0 && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
           <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-4">Performance par canal</p>

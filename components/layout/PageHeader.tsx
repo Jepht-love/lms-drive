@@ -33,7 +33,7 @@ export default function PageHeader({ title }: PageHeaderProps) {
           priority
         />
 
-        {/* Droite : espace symétrique pour centrer le logo (cloche retirée —
+        {/* Droite : espace symétrique pour centrer le logo (cloche retirée ·
             l'onglet Alertes de la barre du bas est l'unique point d'entrée). */}
         <div className="w-20" />
       </div>

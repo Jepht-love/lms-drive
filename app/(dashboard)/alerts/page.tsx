@@ -40,7 +40,7 @@ function AlertGroup({
         <h2 className="text-[11px] font-bold uppercase tracking-widest text-gray-400">
           {title}
         </h2>
-        <span className="text-[10px] font-black text-gray-400">— {items.length}</span>
+        <span className="text-[10px] font-black text-gray-400">· {items.length}</span>
       </div>
       <AnimatedList className="space-y-2">
         {items.map(alert => (

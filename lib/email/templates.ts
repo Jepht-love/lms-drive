@@ -171,7 +171,7 @@ export function contractDepartEmail(p: Partie & { totalPrice?: number | null }):
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${CREME};border-radius:10px;padding:6px 18px;margin:0 0 22px;">
       <tr><td>
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-          ${ligneDetail('Véhicule', `${vehicule}${plaque ? ` — ${plaque}` : ''}`)}
+          ${ligneDetail('Véhicule', `${vehicule}${plaque ? ` · ${plaque}` : ''}`)}
           ${ligneDetail('Départ', fmtDateTime(p.startDatetime))}
           ${ligneDetail('Retour prévu', fmtDateTime(p.endDatetime))}
           ${p.totalPrice != null ? ligneDetail('Montant total', fmtPrix(p.totalPrice)) : ''}
@@ -188,7 +188,7 @@ export function contractDepartEmail(p: Partie & { totalPrice?: number | null }):
   return {
     subject: `Votre contrat de location ${p.contractNumber}`,
     html: layout({
-      preheader: `Votre contrat de location ${p.contractNumber} est confirmé — LMS Drive`,
+      preheader: `Votre contrat de location ${p.contractNumber} est confirmé · LMS Drive`,
       refLabel: 'Contrat de location',
       refValue: `N° ${p.contractNumber}`,
       body,
@@ -218,7 +218,7 @@ export function contractRetourEmail(p: Partie & { hasInvoice: boolean }): {
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${CREME};border-radius:10px;padding:6px 18px;margin:0 0 22px;">
       <tr><td>
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-          ${ligneDetail('Véhicule', `${vehicule}${plaque ? ` — ${plaque}` : ''}`)}
+          ${ligneDetail('Véhicule', `${vehicule}${plaque ? ` · ${plaque}` : ''}`)}
           ${ligneDetail('Départ', fmtDateTime(p.startDatetime))}
           ${ligneDetail('Retour', fmtDateTime(p.endDatetime))}
         </table>
@@ -231,7 +231,7 @@ export function contractRetourEmail(p: Partie & { hasInvoice: boolean }): {
   return {
     subject: `Votre contrat de restitution ${p.contractNumber}`,
     html: layout({
-      preheader: `Votre contrat de restitution${p.hasInvoice ? ' et l\'estimation des frais' : ''} — LMS Drive`,
+      preheader: `Votre contrat de restitution${p.hasInvoice ? ' et l\'estimation des frais' : ''} · LMS Drive`,
       refLabel: 'Contrat de restitution',
       refValue: `N° ${p.contractNumber}`,
       body,
@@ -325,7 +325,7 @@ export function inviteEmail(p: {
       <tr><td style="padding:16px 32px 24px;">
         <p style="color:#9CA3AF;font-size:11px;line-height:1.5;margin:0;">
           Vous recevez cet email car un compte collaborateur a été créé à votre adresse sur
-          LMS Drive. Si vous n'êtes pas concerné, ignorez simplement ce message — aucun accès
+          LMS Drive. Si vous n'êtes pas concerné, ignorez simplement ce message, aucun accès
           ne sera activé sans ce lien. Message automatique, merci de ne pas y répondre.
         </p>
       </td></tr>
@@ -412,5 +412,5 @@ export function passwordResetEmail(p: {
   </td></tr>
 </table>`
 
-  return { subject: 'LMS Drive — Définissez votre nouveau mot de passe', html }
+  return { subject: 'LMS Drive · Définissez votre nouveau mot de passe', html }
 }

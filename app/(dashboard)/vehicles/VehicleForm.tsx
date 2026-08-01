@@ -175,7 +175,7 @@ function SelectField({
         defaultValue={defaultValue ?? ''}
         className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white"
       >
-        <option value="">— Choisir —</option>
+        <option value="">· Choisir ·</option>
         {options.map(o => (
           <option key={o} value={o} className="capitalize">{o}</option>
         ))}

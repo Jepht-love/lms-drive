@@ -64,7 +64,7 @@ export default function NewOperationPage() {
       </BackButton>
       <h1 className="text-xl font-black text-gray-900">Nouvelle opération</h1>
 
-      {/* Étape 1 — type */}
+      {/* Étape 1, type */}
       <div className="grid grid-cols-2 gap-3">
         <button type="button" onClick={() => setDirection('out')}
           className={`p-4 rounded-2xl border-2 text-left transition-colors ${direction === 'out' ? 'border-[#111111] bg-gray-50' : 'border-gray-200 bg-white'}`}>
@@ -127,7 +127,7 @@ export default function NewOperationPage() {
             ) : (
               <select id="client_id" name="client_id" className={input}>
                 <option value="">Aucun</option>
-                {clients.map(c => <option key={c.id} value={c.id}>{c.first_name} {c.last_name} — {c.phone}</option>)}
+                {clients.map(c => <option key={c.id} value={c.id}>{c.first_name} {c.last_name} · {c.phone}</option>)}
               </select>
             )}
           </div>

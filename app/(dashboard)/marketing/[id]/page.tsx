@@ -90,7 +90,7 @@ export default async function CampaignDetailPage({
         )}
       </div>
 
-      {/* Saisie ROI / KPI — éditable sur toute campagne */}
+      {/* Saisie ROI / KPI, éditable sur toute campagne */}
       <KpiEditor
         campaignId={c.id}
         prospects={c.prospects_count}

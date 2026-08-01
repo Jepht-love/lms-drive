@@ -72,7 +72,7 @@ export async function POST(
       if (!existing.data) {
         await supabase.from('documents').insert({
           category: 'vehicule', subcategory: 'rapport_sinistre',
-          name: `Rapport sinistre — ${v?.brand ?? ''} ${v?.model ?? ''} (${acc.accident_date})`,
+          name: `Rapport sinistre · ${v?.brand ?? ''} ${v?.model ?? ''} (${acc.accident_date})`,
           file_url: path, file_type: 'application/pdf',
           entity_id: acc.vehicle_id, entity_type: 'vehicle',
           is_auto_generated: true, created_by: user.id,

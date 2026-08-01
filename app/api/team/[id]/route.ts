@@ -38,7 +38,7 @@ export async function PATCH(
     const tabs = restricted && Array.isArray(body.allowed_tabs) ? body.allowed_tabs : null
     try {
       await admin.from('profiles').update({ allowed_tabs: tabs }).eq('id', id)
-    } catch { /* colonne absente — ignoré */ }
+    } catch { /* colonne absente, ignoré */ }
   }
 
   // Permissions fines — best-effort (colonnes optionnelles, migration 020).
@@ -52,7 +52,7 @@ export async function PATCH(
   if (Object.keys(finePerms).length > 0) {
     try {
       await admin.from('profiles').update(finePerms).eq('id', id)
-    } catch { /* colonnes absentes — ignoré */ }
+    } catch { /* colonnes absentes, ignoré */ }
   }
 
   return NextResponse.json({ success: true })
@@ -94,7 +94,7 @@ export async function DELETE(
     if (adm?.is_admin) {
       return NextResponse.json({ error: 'Impossible de supprimer un administrateur.' }, { status: 400 })
     }
-  } catch { /* colonne absente — ignoré */ }
+  } catch { /* colonne absente, ignoré */ }
 
   // Suppression définitive : le compte auth est supprimé, le profil suit par
   // ON DELETE CASCADE. Si le membre est référencé ailleurs (tâches, contrats,

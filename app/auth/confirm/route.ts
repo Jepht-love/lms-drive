@@ -21,7 +21,7 @@ function confirmPage(tokenHash: string, type: string) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<title>LMS Drive — Accéder à mon espace</title>
+<title>LMS Drive · Accéder à mon espace</title>
 <style>
   body { margin:0; min-height:100vh; display:flex; flex-direction:column; align-items:center;
          justify-content:center; background:#0A0A0A; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; padding:24px; box-sizing:border-box; }

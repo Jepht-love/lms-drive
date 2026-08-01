@@ -72,7 +72,7 @@ export async function createInfraction(formData: FormData) {
       await supabase.from('documents').insert({
         category: 'vehicule',
         subcategory: 'autres',
-        name: `Infraction ${dateAgence(infractionDate)} — ${vehicle?.plate ?? vehicleId}`,
+        name: `Infraction ${dateAgence(infractionDate)} · ${vehicle?.plate ?? vehicleId}`,
         file_url: documentUrl,
         entity_id: vehicleId,
         entity_type: 'vehicle',
@@ -94,7 +94,7 @@ export async function createInfraction(formData: FormData) {
       await supabase.from('documents').insert({
         category: 'vehicule',
         subcategory: 'infraction',
-        name: `Infraction ${infractionDate} — ${vehLabel}`,
+        name: `Infraction ${infractionDate} · ${vehLabel}`,
         file_url: path,
         file_type: justificatif.type,
         file_size: justificatif.size,
@@ -131,7 +131,7 @@ export async function transmitInfractionToClient(id: string) {
     await resend.emails.send({
       from: RESEND_FROM,
       to: resendTo(client.email),
-      subject: `Avis de contravention — véhicule ${v?.brand ?? ''} ${v?.model ?? ''} (${v?.plate ?? ''})`,
+      subject: `Avis de contravention, véhicule ${v?.brand ?? ''} ${v?.model ?? ''} (${v?.plate ?? ''})`,
       html: `<p>Bonjour ${client.first_name},</p>
         <p>Une infraction a été constatée le <b>${inf.infraction_date}</b> avec le véhicule
         <b>${v?.brand} ${v?.model} (${v?.plate})</b> que vous aviez en location.</p>
@@ -139,7 +139,7 @@ export async function transmitInfractionToClient(id: string) {
         ${inf.reference ? `<p>Référence de l'avis : <b>${inf.reference}</b></p>` : ''}
         ${inf.document_url ? `<p><a href="${inf.document_url}">Consulter l'avis de contravention</a></p>` : ''}
         <p>Merci de procéder à la régularisation.</p>
-        <p>— LMS Drive</p>`,
+        <p>· LMS Drive</p>`,
     })
   } catch (e: any) {
     return { error: 'Échec de l\'envoi : ' + (e?.message ?? 'erreur inconnue') }
@@ -153,7 +153,7 @@ export async function transmitInfractionToClient(id: string) {
   await logEmail({
     type: 'avis_infraction',
     recipient: client.email,
-    subject: `Avis de contravention — véhicule ${v?.brand ?? ''} ${v?.model ?? ''} (${v?.plate ?? ''})`,
+    subject: `Avis de contravention, véhicule ${v?.brand ?? ''} ${v?.model ?? ''} (${v?.plate ?? ''})`,
     status: 'envoye',
     referenceType: 'infraction',
     referenceId: id,
@@ -184,7 +184,7 @@ export async function markInfractionPaid(id: string, paidBy: 'client' | 'agence'
     const { error: txError } = await createAdminClient().from('financial_transactions').insert({
       date: today, type: 'depense', category: 'amendes', amount,
       vehicle_id: inf.vehicle_id,
-      notes: `Amende ${inf.type} — ${inf.infraction_date}`,
+      notes: `Amende ${inf.type} · ${inf.infraction_date}`,
       reference: id, infraction_id: id, created_by: user.id,
     })
     if (txError) return { error: txError.message }
@@ -259,7 +259,7 @@ export async function recordInfractionRecovery(id: string, amount: number) {
     const payload = {
       date: today, type: 'recette', category: 'recouvrement_amende', amount: recovered,
       vehicle_id: inf.vehicle_id,
-      notes: `Recouvrement amende ${inf.type} — ${inf.infraction_date}`,
+      notes: `Recouvrement amende ${inf.type} · ${inf.infraction_date}`,
       reference, infraction_id: id, created_by: user.id,
     }
     const { error: txError } = existing
@@ -362,7 +362,7 @@ export async function createAccident(formData: FormData) {
       await supabase.from('documents').insert({
         category: 'vehicule',
         subcategory: 'pv_expertise',
-        name: `Sinistre ${accidentDate} — ${vehLabel}`,
+        name: `Sinistre ${accidentDate} · ${vehLabel}`,
         file_url: path,
         file_type: justificatif.type,
         file_size: justificatif.size,
@@ -416,7 +416,7 @@ export async function updateAccidentStatus(id: string, status: string) {
             date: new Date().toISOString().slice(0, 10),
             type: 'depense', category: 'sinistre', amount: net,
             vehicle_id: acc.vehicle_id, reference,
-            notes: `Sinistre${acc.dossier_number ? ` (dossier ${acc.dossier_number})` : ''} — coût net agence (${acc.accident_date})`,
+            notes: `Sinistre${acc.dossier_number ? ` (dossier ${acc.dossier_number})` : ''}, coût net agence (${acc.accident_date})`,
             created_by: user.id,
           })
           if (txError) return { error: txError.message }
@@ -468,7 +468,7 @@ export async function addAccidentToVehicle(id: string) {
   const { error } = await supabase.from('maintenance_records').insert({
     vehicle_id:  acc.vehicle_id,
     type:        'reparation',
-    description: `Réparation sinistre${acc.dossier_number ? ` (dossier ${acc.dossier_number})` : ''} — ${(acc.description ?? '').slice(0, 80)}`,
+    description: `Réparation sinistre${acc.dossier_number ? ` (dossier ${acc.dossier_number})` : ''} · ${(acc.description ?? '').slice(0, 80)}`,
     date:        new Date().toISOString().slice(0, 10),
     amount:      acc.repair_cost ?? 0,
     notes:       `Sinistre du ${acc.accident_date}`,

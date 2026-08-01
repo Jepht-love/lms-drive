@@ -96,14 +96,14 @@ export default function ContractSigningPanel({ contract, reservation, vehicle, c
   return (
     <div className="space-y-4">
 
-      {/* Statut signature — le contrat se signe PENDANT l'EDL départ (nouveau
+      {/* Statut signature, le contrat se signe PENDANT l'EDL départ (nouveau
           format) : plus de parcours de signature séparé depuis cette fiche. */}
       {!isSigned ? (
         <div className="bg-white rounded-2xl border border-amber-200 shadow-sm p-5">
           <h3 className="font-semibold text-gray-800 mb-1">Signature pendant l'état des lieux</h3>
           <p className="text-sm text-gray-500 mb-4">
             Le contrat se signe directement sur la page de l'état des lieux de départ,
-            en même temps que l'EDL — le client ne signe qu'une seule fois.
+            en même temps que l'EDL, le client ne signe qu'une seule fois.
           </p>
 
           {/* Cachet agence */}

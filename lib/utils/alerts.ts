@@ -390,13 +390,13 @@ export async function fetchAllAlerts(
     // location — BMW Série 1 Blanc ») : on coupe cette fin, sinon la ligne
     // écrivait la voiture deux fois de suite. Un titre qui nomme le client
     // (« Clôturer contrat — Mohamed-amine Baazaoui ») reste entier.
-    const finDuTitre = ev.title.split(' — ').slice(1).join(' — ')
+    const finDuTitre = ev.title.split(' · ').slice(1).join(' · ')
     const finRepeteLeVehicule = Boolean(
       veh && finDuTitre && [veh.brand, veh.model].filter(Boolean).some(
         (mot: string) => finDuTitre.toLowerCase().includes(String(mot).toLowerCase()),
       ),
     )
-    const intitule = finRepeteLeVehicule ? ev.title.split(' — ')[0] : ev.title
+    const intitule = finRepeteLeVehicule ? ev.title.split(' · ')[0] : ev.title
     alerts.push({
       id: `event-${ev.id}`,
       category: 'important',
@@ -478,7 +478,7 @@ export async function fetchAllAlerts(
           : `/calendrier?${new URLSearchParams({
               create: 'prep',
               date: new Date(new Date(r.start_datetime).getTime() - 60 * 60_000).toISOString(),
-              title: `Lavage avant location — ${vLabel(v)}`,
+              title: `Lavage avant location · ${vLabel(v)}`,
               ...(r.vehicle_id ? { vehicle: r.vehicle_id } : {}),
             }).toString()}`,
         date: r.start_datetime,

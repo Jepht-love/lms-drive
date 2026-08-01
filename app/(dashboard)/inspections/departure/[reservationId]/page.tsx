@@ -101,7 +101,7 @@ export default async function DepartureInspectionPage({ params }: { params: Prom
         </BackButton>
         <div>
           <h1 className="text-2xl font-bold text-gray-900">État des lieux de départ</h1>
-          <p className="text-gray-500">{vehicle?.brand} {vehicle?.model} — {vehicle?.plate} · {client?.first_name} {client?.last_name}</p>
+          <p className="text-gray-500">{vehicle?.brand} {vehicle?.model} · {vehicle?.plate} · {client?.first_name} {client?.last_name}</p>
         </div>
       </div>
       <InspectionFlow

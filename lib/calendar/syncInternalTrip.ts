@@ -28,7 +28,7 @@ export async function syncTripToCalendar(tripId: string): Promise<void> {
   // Sans ces logs, un échec ici laissait le déplacement absent du calendrier
   // sans la moindre trace (constaté le 25/07 : trip créé, aucun événement).
   if (readError) {
-    console.error('syncTripToCalendar — lecture du déplacement échouée:', readError.message)
+    console.error('syncTripToCalendar, lecture du déplacement échouée:', readError.message)
     return
   }
   if (!trip) return
@@ -36,7 +36,7 @@ export async function syncTripToCalendar(tripId: string): Promise<void> {
   const vehicle = Array.isArray(trip.vehicle) ? trip.vehicle[0] : trip.vehicle
   const vehicleLabel = vehicle ? `${vehicle.brand} ${vehicle.model}` : ''
   const purposeLabel = internalTripPurposeLabel(trip.purpose, trip.purpose_notes)
-  const title = `Déplacement — ${purposeLabel}${vehicleLabel ? ` (${vehicleLabel})` : ''}`
+  const title = `Déplacement · ${purposeLabel}${vehicleLabel ? ` (${vehicleLabel})` : ''}`
 
   const startAt = trip.start_datetime
   const fallbackEnd = new Date(new Date(startAt).getTime() + FALLBACK_DURATION_MINUTES * 60_000).toISOString()
@@ -68,6 +68,6 @@ export async function syncTripToCalendar(tripId: string): Promise<void> {
     : await admin.from('calendar_events').insert(payload)
 
   if (writeError) {
-    console.error('syncTripToCalendar — écriture de l’événement échouée:', writeError.message)
+    console.error('syncTripToCalendar, écriture de l’événement échouée:', writeError.message)
   }
 }

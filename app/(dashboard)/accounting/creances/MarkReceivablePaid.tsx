@@ -20,7 +20,7 @@ export default function MarkReceivablePaid({ id, amount }: { id: string; amount:
     startTransition(async () => {
       const res = await markDuePaid(id)
       if (res?.error) { toast(res.error, 'error'); return }
-      toast('Créance soldée — recette enregistrée')
+      toast('Créance soldée, recette enregistrée')
       router.refresh()
     })
   }

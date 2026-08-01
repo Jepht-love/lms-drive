@@ -82,8 +82,8 @@ export async function generateInvoiceDraft(contractId: string): Promise<{ invoic
     const price = z.price ?? 0
     if (price <= 0) continue
     const description = z.kind === 'interieur'
-      ? `Dégât intérieur — ${z.label}`
-      : `Dommage constaté — ${z.label} (${graviteLabel(z.severity)})`
+      ? `Dégât intérieur · ${z.label}`
+      : `Dommage constaté · ${z.label} (${graviteLabel(z.severity)})`
     lineItems.push({
       description,
       quantity: 1,
@@ -155,7 +155,7 @@ export async function sendInvoice(invoiceId: string) {
   if (!invoice) return { error: 'Facture introuvable' }
   if (invoice.sent_at) return { error: 'Facture déjà envoyée' }
   if ((invoice.line_items as InvoiceLineItem[]).some(l => l.total <= 0)) {
-    return { error: 'Au moins une ligne a un montant à 0 — complète le tarif avant envoi.' }
+    return { error: 'Au moins une ligne a un montant à 0, complète le tarif avant envoi.' }
   }
 
   const v = Array.isArray(invoice.vehicles) ? invoice.vehicles[0] : invoice.vehicles
@@ -198,11 +198,11 @@ export async function sendInvoice(invoiceId: string) {
       subject: `Facture de restitution ${invoice.invoice_number}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #2563eb;">LMS Drive — Facture de restitution</h2>
+          <h2 style="color: #2563eb;">LMS Drive · Facture de restitution</h2>
           <p>Bonjour ${c.first_name} ${c.last_name},</p>
-          <p>Veuillez trouver ci-joint la facture <strong>${invoice.invoice_number}</strong> relative aux frais complémentaires constatés lors de la restitution du véhicule <strong>${v?.brand} ${v?.model} — ${v?.plate}</strong>.</p>
+          <p>Veuillez trouver ci-joint la facture <strong>${invoice.invoice_number}</strong> relative aux frais complémentaires constatés lors de la restitution du véhicule <strong>${v?.brand} ${v?.model} · ${v?.plate}</strong>.</p>
           <p><strong>Montant total :</strong> ${invoice.total_amount.toLocaleString('fr-FR')} €</p>
-          <p style="color: #64748b; font-size: 12px;">— LMS Drive</p>
+          <p style="color: #64748b; font-size: 12px;">· LMS Drive</p>
         </div>
       `,
       attachments: [{ filename: `${invoice.invoice_number}.pdf`, content: Buffer.from(buffer) }],
@@ -215,7 +215,7 @@ export async function sendInvoice(invoiceId: string) {
   await admin.from('documents').insert({
     category: 'client',
     subcategory: 'facture_restitution',
-    name: `Facture ${invoice.invoice_number} — ${c.first_name} ${c.last_name}`,
+    name: `Facture ${invoice.invoice_number} · ${c.first_name} ${c.last_name}`,
     file_url: publicUrl,
     file_type: 'application/pdf',
     entity_id: c.id,
@@ -239,7 +239,7 @@ export async function sendInvoice(invoiceId: string) {
   }).eq('id', invoiceId)
 
   await admin.from('financial_due_dates').insert({
-    description: `Facture ${invoice.invoice_number} — ${c.first_name} ${c.last_name}`,
+    description: `Facture ${invoice.invoice_number} · ${c.first_name} ${c.last_name}`,
     type: 'recette',
     category: 'facturation',
     amount: invoice.total_amount,
@@ -363,7 +363,7 @@ export async function markRestitutionInvoiceSent(invoiceId: string, buffer: Buff
   await admin.from('documents').insert({
     category: 'client',
     subcategory: 'facture_restitution',
-    name: `Facture ${invoice.invoice_number} — ${c?.first_name ?? ''} ${c?.last_name ?? ''}`.trim(),
+    name: `Facture ${invoice.invoice_number} · ${c?.first_name ?? ''} ${c?.last_name ?? ''}`.trim(),
     file_url: publicUrl,
     file_type: 'application/pdf',
     entity_id: invoice.client_id,
@@ -384,7 +384,7 @@ export async function markRestitutionInvoiceSent(invoiceId: string, buffer: Buff
   }).eq('id', invoiceId)
 
   await admin.from('financial_due_dates').insert({
-    description: `Facture ${invoice.invoice_number} — ${c?.first_name ?? ''} ${c?.last_name ?? ''}`.trim(),
+    description: `Facture ${invoice.invoice_number} · ${c?.first_name ?? ''} ${c?.last_name ?? ''}`.trim(),
     type: 'recette',
     category: 'facturation',
     amount: invoice.total_amount,

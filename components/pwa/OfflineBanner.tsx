@@ -39,7 +39,7 @@ export default function OfflineBanner() {
       {isOffline ? (
         <>
           <WifiOff className="w-4 h-4 flex-shrink-0" />
-          <span>Mode hors-ligne — données en cache uniquement</span>
+          <span>Mode hors-ligne, données en cache uniquement</span>
         </>
       ) : (
         <>

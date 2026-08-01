@@ -95,7 +95,7 @@ export default function VehicleSchemaInteractive({ damagedZones, onZoneClick }: 
         {/* ── AVANT ── */}
         <ZoneBtn id="pare_chocs_av" label="Pare-chocs AV" shortLabel="P.Chocs AV" x={52} y={48} width={106} height={14} />
 
-        {/* Capot row — Aile AV G | Capot | Aile AV D */}
+        {/* Capot row · Aile AV G | Capot | Aile AV D */}
         <ZoneBtn id="aile_av_g" label="Aile avant gauche" shortLabel="Aile AV G" x={42} y={63} width={23} height={68} vertical />
         <ZoneBtn id="capot"     label="Capot"             x={65} y={63} width={80} height={68} />
         <ZoneBtn id="aile_av_d" label="Aile avant droite" shortLabel="Aile AV D" x={145} y={63} width={23} height={68} vertical />

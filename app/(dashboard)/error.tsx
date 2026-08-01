@@ -26,7 +26,7 @@ export default function DashboardError({
         <h2 className="text-base font-bold text-gray-900 mb-2">Une erreur est survenue</h2>
         <p className="text-sm text-gray-400 mb-6">
           {error.message?.includes('fetch') || error.message?.includes('network')
-            ? 'Problème de connexion — vérifiez votre réseau et réessayez.'
+            ? 'Problème de connexion, vérifiez votre réseau et réessayez.'
             : 'Une erreur inattendue s\'est produite. Nos équipes en sont informées.'}
         </p>
         <div className="flex gap-3">

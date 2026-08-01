@@ -75,7 +75,7 @@ export default function DamageComparison({ departureDamages, returnDamages }: Da
             const lastEntry = entries?.[entries.length - 1]
             return (
               <p key={zoneId} className="text-[13px] text-red-600">
-                · {zone?.label}{lastEntry?.comment ? ` — ${lastEntry.comment}` : ''}
+                · {zone?.label}{lastEntry?.comment ? ` · ${lastEntry.comment}` : ''}
               </p>
             )
           })}

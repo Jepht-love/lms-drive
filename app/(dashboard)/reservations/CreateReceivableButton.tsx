@@ -161,7 +161,7 @@ export default function CreateReceivableButton({
               onChange={ev => chooseReservation(ev.target.value)}
               className="flex-1 min-w-0 bg-transparent border-0 outline-none px-3 py-2.5 text-sm text-white [color-scheme:dark]"
             >
-              <option value="">— Choisir une réservation —</option>
+              <option value="">· Choisir une réservation ·</option>
               {reservations!.map(r => (
                 <option key={r.id} value={r.id}>{r.label}</option>
               ))}
@@ -205,7 +205,7 @@ export default function CreateReceivableButton({
             <div>
               {i === 0
                 ? <label className={labelCls} htmlFor={`echeance-amount-${i}`}>Montant dû</label>
-                : <label className="sr-only" htmlFor={`echeance-amount-${i}`}>Montant dû — échéance {i + 1}</label>}
+                : <label className="sr-only" htmlFor={`echeance-amount-${i}`}>Montant dû, échéance {i + 1}</label>}
               <div className={fieldCls}>
                 <input
                   id={`echeance-amount-${i}`}

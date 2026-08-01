@@ -23,8 +23,8 @@ export async function assertPeriodOpen(supabase: SB, date: string): Promise<stri
     supabase.from('daily_closings').select('is_closed').eq('date', date).maybeSingle(),
   ])
 
-  if (annual?.is_closed)  return `Année ${year} clôturée — écriture impossible. Rouvrez la clôture pour modifier.`
-  if (monthly?.is_closed) return `Mois ${String(month).padStart(2, '0')}/${year} clôturé — écriture impossible. Rouvrez la clôture pour modifier.`
-  if (daily?.is_closed)   return `Journée du ${date} clôturée — écriture impossible. Rouvrez la clôture pour modifier.`
+  if (annual?.is_closed)  return `Année ${year} clôturée, écriture impossible. Rouvrez la clôture pour modifier.`
+  if (monthly?.is_closed) return `Mois ${String(month).padStart(2, '0')}/${year} clôturé, écriture impossible. Rouvrez la clôture pour modifier.`
+  if (daily?.is_closed)   return `Journée du ${date} clôturée, écriture impossible. Rouvrez la clôture pour modifier.`
   return null
 }

@@ -161,7 +161,7 @@ export default function EditDatesPanel({
         </button>
       </div>
 
-      {/* Dates — DateTimeField groupé, ton sombre. */}
+      {/* Dates · DateTimeField groupé, ton sombre. */}
       <div className="space-y-3">
         <div>
           <label htmlFor="editdatespanel-depart" className={labelCls}>Départ</label>
@@ -173,7 +173,7 @@ export default function EditDatesPanel({
         </div>
       </div>
 
-      {/* Tarif : par jour OU prix total (négocié) — onglets segmentés shadcn. */}
+      {/* Tarif : par jour OU prix total (négocié), onglets segmentés shadcn. */}
       <div>
         <div className="inline-flex p-0.5 rounded-lg bg-white/10 mb-3">
           <button type="button" onClick={() => setMode('daily')} className={tabCls(mode === 'daily')}>
@@ -197,19 +197,19 @@ export default function EditDatesPanel({
             </div>
             {vehicle?.price_day_weekend != null && vehicle.price_day_weekend > 0 && (
               <p className="text-[11px] text-white/45 mt-1.5">
-                Tarif week-end : {formatPrice(vehicle.price_day_weekend)} / jour — appliqué
+                Tarif week-end : {formatPrice(vehicle.price_day_weekend)} / jour, appliqué
                 automatiquement aux vendredis, samedis et dimanches
               </p>
             )}
             {vehicle?.price_weekend_full != null && vehicle.price_weekend_full > 0 && (
               <p className="text-[11px] text-white/45 mt-1.5">
-                Forfait week-end complet : {formatPrice(vehicle.price_weekend_full)} — remplace les
+                Forfait week-end complet : {formatPrice(vehicle.price_weekend_full)}, remplace les
                 3 journées si la location va du vendredi au lundi
               </p>
             )}
             {vehicle?.weekly_price != null && vehicle.weekly_price > 0 && (
               <p className="text-[11px] text-white/45 mt-1.5">
-                Tarif semaine : {formatPrice(vehicle.weekly_price)} — appliqué auto si ≥ 7 jours
+                Tarif semaine : {formatPrice(vehicle.weekly_price)}, appliqué auto si ≥ 7 jours
               </p>
             )}
           </>
@@ -225,7 +225,7 @@ export default function EditDatesPanel({
               <span className="pr-3 text-xs font-semibold text-white/45 whitespace-nowrap">€ au total</span>
             </div>
             <p className="text-[11px] text-white/45 mt-1.5">
-              Prix négocié pour toute la période — le taux journalier reste la référence.
+              Prix négocié pour toute la période, le taux journalier reste la référence.
             </p>
           </>
         )}
@@ -297,7 +297,7 @@ export default function EditDatesPanel({
       {(reservationStatus === 'en_cours' || reservationStatus === 'en_retard') && (
         <div className="flex items-start gap-2 text-xs text-amber-300">
           <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
-          <span>Location en cours — la modification recalculera le total et mettra à jour le calendrier.</span>
+          <span>Location en cours, la modification recalculera le total et mettra à jour le calendrier.</span>
         </div>
       )}
 

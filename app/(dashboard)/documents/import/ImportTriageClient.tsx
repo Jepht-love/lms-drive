@@ -368,7 +368,7 @@ export default function ImportTriageClient({
         })}
       </div>
 
-      {/* Zone de dépôt — dépose dans la pile active */}
+      {/* Zone de dépôt, dépose dans la pile active */}
       <div
         onDragOver={e => { e.preventDefault(); setDragOver(true) }}
         onDragLeave={() => setDragOver(false)}

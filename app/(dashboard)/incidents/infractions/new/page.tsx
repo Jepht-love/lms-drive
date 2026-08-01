@@ -107,7 +107,7 @@ export default function NewInfractionPage() {
               {driverLoading ? <>Recherche du conducteur…</>
               : driver?.type === 'client' ? <><UserCheck className="w-4 h-4 flex-shrink-0" /> Responsable : <b>{driver.client?.first_name} {driver.client?.last_name}</b> (client)</>
               : driver?.type === 'internal' ? <><UserCog className="w-4 h-4 flex-shrink-0" /> Utilisation interne : <b>{driver.internalUser?.full_name}</b></>
-              : <><AlertTriangle className="w-4 h-4 flex-shrink-0" /> Aucune location trouvée — véhicule interne, vérifier Gestion des déplacements</>}
+              : <><AlertTriangle className="w-4 h-4 flex-shrink-0" /> Aucune location trouvée, véhicule interne, vérifier Gestion des déplacements</>}
             </div>
           )}
 
@@ -153,7 +153,7 @@ export default function NewInfractionPage() {
           </div>
 
           <div>
-            <label className={label} htmlFor="justificatif">Justificatif (avis, photo…) — optionnel</label>
+            <label className={label} htmlFor="justificatif">Justificatif (avis, photo…), optionnel</label>
             <input id="justificatif" name="justificatif" type="file" accept="image/*,application/pdf"
               className="w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-gray-100 file:text-gray-700 file:font-semibold file:text-xs" />
             <p className="text-[11px] text-gray-400 mt-1">Si joint, classé automatiquement dans Documents › Véhicule.</p>

@@ -288,7 +288,7 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
         </button>
       </div>
 
-      {/* Recherche locale — toujours visible : c'est elle qui ouvre le panneau
+      {/* Recherche locale, toujours visible : c'est elle qui ouvre le panneau
           de disponibilité, même quand aucun déplacement n'existe encore. */}
       <div className="space-y-3">
         <div className="relative">
@@ -383,7 +383,7 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
                       >
                         <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${couleurPastille}`} aria-hidden />
                         <span className="flex-1 min-w-0">
-                          <span className="block text-sm font-semibold text-gray-900 truncate">{v.plate} — {v.brand} {v.model}</span>
+                          <span className="block text-sm font-semibold text-gray-900 truncate">{v.plate} · {v.brand} {v.model}</span>
                           <span className={`block text-xs truncate ${couleurTexte}`}>{detail}</span>
                         </span>
                         <CalendarClock className="w-4 h-4 text-gray-300 flex-shrink-0" />
@@ -594,8 +594,8 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
           <div>
             <label htmlFor="plan-vehicle" className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Véhicule *</label>
             <select id="plan-vehicle" name="vehicle_id" required defaultValue={planVehicleId} className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white">
-              <option value="">— Choisir —</option>
-              {vehicles.map(v => <option key={v.id} value={v.id}>{v.plate} — {v.brand} {v.model}</option>)}
+              <option value="">· Choisir ·</option>
+              {vehicles.map(v => <option key={v.id} value={v.id}>{v.plate} · {v.brand} {v.model}</option>)}
             </select>
           </div>
           <div>
@@ -638,7 +638,7 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
             <div>
               <label htmlFor="plan-driver" className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Conducteur</label>
               <select id="plan-driver" name="user_id" defaultValue="none" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white">
-                <option value="none">— Non assigné —</option>
+                <option value="none">· Non assigné ·</option>
                 {members.map(m => <option key={m.id} value={m.id}>{m.full_name}</option>)}
               </select>
               <p className="text-[11px] text-gray-400 mt-1">Laissez « Non assigné » pour attribuer plus tard.</p>
@@ -655,12 +655,12 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
       </Drawer>
 
       {/* Assign Drawer */}
-      <Drawer open={!!assigningTrip} onClose={reset} title={`Assigner — ${assigningTrip?.vehicle?.plate ?? ''}`}>
+      <Drawer open={!!assigningTrip} onClose={reset} title={`Assigner · ${assigningTrip?.vehicle?.plate ?? ''}`}>
         <form action={handleAssign} className="space-y-4">
           <div>
             <label htmlFor="assign-driver" className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Conducteur *</label>
             <select id="assign-driver" name="user_id" required defaultValue="" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white">
-              <option value="">— Choisir —</option>
+              <option value="">· Choisir ·</option>
               {members.map(m => <option key={m.id} value={m.id}>{m.full_name}</option>)}
             </select>
           </div>
@@ -672,7 +672,7 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
       </Drawer>
 
       {/* Start-planned Drawer */}
-      <Drawer open={!!startingPlanned} onClose={reset} title={`Démarrer — ${startingPlanned?.vehicle?.plate ?? ''}`}>
+      <Drawer open={!!startingPlanned} onClose={reset} title={`Démarrer · ${startingPlanned?.vehicle?.plate ?? ''}`}>
         <form action={handleStartPlanned} className="space-y-4">
           <div>
             <label htmlFor="startp-km" className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">
@@ -703,9 +703,9 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
               onChange={e => setSelectedVehicle(vehicles.find(v => v.id === e.target.value) ?? null)}
               className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white"
             >
-              <option value="">— Choisir —</option>
+              <option value="">· Choisir ·</option>
               {vehicles.map(v => (
-                <option key={v.id} value={v.id}>{v.plate} — {v.brand} {v.model}</option>
+                <option key={v.id} value={v.id}>{v.plate} · {v.brand} {v.model}</option>
               ))}
             </select>
           </div>
@@ -772,7 +772,7 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
       </Drawer>
 
       {/* End Drawer */}
-      <Drawer open={!!endingTrip} onClose={reset} title={`Terminer — ${endingTrip?.vehicle?.plate ?? ''}`}>
+      <Drawer open={!!endingTrip} onClose={reset} title={`Terminer · ${endingTrip?.vehicle?.plate ?? ''}`}>
         <form action={handleEnd} className="space-y-4">
           <div>
             <label htmlFor="end-km" className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">
@@ -811,7 +811,7 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
       <Drawer
         open={!!editingTrip}
         onClose={reset}
-        title={`Modifier — ${editingTrip?.vehicle?.plate ?? ''}`}
+        title={`Modifier · ${editingTrip?.vehicle?.plate ?? ''}`}
         footer={
           <button type="submit" form="edit-trip-form" disabled={loading} className="w-full py-3 bg-[#111111] text-white rounded-xl font-semibold disabled:opacity-50 transition-colors active:scale-[.97]">
             {loading ? 'Enregistrement...' : 'Enregistrer'}
@@ -853,7 +853,7 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
               min={editStart || undefined}
               className="px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white"
             />
-            {/* Ce que cette date fait vraiment — et ce qu'elle ne fait pas : sur un
+            {/* Ce que cette date fait vraiment, et ce qu'elle ne fait pas : sur un
                 déplacement en cours, la flotte compte le véhicule dehors jusqu'à la
                 clôture, quelle que soit la date affichée ici. */}
             <p className="text-[11px] text-gray-400 mt-1">
@@ -903,13 +903,13 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
                 defaultValue={editingTrip?.user_id ?? 'none'}
                 className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white"
               >
-                {editingTrip?.status !== 'en_cours' && <option value="none">— Non assigné —</option>}
+                {editingTrip?.status !== 'en_cours' && <option value="none">· Non assigné ·</option>}
                 {members.map(m => <option key={m.id} value={m.id}>{m.full_name}{m.id === currentUserId ? ' (moi)' : ''}</option>)}
               </select>
               <p className="text-[11px] text-gray-400 mt-1">C’est la personne désignée si une infraction tombe sur cette période.</p>
             </div>
           )}
-          {/* KM de départ : un déplacement planifié n'en a pas encore — il est
+          {/* KM de départ : un déplacement planifié n'en a pas encore, il est
               relevé au démarrage. */}
           {editingTrip?.status === 'en_cours' && (
             <div>

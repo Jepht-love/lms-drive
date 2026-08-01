@@ -37,7 +37,7 @@ export default async function SettingsPage() {
         <Settings className="w-6 h-6 text-gray-700" />
         <div>
           <h1 className="text-xl font-black text-gray-900">Paramètres</h1>
-          <p className="text-gray-500 mt-0.5">Administration — Gérant uniquement</p>
+          <p className="text-gray-500 mt-0.5">Administration · Gérant uniquement</p>
         </div>
       </div>
 
@@ -81,7 +81,7 @@ export default async function SettingsPage() {
       {/* Notifications push */}
       <NotificationSettings />
 
-      {/* Journal d'audit — français lisible, filtrable par employé */}
+      {/* Journal d'audit, français lisible, filtrable par employé */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
         <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
           <FileClock className="w-4 h-4" /> Journal d'audit

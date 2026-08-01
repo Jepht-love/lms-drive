@@ -121,7 +121,7 @@ export default async function NewTaskPage({
           <div>
             <label htmlFor="page-vehicle_id" className={label}>Véhicule concerné</label>
             <select id="page-vehicle_id" name="vehicle_id" className={input}>
-              <option value="">— Aucun —</option>
+              <option value="">· Aucun ·</option>
               {vehicles?.map(v => (
                 <option key={v.id} value={v.id}>{v.brand} {v.model} · {v.plate}</option>
               ))}
@@ -131,7 +131,7 @@ export default async function NewTaskPage({
           <div>
             <label htmlFor="page-assigned_to" className={label}>Assigné à</label>
             <select id="page-assigned_to" name="assigned_to" className={input}>
-              <option value="">— Non assigné —</option>
+              <option value="">· Non assigné ·</option>
               {profiles?.map(p => (
                 <option key={p.id} value={p.id}>{p.full_name}</option>
               ))}

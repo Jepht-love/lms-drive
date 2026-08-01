@@ -103,8 +103,8 @@ export async function syncReservationToCalendar(reservationId: string): Promise<
     ? `${vehicle.brand} ${vehicle.model}${vehicle.color ? ' ' + vehicle.color : ''}`
     : reservation.reservation_number
 
-  await upsertEvent(admin, reservation, 'depart_vehicule', reservation.start_datetime, depart, `Départ — ${vehicleLabel}`)
-  await upsertEvent(admin, reservation, 'retour_vehicule', reservation.end_datetime, retour, `Retour — ${vehicleLabel}`)
+  await upsertEvent(admin, reservation, 'depart_vehicule', reservation.start_datetime, depart, `Départ · ${vehicleLabel}`)
+  await upsertEvent(admin, reservation, 'retour_vehicule', reservation.end_datetime, retour, `Retour · ${vehicleLabel}`)
   await syncWashTask(admin, reservation, depart, vehicleLabel)
 }
 
@@ -166,7 +166,7 @@ async function syncWashTask(
 
   const washStart = new Date(newStart.getTime() - 60 * 60_000).toISOString()
   const payload = {
-    title: `Lavage avant location — ${vehicleLabel}`,
+    title: `Lavage avant location · ${vehicleLabel}`,
     event_type: 'tache' as const,
     status: departStatus,
     start_at: washStart,

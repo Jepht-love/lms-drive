@@ -102,16 +102,16 @@ export async function endTrip(tripId: string, formData: FormData) {
   if (tolls > 0 && !booked.has(tollsRef)) {
     charges.push({ date: today, type: 'depense', category: 'peages', amount: tolls,
       vehicle_id: trip.vehicle_id, reference: tollsRef,
-      notes: 'Péages — déplacement interne', created_by: user.id })
+      notes: 'Péages, déplacement interne', created_by: user.id })
   }
   if (expenses > 0 && !booked.has(expRef)) {
     charges.push({ date: today, type: 'depense', category: 'deplacement_interne', amount: expenses,
       vehicle_id: trip.vehicle_id, reference: expRef,
-      notes: 'Frais — déplacement interne', created_by: user.id })
+      notes: 'Frais, déplacement interne', created_by: user.id })
   }
   if (charges.length) {
     const { error: chargeErr } = await admin.from('financial_transactions').insert(charges)
-    if (chargeErr) console.error('endTrip — écritures compta échouées:', chargeErr.message)
+    if (chargeErr) console.error('endTrip, écritures compta échouées:', chargeErr.message)
   }
 
   await syncTripToCalendar(tripId)
@@ -278,9 +278,9 @@ export async function startPlannedTrip(tripId: string, formData: FormData) {
 // ne sont pas réécrites ici : elles viennent de `vehiculesIndisponibles`, le même
 // code que celui qui refuse une réservation ou une prolongation.
 const CONFLIT_MESSAGES: Record<RaisonIndisponibilite, string> = {
-  reservation: 'Ce véhicule est déjà réservé sur la période demandée — ajustez les dates.',
-  garage:      'Ce véhicule a un rendez-vous garage sur la période demandée — ajustez les dates.',
-  deplacement: 'Ce véhicule part sur un autre déplacement interne sur la période demandée — ajustez les dates.',
+  reservation: 'Ce véhicule est déjà réservé sur la période demandée, ajustez les dates.',
+  garage:      'Ce véhicule a un rendez-vous garage sur la période demandée, ajustez les dates.',
+  deplacement: 'Ce véhicule part sur un autre déplacement interne sur la période demandée, ajustez les dates.',
 }
 
 /**
@@ -443,7 +443,7 @@ export async function updateTrip(tripId: string, formData: FormData) {
     .select('id')
   if (error) return { error: error.message }
   if (!updated || updated.length === 0) {
-    return { error: 'Ce déplacement a changé entre-temps — rouvrez-le avant de le modifier' }
+    return { error: 'Ce déplacement a changé entre-temps, rouvrez-le avant de le modifier' }
   }
 
   // Le calendrier porte le motif dans le titre du bloc, le conducteur dans son
@@ -476,7 +476,7 @@ export async function updateTrip(tripId: string, formData: FormData) {
     user_id: user.id, action: 'internal_trip_updated',
     entity_type: 'internal_trips', entity_id: tripId,
     metadata: {
-      summary: `Déplacement interne modifié${vehicle?.plate ? ` — ${vehicle.plate}` : ''}${changements.length ? ` · ${changements.join(' · ')}` : ''}`,
+      summary: `Déplacement interne modifié${vehicle?.plate ? ` · ${vehicle.plate}` : ''}${changements.length ? ` · ${changements.join(' · ')}` : ''}`,
       purpose, start_datetime: debutIso, end_datetime: finIso,
       previous_user_id: trip.user_id, user_id: assignee,
     },

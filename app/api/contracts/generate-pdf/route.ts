@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
       await supabase.from('documents').insert({
         category: 'client',
         subcategory: 'contrat_location',
-        name: `Contrat ${contract.contract_number}${clientName ? ` — ${clientName}` : ''}`,
+        name: `Contrat ${contract.contract_number}${clientName ? ` · ${clientName}` : ''}`,
         file_url: contractPublicUrl,
         file_type: 'application/pdf',
         entity_id: client?.id ?? null,

@@ -98,7 +98,7 @@ export default function InvoiceCard({ invoice }: { invoice: Invoice }) {
         <div className="flex items-center gap-2 text-gray-500 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5">
           <Ban className="w-4 h-4 flex-shrink-0" />
           <p className="text-sm font-medium">
-            {invoice.invoice_number} annulée le {new Date(invoice.cancelled_at).toLocaleDateString('fr-FR')} — impact comptable retiré
+            {invoice.invoice_number} annulée le {new Date(invoice.cancelled_at).toLocaleDateString('fr-FR')}, impact comptable retiré
           </p>
         </div>
       </div>
@@ -115,7 +115,7 @@ export default function InvoiceCard({ invoice }: { invoice: Invoice }) {
         <div className="flex items-center gap-2 text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2.5">
           <Check className="w-4 h-4 flex-shrink-0" />
           <p className="text-sm font-medium">
-            {invoice.invoice_number} envoyée le {new Date(invoice.sent_at).toLocaleDateString('fr-FR')} — {formatPrice(invoice.total_amount)}
+            {invoice.invoice_number} envoyée le {new Date(invoice.sent_at).toLocaleDateString('fr-FR')} · {formatPrice(invoice.total_amount)}
             {invoice.due_date && <> · échéance {new Date(invoice.due_date).toLocaleDateString('fr-FR')}</>}
           </p>
         </div>
@@ -147,14 +147,14 @@ export default function InvoiceCard({ invoice }: { invoice: Invoice }) {
       <div className="flex items-center gap-2">
         <Receipt className="w-4 h-4 text-gray-400" />
         <span className="text-xs font-bold uppercase tracking-widest text-gray-400">
-          Facture de restitution — {invoice.invoice_number}
+          Facture de restitution · {invoice.invoice_number}
         </span>
       </div>
 
       <div className="space-y-2">
         {lines.map((l, i) => (
           <div key={lineIds[i]} className="flex items-center gap-2">
-            <label htmlFor={`invoice-line-desc-${i}`} className="sr-only">Description — ligne {i + 1}</label>
+            <label htmlFor={`invoice-line-desc-${i}`} className="sr-only">Description, ligne {i + 1}</label>
             <input
               id={`invoice-line-desc-${i}`}
               value={l.description}
@@ -163,7 +163,7 @@ export default function InvoiceCard({ invoice }: { invoice: Invoice }) {
               className={`${input} flex-1 min-w-0`}
             />
             {/* `x || ''` : vider le champ le laisse vide (pas de 0 fantôme). */}
-            <label htmlFor={`invoice-line-qty-${i}`} className="sr-only">Quantité — ligne {i + 1}</label>
+            <label htmlFor={`invoice-line-qty-${i}`} className="sr-only">Quantité, ligne {i + 1}</label>
             <input
               id={`invoice-line-qty-${i}`}
               type="number" min="0" step="1" value={l.quantity || ''} placeholder="0"
@@ -171,7 +171,7 @@ export default function InvoiceCard({ invoice }: { invoice: Invoice }) {
               className={`${input} w-14 text-center`}
               title="Quantité"
             />
-            <label htmlFor={`invoice-line-price-${i}`} className="sr-only">Prix unitaire (€) — ligne {i + 1}</label>
+            <label htmlFor={`invoice-line-price-${i}`} className="sr-only">Prix unitaire (€), ligne {i + 1}</label>
             <input
               id={`invoice-line-price-${i}`}
               type="number" min="0" step="0.01" value={l.unit_price || ''} placeholder="0"
@@ -214,7 +214,7 @@ export default function InvoiceCard({ invoice }: { invoice: Invoice }) {
       {hasZeroPrice && (
         <div className="flex items-start gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
           <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
-          <span>Au moins une ligne (dommage constaté) attend un tarif — complète-la avant l&apos;envoi.</span>
+          <span>Au moins une ligne (dommage constaté) attend un tarif, complète-la avant l&apos;envoi.</span>
         </div>
       )}
       {error && <p className="text-xs text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>}

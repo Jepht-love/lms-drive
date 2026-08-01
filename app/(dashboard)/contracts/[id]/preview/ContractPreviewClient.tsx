@@ -276,7 +276,7 @@ export default function ContractPreviewClient({ contract, reservation, vehicle, 
           </p>
         </div>
 
-        {/* ── Conditions générales — 14 articles ── */}
+        {/* ── Conditions générales · 14 articles ── */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
           <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-5">
             Conditions générales de location
@@ -294,7 +294,7 @@ export default function ContractPreviewClient({ contract, reservation, vehicle, 
         {/* ── Clause photo horodatée ── */}
         <div className="bg-blue-50 border border-blue-100 rounded-2xl p-5">
           <h2 className="text-xs font-bold text-blue-800 uppercase tracking-wide mb-2">
-            Clause photo horodatée — État des lieux
+            Clause photo horodatée · État des lieux
           </h2>
           <p className="text-xs text-blue-700 leading-relaxed">{VIDEO_CLAUSE}</p>
         </div>
@@ -349,7 +349,7 @@ export default function ContractPreviewClient({ contract, reservation, vehicle, 
                         {graviteLabel((z.severity ?? 'dommage') as DamageSeverity)}
                       </span>
                       <span className="text-gray-800 truncate">{z.label ?? z.id}</span>
-                      {z.description && <span className="text-gray-400 text-xs truncate">— {z.description}</span>}
+                      {z.description && <span className="text-gray-400 text-xs truncate">· {z.description}</span>}
                     </div>
                   ))}
                 </div>

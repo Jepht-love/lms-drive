@@ -234,14 +234,14 @@ export default function RecapSignatures({
   return (
     <div className="space-y-4">
 
-      {/* ══ DÉPART · 1. EN-TÊTE CONTRAT — loueur, locataire, véhicule, dates, prix ══ */}
+      {/* ══ DÉPART · 1. EN-TÊTE CONTRAT, loueur, locataire, véhicule, dates, prix ══ */}
       {isDepart && contrat && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
           {enTeteContrat}
         </div>
       )}
 
-      {/* ══ ÉTAT DES LIEUX — relevé, schéma/comparaison, photos ══ */}
+      {/* ══ ÉTAT DES LIEUX, relevé, schéma/comparaison, photos ══ */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
         <div className="flex items-center gap-2">
           <ClipboardCheck className="w-5 h-5 text-blue-500" />
@@ -328,7 +328,7 @@ export default function RecapSignatures({
         {isDepart && caseEtSignatureEdl}
       </div>
 
-      {/* ══ RETOUR · CONTRAT DE RESTITUTION — en-tête + conditions + case + signature EDL ══ */}
+      {/* ══ RETOUR · CONTRAT DE RESTITUTION, en-tête + conditions + case + signature EDL ══ */}
       {!isDepart && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
           {enTeteContrat}
@@ -355,7 +355,7 @@ export default function RecapSignatures({
         </div>
       )}
 
-      {/* ══ RETOUR · FACTURE DE RESTITUTION — lignes détaillées + total + signature ══ */}
+      {/* ══ RETOUR · FACTURE DE RESTITUTION, lignes détaillées + total + signature ══ */}
       {!isDepart && retour && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
           <div className="flex items-center gap-2">
@@ -371,7 +371,7 @@ export default function RecapSignatures({
 
           {retour.lignes.length === 0 ? (
             <div className="rounded-xl bg-green-50 border border-green-100 p-4 text-center">
-              <p className="text-sm font-bold text-green-700">Aucun frais — rien à facturer</p>
+              <p className="text-sm font-bold text-green-700">Aucun frais, rien à facturer</p>
               <p className="text-xs text-green-600 mt-0.5">Véhicule rendu conforme, dans les délais et le kilométrage inclus.</p>
             </div>
           ) : (
@@ -420,7 +420,7 @@ export default function RecapSignatures({
             </div>
           </div>
 
-          {/* SIGNATURE DU CONTRAT — tout en bas, comme en agence */}
+          {/* SIGNATURE DU CONTRAT, tout en bas, comme en agence */}
           <ZoneSignature
             label="Signature du contrat de location"
             value={contratSig}

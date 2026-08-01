@@ -45,7 +45,7 @@ export default async function SuiviPage({
         <p className="text-sm text-gray-400 mt-0.5">Entretien, sinistres &amp; infractions</p>
       </div>
 
-      {/* Contrôle segmenté — masqué pour les non-managers (un seul onglet) */}
+      {/* Contrôle segmenté, masqué pour les non-managers (un seul onglet) */}
       {isManager && (
         <div className="flex gap-1 bg-gray-100 p-1 rounded-xl">
           {tabs.map(t => {

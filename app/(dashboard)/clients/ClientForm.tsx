@@ -196,7 +196,7 @@ export default function ClientForm({ action, client: c }: ClientFormProps) {
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Obligatoires à la CRÉATION seulement. En édition on n'impose rien : les
               fiches créées à la volée (nom seul, téléphone vide) doivent rester
-              enregistrables pour être complétées — sinon la validation HTML5 bloque
+              enregistrables pour être complétées, sinon la validation HTML5 bloque
               silencieusement le bouton « Mettre à jour ». */}
           <Field label={c ? 'Prénom' : 'Prénom *'} name="first_name" defaultValue={c?.first_name} required={!c} autoComplete="given-name" enterKeyHint="next" />
           <Field label={c ? 'Nom' : 'Nom *'} name="last_name" defaultValue={c?.last_name} required={!c} autoComplete="family-name" enterKeyHint="next" />
@@ -352,7 +352,7 @@ function SelectField({ label, name, defaultValue, options, labels }: {
         id={name} name={name} defaultValue={defaultValue ?? ''}
         className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white"
       >
-        <option value="">— Choisir —</option>
+        <option value="">· Choisir ·</option>
         {options.map(o => <option key={o} value={o}>{labels?.[o] ?? o}</option>)}
       </select>
     </div>

@@ -49,7 +49,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex" style={{ background: '#0A0A0A' }}>
-      {/* Panneau gauche — logo seul */}
+      {/* Panneau gauche, logo seul */}
       <div className="hidden lg:flex flex-col justify-between w-[45%] p-14" style={{ background: '#0A0A0A', borderRight: '1px solid #1E1E1E' }}>
         <div>
           <Image
@@ -76,7 +76,7 @@ export default function LoginPage() {
         </p>
       </div>
 
-      {/* Panneau droit — formulaire */}
+      {/* Panneau droit, formulaire */}
       <div className="flex-1 flex flex-col items-center justify-center p-6 lg:p-16" style={{ background: '#0F0F0F' }}>
         {/* Logo mobile uniquement */}
         <div className="lg:hidden mb-12">

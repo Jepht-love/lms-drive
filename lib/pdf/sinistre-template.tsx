@@ -123,7 +123,7 @@ export function SinistrePDF({ data }: { data: SinistrePDFData }) {
         {/* Footer */}
         <View style={s.footer} fixed>
           <Text>{data.agency_name}</Text>
-          <Text>Sinistre — {data.vehicle.brand} {data.vehicle.model} {data.vehicle.plate}</Text>
+          <Text>Sinistre · {data.vehicle.brand} {data.vehicle.model} {data.vehicle.plate}</Text>
           <Text render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`} />
         </View>
       </Page>

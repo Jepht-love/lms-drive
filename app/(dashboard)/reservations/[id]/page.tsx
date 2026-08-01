@@ -518,7 +518,7 @@ export default async function ReservationPage({
             reservationNumber={reservation.reservation_number ?? ''}
           />
         )}
-        {/* Créance : toujours disponible (même résa marquée réglée) — le reste dû
+        {/* Créance : toujours disponible (même résa marquée réglée), le reste dû
             pré-remplit la 1re échéance, mais on peut enregistrer un complément
             (dommages, frais…) ou un paiement échelonné à tout moment. */}
         <CreateReceivableButton
