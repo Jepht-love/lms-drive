@@ -15,6 +15,8 @@ interface Props {
   resources: CalendarResource[]
   onEventClick: (e: CalendarEvent) => void
   onBack: () => void
+  /** Masque la ligne de date : sur téléphone elle est déjà dans l.en-tête. */
+  hideHeader?: boolean
 }
 
 // Les types d'évènement qui attendent quelqu'un. Un blocage ou une indisponibilité
@@ -25,7 +27,7 @@ const ASSIGNABLE: EventType[] = [
   'rdv_client', 'rdv_garage', 'rdv_autre', 'livraison', 'recuperation',
 ]
 
-export default function DayEventsPanel({ currentDate, events, resources, onEventClick, onBack }: Props) {
+export default function DayEventsPanel({ currentDate, events, resources, onEventClick, onBack, hideHeader = false }: Props) {
   const dayEvents = events
     .filter(e => isSameDay(new Date(e.start_at), currentDate))
     .sort((a, b) => a.start_at.localeCompare(b.start_at))
@@ -37,7 +39,12 @@ export default function DayEventsPanel({ currentDate, events, resources, onEvent
       {/* Header */}
       {/* Une seule ligne, compacte : ces bandeaux mangeaient la moitié de l'écran
           du téléphone et il ne restait presque rien pour les tâches (remarque 32
-          de Jeff, 01/08/2026). */}
+          de Jeff, 01/08/2026).
+
+          Sur téléphone, cette ligne ne s'affiche pas du tout (`hideHeader`) : la
+          date est déjà dans l'en-tête du calendrier juste au-dessus, la répéter
+          coûtait un bandeau pour rien. */}
+      {!hideHeader && (
       <div className="flex items-center gap-1.5 px-3 py-1 bg-white border-b border-gray-100">
         <button type="button" aria-label="Retour"
           onClick={onBack}
@@ -49,6 +56,7 @@ export default function DayEventsPanel({ currentDate, events, resources, onEvent
           {format(currentDate, 'EEEE d MMMM yyyy', { locale: fr })}
         </p>
       </div>
+      )}
 
       {/* Event list */}
       <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1.5">
@@ -74,13 +82,13 @@ export default function DayEventsPanel({ currentDate, events, resources, onEvent
               >
                 <div className="flex items-stretch gap-0">
                   {/* Color bar */}
-                  <div className="w-1.5 flex-shrink-0 rounded-l-2xl" style={{ backgroundColor: color }} />
+                  <div className="w-1 flex-shrink-0 rounded-l-2xl" style={{ backgroundColor: color }} />
 
-                  <div className="flex-1 px-4 py-3">
+                  <div className="flex-1 px-3 py-2">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-bold text-gray-900 truncate">{ev.title}</p>
-                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                           <span
                             className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full text-white"
                             style={{ backgroundColor: color }}
@@ -94,7 +102,7 @@ export default function DayEventsPanel({ currentDate, events, resources, onEvent
                           )}
                         </div>
                         {ev.vehicles && ev.vehicles.length > 0 && (
-                          <p className="text-xs text-gray-400 mt-1 truncate">
+                          <p className="text-xs text-gray-400 mt-0.5 truncate">
                             {ev.vehicles.map(v => `${v.brand} ${v.model} · ${v.plate}`).join(', ')}
                           </p>
                         )}
@@ -120,7 +128,10 @@ export default function DayEventsPanel({ currentDate, events, resources, onEvent
                             )}
                           </p>
                         ) : ASSIGNABLE.includes(ev.event_type) && !ev.assigned_team_id ? (
-                          <p className="text-xs font-bold text-amber-600 mt-0.5 truncate">
+                          // Noir, comme la pastille de filtre « Non attribué »
+                          // (remarque 33 de Jeff, 01/08/2026). Aucun profil ne peut
+                          // prendre cette couleur : voir RESOURCE_PALETTE.
+                          <p className="text-xs font-bold text-[#111111] mt-0.5 truncate">
                             Non attribué
                           </p>
                         ) : null}

@@ -124,7 +124,6 @@ export default function CalendarPage() {
   }, [])
 
   const loadResources = useCallback(() => {
-    const mobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches
     fetch('/api/calendar/resources')
       .then(r => {
         if (!r.ok) throw new Error(String(r.status))
@@ -161,7 +160,14 @@ export default function CalendarPage() {
             role: r.role,
             type: r.type,
             color: r.color ?? RESOURCE_PALETTE[i % RESOURCE_PALETTE.length],
-            visible: mobile ? true : (meInResources ? r.id === meId : true),
+            // Chacun ouvre le calendrier sur SON planning, plus les tâches non
+            // attribuées (visibles juste au-dessus). Même règle sur téléphone que
+            // sur ordinateur depuis le 01/08/2026 : le mobile affichait tout le
+            // monde, et le gérant devait masquer ses collaborateurs à chaque fois
+            // pour retrouver sa propre journée.
+            // Repli « tout le monde » pour un compte sans colonne (admin technique) :
+            // sans lui, il n'aurait aucun planning du tout.
+            visible: meInResources ? r.id === meId : true,
           })),
         ])
       })

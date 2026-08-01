@@ -427,6 +427,7 @@ export default function MobileCalendar({
             resources={resources.filter(r => r.visible)}
             onEventClick={onEventClick}
             onBack={() => onViewChange('month')}
+            hideHeader
           />
         </>
       )}

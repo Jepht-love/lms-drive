@@ -62,6 +62,13 @@ export const ALERT_RULES: Record<AlertType, {
 }
 
 // Palette de couleurs pour les colonnes ressources (attribution séquentielle)
+/**
+ * Couleurs proposées aux profils et aux équipes.
+ *
+ * **Jamais de noir ni de gris foncé ici** (règle de Jeff du 01/08/2026) : le noir
+ * appartient au « Non attribué », pastille et libellé. Un profil qui le prendrait
+ * se confondrait avec les missions que personne n'a prises.
+ */
 export const RESOURCE_PALETTE = [
   '#EF4444', '#F97316', '#EAB308', '#22C55E',
   '#06B6D4', '#3B82F6', '#8B5CF6', '#EC4899',
