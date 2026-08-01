@@ -13,6 +13,7 @@ import {
   couleurEvenement,
 } from '@/lib/calendar/constants'
 import MonthView from './MonthView'
+import DayEventsPanel from './DayEventsPanel'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -416,93 +417,17 @@ export default function MobileCalendar({
             </div>
           )}
 
-          {/* ── Timeline ─────────────────────────────────────────────────── */}
-          <div
-            ref={scrollRef}
-            className="flex-1 overflow-y-auto"
-            style={{ paddingBottom: 'calc(60px + env(safe-area-inset-bottom) + 16px)' }}
-          >
-            <div className="flex" style={{ height: TOTAL_H, minHeight: TOTAL_H }}>
-              {/* Hour labels */}
-              <div className="w-12 flex-shrink-0 relative select-none">
-                {Array.from({ length: TOTAL_HOURS }, (_, i) => {
-                  const h = CALENDAR_START_HOUR + i
-                  const label = h < 24 ? `${String(h).padStart(2, '0')}h` : `0${h - 24}h`
-                  return (
-                    <div
-                      key={h}
-                      className="absolute w-full pr-2 text-right"
-                      style={{ top: i * HOUR_HEIGHT_PX - 8 }}
-                    >
-                      <span className="text-[10px] text-gray-400">{label}</span>
-                    </div>
-                  )
-                })}
-              </div>
-
-              {/* Grid + events */}
-              <div
-                className="flex-1 relative border-l border-gray-100"
-                onClick={e => {
-                  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-                  const hour = Math.floor((e.clientY - rect.top) / HOUR_HEIGHT_PX) + CALENDAR_START_HOUR
-                  if (defaultResource) onSlotClick(defaultResource, currentDate, Math.min(hour, 23))
-                }}
-              >
-                {/* Hour lines */}
-                {Array.from({ length: TOTAL_HOURS }, (_, i) => (
-                  <div
-                    key={i}
-                    className="absolute left-0 right-0 border-t border-gray-100"
-                    style={{ top: i * HOUR_HEIGHT_PX }}
-                  />
-                ))}
-                {/* Half-hour lines */}
-                {Array.from({ length: TOTAL_HOURS }, (_, i) => (
-                  <div
-                    key={`half-${i}`}
-                    className="absolute left-0 right-0 border-t border-gray-50"
-                    style={{ top: i * HOUR_HEIGHT_PX + HOUR_HEIGHT_PX / 2 }}
-                  />
-                ))}
-
-                <NowLine day={currentDate} />
-
-                {positioned.map(p => (
-                  <button
-                    key={p.ev.id}
-                    type="button"
-                    onClick={e => { e.stopPropagation(); onEventClick(p.ev) }}
-                    className="absolute rounded-lg px-2 py-1 text-left overflow-hidden"
-                    style={{
-                      top: p.top + 1,
-                      height: p.height - 2,
-                      left: p.left,
-                      width: p.width,
-                      backgroundColor: p.color,
-                      zIndex: 2,
-                    }}
-                  >
-                    <p className="text-white text-[11px] font-semibold leading-tight line-clamp-1">{p.ev.title}</p>
-                    {p.height >= 36 && (
-                      <p className="text-white/75 text-[10px] leading-tight mt-0.5 line-clamp-1">
-                        {format(new Date(p.ev.start_at), 'HH:mm')}
-                        {' – '}
-                        {format(new Date(p.ev.end_at), 'HH:mm')}
-                        {p.ev.client ? ` · ${p.ev.client.first_name}` : ''}
-                      </p>
-                    )}
-                  </button>
-                ))}
-
-                {positioned.length === 0 && dayEvs.length === 0 && (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <p className="text-[13px] text-gray-300 font-medium">Aucun événement</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+          {/* La liste des tâches du jour, avec leur heure et qui doit les faire.
+              Remplace la grille horaire depuis le 01/08/2026 (remarque de Jeff) :
+              sur téléphone, taper un jour depuis le mois doit donner la même lecture
+              simple que sur tablette, pas une timeline à faire défiler. */}
+          <DayEventsPanel
+            currentDate={currentDate}
+            events={events}
+            resources={resources.filter(r => r.visible)}
+            onEventClick={onEventClick}
+            onBack={() => onViewChange('month')}
+          />
         </>
       )}
     </div>
