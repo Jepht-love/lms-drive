@@ -30,7 +30,7 @@ function rangeLabel(view: CalendarView, currentDate: Date): string {
   const first = dates[0]
   const last = dates[dates.length - 1]
   const lastMonthYear = format(last, 'MMMM yyyy', { locale: fr })
-  return `${DAY_ABBR[first.getDay()]} ${format(first, 'dd')} — ${DAY_ABBR[last.getDay()]} ${format(last, 'dd')} (${lastMonthYear})`
+  return `${DAY_ABBR[first.getDay()]} ${format(first, 'dd')} · ${DAY_ABBR[last.getDay()]} ${format(last, 'dd')} (${lastMonthYear})`
 }
 
 /** Vue compacte, pensée pour vivre dans la sidebar (220px) plutôt qu'en barre pleine largeur. */

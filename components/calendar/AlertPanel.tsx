@@ -109,7 +109,7 @@ export default function AlertPanel({ open, onClose, onOpenEvent, onDismissed }: 
             <p className="text-[12px] font-medium">{ALERT_RULES[alert.alert_type]?.label ?? alert.alert_type}</p>
             <p className="text-[11px] text-gray-400 mb-1.5">
               {format(new Date(alert.trigger_at), "dd MMM 'à' HH:mm", { locale: fr })}
-              {alert.event?.title ? ` — ${alert.event.title}` : ''}
+              {alert.event?.title ? ` · ${alert.event.title}` : ''}
             </p>
             <div className="flex items-center gap-2">
               {(() => {

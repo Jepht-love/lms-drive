@@ -389,7 +389,7 @@ export async function GET(request: NextRequest) {
         await resend.emails.send({
           from: RESEND_FROM,
           to: resendTo(clt.email),
-          subject: `Restitution de véhicule en retard — ${vehLabel || r.reservation_number}`,
+          subject: `Restitution de véhicule en retard · ${vehLabel || r.reservation_number}`,
           // Contenu provisoire (à finaliser avec le gérant).
           html: `
             <div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.65;color:#111111;">
@@ -411,7 +411,7 @@ export async function GET(request: NextRequest) {
       await supabase.from('notifications').insert({
         user_id: null, type: 'client_late_email',
         title: 'Relance retard envoyée au client',
-        body: `${clientLabel}${vehLabel ? ' — ' + vehLabel : ''} · email de relance envoyé`,
+        body: `${clientLabel}${vehLabel ? ' · ' + vehLabel : ''} · email de relance envoyé`,
         entity_type: 'reservations', entity_id: r.id,
       })
       created.push(r.id)
@@ -430,7 +430,7 @@ export async function GET(request: NextRequest) {
     // qu'elle a déjà sa propre notification. Constaté le 29/07 sur l'iPhone.
     const { data: lateEvents } = await supabase
       .from('calendar_events')
-      .select('id, title, end_at, vehicle_ids, assigned_to, assignee:profiles!assigned_to(full_name)')
+      .select('id, title, event_type, end_at, vehicle_ids, assigned_to, assignee:profiles!assigned_to(full_name)')
       .is('source_key', null)
       .gte('end_at', lateEventFrom)
       .lt('end_at', lateEventTo)
@@ -465,12 +465,17 @@ export async function GET(request: NextRequest) {
         quiFait?.full_name ? `Confiée à ${quiFait.full_name}` : 'Non attribuée',
         `Aurait dû être terminé le ${fmtAgence(ev.end_at, { day: '2-digit', month: '2-digit' })} à ${heureAgence(ev.end_at)}`,
       ].filter(Boolean).join('\n')
+      // Le titre dit ce que c'est vraiment. « Tâche / RDV en retard » obligeait à
+      // lire le corps pour savoir de quoi on parlait, alors que l'évènement le sait
+      // (remontée SAV de Jeff, 31/07/2026). Le libellé « Tâche / RDV en retard »
+      // reste celui du RÉGLAGE dans les paramètres, où il couvre bien les deux.
+      const titreRetard = (ev as any).event_type === 'tache' ? 'Tâche en retard' : 'RDV en retard'
       await supabase.from('notifications').insert({
         user_id: null, type: 'event_return_late',
-        title: 'Tâche / RDV en retard', body,
+        title: titreRetard, body,
         entity_type: 'calendar_events', entity_id: ev.id,
       })
-      await broadcastPushToManagers({ title: 'Tâche / RDV en retard', body, url: '/calendrier' }, 'task_late_alert')
+      await broadcastPushToManagers({ title: titreRetard, body, url: '/calendrier' }, 'task_late_alert')
       created.push(ev.id)
     }
 

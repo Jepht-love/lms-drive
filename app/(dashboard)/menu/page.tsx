@@ -94,7 +94,7 @@ export default async function MenuPage() {
     // Casse le padding du layout pour aller bord-à-bord
     <div className="-mx-4 -mt-5 pb-2">
 
-      {/* ─── Hero profil — fond noir pleine largeur ─── */}
+      {/* ─── Hero profil, fond noir pleine largeur ─── */}
       <div className="bg-[#1C1C1E] px-5 pt-5 pb-6" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
         <div className="flex items-center justify-between max-w-3xl mx-auto">
 
@@ -118,7 +118,7 @@ export default async function MenuPage() {
         </div>
       </div>
 
-      {/* ─── Corps de la page — fond gris très clair ─── */}
+      {/* ─── Corps de la page, fond gris très clair ─── */}
       <div className="px-4 space-y-3 mt-4 max-w-3xl mx-auto">
 
         {/* Modules principaux */}
@@ -147,7 +147,7 @@ export default async function MenuPage() {
           ))}
         </div>
 
-        {/* Administration — réservé gérant/associé */}
+        {/* Administration, réservé gérant/associé */}
         {isManager && (
           <div>
             <p className="px-1 pb-2 pt-1 text-[10px] font-black uppercase tracking-[0.15em] text-gray-400">
@@ -174,7 +174,7 @@ export default async function MenuPage() {
           </div>
         )}
 
-        {/* SAV — réservé au super-admin (éditeur) */}
+        {/* SAV, réservé au super-admin (éditeur) */}
         {savAdmin && (
           <div>
             <p className="px-1 pb-2 pt-1 text-[10px] font-black uppercase tracking-[0.15em] text-gray-400">
@@ -189,7 +189,7 @@ export default async function MenuPage() {
                   <Bug className="w-4 h-4 text-[#111111]" strokeWidth={1.8} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-[#111111] leading-snug">SAV — Tickets</p>
+                  <p className="text-sm font-semibold text-[#111111] leading-snug">SAV · Tickets</p>
                   <p className="text-xs text-gray-400 mt-0.5 leading-none">Signalements de bugs des utilisateurs</p>
                 </div>
                 <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />

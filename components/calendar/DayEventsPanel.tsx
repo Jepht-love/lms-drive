@@ -68,7 +68,7 @@ export default function DayEventsPanel({ currentDate, events, resources, onEvent
               <button
                 key={ev.id}
                 type="button"
-                aria-label={`${ev.title} — de ${startTime} à ${endTime}`}
+                aria-label={`${ev.title}, de ${startTime} à ${endTime}`}
                 onClick={() => onEventClick(ev)}
                 className="w-full text-left bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-shadow active:scale-[.99]"
               >

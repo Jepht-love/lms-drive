@@ -34,7 +34,7 @@ export default function MobileCalendarPanel({
 }: MobileCalendarPanelProps) {
   return (
     <>
-      {/* Fond semi-transparent — clic = fermer */}
+      {/* Fond semi-transparent, clic = fermer */}
       <div
         className={[
           'fixed inset-0 z-40 bg-black/30 transition-opacity md:hidden',

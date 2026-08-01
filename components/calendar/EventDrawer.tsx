@@ -269,10 +269,10 @@ export default function EventDrawer({ open, event, slotContext, resources, prese
       <button type="button" aria-label="Fermer" onClick={onClose} className="absolute inset-0 bg-black/30" />
 
       {/*
-        Téléphone : fenêtre centrée, marge tout autour (depuis le 29/07/2026 —
+        Téléphone : fenêtre centrée, marge tout autour (depuis le 29/07/2026 ·
                     elle était collée en bas et le bouton d'enregistrement d'un
                     formulaire long passait sous le pli)
-        Ordinateur : tiroir à droite, pleine hauteur — volontairement conservé,
+        Ordinateur : tiroir à droite, pleine hauteur, volontairement conservé,
                     c'est la mise en page de l'agenda sur grand écran
       */}
       <div className="
@@ -350,7 +350,7 @@ export default function EventDrawer({ open, event, slotContext, resources, prese
           </div>
 
           {/* Groupe de boutons, pas un champ : l'intitulé nomme le groupe via
-              aria-labelledby, et aria-pressed porte l'état sélectionné — que
+              aria-labelledby, et aria-pressed porte l'état sélectionné, que
               seule la couleur signalait jusqu'ici. */}
           <p id="event-status-label" className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1">Statut</p>
           <div role="group" aria-labelledby="event-status-label" className="flex flex-wrap gap-1.5 mb-3">
@@ -406,7 +406,7 @@ export default function EventDrawer({ open, event, slotContext, resources, prese
             onChange={e => setAssignee(e.target.value)}
             className="w-full border border-gray-200 rounded-lg px-3 h-9 text-[13px] mb-3"
           >
-            <option value="">— Aucune —</option>
+            <option value="">· Aucune ·</option>
             <optgroup label="Collaborateurs">
               {resources.filter(r => r.type === 'profile' && r.id !== UNASSIGNED_RESOURCE_ID).map(r => (
                 <option key={r.id} value={`profile:${r.id}`}>{r.full_name}</option>
@@ -461,7 +461,7 @@ export default function EventDrawer({ open, event, slotContext, resources, prese
             disabled={locked}
             className="w-full border border-gray-200 rounded-lg px-3 h-9 text-[13px] mb-3 disabled:bg-gray-50 disabled:text-gray-400"
           >
-            <option value="">— Aucun —</option>
+            <option value="">· Aucun ·</option>
             {clients.map(c => (
               <option key={c.id} value={c.id}>{c.first_name} {c.last_name}</option>
             ))}
@@ -479,7 +479,7 @@ export default function EventDrawer({ open, event, slotContext, resources, prese
           {error && <p className="text-[12px] text-red-500 mt-2">{error}</p>}
         </div>
 
-        {/* Footer collé en bas — toujours visible sans scroll. La réserve de 76 px
+        {/* Footer collé en bas, toujours visible sans scroll. La réserve de 76 px
             qui le remontait au-dessus de la barre de navigation a sauté le
             29/07/2026 : la fenêtre est centrée, elle ne touche plus le bas. */}
         <div className="shrink-0 px-4 pt-3 pb-4 border-t border-gray-100 flex flex-col gap-2 bg-white">

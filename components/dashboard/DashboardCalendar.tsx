@@ -69,13 +69,13 @@ function eventVehicule(e: CalendarEvent): string | null {
  */
 function eventIntitule(e: CalendarEvent, libellePastille: string): string | null {
   const v = e.vehicles?.[0]
-  const finDuTitre = e.title.split(' — ').slice(1).join(' — ')
+  const finDuTitre = e.title.split(' · ').slice(1).join(' · ')
   const finRepeteLeVehicule = Boolean(
     v && finDuTitre && [v.brand, v.model].filter(Boolean).some(
       mot => finDuTitre.toLowerCase().includes(String(mot).toLowerCase()),
     ),
   )
-  const intitule = (finRepeteLeVehicule ? e.title.split(' — ')[0] : e.title).trim()
+  const intitule = (finRepeteLeVehicule ? e.title.split(' · ')[0] : e.title).trim()
   if (!intitule) return null
   if (intitule.toLowerCase() === libellePastille.toLowerCase()) return null
   return intitule
@@ -218,7 +218,7 @@ export default function DashboardCalendar() {
       {loadFailed && (
         <LoadErrorBanner
           className="mb-3"
-          message="Semaine non chargée — les pastilles peuvent manquer."
+          message="Semaine non chargée, les pastilles peuvent manquer."
           onRetry={() => setReloadKey(k => k + 1)}
         />
       )}

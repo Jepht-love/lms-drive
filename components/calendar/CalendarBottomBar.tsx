@@ -52,7 +52,7 @@ export default function CalendarBottomBar({ events, onCreateNew, onPickEvent }: 
               >
                 <p className="text-[12px] font-medium">{ev.title}</p>
                 <p className="text-[11px] text-gray-400">
-                  {(ev.vehicles ?? []).map(v => v.plate).join(', ')}{ev.client ? ` — ${ev.client.first_name} ${ev.client.last_name}` : ''}
+                  {(ev.vehicles ?? []).map(v => v.plate).join(', ')}{ev.client ? ` · ${ev.client.first_name} ${ev.client.last_name}` : ''}
                 </p>
               </button>
             ))}
@@ -64,7 +64,7 @@ export default function CalendarBottomBar({ events, onCreateNew, onPickEvent }: 
       )}
 
       {/* Deux boutons flottants juste au-dessus du BottomNav standard (60px +
-          safe-area) — plus de barre intermédiaire en double. */}
+          safe-area), plus de barre intermédiaire en double. */}
       <button
         type="button"
         onClick={() => setSearchOpen(true)}

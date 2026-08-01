@@ -357,7 +357,7 @@ export default function CalendarPage() {
         {loadFailed && (
           <LoadErrorBanner
             className="flex-shrink-0 mx-3 mt-3 mb-1"
-            message="Planning non chargé — ce qui est affiché peut être incomplet."
+            message="Planning non chargé, ce qui est affiché peut être incomplet."
             onRetry={() => { loadResources(); loadEvents(); loadAlertCount() }}
           />
         )}
