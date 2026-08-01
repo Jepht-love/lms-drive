@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, ChevronDown, ChevronUp } from 'lucide-react'
-import { reportVehicleIssues } from '@/lib/actions/vehicle-issues'
+import { reportVehicleIssues, updateVehicleIssue } from '@/lib/actions/vehicle-issues'
 import { useToast } from '@/components/Toast'
 import type { MaintenanceFlag } from '@/types/database'
 import DamageRow from '@/components/vehicles/DamageRow'
@@ -34,6 +34,11 @@ import {
 //   · Un dégât RÉPARÉ reste affiché, dans sa propre section : c'est l'historique
 //     du véhicule, et ce qui permet de comparer encaissé et dépensé.
 //
+// Depuis le 01/08/2026 (remarque 35 de Jeff), le même formulaire sert à déclarer
+// et à corriger : un dommage se saisit à chaud depuis le téléphone, une faute de
+// frappe devait pouvoir se rattraper. Un dégât venu d'un état des lieux garde son
+// type et son origine verrouillés, ce sont eux qui ont fixé la facture du client.
+//
 // Les montants ne sont visibles que du gérant et des associés (`canSeeAmounts`).
 
 const SEVERITIES: { id: MaintenanceFlag['severity']; label: string; cls: string }[] = [
@@ -52,6 +57,7 @@ export default function VehicleFacts({ vehicleId, flags, canSeeAmounts }: Props)
   const router = useRouter()
   const { show: toast } = useToast()
   const [adding, setAdding] = useState(false)
+  const [editing, setEditing] = useState<MaintenanceFlag | null>(null)
   const [label, setLabel] = useState('')
   const [damageType, setDamageType] = useState('')
   const [origin, setOrigin] = useState('usure')
@@ -62,27 +68,48 @@ export default function VehicleFacts({ vehicleId, flags, canSeeAmounts }: Props)
   const actifs = flags.filter(f => !f.repaired_at)
   const repares = flags.filter(f => f.repaired_at)
 
-  function add() {
+  // Le type et l'origine d'un dégât venu d'un état des lieux ne se retouchent pas :
+  // ce sont eux qui ont chiffré la facture de restitution du client.
+  const verrouille = editing?.source === 'inspection'
+
+  function ferme() {
+    setAdding(false); setEditing(null)
+    setLabel(''); setDamageType(''); setOrigin('usure'); setSeverity('attention')
+  }
+
+  function ouvreCorrection(f: MaintenanceFlag) {
+    setEditing(f)
+    setAdding(false)
+    setLabel(f.label)
+    setDamageType(f.damage_type ?? '')
+    setOrigin(f.origin ?? 'usure')
+    setSeverity(f.severity)
+  }
+
+  function enregistre() {
     const l = label.trim()
-    if (!l || !damageType) return
+    if (!l || (!damageType && !verrouille)) return
     startTransition(async () => {
-      const r = await reportVehicleIssues(vehicleId, [{
-        category: 'manuel',
-        label: l,
-        severity,
-        source: 'manuel',
-        source_id: null,
-        damage_type: damageType,
-        origin,
-        // Un fait saisi à la main n'est rattaché à aucune réservation et n'a rien
-        // été facturé : c'est un coût pour la société, pas une recette.
-        reservation_id: null,
-        billed_amount: null,
-      }])
+      const r = editing
+        ? await updateVehicleIssue(vehicleId, editing.id, { label: l, damage_type: damageType, origin, severity })
+        : await reportVehicleIssues(vehicleId, [{
+            category: 'manuel',
+            label: l,
+            severity,
+            source: 'manuel',
+            source_id: null,
+            damage_type: damageType,
+            origin,
+            // Un fait saisi à la main n'est rattaché à aucune réservation et n'a rien
+            // été facturé : c'est un coût pour la société, pas une recette.
+            reservation_id: null,
+            billed_amount: null,
+          }])
       if (r?.error) { toast(r.error, 'error'); return }
-      setLabel(''); setDamageType(''); setOrigin('usure'); setSeverity('attention'); setAdding(false)
+      const corrige = !!editing
+      ferme()
       router.refresh()
-      toast('Dommage ajouté')
+      toast(corrige ? 'Dommage modifié' : 'Dommage ajouté')
     })
   }
 
@@ -92,7 +119,7 @@ export default function VehicleFacts({ vehicleId, flags, canSeeAmounts }: Props)
           « Ajouter une intervention » et que les blocs de la page. Il tient aussi
           lieu de titre : un intitulé au-dessus ferait doublon. Demandes de Jeff du
           01/08/2026. */}
-      {!adding && (
+      {!adding && !editing && (
         <button type="button"
           onClick={() => setAdding(true)}
           className="flex items-center justify-center gap-2 w-full py-3.5 bg-[#111111] text-white rounded-2xl font-bold text-sm hover:bg-gray-800 transition-colors active:scale-[.99]"
@@ -102,8 +129,11 @@ export default function VehicleFacts({ vehicleId, flags, canSeeAmounts }: Props)
       )}
 
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 space-y-3">
-      {adding && (
+      {(adding || editing) && (
         <div className="rounded-xl border border-gray-100 bg-gray-50 p-3 space-y-3">
+          {editing && (
+            <p className="text-xs font-bold text-gray-900">Modifier le dommage</p>
+          )}
           <div>
             <label htmlFor="vehicle-fact-label" className="block text-xs font-medium text-gray-600 mb-1 uppercase tracking-wide">Dommage constaté</label>
             <input
@@ -121,8 +151,9 @@ export default function VehicleFacts({ vehicleId, flags, canSeeAmounts }: Props)
             <select
               id="vehicle-fact-type"
               value={damageType}
+              disabled={verrouille}
               onChange={e => setDamageType(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gray-300"
+              className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gray-300 disabled:bg-gray-100 disabled:text-gray-500"
             >
               <option value="">Choisir…</option>
               <optgroup label="Dégâts facturables au client">
@@ -136,6 +167,12 @@ export default function VehicleFacts({ vehicleId, flags, canSeeAmounts }: Props)
                 ))}
               </optgroup>
             </select>
+            {verrouille && (
+              <p className="text-[10px] text-gray-400 mt-1">
+                Ce dommage vient d&apos;un état des lieux : son type et sa provenance ont servi
+                à facturer le client, ils ne se modifient plus. Le libellé et la gravité, oui.
+              </p>
+            )}
           </div>
 
           <div>
@@ -145,8 +182,9 @@ export default function VehicleFacts({ vehicleId, flags, canSeeAmounts }: Props)
                 <button type="button"
                   key={o.id}
                   onClick={() => setOrigin(o.id)}
+                  disabled={verrouille}
                   title={o.hint}
-                  className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border ${
+                  className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border disabled:opacity-40 ${
                     origin === o.id ? 'border-[#111111] bg-[#111111] text-white' : 'border-gray-200 text-gray-500'
                   }`}
                 >
@@ -175,30 +213,30 @@ export default function VehicleFacts({ vehicleId, flags, canSeeAmounts }: Props)
 
           <div className="flex gap-2">
             <button type="button"
-              onClick={() => { setAdding(false); setLabel(''); setDamageType('') }}
+              onClick={ferme}
               disabled={pending}
               className="flex-1 py-2 rounded-lg text-xs font-semibold border border-gray-200 text-gray-600 disabled:opacity-40"
             >
               Annuler
             </button>
             <button type="button"
-              onClick={add}
-              disabled={pending || !label.trim() || !damageType}
+              onClick={enregistre}
+              disabled={pending || !label.trim() || (!damageType && !verrouille)}
               className="flex-1 py-2 rounded-lg text-xs font-bold bg-[#111111] text-white disabled:opacity-40"
             >
-              Ajouter
+              {editing ? 'Enregistrer' : 'Ajouter'}
             </button>
           </div>
         </div>
       )}
 
       {actifs.length === 0 ? (
-        !adding && <p className="text-xs text-gray-400">Aucun dommage en attente. Ajoutez une usure ou un point à surveiller.</p>
+        !adding && !editing && <p className="text-xs text-gray-400">Aucun dommage en attente. Ajoutez une usure ou un point à surveiller.</p>
       ) : (
         <div className="space-y-1.5">
           {actifs.map(f => (
             <div key={f.id} className="space-y-0.5">
-              <DamageRow flag={f} />
+              <DamageRow flag={f} onEdit={() => ouvreCorrection(f)} />
               <p className="text-[10px] text-gray-400 px-1">
                 {damageTypeLabel(f.damage_type)} · {damageOriginLabel(f.origin)}
                 {canSeeAmounts && f.billed_amount != null && (

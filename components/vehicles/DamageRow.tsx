@@ -1,3 +1,4 @@
+import { Pencil } from 'lucide-react'
 import type { MaintenanceFlag } from '@/types/database'
 
 const SEV_CLS: Record<MaintenanceFlag['severity'], string> = {
@@ -27,11 +28,14 @@ const SEV_LABEL: Record<MaintenanceFlag['severity'], string> = {
  *
  * Partagée par la fiche véhicule et la page entretien.
  *
+ * Un crayon de correction n'apparaît que si l'écran fournit `onEdit` : la page
+ * entretien le donne, la fiche véhicule non (on y consulte, on n'y corrige pas).
+ *
  * Ce qu'il ne faut pas casser : la mise en page passe à la ligne sur téléphone
  * (`flex-wrap`). Sans ça, la gravité, le libellé et la provenance se chevauchent
  * en largeur iPhone, constaté par Jeff le 01/08/2026.
  */
-export default function DamageRow({ flag }: { flag: MaintenanceFlag }) {
+export default function DamageRow({ flag, onEdit }: { flag: MaintenanceFlag; onEdit?: () => void }) {
   return (
     <div className="rounded-xl bg-gray-50 px-2.5 py-2">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -46,6 +50,15 @@ export default function DamageRow({ flag }: { flag: MaintenanceFlag }) {
             intervention : le dire, sinon on le croit oublié. */}
         {flag.intervention_id && (
           <span className="text-[10px] font-semibold text-blue-600">au garage</span>
+        )}
+        {onEdit && (
+          <button type="button"
+            onClick={onEdit}
+            aria-label={`Modifier le dommage : ${flag.label}`}
+            className="ml-auto shrink-0 p-1.5 -m-0.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-200 transition-colors"
+          >
+            <Pencil className="w-3.5 h-3.5" />
+          </button>
         )}
       </div>
     </div>

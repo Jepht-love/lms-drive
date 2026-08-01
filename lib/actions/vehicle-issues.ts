@@ -76,6 +76,74 @@ export async function reportVehicleIssues(vehicleId: string, issues: NewIssue[],
 }
 
 /**
+ * Corrige une déclaration de dommage déjà enregistrée (remarque 35 de Jeff,
+ * 01/08/2026). Un dommage se saisit à chaud, souvent depuis le téléphone : une
+ * faute de frappe, un type mal choisi ou une gravité trop forte devaient pouvoir
+ * se rattraper sans supprimer la ligne et la refaire.
+ *
+ * Ce qu'elle attend : le véhicule, le dégât, et les seuls champs à changer.
+ * Ce qu'elle produit : le dégât corrigé dans `vehicles.maintenance_flags`.
+ *
+ * Deux garde-fous, qui protègent des chiffres déjà écrits ailleurs :
+ *   · Un dommage RÉPARÉ ne se modifie plus. Sa dépense est déjà en comptabilité,
+ *     dans un poste déduit de son type : le changer ferait mentir l'écriture.
+ *   · Un dommage venu d'un ÉTAT DES LIEUX garde son type et son origine. Ce sont
+ *     eux qui ont déterminé ce que le client a payé sur sa facture de restitution ;
+ *     seuls le libellé et la gravité restent libres.
+ *
+ * Un dommage déjà confié à une intervention reste modifiable : rien n'est encore
+ * écrit en comptabilité tant que le garage n'a pas facturé.
+ */
+export async function updateVehicleIssue(
+  vehicleId: string,
+  flagId: string,
+  patch: { label?: string; damage_type?: string; origin?: string; severity?: MaintenanceFlag['severity'] },
+) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié' }
+
+  const { flags } = await loadFlags(supabase, vehicleId)
+  const target = flags.find(f => f.id === flagId)
+  if (!target) return { error: 'Dommage introuvable' }
+  if (target.repaired_at) return { error: 'Ce dommage a déjà été réparé, il ne peut plus être modifié' }
+
+  const label = patch.label?.trim()
+  if (patch.label !== undefined && !label) return { error: 'Le dommage constaté ne peut pas être vide' }
+
+  const venuDunEtatDesLieux = target.source === 'inspection'
+  const corrige: MaintenanceFlag = {
+    ...target,
+    ...(label ? { label } : {}),
+    ...(patch.severity ? { severity: patch.severity } : {}),
+    ...(venuDunEtatDesLieux ? {} : {
+      ...(patch.damage_type ? { damage_type: patch.damage_type } : {}),
+      ...(patch.origin ? { origin: patch.origin } : {}),
+    }),
+  }
+
+  const { error } = await supabase
+    .from('vehicles')
+    .update({ maintenance_flags: flags.map(f => (f.id === flagId ? corrige : f)) })
+    .eq('id', vehicleId)
+  if (error) return { error: error.message }
+
+  await supabase.from('audit_logs').insert({
+    user_id: user.id,
+    action: 'vehicle_damage_updated',
+    entity_type: 'vehicles',
+    entity_id: vehicleId,
+    metadata: { flag_id: flagId, avant: { label: target.label, damage_type: target.damage_type, origin: target.origin, severity: target.severity } },
+  })
+
+  revalidatePath('/vehicles')
+  revalidatePath(`/vehicles/${vehicleId}`)
+  revalidatePath('/maintenance')
+  revalidatePath(`/maintenance/${vehicleId}`)
+  return { success: true }
+}
+
+/**
  * Enregistre le DEVIS du garage sur un dégât, avant réparation.
  *
  * N'écrit rien en comptabilité et ne solde rien : un devis n'est pas une dépense,
