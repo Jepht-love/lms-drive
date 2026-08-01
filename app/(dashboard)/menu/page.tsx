@@ -12,11 +12,18 @@ import { isSavAdmin } from '@/lib/sav/admin'
 import { Bug, Smartphone } from 'lucide-react'
 
 // Le simulateur d'appareil est un outil de travail de l'éditeur, pas une
-// fonctionnalité du logiciel : il vit dans `public/simulateur.html`, un fichier
-// volontairement absent du dépôt pour qu'aucun déploiement client ne le porte.
-// Le lien ne s'affiche donc qu'en développement — en ligne, le fichier n'existe
-// pas et le lien mènerait à une page introuvable. Décidé avec Jeff le 30/07/2026.
-const SIMULATEUR_DISPONIBLE = process.env.NODE_ENV !== 'production'
+// fonctionnalité du logiciel. Il vivait hors du dépôt et son lien ne s'affichait
+// qu'en développement ; **Jeff l'a demandé en ligne le 01/08/2026** pour tester et
+// annoter depuis n'importe quel poste, sans lancer le projet en local.
+//
+// Ce qui le protège : la section « Éditeur » qui le contient n'apparaît que pour
+// le super-administrateur (isSavAdmin, sur l'adresse e-mail). Aucun gérant client
+// ne le voit.
+//
+// Ce qui ne le protège pas : le fichier vit dans `public/`, donc l'adresse
+// `/simulateur.html` répond à qui la connaît. Ce n'est qu'un cadre autour du
+// logiciel, qui exige toujours une connexion — mais ne jamais y écrire quoi que ce
+// soit de confidentiel, ni aucune clé.
 
 // ─── Modules principaux ───────────────────────────────────────────────────────
 const modules = [
@@ -198,23 +205,21 @@ export default async function MenuPage() {
               {/* Lien direct vers un fichier statique, hors du routeur : un <a> et
                   non un <Link>, sinon la navigation côté client cherche une route
                   qui n'existe pas. Nouvel onglet, pour ne pas perdre la page en cours. */}
-              {SIMULATEUR_DISPONIBLE && (
-                <a
-                  href="/simulateur.html"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-4 px-4 py-4 hover:bg-gray-50 transition-colors active:bg-gray-100"
-                >
-                  <div className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0">
-                    <Smartphone className="w-4 h-4 text-[#111111]" strokeWidth={1.8} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-[#111111] leading-snug">Simulateur</p>
-                    <p className="text-xs text-gray-400 mt-0.5 leading-none">Tester sur mobile et écrire des remarques</p>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
-                </a>
-              )}
+              <a
+                href="/simulateur.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-4 px-4 py-4 hover:bg-gray-50 transition-colors active:bg-gray-100"
+              >
+                <div className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0">
+                  <Smartphone className="w-4 h-4 text-[#111111]" strokeWidth={1.8} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-[#111111] leading-snug">Simulateur</p>
+                  <p className="text-xs text-gray-400 mt-0.5 leading-none">Tester sur mobile et écrire des remarques</p>
+                </div>
+                <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
+              </a>
             </div>
           </div>
         )}

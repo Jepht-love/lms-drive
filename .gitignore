@@ -44,9 +44,11 @@ next-env.d.ts
 /edl-editor.local.html
 
 # Outils de travail de l'éditeur, jamais livrés à un client (règle du 30/07/2026).
-# Le simulateur ouvre l'application dans un cadre de la taille d'un téléphone et
-# permet d'écrire des remarques ; l'aperçu sert à relire toutes les notifications.
-# Ils ne fonctionnent qu'en local : le menu ne montre leur lien qu'en développement.
-/public/simulateur.html
-/public/simulateur.js
+# L'aperçu sert à relire toutes les notifications ; il ne fonctionne qu'en local,
+# le menu ne montre son lien qu'en développement.
+#
+# LE SIMULATEUR EST SORTI DE CETTE LISTE le 01/08/2026, à la demande de Jeff : il
+# est désormais suivi et déployé, pour qu'il puisse tester et annoter depuis
+# n'importe quel poste. Son lien reste dans la section « Éditeur » du menu, qui ne
+# s'affiche que pour le super-administrateur.
 /public/apercu-notifications.html
