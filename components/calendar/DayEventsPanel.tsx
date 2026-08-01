@@ -35,25 +35,23 @@ export default function DayEventsPanel({ currentDate, events, resources, onEvent
   return (
     <div className="flex flex-col flex-1 overflow-hidden bg-[#F2F2F7]">
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-100">
+      {/* Une seule ligne, compacte : ces bandeaux mangeaient la moitié de l'écran
+          du téléphone et il ne restait presque rien pour les tâches (remarque 32
+          de Jeff, 01/08/2026). */}
+      <div className="flex items-center gap-1.5 px-3 py-1 bg-white border-b border-gray-100">
         <button type="button" aria-label="Retour"
           onClick={onBack}
-          className="p-1.5 rounded-xl hover:bg-gray-100 transition-colors"
+          className="p-1 rounded-lg hover:bg-gray-100 transition-colors"
         >
-          <ArrowLeft className="w-5 h-5 text-gray-600" />
+          <ArrowLeft className="w-4 h-4 text-gray-600" />
         </button>
-        <div>
-          <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 capitalize">
-            {format(currentDate, 'EEEE', { locale: fr })}
-          </p>
-          <p className="text-lg font-black text-gray-900">
-            {format(currentDate, 'd MMMM yyyy', { locale: fr })}
-          </p>
-        </div>
+        <p className="text-[13px] font-bold text-gray-900 capitalize">
+          {format(currentDate, 'EEEE d MMMM yyyy', { locale: fr })}
+        </p>
       </div>
 
       {/* Event list */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-2">
+      <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1.5">
         {dayEvents.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <CalendarDays className="w-10 h-10 text-gray-200 mb-3" />

@@ -216,13 +216,13 @@ export default function MobileCalendar({
     <div className="flex flex-col h-full overflow-hidden bg-white">
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <div className="flex-shrink-0 px-3 pt-2 pb-1.5 flex items-center justify-between border-b border-gray-100">
+      <div className="flex-shrink-0 px-3 py-0.5 flex items-center justify-between border-b border-gray-100">
         <div className="flex items-center gap-0.5">
           <button
             type="button"
             aria-label="Période précédente"
             onClick={() => handleHeaderNav(-1)}
-            className="w-8 h-8 flex items-center justify-center text-gray-400"
+            className="w-6 h-6 flex items-center justify-center text-gray-400"
           >
             <ChevronLeft size={18} />
           </button>
@@ -235,7 +235,7 @@ export default function MobileCalendar({
             type="button"
             aria-label="Période suivante"
             onClick={() => handleHeaderNav(1)}
-            className="w-8 h-8 flex items-center justify-center text-gray-400"
+            className="w-6 h-6 flex items-center justify-center text-gray-400"
           >
             <ChevronRight size={18} />
           </button>
@@ -270,7 +270,7 @@ export default function MobileCalendar({
           <button
             type="button"
             onClick={onShowAlerts}
-            className="relative w-8 h-8 flex items-center justify-center"
+            className="relative w-6 h-6 flex items-center justify-center"
           >
             <Bell size={18} className="text-gray-600" />
             {alertCount > 0 && (
@@ -283,7 +283,7 @@ export default function MobileCalendar({
             type="button"
             aria-label="Nouvel événement"
             onClick={onCreateNew}
-            className="w-8 h-8 bg-[#111111] rounded-full flex items-center justify-center"
+            className="w-7 h-7 bg-[#111111] rounded-full flex items-center justify-center"
           >
             <Plus size={16} className="text-white" />
           </button>
@@ -291,7 +291,7 @@ export default function MobileCalendar({
       </div>
 
       {/* ── View tabs + accès panneau (dates · calendriers · disponibilités) ── */}
-      <div className="flex-shrink-0 flex items-center justify-between px-3 py-2 border-b border-gray-100">
+      <div className="flex-shrink-0 flex items-center justify-between px-3 py-0.5 border-b border-gray-100">
         <div className="flex gap-1">
           {([['day', 'Jour'], ['month', 'Mois']] as [CalendarView, string][]).map(([v, label]) => (
             <button
@@ -299,7 +299,7 @@ export default function MobileCalendar({
               type="button"
               onClick={() => onViewChange(v)}
               className={[
-                'px-4 h-7 rounded-lg text-[12px] font-semibold transition-colors',
+                'px-3 h-6 rounded-lg text-[11px] font-semibold transition-colors',
                 view === v ? 'bg-[#111111] text-white' : 'bg-gray-100 text-gray-500',
               ].join(' ')}
             >
@@ -310,7 +310,7 @@ export default function MobileCalendar({
         <button
           type="button"
           onClick={onOpenPanel}
-          className="flex items-center gap-1.5 px-3 h-7 rounded-lg text-[12px] font-semibold text-gray-600 bg-gray-100"
+          className="flex items-center gap-1.5 px-2.5 h-6 rounded-lg text-[12px] font-semibold text-gray-600 bg-gray-100"
         >
           <SlidersHorizontal size={13} /> Calendriers
         </button>
@@ -327,7 +327,7 @@ export default function MobileCalendar({
       ) : (
         <>
           {/* ── Date strip ───────────────────────────────────────────────── */}
-          <div className="flex-shrink-0 bg-white border-b border-gray-100 py-2">
+          <div className="flex-shrink-0 bg-white border-b border-gray-100 py-0.5">
             <div className="flex justify-around px-1">
               {weekDays.map((day, i) => {
                 const isTd = sameDay(day, today)
@@ -359,12 +359,12 @@ export default function MobileCalendar({
           {/* ── Resource chips ───────────────────────────────────────────── */}
           {namedResources.length > 1 && (
             <div className="flex-shrink-0 border-b border-gray-100 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
-              <div className="flex gap-2 px-3 py-2 w-max">
+              <div className="flex gap-1.5 px-3 py-1 w-max">
                 <button
                   type="button"
                   onClick={onSelectAll}
                   className={[
-                    'px-3 h-7 rounded-full text-[12px] font-semibold flex-shrink-0 border transition-colors',
+                    'px-2.5 h-6 rounded-full text-[11px] font-semibold flex-shrink-0 border transition-colors',
                     allVisible
                       ? 'bg-[#111111] text-white border-[#111111]'
                       : 'bg-white text-gray-500 border-gray-200',
@@ -378,7 +378,7 @@ export default function MobileCalendar({
                     type="button"
                     onClick={() => onToggleResource(r.id)}
                     className={[
-                      'flex items-center gap-1.5 px-2.5 h-7 rounded-full text-[12px] font-semibold flex-shrink-0 border transition-colors',
+                      'flex items-center gap-1 px-2 h-6 rounded-full text-[11px] font-semibold flex-shrink-0 border transition-colors',
                       r.visible ? 'text-white border-transparent' : 'bg-white text-gray-500 border-gray-200',
                     ].join(' ')}
                     style={r.visible ? { backgroundColor: r.color, borderColor: r.color } : undefined}
