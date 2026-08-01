@@ -142,7 +142,7 @@ Conséquence directe : **son travail de préparation est fragile.** Une migratio
 ### Ce que le calendrier impose
 
 - **La régression est l'ennemi numéro un.** Casser un écran qui fonctionnait coûte beaucoup plus cher que de laisser un défaut mineur. Avant de modifier un fichier partagé (`lib/`, un composant réutilisé), vérifier qui d'autre s'en sert.
-- **Quand un bug est signalé, chercher si le même défaut existe ailleurs.** Un motif copié d'un écran à l'autre produit le même bug dans dix rubriques ; corriger la seule occurrence signalée en laisse neuf. **Pour les remontées du SAV, ce balayage revient à l'agent `chercheur-de-jumeaux`** : le lancer après correction, sans attendre que Jeff le demande. Il repasse ensuite vérifier que tout est réellement réglé. Ne pas le lancer sur un simple ajustement d'affichage demandé par Jeff.
+- **Quand un bug est signalé, chercher si le même défaut existe ailleurs.** Un motif copié d'un écran à l'autre produit le même bug dans dix rubriques ; corriger la seule occurrence signalée en laisse neuf. Ce balayage se fait en direct, par une recherche dans le code, pas par un agent.
 - **Pas de refonte lourde d'ici septembre.** Si j'en repère une qui devient nécessaire, la signaler sans la lancer.
 
 ## 7. D'où viennent les corrections
@@ -156,17 +156,17 @@ Quatre sources, à traiter différemment :
 
 Un défaut vu par le gérant ou par Jeff à l'écran passe **toujours** devant une alerte d'outil.
 
-### Le circuit d'une remontée du SAV
+### Les remarques se traitent onglet par onglet — règle du 30/07/2026
 
-Quand Jeff demande de traiter le SAV, trois agents s'enchaînent — ils sont définis dans `~/.claude/agents/` et n'écrivent jamais dans ses fichiers de travail.
+Quand Jeff a posé une série de remarques avec son outil d'annotation, **on ne les prend pas une par une au gré de la facilité ou du hasard.** On choisit un onglet, on traite **tout** ce qu'il porte, on passe au suivant. L'ordre suit celui de validation du §6 : le parc d'abord.
 
-1. **`correcteur-sav`** lit la remontée et la capture jointe dans `/sav`, reproduit le défaut à l'écran, en trouve la cause, écrit la correction dans une copie isolée du dépôt et produit un fichier de correctif.
-2. **`chercheur-de-jumeaux`** part **en même temps**, dès que la cause est connue : il balaye l'application à la recherche du même défaut ailleurs. Une seule passe de correction au lieu de deux.
-3. **`relecteur-de-correctif`** juge la correction avant qu'elle n'arrive chez Jeff, avec pour consigne de refuser par défaut. C'est le seul contrôle qu'elle reçoit — il n'y a aucun test automatique.
+Deux conséquences pratiques : regrouper les remarques par onglet avant de commencer, et annoncer l'onglet retenu. Et **marquer dans son outil chaque remarque livrée** (`✅ FAIT (<commit>)` en tête de son texte, clé `lms_remarques`, origine `localhost:3100`) : c'est comme ça qu'il voit ce qui reste, il ne faut pas attendre qu'il le demande.
 
-**Rien ne s'applique tout seul.** Jeff lit le verdict et décide ; le correctif n'entre dans le projet que s'il le dit. Toute opération sur la base de données est affichée en entier et jamais exécutée par un agent.
+### Une remontée du SAV se traite en direct
 
-Ne pas lancer ce circuit sur un simple ajustement d'affichage demandé par Jeff : il est fait pour les vrais défauts remontés du terrain.
+Lire la remontée et sa capture dans `/sav`, reproduire le défaut à l'écran, en trouver la cause, corriger, montrer le résultat à Jeff. **Aucun agent, aucune délégation** : le circuit à trois agents qui vivait ici a été supprimé le 31/07/2026, il coûtait deux tiers d'un quota hebdomadaire pour trois corrections. Voir le §7 du CLAUDE.md général.
+
+**Rien ne s'applique tout seul.** Jeff décide de ce qui entre dans le projet. Toute opération sur la base de données est affichée en entier avant d'être lancée.
 
 ## 8. Stack et déploiement
 
