@@ -1,14 +1,23 @@
 'use client'
 
 /**
- * Calendrier du tableau de bord — façon « semaine » iOS.
- * Vrai carrousel : trois panneaux (semaine précédente / courante / suivante)
- * glissent sous le doigt ; au relâcher, on s'aligne (spring) sur la semaine la
- * plus proche. Flèches ‹ › aussi. Un clic sur un jour affiche, en dessous, les
- * tâches de ce jour (à faire / à assigner). Chaque tâche ouvre le tiroir de
- * l'événement (/calendrier?event=<id>) : attribuer un membre PUIS ouvrir la résa.
+ * Calendrier du tableau de bord — bande de jours qui roule, façon Google Agenda.
  *
- * Auto-alimenté : charge une fenêtre de 3 semaines via
+ * La bande avance JOUR PAR JOUR sous le doigt, elle n'est donc pas alignée sur une
+ * semaine et se retrouve à cheval sur deux : c'est voulu. Jeff a tranché le
+ * 01/08/2026 (remarque 37) entre les deux gestes possibles — Google, retenu ici,
+ * contre Apple, qui paginait par semaine entière et que cet écran faisait avant.
+ * Ne pas revenir à la semaine en croyant corriger un défaut d'alignement.
+ *
+ * Le jour choisi reste au milieu des sept cases visibles. Les flèches ‹ › avancent
+ * d'un jour, comme le geste. Un clic sur un jour affiche, en dessous, les tâches de
+ * ce jour (à faire / à assigner). Chaque tâche ouvre le tiroir de l'événement
+ * (/calendrier?event=<id>) : attribuer un membre PUIS ouvrir la résa.
+ *
+ * Même mécanisme que la bande de la page Calendrier (`MobileCalendar`) : si l'un
+ * change, changer l'autre, deux gestes différents pour la même bande se verraient.
+ *
+ * Auto-alimenté : charge les 21 jours dessinés via
  * GET /api/calendar/events?start&end (même source que la page Calendrier).
  */
 
@@ -87,62 +96,68 @@ function eventPersonne(e: CalendarEvent): string | null {
   return e.description?.trim() || null
 }
 
+// La bande dessine 21 jours autour du jour choisi, qui reste à la 4ᵉ des 7 cases
+// visibles. Mêmes valeurs que la page Calendrier : les deux bandes doivent bouger
+// pareil.
+const RAYON_JOURS = 10
+const PLACE_DU_JOUR_CHOISI = 3
+
 export default function DashboardCalendar() {
-  const baseMonday = useMemo(() => startOfWeek(new Date(), { weekStartsOn: 1 }), [])
-  const [weekOffset, setWeekOffset] = useState(0)
   const [selected, setSelected] = useState<Date>(() => new Date())
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [loading, setLoading] = useState(true)
   const [loadFailed, setLoadFailed] = useState(false)
-  // Incrémenté par « Réessayer » : relance le chargement de la semaine affichée.
+  // Incrémenté par « Réessayer » : relance le chargement des jours affichés.
   const [reloadKey, setReloadKey] = useState(0)
 
-  // Carrousel : largeur mesurée du conteneur + position (px) de la piste 3×.
-  const containerRef = useRef<HTMLDivElement>(null)
+  // Piste : largeur mesurée du conteneur, puis position (px) de la piste de 21 jours.
   const [w, setW] = useState(0)
   const x = useMotionValue(0)
+  const largeurCase = w / 7
+  const xRepos = -(RAYON_JOURS - PLACE_DU_JOUR_CHOISI) * largeurCase
 
-  useEffect(() => {
-    const el = containerRef.current
+  const containerRef = useCallback((el: HTMLDivElement | null) => {
     if (!el) return
-    const update = () => setW(el.offsetWidth)
-    update()
-    const ro = new ResizeObserver(update)
+    setW(el.offsetWidth)
+    const ro = new ResizeObserver(() => setW(el.offsetWidth))
     ro.observe(el)
-    return () => ro.disconnect()
   }, [])
 
-  // Position de repos : panneau du milieu centré → x = -w.
-  useEffect(() => { x.set(-w) }, [w, x])
+  useEffect(() => { x.set(xRepos) }, [xRepos, x])
 
-  const weekStart = useMemo(() => addWeeks(baseMonday, weekOffset), [baseMonday, weekOffset])
-
-  // Aligne la piste sur la semaine voisine (spring), puis bascule les données
-  // du milieu sans saut visuel (le panneau cible == nouveau panneau central).
-  const commit = useCallback((dir: number) => {
-    if (!w) return
-    const target = dir > 0 ? -2 * w : 0
-    animate(x, target, {
+  // Fait rouler la bande de n jours (spring), puis change le jour choisi et remet
+  // la piste au repos : les 21 jours sont alors redessinés autour de la nouvelle
+  // date, donc rien ne saute à l'œil.
+  const glisseDeJours = useCallback((n: number) => {
+    if (!largeurCase) return
+    if (n === 0) {
+      animate(x, xRepos, { type: 'spring', stiffness: 550, damping: 45 })
+      return
+    }
+    animate(x, xRepos - n * largeurCase, {
       type: 'spring', stiffness: 550, damping: 45,
       onComplete: () => {
-        setWeekOffset(o => o + dir)
-        setSelected(s => addDays(s, dir * 7))
-        x.set(-w)
+        setSelected(s => addDays(s, n))
+        x.set(xRepos)
       },
     })
-  }, [w, x])
+  }, [largeurCase, xRepos, x])
 
   const goToday = useCallback(() => {
-    setWeekOffset(0)
     setSelected(new Date())
-    x.set(-w)
-  }, [w, x])
+    x.set(xRepos)
+  }, [xRepos, x])
 
-  // Fenêtre chargée : 3 semaines (panneau précédent → suivant), pour que les
-  // pastilles des semaines voisines soient déjà là pendant le glissement.
+  // Fenêtre chargée : de quoi couvrir les 21 jours dessinés quelle que soit la
+  // position du jour choisi dans sa semaine. On s'accroche au lundi plutôt qu'au
+  // jour lui-même pour ne PAS relancer une requête à chaque case franchie : sans
+  // ça, faire rouler la bande d'un bout à l'autre du mois déclencherait trente
+  // chargements.
+  const ancrage = useMemo(() => startOfWeek(selected, { weekStartsOn: 1 }), [selected])
+
   useEffect(() => {
-    const start = addDays(weekStart, -7)
-    const end = addDays(weekStart, 14)
+    const start = addDays(ancrage, -RAYON_JOURS)
+    const end = addDays(ancrage, RAYON_JOURS + 7)
     let cancelled = false
     setLoading(true)
     setLoadFailed(false)
@@ -152,12 +167,12 @@ export default function DashboardCalendar() {
         return r.json()
       })
       .then(data => { if (!cancelled) setEvents(Array.isArray(data) ? data : []) })
-      // Une semaine vide et une semaine non chargée se ressemblent : on le dit,
+      // Des jours vides et des jours non chargés se ressemblent : on le dit,
       // sinon le tableau de bord laisse croire qu'il n'y a rien de prévu.
       .catch(() => { if (!cancelled) setLoadFailed(true) })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
-  }, [weekStart, reloadKey])
+  }, [ancrage, reloadKey])
 
   const eventsByDay = useMemo(() => {
     const map = new Map<string, CalendarEvent[]>()
@@ -177,8 +192,8 @@ export default function DashboardCalendar() {
   )
 
   const selectedEvents = dayEvents(selected)
-  const monthLabel = format(weekStart, 'MMMM yyyy', { locale: fr })
-  const isThisWeek = weekOffset === 0
+  const monthLabel = format(selected, 'MMMM yyyy', { locale: fr })
+  const estAujourdhui = isToday(selected)
 
   const renderDay = (day: Date) => {
     const evs = dayEvents(day)
@@ -189,8 +204,9 @@ export default function DashboardCalendar() {
       <button
         key={day.toISOString()}
         type="button"
+        style={{ width: largeurCase }}
         onClick={() => setSelected(day)}
-        className="flex flex-col items-center gap-1 py-1 select-none"
+        className="shrink-0 flex flex-col items-center gap-1 py-1 select-none"
       >
         <span className={`text-[9px] font-bold uppercase capitalize ${selectedDay ? 'text-gray-900' : 'text-gray-400'}`}>
           {format(day, 'EEE', { locale: fr })}
@@ -226,15 +242,15 @@ export default function DashboardCalendar() {
       <div className="flex items-center justify-between mb-3">
         <button
           type="button"
-          onClick={() => commit(-1)}
+          onClick={() => glisseDeJours(-1)}
           className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-50 hover:text-gray-700 transition-colors"
-          aria-label="Semaine précédente"
+          aria-label="Jour précédent"
         >
           <ChevronLeft className="w-4 h-4" />
         </button>
         <div className="flex items-center gap-2">
           <span className="text-sm font-black text-gray-900 capitalize">{monthLabel}</span>
-          {!isThisWeek && (
+          {!estAujourdhui && (
             <button
               type="button"
               onClick={goToday}
@@ -246,41 +262,35 @@ export default function DashboardCalendar() {
         </div>
         <button
           type="button"
-          onClick={() => commit(1)}
+          onClick={() => glisseDeJours(1)}
           className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-50 hover:text-gray-700 transition-colors"
-          aria-label="Semaine suivante"
+          aria-label="Jour suivant"
         >
           <ChevronRight className="w-4 h-4" />
         </button>
       </div>
 
-      {/* Carrousel : 3 panneaux (préc./courant/suivant) glissent sous le doigt */}
+      {/* La bande roule jour par jour sous le doigt (voir l'en-tête du fichier) */}
       <div ref={containerRef} className="overflow-hidden">
         <motion.div
           className="flex"
-          style={{ x, width: w * 3 }}
-          drag={w > 0 ? 'x' : false}
-          dragConstraints={{ left: -2 * w, right: 0 }}
+          style={{ x, width: largeurCase * (2 * RAYON_JOURS + 1) }}
+          drag={largeurCase > 0 ? 'x' : false}
+          dragConstraints={{
+            left: xRepos - RAYON_JOURS * largeurCase,
+            right: xRepos + RAYON_JOURS * largeurCase,
+          }}
           dragElastic={0.08}
           onDragEnd={(_, info) => {
-            const cur = x.get()
-            const thresh = w * 0.28
-            if (cur <= -w - thresh || info.velocity.x < -450) commit(1)
-            else if (cur >= -w + thresh || info.velocity.x > 450) commit(-1)
-            else animate(x, -w, { type: 'spring', stiffness: 550, damping: 45 })
+            // Combien de cases le doigt a-t-il parcourues ? Un geste court mais
+            // lancé compte quand même pour un jour, sinon un « flick » rapide ne
+            // fait rien et la bande a l'air bloquée.
+            let n = Math.round((xRepos - x.get()) / largeurCase)
+            if (n === 0 && Math.abs(info.velocity.x) > 450) n = info.velocity.x < 0 ? 1 : -1
+            glisseDeJours(Math.max(-RAYON_JOURS, Math.min(RAYON_JOURS, n)))
           }}
         >
-          {[-1, 0, 1].map(panelOffset => {
-            const start = addWeeks(baseMonday, weekOffset + panelOffset)
-            const wdays = Array.from({ length: 7 }, (_, i) => addDays(start, i))
-            return (
-              <div key={panelOffset} style={{ width: w }} className="shrink-0">
-                <div className="grid grid-cols-7 gap-1">
-                  {wdays.map(renderDay)}
-                </div>
-              </div>
-            )
-          })}
+          {Array.from({ length: 2 * RAYON_JOURS + 1 }, (_, i) => addDays(selected, i - RAYON_JOURS)).map(renderDay)}
         </motion.div>
       </div>
 

@@ -17,10 +17,13 @@ ce qui reste.
 
 | N° | Ce qu'il demande | État |
 |---|---|---|
-| 35 | Modifier une déclaration de dommage déjà faite | ✅ écrit et vérifié à l'écran, pas encore commité |
-| 36 | L'application est lente à réagir : voir §2 | à faire |
-| 37 | Défilement coulissant des jours, façon Google Agenda, dans le calendrier et sur l'accueil | à faire |
+| 35 | Modifier une déclaration de dommage déjà faite | ✅ FAIT (`b56dbdf`), pas encore poussé |
+| 36 | L'application est lente à réagir : voir §2 | **reporté à plus tard, décision de Jeff du 01/08/2026** |
+| 37 | Défilement coulissant des jours, façon Google Agenda, dans le calendrier et sur l'accueil | en cours |
 | 38 | Le chantier des interventions au garage : voir §3 | à faire |
+
+**L'ordre décidé le 01/08/2026 : 35, puis 37, puis 38, puis le lot 3 du chantier
+comptable.** La fluidité (36) attend une prochaine session.
 
 Les 14 autres remarques ouvertes restent à reprendre une par une.
 
@@ -71,15 +74,24 @@ Ce que Jeff décrit, dans l'ordre où il l'a écrit :
 
 Le cadrage déjà validé du volet comptable est dans `PLAN-INTERVENTIONS-COMPTA.md`.
 
-### Les questions posées, en attente de réponse
+### Ce que Jeff a tranché le 01/08/2026
 
-1. « on plus parler de devis facture sur les intervention » : arrêter d'employer
-   ces deux mots, ou au contraire les faire apparaître ?
-2. Quatre véhicules chez le même garage à la même heure : quatre rendez-vous
-   distincts dans le calendrier, ou un seul portant les quatre ?
-3. Ce qui déclenche l'écriture en comptabilité : la clôture de l'intervention, ou
-   la saisie du montant réellement payé comme aujourd'hui ?
-4. La lenteur de la remarque 36 : constatée en local ou sur son téléphone ?
+- **Plus de « devis » ni de « facture » sur une intervention.** Un seul montant,
+  sans dire d'où il vient. *Conséquence : le vocabulaire actuel de l'écran et de la
+  base (`quote_amount`, `quote_status`) doit disparaître de l'affichage.*
+- **Un seul rendez-vous porte plusieurs véhicules.** Quatre voitures chez le même
+  garage à la même heure, c'est une ligne dans le calendrier, pas quatre. *Mais la
+  vue jour doit savoir empiler quatre rendez-vous sur le même créneau, c'est une
+  demande distincte de la remarque 38.*
+- **La comptabilité attend la CLÔTURE de l'intervention.** Tant qu'elle est « en
+  cours », rien n'apparaît dans les chiffres, même si le montant est déjà saisi.
+  *Changement par rapport à aujourd'hui : l'écriture part actuellement dès la
+  saisie du montant payé (`settleIntervention`). À déplacer sur la clôture.*
+- **Le défilement de la bande des jours (remarque 37)** : **jour par jour, façon
+  Google Agenda, et pas semaine par semaine façon Apple.** La bande roule d'une
+  case et se retrouve donc à cheval sur deux semaines, c'est voulu. Le geste ne
+  marche que sur la bande des dates : la liste des tâches en dessous reste inerte.
+  *Le calendrier du tableau de bord garde, lui, la pagination par semaine.*
 
 ## 4. Le ménage repéré en passant
 
