@@ -87,7 +87,11 @@ export default function DayEventsPanel({ currentDate, events, resources, onEvent
                   <div className="flex-1 px-3 py-2">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-gray-900 truncate">{ev.title}</p>
+                        {/* Le titre passe à la ligne au lieu d'être coupé (remarque 34
+                            de Jeff, 01/08/2026) : « Encaissement en retard depuis le
+                            29/07 · 150,00 € » perdait son montant, l'information la
+                            plus utile de la ligne. */}
+                        <p className="text-sm font-bold text-gray-900 break-words">{ev.title}</p>
                         <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                           <span
                             className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full text-white"
