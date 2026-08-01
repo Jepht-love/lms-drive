@@ -171,6 +171,19 @@ export function expenseCategoriesByFamily(): { family: ExpenseFamily; categories
 
 export const REVENUE_CATEGORIES = [
   { id: 'location', label: 'Location véhicule' },
+  // `degats` porte les dommages facturés à l'état des lieux de retour
+  // (lib/actions/reservations.ts). Il manquait de cette liste : la recette existait
+  // en base mais s'affichait sous son identifiant brut, sans libellé. Ajouté le
+  // 31/07/2026. Ne pas renommer l'identifiant, il est écrit dans les transactions
+  // déjà enregistrées.
+  //
+  // À lire avec la dépense de réparation qui lui fait face : un dommage facturé
+  // 450 € et réparé 450 € ne dégage aucun bénéfice, c'est voulu.
+  { id: 'degats', label: 'Dommages facturés au client' },
+  // Une retenue sur caution est une ligne À PART, jamais fusionnée avec la facture
+  // de restitution (règle de Jeff, 31/07/2026). Avant cette date elle s'écrivait
+  // sous `degats`, ce qui mélangeait deux choses différentes : les transactions
+  // antérieures au 31/07/2026 portant la note « Caution retenue » sont dans ce cas.
   { id: 'caution_retenue', label: 'Retenue sur caution' },
   { id: 'frais_retard', label: 'Frais de retard' },
   { id: 'km_supplementaires', label: 'Km supplémentaires' },

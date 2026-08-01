@@ -3,7 +3,7 @@ export type VehicleView = 'top' | 'front' | 'rear' | 'left' | 'right'
 export type DamageSeverity = 'rayure' | 'dommage' | 'attention'
 
 export interface DamageEntry {
-  severity: DamageSeverity   // = gravité (voir GRAVITES) — pilote couleurs + flags maintenance
+  severity: DamageSeverity   // = gravité (voir GRAVITES), pilote couleurs + flags maintenance
   type?: string              // type de dommage (voir DAMAGE_TYPES)
   comment: string
   photos: string[]
@@ -56,6 +56,15 @@ const ZONES_JANTE = new Set([
   'jante-av-gauche', 'jante-av-droite', 'jante-ar-gauche', 'jante-ar-droite',
 ])
 
+/**
+ * Zones de pneumatique. Une dégradation y relève de la ligne « Usure anormale
+ * pneu » du contrat, jamais de la carrosserie : un pneu ne se raye pas comme une
+ * portière, et le contrat ne prévoit pas d'autre ligne pour lui.
+ */
+const ZONES_PNEU = new Set([
+  'pneu-av-gauche', 'pneu-av-droite', 'pneu-ar-gauche', 'pneu-ar-droite',
+])
+
 export interface TarifDommage {
   /** Montant proposé. `null` quand le contrat renvoie à un devis. */
   montant: number | null
@@ -63,6 +72,12 @@ export interface TarifDommage {
   ligne: string
   /** Ce qu'il faut afficher quand il n'y a pas de montant à proposer. */
   mention?: string
+  /**
+   * Type du catalogue partagé (lib/vehicles/damage-catalog.ts) que ce dégât
+   * représente. C'est lui qui est enregistré sur le véhicule, pour que le dégât
+   * d'un état des lieux et celui saisi à la main parlent le même vocabulaire.
+   */
+  typeId: string | null
 }
 
 /**
@@ -83,55 +98,80 @@ export function tarifDommage(
   vehicleCategory: string | undefined,
 ): TarifDommage {
   const sport = vehicleCategory === 'sportif'
-  const surDevis = (ligne: string): TarifDommage => ({
+  const surDevis = (): TarifDommage => ({
     montant: null,
-    ligne,
+    ligne: 'Dommage carrosserie',
     mention: sport ? 'Sur devis + 50 % de frais' : 'Sur devis + 30 % de frais',
+    typeId: 'dommage_carrosserie',
   })
 
-  if (!type) return { montant: null, ligne: '' }
+  if (!type) return { montant: null, ligne: '', typeId: null }
 
   const vitrage = !!zoneId && ZONES_VITRAGE.has(zoneId)
   const jante = !!zoneId && ZONES_JANTE.has(zoneId)
+  const pneu = !!zoneId && ZONES_PNEU.has(zoneId)
+  const vitrageCasse = (): TarifDommage => ({
+    montant: sport ? 5000 : 1000,
+    ligne: 'Pare-brise, vitre cassé',
+    typeId: 'vitrage_casse',
+  })
+  const pneuAnormal = (): TarifDommage => ({
+    montant: sport ? 700 : 400,
+    ligne: 'Usure anormale pneu (crevaison, hernie, abîmé)',
+    typeId: 'pneu_anormal',
+  })
+
+  // La ZONE prime sur le mot choisi à la saisie quand il s'agit d'un pneu.
+  // Corrigé le 01/08/2026 : une « rayure » constatée sur un pneu prenait la ligne
+  // « Rayure légère », soit 300 € facturés au client au lieu des 400 € du contrat
+  // (700 € en sportif), et la réparation atterrissait dans le poste carrosserie de
+  // l'entretien. Constaté par Jeff sur un cas réel.
+  // Le nettoyage et l'élément manquant gardent leur ligne : ils ne décrivent pas
+  // l'état du pneu lui-même.
+  if (pneu && type !== 'salissure' && type !== 'manquant') return pneuAnormal()
 
   switch (type) {
     case 'rayure':
       return jante
-        ? { montant: sport ? 500 : 300, ligne: 'Rayure par jantes' }
-        : { montant: sport ? 500 : 300, ligne: 'Rayure légère' }
+        ? { montant: sport ? 500 : 300, ligne: 'Rayure par jantes', typeId: 'rayure_jantes' }
+        : { montant: sport ? 500 : 300, ligne: 'Rayure légère', typeId: 'rayure_legere' }
 
     case 'rayure_profonde':
-      return { montant: sport ? 800 : 500, ligne: 'Rayure profonde' }
+      return { montant: sport ? 800 : 500, ligne: 'Rayure profonde', typeId: 'rayure_profonde' }
 
     case 'fissure':
-      if (jante) return { montant: sport ? 800 : 500, ligne: 'Fissure jantes' }
-      if (vitrage) return { montant: sport ? 5000 : 1000, ligne: 'Pare-brise, vitre cassé' }
-      return surDevis('Dommage carrosserie')
+      if (jante) return { montant: sport ? 800 : 500, ligne: 'Fissure jantes', typeId: 'fissure_jantes' }
+      if (vitrage) return vitrageCasse()
+      return surDevis()
 
     // Un éclat sur une vitre prend le tarif de remplacement : arbitré par Jeff le
     // 30/07/2026, l'agent baisse à la main s'il juge le vitrage réparable.
     case 'impact':
     case 'casse':
-      if (vitrage) return { montant: sport ? 5000 : 1000, ligne: 'Pare-brise, vitre cassé' }
-      return surDevis('Dommage carrosserie')
+      return vitrage ? vitrageCasse() : surDevis()
 
     case 'bosse':
-      return surDevis('Dommage carrosserie')
+      return surDevis()
 
     case 'crevaison':
     case 'usure':
-      return { montant: sport ? 700 : 400, ligne: 'Usure anormale pneu (crevaison, hernie, abîmé)' }
+      return pneuAnormal()
 
     case 'salissure':
-      return { montant: sport ? 100 : 50, ligne: 'Nettoyage véhicule intérieur / extérieur' }
+      return {
+        montant: sport ? 100 : 50,
+        ligne: 'Nettoyage véhicule intérieur / extérieur',
+        typeId: 'nettoyage',
+      }
 
     // Le contrat ne chiffre que le tapis et les clés, qui ne sont pas des zones du
-    // schéma de carrosserie. Tout autre élément manquant se saisit à la main.
+    // schéma de carrosserie. Tout autre élément manquant se saisit à la main, et
+    // son type précis se choisit alors depuis la fiche du véhicule.
     case 'manquant':
-      return { montant: null, ligne: 'Élément manquant', mention: 'Montant à saisir' }
+      return { montant: null, ligne: 'Élément manquant', mention: 'Montant à saisir', typeId: null }
 
     default:
-      return { montant: null, ligne: '' }
+      return { montant: null, ligne: '', typeId: null }
   }
 }
 

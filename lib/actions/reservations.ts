@@ -32,7 +32,7 @@ export async function sendPaymentInfoEmail(
   const { error } = await resend.emails.send({
     from: RESEND_FROM,
     to: resendTo(clientEmail),
-    subject: `Modalités de paiement — Réservation ${reservationNumber}`,
+    subject: `Modalités de paiement · Réservation ${reservationNumber}`,
     html: `
       <div style="font-family:sans-serif;max-width:520px;margin:0 auto;color:#111">
         <h2 style="margin-bottom:4px">Bonjour${clientName ? ` ${clientName}` : ''},</h2>
@@ -44,7 +44,7 @@ export async function sendPaymentInfoEmail(
         </ul>
         <p>Pour un paiement en espèces, merci de contacter l'agence afin de convenir d'un rendez-vous.</p>
         <p style="color:#e55;font-weight:bold">⏳ Merci de régler l'acompte sous 2 h. Sans règlement, votre réservation pourra être annulée et le véhicule remis en disponibilité.</p>
-        <p style="color:#666;font-size:13px;margin-top:24px">— L'équipe LMS Drive</p>
+        <p style="color:#666;font-size:13px;margin-top:24px">· L'équipe LMS Drive</p>
       </div>
     `,
   })
@@ -157,7 +157,7 @@ export async function updatePaymentInfo(
         supplier_beneficiary: clientName,
         payment_method: data.payment_method,
         reference: txRef,
-        notes: res?.reservation_number ? `Paiement — ${res.reservation_number}` : null,
+        notes: res?.reservation_number ? `Paiement · ${res.reservation_number}` : null,
         created_by: user.id,
       })
     }
@@ -279,7 +279,7 @@ async function postRentalRevenue(reservationId: string, userId: string) {
 
   const { data: res } = await admin
     .from('reservations')
-    .select('total_price, vehicle_id, end_datetime, reservation_number, extra_km_amount, late_fee_amount, late_fee_validated, deposit_deducted')
+    .select('total_price, vehicle_id, end_datetime, reservation_number, extra_km_amount, late_fee_amount, late_fee_validated, deposit_deducted, damage_fee_amount')
     .eq('id', reservationId)
     .single()
   if (!res) return
@@ -317,8 +317,19 @@ async function postRentalRevenue(reservationId: string, userId: string) {
   if ((res.late_fee_amount ?? 0) > 0 && res.late_fee_validated && !posted.has('frais_retard')) {
     rows.push({ ...base, category: 'frais_retard', amount: res.late_fee_amount, notes: `Frais de retard ${res.reservation_number}` })
   }
-  if ((res.deposit_deducted ?? 0) > 0 && !posted.has('degats')) {
-    rows.push({ ...base, category: 'degats', amount: res.deposit_deducted, notes: `Caution retenue ${res.reservation_number}` })
+  // Les dommages facturés à l'état des lieux de retour. Corrigé le 31/07/2026 :
+  // cette recette n'était écrite QUE si une caution était retenue, si bien qu'un
+  // dégât facturé au client sans retenue de caution n'apparaissait nulle part en
+  // comptabilité. C'est `damage_fee_amount` (posé par l'état des lieux) qui fait
+  // foi, pas la façon dont le client règle.
+  if ((res.damage_fee_amount ?? 0) > 0 && !posted.has('degats')) {
+    rows.push({ ...base, category: 'degats', amount: res.damage_fee_amount, notes: `Dommages facturés ${res.reservation_number}` })
+  }
+  // La retenue sur caution est une ligne À PART, jamais fusionnée avec la facture
+  // de restitution (règle de Jeff, 31/07/2026). Elle était écrite sous « degats »
+  // avant, ce qui mélangeait deux choses différentes.
+  if ((res.deposit_deducted ?? 0) > 0 && !posted.has('caution_retenue')) {
+    rows.push({ ...base, category: 'caution_retenue', amount: res.deposit_deducted, notes: `Caution retenue ${res.reservation_number}` })
   }
   if (rows.length) await admin.from('financial_transactions').insert(rows)
 }
@@ -356,10 +367,10 @@ export async function createReservation(formData: FormData) {
 
   if (newFirstName && newLastName && newPhone) {
     if (await isNameBlacklisted(supabase, newFirstName, newLastName)) {
-      return { error: 'Ce nom correspond à un client blacklisté — réservation impossible.' }
+      return { error: 'Ce nom correspond à un client blacklisté, réservation impossible.' }
     }
     if (await isContactBlacklisted(supabase, newPhone, null)) {
-      return { error: 'Ce numéro correspond à un client blacklisté — réservation impossible.' }
+      return { error: 'Ce numéro correspond à un client blacklisté, réservation impossible.' }
     }
     const admin = createAdminClient()
     const { data: newClient, error: clientErr } = await admin
@@ -374,13 +385,13 @@ export async function createReservation(formData: FormData) {
     const { data: selectedClient } = await supabase
       .from('clients').select('status, first_name, last_name, phone, email').eq('id', clientId).maybeSingle()
     if (selectedClient?.status === 'blackliste') {
-      return { error: 'Ce client est blacklisté — réservation impossible.' }
+      return { error: 'Ce client est blacklisté, réservation impossible.' }
     }
     if (selectedClient && await isNameBlacklisted(supabase, selectedClient.first_name, selectedClient.last_name, clientId)) {
-      return { error: 'Ce nom correspond à un client blacklisté sous un autre dossier — réservation impossible.' }
+      return { error: 'Ce nom correspond à un client blacklisté sous un autre dossier, réservation impossible.' }
     }
     if (selectedClient && await isContactBlacklisted(supabase, selectedClient.phone, selectedClient.email, clientId)) {
-      return { error: 'Les coordonnées de ce client correspondent à un client blacklisté sous un autre dossier — réservation impossible.' }
+      return { error: 'Les coordonnées de ce client correspondent à un client blacklisté sous un autre dossier, réservation impossible.' }
     }
     clientName = selectedClient ? `${selectedClient.first_name} ${selectedClient.last_name}` : ''
   }
@@ -937,7 +948,7 @@ export async function prolongReservation(
   const deadlineMs = endMs - PROLONG_DEADLINE_HOURS * 3600 * 1000
   if (Date.now() > deadlineMs) {
     return {
-      error: `La prolongation doit être demandée au moins ${PROLONG_DEADLINE_HOURS} h avant la fin prévue. Ce délai est dépassé — créez une nouvelle réservation.`,
+      error: `La prolongation doit être demandée au moins ${PROLONG_DEADLINE_HOURS} h avant la fin prévue. Ce délai est dépassé, créez une nouvelle réservation.`,
     }
   }
 
@@ -955,7 +966,7 @@ export async function prolongReservation(
     .limit(1)
 
   if (conflicts && conflicts.length > 0) {
-    return { error: 'Le véhicule est déjà réservé juste après — prolongation impossible sur cette période.' }
+    return { error: 'Le véhicule est déjà réservé juste après, prolongation impossible sur cette période.' }
   }
 
   // Même règle de chevauchement horaire que createReservation, appliquée à la
@@ -970,11 +981,11 @@ export async function prolongReservation(
     .gt('end_at', reservation.end_datetime)
     .limit(1)
   if (garageConflicts && garageConflicts.length > 0) {
-    return { error: 'Ce véhicule a un rendez-vous garage sur cette période — prolongation impossible.' }
+    return { error: 'Ce véhicule a un rendez-vous garage sur cette période, prolongation impossible.' }
   }
 
   if (await findBlockingInternalTrip(supabase, reservation.vehicle_id, reservation.end_datetime, newEnd)) {
-    return { error: 'Ce véhicule est utilisé pour un déplacement interne sur cette période — prolongation impossible.' }
+    return { error: 'Ce véhicule est utilisé pour un déplacement interne sur cette période, prolongation impossible.' }
   }
 
   const vehicle = Array.isArray(reservation.vehicle) ? reservation.vehicle[0] : reservation.vehicle as any
@@ -1114,7 +1125,7 @@ export async function validateContract(contractId: string) {
     const ve = Array.isArray(resInfo?.vehicles) ? resInfo?.vehicles[0] : resInfo?.vehicles
     const who = [cl?.first_name, cl?.last_name].filter(Boolean).join(' ')
     const veh = ve ? `${ve.brand} ${ve.model}${ve.plate ? ` (${ve.plate})` : ''}` : ''
-    validatedSummary = `Contrat validé${who ? ` — ${who}` : ''}${veh ? ` — ${veh}` : ''}`
+    validatedSummary = `Contrat validé${who ? ` · ${who}` : ''}${veh ? ` · ${veh}` : ''}`
   }
   await logAudit(supabase, {
     userId: user.id,

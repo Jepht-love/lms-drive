@@ -553,7 +553,7 @@ export default function InspectionFlow({
               entity_id: reservationId,
             }),
             supabase.from('calendar_events').insert({
-              title: `Clôturer contrat${clientLabel ? ' — ' + clientLabel : ''}`,
+              title: `Clôturer contrat${clientLabel ? ' · ' + clientLabel : ''}`,
               description: vehLabel || null,
               event_type: 'tache',
               status: 'a_faire',
@@ -577,11 +577,32 @@ export default function InspectionFlow({
 
         // Dégradations relevées au retour → drapeaux « Dégradé » sur le véhicule
         // (badge visible, sans retirer le véhicule de la disponibilité)
+        // Chaque dégât part avec son type du catalogue, son origine, la réservation
+        // en cause et CE QUI A ÉTÉ FACTURÉ AU CLIENT. C'est ce montant qui permettra
+        // plus tard, au moment de planifier la réparation chez le garagiste, de voir
+        // si elle coûte plus qu'elle n'a rapporté. Ajouté le 30/07/2026.
+        // Un montant à 0 se range comme « non facturé » (null) : l'agent a pu mettre
+        // zéro volontairement, la raison se précise ensuite depuis la fiche véhicule.
         const issues = Object.entries(damages)
           .filter(([, entries]) => entries.length > 0)
-          .flatMap(([zoneId, entries]) => entries.map(e =>
-            buildDamageFlag(zoneId, NEW_ZONES.find(z => z.id === zoneId)?.label ?? zoneId, e.severity, inspection.id),
-          ))
+          .flatMap(([zoneId, entries]) => {
+            const tarif = tarifZone(zoneId)
+            const facture = priceForZone(zoneId)
+            return entries.map(e =>
+              buildDamageFlag(
+                zoneId,
+                NEW_ZONES.find(z => z.id === zoneId)?.label ?? zoneId,
+                e.severity,
+                inspection.id,
+                {
+                  damage_type: tarif.typeId,
+                  origin: reservationId ? 'location' : 'non_communiquee',
+                  reservation_id: reservationId ?? null,
+                  billed_amount: facture > 0 ? facture : null,
+                },
+              ),
+            )
+          })
         if (issues.length > 0) {
           await reportVehicleIssues(vehicleId, issues, inspection.id)
         }
@@ -617,7 +638,7 @@ export default function InspectionFlow({
           <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
             {type === 'depart' && needContratSig
-              ? 'Départ validé — contrat signé'
+              ? 'Départ validé, contrat signé'
               : `État des lieux ${type === 'depart' ? 'de départ' : 'de retour'} enregistré`}
           </h2>
           <p className="text-gray-500">KM : {kmReading.toLocaleString('fr-FR')} · {damagedZoneCount} zone(s) signalée(s)</p>
@@ -629,7 +650,7 @@ export default function InspectionFlow({
           )}
         </div>
 
-        {/* Récapitulatif de facturation — forfait + frais, ce qui reste dû.
+        {/* Récapitulatif de facturation, forfait + frais, ce qui reste dû.
             L'écran n'affichait que les frais : impossible de savoir ce que le
             client devait au total, ni ce qu'il restait à encaisser. Chaque frais
             porte désormais son vrai nom (un lavage n'est pas un dommage).
@@ -808,7 +829,7 @@ export default function InspectionFlow({
 
   return (
     <div className="space-y-4">
-      {/* Input photo PARTAGÉ — monté en permanence (pas seulement à l'étape
+      {/* Input photo PARTAGÉ, monté en permanence (pas seulement à l'étape
           « Photos »). Sinon, à l'étape « Zones / schéma », le bouton caméra des
           dégâts intérieurs déclenche photoInputRef.current?.click() alors que
           l'input n'est pas dans le DOM → rien ne se passe (bug EDL retour). */}
@@ -854,11 +875,16 @@ export default function InspectionFlow({
             <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Relevé de bord</p>
 
             <div className="grid grid-cols-2 gap-3">
-              {/* Kilométrage */}
+              {/* Kilométrage.
+                  La ligne d'intitulé a une HAUTEUR FIXE dans les deux blocs : sans
+                  elle, un intitulé plus long passait sur deux lignes en largeur
+                  téléphone et descendait sa case d'un cran, les deux champs ne
+                  s'alignaient plus (remarque de Jeff du 31/07/2026, iPhone Pro et
+                  mini). Ne pas la retirer en changeant un libellé. */}
               <div className="bg-[#111111] rounded-xl p-3 space-y-2">
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 h-4">
                   <Gauge className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
-                  <label htmlFor="inspection-km" className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Kilométrage</label>
+                  <label htmlFor="inspection-km" className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 truncate">Kilométrage</label>
                 </div>
                 <input
                   id="inspection-km"
@@ -888,9 +914,9 @@ export default function InspectionFlow({
 
               {/* Carburant */}
               <div className="bg-[#111111] rounded-xl p-3 space-y-2">
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 h-4">
                   <Fuel className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
-                  <label htmlFor="inspection-fuel-range" className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Autonomie (km)</label>
+                  <label htmlFor="inspection-fuel-range" className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 truncate">Autonomie</label>
                 </div>
                 <input
                   id="inspection-fuel-range"
@@ -921,7 +947,7 @@ export default function InspectionFlow({
               </div>
             </div>
 
-            {/* Rappel km inclus — EDL retour uniquement */}
+            {/* Rappel km inclus · EDL retour uniquement */}
             {type === 'arrivee' && (
               <div className="bg-[#111111] rounded-xl px-3 py-2 flex items-center gap-2">
                 <Gauge className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
@@ -1089,7 +1115,7 @@ export default function InspectionFlow({
                       <div className="flex items-center justify-between gap-3">
                         <label htmlFor={`interior-charge-${it.id}`} className="text-sm text-gray-600 flex-1 min-w-0">{it.label}</label>
                         <div className="flex items-center gap-2 flex-shrink-0">
-                          {/* Bouton photo — obligatoire si le poste est facturé, disponible toujours */}
+                          {/* Bouton photo, obligatoire si le poste est facturé, disponible toujours */}
                           <button
                             type="button"
                             onClick={() => triggerPhoto(`interior:${it.id}`)}
@@ -1098,7 +1124,7 @@ export default function InspectionFlow({
                                 ? 'bg-green-100 text-green-600'
                                 : 'bg-gray-100 text-gray-400 hover:bg-blue-50 hover:text-blue-500'
                             }`}
-                            title={pics.length > 0 ? `${pics.length} photo(s) — ajouter` : 'Ajouter une photo'}
+                            title={pics.length > 0 ? `${pics.length} photo(s), ajouter` : 'Ajouter une photo'}
                           >
                             <Camera className="w-4 h-4" />
                           </button>
@@ -1226,7 +1252,7 @@ export default function InspectionFlow({
           {!mandatoryCompleted && (
             <p className="text-sm text-amber-600 bg-amber-50 rounded-xl px-4 py-3 flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-              Minimum 3 photos requises — {photoCount}/3
+              Minimum 3 photos requises · {photoCount}/3
             </p>
           )}
 
@@ -1282,7 +1308,7 @@ export default function InspectionFlow({
             // damageFeeAmount (= somme de toutes les zones du retour).
             lignes: [
               ...currentDamagedZoneIds.map(id => ({
-                label: `${NEW_ZONES.find(z => z.id === id)?.label ?? id} — ${graviteLabel(damages[id]?.[0]?.severity ?? 'dommage')}`,
+                label: `${NEW_ZONES.find(z => z.id === id)?.label ?? id} · ${graviteLabel(damages[id]?.[0]?.severity ?? 'dommage')}`,
                 montant: priceForZone(id),
               })),
               ...Object.entries(interiorCharges)

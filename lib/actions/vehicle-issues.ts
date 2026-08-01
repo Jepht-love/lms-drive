@@ -6,12 +6,15 @@ import { recomputeVehicleStatus } from '@/lib/vehicles/vehicleStatus'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { assertPeriodOpen } from '@/lib/accounting/period-lock'
 import type { MaintenanceFlag } from '@/types/database'
+import { expenseCategoryForDamageType, maintenanceTypeForDamageType, damageTypeLabel, damageOriginLabel } from '@/lib/vehicles/damage-catalog'
 
 type NewIssue = Omit<MaintenanceFlag, 'id' | 'created_at'>
 
-// Catégorie comptable déduite du libellé du dommage (« déjà catégorisé par le
-// type de dommage » — pas de sélecteur). Défaut : réparation mécanique.
-function expenseCategoryForDamage(flag: { category?: string; label?: string }): string {
+// Poste comptable d'une réparation. Depuis le 30/07/2026 il vient du type du
+// catalogue ; les dégâts saisis AVANT n'en ont pas, on retombe alors sur l'ancienne
+// lecture des mots du libellé pour ne pas les envoyer tous dans « réparations ».
+function expenseCategoryForDamage(flag: { category?: string; label?: string; damage_type?: string | null }): string {
+  if (flag.damage_type) return expenseCategoryForDamageType(flag.damage_type)
   const hay = `${flag.category ?? ''} ${flag.label ?? ''}`.toLowerCase()
   if (/glace|vitre|pare.?brise|bris/.test(hay)) return 'bris_glace'
   if (/carross|pare.?choc|aile|porti?[eè]re|porte|capot|hayon|r[eé]tro|jante/.test(hay)) return 'carrosserie'
@@ -46,6 +49,9 @@ export async function reportVehicleIssues(vehicleId: string, issues: NewIssue[],
     id: crypto.randomUUID(),
     created_at: now,
     source_id: i.source_id ?? sourceId,
+    // Qui a déclaré le dégât. Posé ici, côté serveur : c'est le seul endroit où
+    // l'identité est certaine, un écran pourrait envoyer n'importe quoi.
+    reported_by: i.reported_by ?? user.id,
   }))
 
   const { error } = await supabase
@@ -67,6 +73,39 @@ export async function reportVehicleIssues(vehicleId: string, issues: NewIssue[],
   revalidatePath('/maintenance')
   revalidatePath(`/maintenance/${vehicleId}`)
   return { success: true, count: added.length }
+}
+
+/**
+ * Enregistre le DEVIS du garage sur un dégât, avant réparation.
+ *
+ * N'écrit rien en comptabilité et ne solde rien : un devis n'est pas une dépense,
+ * le garage ne facture qu'une fois la réparation faite. Le dégât reste actif et
+ * continue d'appeler une intervention. Ajouté le 30/07/2026.
+ *
+ * Passer `null` efface le devis (devis annulé, ou saisie erronée).
+ */
+export async function setDamageQuote(vehicleId: string, flagId: string, amount: number | null) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié' }
+
+  const { flags } = await loadFlags(supabase, vehicleId)
+  const target = flags.find(f => f.id === flagId)
+  if (!target) return { error: 'Dommage introuvable' }
+  if (target.repaired_at) return { error: 'Ce dommage a déjà été réparé' }
+
+  const value = amount != null && amount > 0 ? amount : null
+  const updated = flags.map(f => (f.id === flagId ? { ...f, quote_amount: value } : f))
+
+  const { error } = await supabase
+    .from('vehicles')
+    .update({ maintenance_flags: updated })
+    .eq('id', vehicleId)
+  if (error) return { error: error.message }
+
+  revalidatePath(`/vehicles/${vehicleId}`)
+  revalidatePath(`/maintenance/${vehicleId}`)
+  return { success: true }
 }
 
 /**
@@ -92,8 +131,8 @@ export async function resolveVehicleIssue(
   // écriture (compta ou statut). Bloque un coût posté contre un vehicleId/flagId
   // arbitraire, et évite un double débit si deux personnes soldent le même
   // dommage en même temps (le 2ᵉ ne le trouve plus).
-  if (!target) return { error: 'Dommage introuvable ou déjà soldé' }
-  const remaining = flags.filter(f => f.id !== flagId)
+  if (!target) return { error: 'Dommage introuvable' }
+  if (target.repaired_at) return { error: 'Ce dommage a déjà été réparé' }
 
   // Coût de réparation → écriture de dépense liée au véhicule.
   const amount = repair?.amount && repair.amount > 0 ? repair.amount : 0
@@ -108,17 +147,52 @@ export async function resolveVehicleIssue(
       category: expenseCategoryForDamage(target),
       amount,
       vehicle_id: vehicleId,
-      notes: `Réparation : ${target.label}${note ? ` — ${note}` : ''}`,
+      notes: `Réparation : ${target.label}${note ? ` · ${note}` : ''}`,
       created_by: user.id,
     })
     if (txErr) return { error: txErr.message }
   }
 
+  // Le dégât réparé RESTE dans la liste, marqué de sa date et de son coût — il ne
+  // s'efface plus (décision de Jeff du 30/07/2026). C'est ce qui permet de comparer
+  // ce qui a été facturé au client et ce que la réparation a coûté, de garder
+  // l'historique du véhicule, et d'empêcher qu'un même dégât soit réparé deux fois.
+  const repairedAt = (repair?.date || new Date().toISOString().slice(0, 10)).slice(0, 10)
+  const updated = flags.map(f =>
+    f.id === flagId
+      ? { ...f, repaired_at: repairedAt, repair_cost: amount > 0 ? amount : null }
+      : f,
+  )
+
   const { error } = await supabase
     .from('vehicles')
-    .update({ maintenance_flags: remaining })
+    .update({ maintenance_flags: updated })
     .eq('id', vehicleId)
   if (error) return { error: error.message }
+
+  // Une réparation laisse sa trace dans l'HISTORIQUE D'ENTRETIEN du véhicule, pas
+  // seulement en comptabilité : c'est là qu'on lit le passé d'une voiture. Ajouté
+  // le 31/07/2026, la réparation d'un dégât n'y apparaissait nulle part.
+  // `paid_at` reste vide : la dépense a déjà été écrite plus haut, la renseigner
+  // ici la compterait deux fois.
+  const { error: histErr } = await supabase.from('maintenance_records').insert({
+    vehicle_id: vehicleId,
+    type: maintenanceTypeForDamageType(target.damage_type),
+    description: target.label,
+    date: repairedAt,
+    amount,
+    notes: [
+      damageTypeLabel(target.damage_type),
+      `origine ${damageOriginLabel(target.origin).toLowerCase()}`,
+      target.billed_amount != null ? `facturé ${target.billed_amount} € au client` : null,
+      target.quote_amount != null ? `devis ${target.quote_amount} €` : null,
+      repair?.note?.trim() || null,
+    ].filter(Boolean).join(' · '),
+  })
+  // L'historique ne doit jamais faire échouer la réparation : le dégât est déjà
+  // soldé et la dépense écrite. On avale l'erreur plutôt que de laisser Jeff avec
+  // un écran en échec sur une opération qui, elle, a bien eu lieu.
+  if (histErr) console.error('historique entretien non écrit', histErr.message)
 
   await supabase.from('audit_logs').insert({
     user_id: user.id,
