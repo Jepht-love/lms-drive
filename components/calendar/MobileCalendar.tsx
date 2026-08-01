@@ -170,6 +170,12 @@ export default function MobileCalendar({
   const visibleIds = getVisibleIds(resources)
   const allVisible = resources.every(r => r.visible)
   const namedResources = resources.filter(r => r.id !== UNASSIGNED_RESOURCE_ID)
+
+  // La personne dont on regarde le planning, quand il n'y en a qu'une d'affichée.
+  // Sert au repère coloré de l'en-tête. Dès que plusieurs personnes sont visibles,
+  // c'est un comparatif et le repère n'aurait plus de sens.
+  const visiblesNommees = namedResources.filter(r => r.visible)
+  const personneAffichee = visiblesNommees.length === 1 ? visiblesNommees[0] : null
   const defaultResource = resources.find(r => r.visible) ?? resources[0]
 
   const dayEvs = events.filter(ev => {
@@ -235,6 +241,22 @@ export default function MobileCalendar({
         </div>
 
         <div className="flex items-center gap-1">
+          {/* De qui on regarde le planning. Reste en haut à droite tant qu'une seule
+              personne est affichée (demande de Jeff du 01/08/2026) : sans ce repère,
+              on oublie qu'un filtre est actif et on croit que l'agenda est vide.
+              « Non attribué » ne compte pas, elle accompagne toujours la sélection. */}
+          {personneAffichee && (
+            <span
+              className="flex items-center gap-1.5 h-7 pl-1 pr-2 rounded-full text-[11px] font-bold text-white max-w-[130px]"
+              style={{ backgroundColor: personneAffichee.color }}
+              title={personneAffichee.full_name}
+            >
+              <span className="w-[18px] h-[18px] rounded-full bg-white/30 text-[8px] flex items-center justify-center flex-shrink-0">
+                {initials(personneAffichee.full_name)}
+              </span>
+              <span className="truncate">{personneAffichee.full_name.split(' ')[0]}</span>
+            </span>
+          )}
           {!sameDay(today, currentDate) && view !== 'month' && (
             <button
               type="button"
