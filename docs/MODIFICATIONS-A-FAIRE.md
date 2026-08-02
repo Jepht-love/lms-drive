@@ -1,5 +1,10 @@
 # Les modifications à effectuer
 
+> **▶ Le plan d'exécution est dans `PLAN-REMARQUES.md`**, écrit le 01/08/2026 au soir :
+> les 21 remarques ouvertes regroupées par onglet, avec leur cause vérifiée, le geste et
+> la durée. **C'est lui qu'on suit pour travailler.** Ce document-ci reste la liste
+> brute et l'historique des décisions.
+
 Liste tenue au fil de l'eau, ouverte le 01/08/2026. Chaque ligne dit ce qui change
 pour l'utilisateur, pas comment c'est fabriqué. L'ordre de traitement suit celui
 que Jeff donne, pas celui de cette liste.

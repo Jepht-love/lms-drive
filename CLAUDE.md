@@ -171,7 +171,7 @@ Lire la remontée et sa capture dans `/sav`, reproduire le défaut à l'écran, 
 ## 8. Stack et déploiement
 
 - **Next.js 16.2.7** (App Router), React 19, TypeScript, Tailwind 4, shadcn/ui (voir §10 du CLAUDE.md général).
-- **Supabase** pour la base, l'authentification et le stockage. **Un projet par client**, organisation `sas-financial-services` : `vtxoqybfqdauhblavvza` (LMS DRIVE, eu-central-1), celui de Smart Loc à créer. Accessible via l'outil Supabase, les migrations s'exécutent automatiquement après avoir affiché le SQL dans la réponse. **Toujours vérifier sur quel projet on écrit avant de lancer quoi que ce soit.**
+- **Supabase** pour la base, l'authentification et le stockage. **Un projet par client**, organisation `sas-financial-services` : `vtxoqybfqdauhblavvza` (LMS DRIVE, eu-central-1), celui de Smart Loc à créer. Accessible via l'outil Supabase, les migrations s'exécutent automatiquement, puis se résument en deux ou trois lignes sans montrer le SQL (consigne du 01/08/2026, §5 du CLAUDE.md général). **Toujours vérifier sur quel projet on écrit avant de lancer quoi que ce soit.**
 - ⚠️ **L'organisation est sur le plan gratuit : aucune sauvegarde automatique, et 2 bases actives au maximum.** La base de production de LMS Drive est aujourd'hui sans filet. Signalé à Jeff le 28/07/2026, décision en attente. Le troisième client imposera le plan payant.
 - Resend pour les e-mails, date-fns pour les dates.
 - **Déploiement : Vercel, un projet par client.** `lms-drive` sur la branche `main`, `smartloc` sur sa propre branche de production.
