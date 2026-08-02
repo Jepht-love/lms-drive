@@ -1,7 +1,13 @@
 import { createClient } from '@/lib/supabase/server'
 import InternalTripsClient from './InternalTripsClient'
+import { fetchSituationVehicule } from '@/lib/vehicles/situation'
 
-export default async function InternalTripsPage() {
+export default async function InternalTripsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ vehicle?: string }>
+}) {
+  const { vehicle } = await searchParams
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -36,6 +42,11 @@ export default async function InternalTripsPage() {
       .order('full_name'),
   ])
 
+  // Situation du véhicule choisi, même carte que l'écran Réservations (demande de
+  // Jeff du 02/08/2026, remarque 46). Elle informe, elle ne filtre pas la liste
+  // des déplacements affichée en dessous.
+  const situation = vehicle ? await fetchSituationVehicule(supabase, vehicle) : null
+
   const total      = trips?.length ?? 0
   const enCours    = trips?.filter(t => t.status === 'en_cours').length ?? 0
   const planifies  = trips?.filter(t => t.status === 'planifie').length ?? 0
@@ -63,6 +74,8 @@ export default async function InternalTripsPage() {
         members={members ?? []}
         isManager={isManager}
         currentUserId={user?.id ?? ''}
+        vehiculeChoisi={vehicle}
+        situation={situation}
       />
     </div>
   )

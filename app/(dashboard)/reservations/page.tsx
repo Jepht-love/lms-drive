@@ -4,7 +4,9 @@ import { Plus, ClipboardList } from 'lucide-react'
 import SmartSearch from '@/components/ui/SmartSearch'
 import { formatPrice, reservationDiscount } from '@/lib/utils'
 import DeleteReservationButton from './DeleteReservationButton'
-import VehicleFilter from './VehicleFilter'
+import VehiclePicker from '@/components/vehicles/VehiclePicker'
+import VehicleSituationCard from '@/components/vehicles/VehicleSituationCard'
+import { fetchSituationVehicule } from '@/lib/vehicles/situation'
 import PaymentCountdownMini from './PaymentCountdownMini'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
@@ -41,7 +43,9 @@ export default async function ReservationsPage({
   // permettait d'en choisir un sans connaître son identifiant.
   const { data: vehiclesList } = await supabase
     .from('vehicles')
-    .select('id, brand, model, plate')
+    // `status` sert à la carte du véhicule choisi : un véhicule loué ne peut pas
+    // être annoncé « en déplacement », même si une ligne de déplacement traîne.
+    .select('id, brand, model, plate, status')
     .eq('is_active', true)
     .order('brand')
 
@@ -114,52 +118,10 @@ export default async function ReservationsPage({
   // ouvrir un autre onglet, puis créer la réservation avec ce véhicule déjà
   // choisi. On travaille sur TOUTES ses réservations, pas sur la liste filtrée
   // par statut : sinon un filtre « Confirmée » masquerait la location en cours.
-  const maintenant = new Date()
-  let vehiculeChoisi: {
-    label: string
-    enCours?: { fin: Date; client: string; enRetard: boolean }
-    suivante?: { debut: Date; client: string }
-    precedente?: { fin: Date; client: string }
-  } | null = null
-
-  if (vehicle) {
-    const v = (vehiclesList ?? []).find(x => x.id === vehicle)
-    const { data: sesResas } = await supabase
-      .from('reservations')
-      .select('start_datetime, end_datetime, status, client:clients(first_name, last_name)')
-      .eq('vehicle_id', vehicle)
-      .not('status', 'in', '("annulee","non_presente")')
-      .order('start_datetime', { ascending: true })
-
-    const nom = (r: any) => {
-      const c = Array.isArray(r.client) ? r.client[0] : r.client
-      return c ? `${c.first_name} ${c.last_name}`.trim() : 'Client'
-    }
-    const lignes = (sesResas ?? []).map((r: any) => ({
-      debut: new Date(r.start_datetime),
-      fin: new Date(r.end_datetime),
-      client: nom(r),
-      statut: r.status as string,
-    }))
-
-    // Le STATUT prime sur les dates. Une location « en retard » a une fin déjà
-    // passée alors que la voiture est toujours dehors : se fier à la date
-    // seule l'annonçait « disponible », ce qui est faux et dangereux — on
-    // pourrait la relouer. Constaté à l'écran le 28/07/2026 sur la BMW M135i.
-    const dehors = lignes.find(l => l.statut === 'en_cours' || l.statut === 'en_retard')
-    const enCours = dehors ?? lignes.find(l => l.debut <= maintenant && l.fin > maintenant)
-    const suivante = lignes.find(l => l.debut > maintenant && l !== enCours)
-    // La plus récente réellement rendue : utile pour savoir depuis quand la
-    // voiture est au dépôt. « Terminée » uniquement, pour la même raison.
-    const precedente = [...lignes].reverse().find(l => l.statut === 'terminee')
-
-    vehiculeChoisi = {
-      label: v ? `${[v.brand, v.model].filter(Boolean).join(' ')} · ${v.plate}` : 'Véhicule',
-      enCours: enCours && { fin: enCours.fin, client: enCours.client, enRetard: enCours.statut === 'en_retard' },
-      suivante: suivante && { debut: suivante.debut, client: suivante.client },
-      precedente: precedente && { fin: precedente.fin, client: precedente.client },
-    }
-  }
+  // Le calcul vit dans `lib/vehicles/situation.ts` depuis le 02/08/2026 : la même
+  // carte sert maintenant à Suivi véhicule et à Déplacements (remarque 46 de
+  // Jeff). Ne pas le réécrire ici, les trois écrans doivent dire la même chose.
+  const vehiculeChoisi = vehicle ? await fetchSituationVehicule(supabase, vehicle) : null
 
   return (
     <div className="space-y-4">
@@ -201,7 +163,7 @@ export default async function ReservationsPage({
           mesurés. Le défilement latéral reste en place comme filet, pour les
           écrans plus étroits que 390 px. */}
       <div className="flex gap-1.5 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}>
-        <VehicleFilter vehicles={vehiclesList ?? []} selected={vehicle} />
+        <VehiclePicker vehicles={vehiclesList ?? []} selected={vehicle} basePath="/reservations" />
         <Link
           href="/reservations"
           className={`px-2.5 py-2 min-h-[44px] flex items-center rounded-xl text-sm font-semibold whitespace-nowrap transition-colors flex-shrink-0 ${
@@ -232,40 +194,17 @@ export default async function ReservationsPage({
 
       {/* Le véhicule choisi, en une carte : disponible ou non, et quand */}
       {vehiculeChoisi && (
-        <div className="bg-[#111111] text-white rounded-2xl p-4">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-white/50">{vehiculeChoisi.label}</p>
-          {vehiculeChoisi.enCours ? (
-            <>
-              <p className={`text-lg font-black mt-1 ${vehiculeChoisi.enCours.enRetard ? 'text-red-400' : ''}`}>
-                {vehiculeChoisi.enCours.enRetard ? 'Devait revenir le ' : 'Revient le '}
-                {format(vehiculeChoisi.enCours.fin, "d MMMM 'à' HH:mm", { locale: fr })}
-              </p>
-              <p className="text-xs text-white/60 mt-0.5">
-                {vehiculeChoisi.enCours.enRetard ? 'En retard' : 'En location'} · {vehiculeChoisi.enCours.client}
-              </p>
-            </>
-          ) : (
-            <>
-              <p className="text-lg font-black mt-1 text-emerald-300">Disponible</p>
-              {vehiculeChoisi.precedente && (
-                <p className="text-xs text-white/60 mt-0.5">
-                  Rentré le {format(vehiculeChoisi.precedente.fin, "d MMMM 'à' HH:mm", { locale: fr })} · {vehiculeChoisi.precedente.client}
-                </p>
-              )}
-            </>
-          )}
-          {vehiculeChoisi.suivante && (
-            <p className="text-xs text-white/60 mt-1.5 pt-1.5 border-t border-white/10">
-              Repart le {format(vehiculeChoisi.suivante.debut, "d MMMM 'à' HH:mm", { locale: fr })} · {vehiculeChoisi.suivante.client}
-            </p>
-          )}
-          <Link
-            href={`/reservations/new?vehicle=${vehicle}`}
-            className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-[#111111] bg-white px-3 py-2 rounded-lg"
-          >
-            <Plus className="w-3.5 h-3.5" /> Réserver ce véhicule
-          </Link>
-        </div>
+        <VehicleSituationCard
+          situation={vehiculeChoisi}
+          action={
+            <Link
+              href={`/reservations/new?vehicle=${vehicle}`}
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-[#111111] bg-white px-3 py-2 rounded-lg"
+            >
+              <Plus className="w-3.5 h-3.5" /> Réserver ce véhicule
+            </Link>
+          }
+        />
       )}
 
       {/* Liste */}

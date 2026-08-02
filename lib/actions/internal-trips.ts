@@ -6,6 +6,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { syncTripToCalendar } from '@/lib/calendar/syncInternalTrip'
 import { instantDepuisSaisie, jourHeureAgence } from '@/lib/format/heureAgence'
 import { vehiculesIndisponibles, type RaisonIndisponibilite } from '@/lib/reservations/disponibilite'
+import { FALLBACK_DURATION_MINUTES } from '@/lib/vehicles/internalTrips'
 
 export async function startTrip(formData: FormData) {
   const supabase = await createClient()
@@ -22,10 +23,34 @@ export async function startTrip(formData: FormData) {
   const purposeNotes = ((formData.get('purpose_notes') as string) || '').trim()
   if (purpose === 'autre' && !purposeNotes) return { error: 'Précisez le motif du déplacement' }
 
+  const vehicleId = formData.get('vehicle_id') as string
+  const departIso = new Date().toISOString()
+
+  // Le véhicule est-il réellement libre à cet instant ? Jusqu'au 02/08/2026,
+  // « Démarrer maintenant » n'effectuait AUCUN contrôle : une voiture partie chez
+  // un client jusqu'au 31 août pouvait être envoyée en préparation, sans un mot.
+  // Constaté par Jeff sur la Citroën C3.
+  //
+  // Un départ n'a pas d'heure de retour : on contrôle la fenêtre de repli, la
+  // même qui sert à décider qu'un déplacement sans fin bloque le véhicule
+  // (`fenetreBloquanteDeplacement`). Les règles ne sont pas réécrites ici, elles
+  // viennent de `vehiculesIndisponibles`, le code qui refuse déjà une réservation.
+  //
+  // Lecture par le client admin : hors gérant et associé, un salarié ne voit que
+  // ses propres déplacements et les rendez-vous garage qui lui sont affectés. Le
+  // contrôle laisserait alors passer sans un mot la sortie d'un collègue. Même
+  // détour que `updateTrip`.
+  const finFenetre = new Date(Date.now() + FALLBACK_DURATION_MINUTES * 60_000).toISOString()
+  const indispo = await vehiculesIndisponibles(createAdminClient(), departIso, finFenetre, {
+    vehicleIds: [vehicleId],
+  })
+  const conflit = indispo.get(vehicleId)
+  if (conflit) return { error: CONFLIT_MESSAGES_DEPART[conflit.raison] }
+
   const payload = {
-    vehicle_id: formData.get('vehicle_id') as string,
+    vehicle_id: vehicleId,
     user_id: assignee,
-    start_datetime: new Date().toISOString(),
+    start_datetime: departIso,
     purpose,
     purpose_notes: purposeNotes || null,
     status: 'en_cours' as const,
@@ -179,6 +204,19 @@ export async function planTrip(formData: FormData) {
     ? (assigneeRaw && assigneeRaw !== 'none' ? assigneeRaw : null)
     : user.id
 
+  // Le créneau demandé est-il réellement libre ? Le panneau de disponibilité le
+  // montre à l'écran depuis le 30/07, mais rien ne l'imposait à l'enregistrement :
+  // un clic sur une ligne « pris » ouvrait le formulaire et le déplacement
+  // s'enregistrait quand même. Ajouté le 02/08/2026, même contrôle que la
+  // modification d'un déplacement et que la création d'une réservation.
+  // Lecture par le client admin, sinon un salarié ne verrait ni les rendez-vous
+  // garage ni les sorties de ses collègues (voir `updateTrip`).
+  const indispo = await vehiculesIndisponibles(createAdminClient(), startIso, endIso, {
+    vehicleIds: [vehicleId],
+  })
+  const conflit = indispo.get(vehicleId)
+  if (conflit) return { error: CONFLIT_MESSAGES[conflit.raison] }
+
   const payload = {
     vehicle_id: vehicleId,
     user_id: assignee,
@@ -283,6 +321,14 @@ const CONFLIT_MESSAGES: Record<RaisonIndisponibilite, string> = {
   deplacement: 'Ce véhicule part sur un autre déplacement interne sur la période demandée, ajustez les dates.',
 }
 
+// Même contrôle, mais pour un départ immédiat : il n'y a aucune date à ajuster,
+// la voiture est occupée maintenant. Le message dit donc quoi faire d'autre.
+const CONFLIT_MESSAGES_DEPART: Record<RaisonIndisponibilite, string> = {
+  reservation: 'Ce véhicule est en location en ce moment, il ne peut pas partir en déplacement.',
+  garage:      'Ce véhicule est au garage en ce moment, il ne peut pas partir en déplacement.',
+  deplacement: 'Ce véhicule est déjà sur un autre déplacement interne, terminez-le d’abord.',
+}
+
 /**
  * Modifie un déplacement PLANIFIÉ ou EN COURS.
  *
@@ -352,9 +398,9 @@ export async function updateTrip(tripId: string, formData: FormData) {
   }
 
   // Fenêtre AJOUTÉE par la modification, c'est-à-dire ce que ce déplacement ne
-  // bloquait pas déjà. Contrôler tout le créneau interdirait de corriger un
-  // déplacement qui chevauche déjà quelque chose (« Démarrer maintenant » ne
-  // contrôle rien à la création).
+  // bloquait pas déjà. Contrôler tout le créneau ferait échouer la modification
+  // d'un déplacement sur son propre créneau, et interdirait de corriger les
+  // lignes créées avant le 02/08/2026, quand la création ne contrôlait rien.
   const fenetres: Array<[string, string]> = []
   if (!ancienFin) {
     // Sans retour renseigné (cas de « Démarrer maintenant »), ce déplacement

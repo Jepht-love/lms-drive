@@ -91,7 +91,7 @@ export async function syncReservationToCalendar(reservationId: string): Promise<
   const admin = createAdminClient()
   const { data: reservation } = await admin
     .from('reservations')
-    .select('id, vehicle_id, client_id, start_datetime, end_datetime, status, reservation_number, vehicle:vehicles(brand, model, color)')
+    .select('id, vehicle_id, client_id, start_datetime, end_datetime, status, reservation_number, vehicle:vehicles(brand, model, color), client:clients(first_name, last_name)')
     .eq('id', reservationId)
     .single()
 
@@ -103,8 +103,16 @@ export async function syncReservationToCalendar(reservationId: string): Promise<
     ? `${vehicle.brand} ${vehicle.model}${vehicle.color ? ' ' + vehicle.color : ''}`
     : reservation.reservation_number
 
-  await upsertEvent(admin, reservation, 'depart_vehicule', reservation.start_datetime, depart, `Départ · ${vehicleLabel}`)
-  await upsertEvent(admin, reservation, 'retour_vehicule', reservation.end_datetime, retour, `Retour · ${vehicleLabel}`)
+  // Le CLIENT dans le titre (Jeff, 02/08/2026) : « Retour · Renault Captur » ne
+  // disait ni pour qui ni pourquoi la voiture était sortie, et le calendrier du
+  // tableau de bord n'affiche que ce titre. Sans client (réservation sans fiche
+  // rattachée), on garde le libellé d'avant plutôt qu'un séparateur orphelin.
+  const c = Array.isArray(reservation.client) ? reservation.client[0] : reservation.client
+  const clientLabel = c ? `${c.first_name ?? ''} ${c.last_name ?? ''}`.trim() : ''
+  const suffixeClient = clientLabel ? ` · ${clientLabel}` : ''
+
+  await upsertEvent(admin, reservation, 'depart_vehicule', reservation.start_datetime, depart, `Départ · ${vehicleLabel}${suffixeClient}`)
+  await upsertEvent(admin, reservation, 'retour_vehicule', reservation.end_datetime, retour, `Retour · ${vehicleLabel}${suffixeClient}`)
   await syncWashTask(admin, reservation, depart, vehicleLabel)
 }
 

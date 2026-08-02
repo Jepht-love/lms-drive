@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Edit, Calendar, Wrench, AlertTriangle, FileText, TrendingUp } from 'lucide-react'
+import { ArrowLeft, Edit, Calendar, Wrench, AlertTriangle, FileText, TrendingUp, Briefcase } from 'lucide-react'
 import BackButton from '@/components/ui/BackButton'
 import { getVehicleStatusColor, getVehicleStatusLabel, formatDate, formatPrice } from '@/lib/utils'
 import VehicleStatusButton from '../VehicleStatusButton'
@@ -9,6 +9,8 @@ import VehicleMaintenanceCard from './VehicleMaintenanceCard'
 import DeleteButton from '@/components/ui/DeleteButton'
 import { deleteVehicle } from '@/lib/actions/delete'
 import { computeVehicleNeeds, buildLastByType } from '@/lib/maintenance-health'
+import { fetchActiveInternalTrips, estEnDeplacement, internalTripPurposeLabel } from '@/lib/vehicles/internalTrips'
+import { jourHeureAgence } from '@/lib/format/heureAgence'
 import type { MaintenanceFlag } from '@/types/database'
 
 const RESA_STATUS_LABEL: Record<string, string> = {
@@ -35,9 +37,9 @@ export default async function VehiclePage({ params }: { params: Promise<{ id: st
     .from('profiles').select('role').eq('id', user?.id ?? '').single()
   const isManager = caller?.role === 'gerant' || caller?.role === 'associe'
 
-  // Ces six lectures sont indépendantes (toutes clefées sur `id`) : les enchaîner
-  // en série cumulait six aller-retours réseau. En parallèle, la latence de la
-  // page retombe à celle de la requête la plus lente.
+  // Ces sept lectures sont indépendantes : les enchaîner en série cumulait autant
+  // d'aller-retours réseau. En parallèle, la latence de la page retombe à celle
+  // de la requête la plus lente.
   const [
     { data: recentReservations },
     { data: activeReservation },
@@ -45,6 +47,7 @@ export default async function VehiclePage({ params }: { params: Promise<{ id: st
     { data: maintRecords },
     { count: totalRentals },
     { count: completedRentals },
+    activeTrips,
   ] = await Promise.all([
     supabase
       .from('reservations')
@@ -84,7 +87,21 @@ export default async function VehiclePage({ params }: { params: Promise<{ id: st
       .select('id', { count: 'exact', head: true })
       .eq('vehicle_id', id)
       .eq('status', 'terminee'),
+    // ── Déplacements internes en cours ──
+    // La fiche lisait le statut brut et annonçait « Disponible » une voiture
+    // partie en déplacement professionnel (remonté par le gérant, corrigé le
+    // 02/08/2026). Le statut n'est jamais écrit en base pour un déplacement :
+    // l'information se superpose à l'affichage, ici comme sur la liste des
+    // véhicules et le tableau de bord.
+    fetchActiveInternalTrips(supabase),
   ])
+
+  const trip = activeTrips.get(id)
+  const enDeplacement = estEnDeplacement(vehicle.status, trip)
+  // Le statut MONTRÉ. `vehicle.status` reste le statut de fond, celui que le
+  // bouton de changement manuel pilote : il reprend la main à la clôture du
+  // déplacement, sans rien avoir à défaire.
+  const statutAffiche = enDeplacement ? 'deplacement_pro' : vehicle.status
 
   const needs = computeVehicleNeeds(vehicle, buildLastByType(maintRecords ?? []), new Date())
   // Seuls les dégâts NON réparés remontent ici : depuis le 30/07/2026 un dégât
@@ -214,8 +231,8 @@ export default async function VehiclePage({ params }: { params: Promise<{ id: st
               <span className="bg-gray-100 text-gray-500 text-xs font-mono font-medium px-2.5 py-1 rounded-lg tracking-wider">
                 {vehicle.plate}
               </span>
-              <span className={`text-sm font-medium px-3 py-1 rounded-full border ${getVehicleStatusColor(vehicle.status)}`}>
-                {getVehicleStatusLabel(vehicle.status)}
+              <span className={`text-sm font-medium px-3 py-1 rounded-full border ${getVehicleStatusColor(statutAffiche)}`}>
+                {getVehicleStatusLabel(statutAffiche)}
               </span>
             </div>
             {vehicle.version && <p className="text-gray-500 mt-0.5">{vehicle.version} {vehicle.year ? `· ${vehicle.year}` : ''}</p>}
@@ -349,6 +366,29 @@ export default async function VehiclePage({ params }: { params: Promise<{ id: st
         {/* Side */}
         <div className="space-y-4">
           <InfoCard title="Statut">
+            {/* Le véhicule est physiquement sorti : on le dit avant la liste des
+                statuts manuels, sinon la fiche affiche « Déplacement pro » en
+                haut et « Disponible ● Actuel » juste en dessous. */}
+            {enDeplacement && (
+              <Link
+                href="/internal-trips"
+                className="flex items-start gap-2.5 p-3 mb-3 rounded-xl bg-indigo-50 border border-indigo-100 hover:bg-indigo-100 transition-colors"
+              >
+                <Briefcase className="w-4 h-4 text-indigo-500 mt-0.5 flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-indigo-900">
+                    En déplacement · {internalTripPurposeLabel(trip.purpose, trip.purposeNotes)}
+                  </p>
+                  <p className="text-xs text-indigo-500 mt-0.5">
+                    {/* jourHeureAgence et pas formatDate : la page est calculée
+                        sur le serveur, et Vercel tourne en temps universel — un
+                        retour à 22:04 s'y écrirait 20:04. */}
+                    {trip.endAt ? `Retour prévu le ${jourHeureAgence(trip.endAt)}` : 'Retour non renseigné'}
+                    {' · '}Le statut ci-dessous reprend la main à la clôture.
+                  </p>
+                </div>
+              </Link>
+            )}
             <VehicleStatusButton vehicleId={vehicle.id} currentStatus={vehicle.status} />
           </InfoCard>
 

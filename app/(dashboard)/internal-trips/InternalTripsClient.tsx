@@ -17,6 +17,11 @@
 // le véhicule et la période déjà remplis, y compris sur un véhicule pris (c'est
 // l'enregistrement qui tranche, pas l'affichage).
 //
+// Contrôle réel à l'enregistrement (02/08/2026) : « Démarrer maintenant » et
+// « Planifier » refusent désormais un véhicule occupé, ce que la phrase
+// ci-dessus supposait déjà sans que ce soit vrai. Avant cette date, une voiture
+// louée jusqu'au 31 août pouvait partir en déplacement sans un mot.
+//
 // Créneaux libres (30/07/2026) : un véhicule pris n'est plus un simple « occupé
 // jusqu'à 15h ». Le panneau affiche les TROUS réellement libres à l'intérieur de
 // la période demandée (une voiture rendue à 13h et reprise à 15h propose « Libre
@@ -35,6 +40,9 @@ import { internalTripPurposeLabel } from '@/lib/vehicles/internalTrips'
 import { Plus, Navigation, Clock, CheckCircle2, CalendarClock, UserPlus, Play, Pencil, Trash2, User, Search, X, Loader2 } from 'lucide-react'
 import Drawer from '@/components/Drawer'
 import DateTimeField from '@/components/ui/DateTimeField'
+import VehiclePicker from '@/components/vehicles/VehiclePicker'
+import VehicleSituationCard from '@/components/vehicles/VehicleSituationCard'
+import type { SituationVehicule } from '@/lib/vehicles/situation'
 
 interface Vehicle { id: string; plate: string; brand: string; model: string; current_km: number }
 interface Member { id: string; full_name: string; role: string }
@@ -60,6 +68,15 @@ const PURPOSES = [
 ]
 
 const tripLabel = (t: Trip) => internalTripPurposeLabel(t.purpose, t.purpose_notes)
+
+/**
+ * Nom d'usage d'un véhicule : la marque et le modèle. C'est l'identification
+ * PRINCIPALE demandée par Jeff (remarque 40.2, redite le 02/08/2026) ; la plaque
+ * reste affichée mais en second, en petit. Même ordre que le format commun des
+ * lignes du tableau de bord. Ne pas revenir à la plaque en tête.
+ */
+const vehicleName = (v?: { brand: string; model: string } | null) =>
+  v ? `${v.brand} ${v.model}`.trim() : 'Véhicule'
 
 /** Motifs d'indisponibilité renvoyés par /api/vehicles/availability. */
 const RAISON: Record<string, string> = {
@@ -109,12 +126,18 @@ function tripWindow(t: Trip) {
   return `${startTxt} → ${startTxt.slice(0, 10) === endTxt.slice(0, 10) ? endTxt.slice(11) : endTxt}`
 }
 
-export default function InternalTripsClient({ vehicles, trips, members, isManager, currentUserId }: {
+export default function InternalTripsClient({
+  vehicles, trips, members, isManager, currentUserId, vehiculeChoisi, situation,
+}: {
   vehicles: Vehicle[]
   trips: Trip[]
   members: Member[]
   isManager: boolean
   currentUserId: string
+  /** Véhicule choisi dans la liste déroulante, s'il y en a un. */
+  vehiculeChoisi?: string
+  /** Sa situation, calculée par le serveur (même carte que Réservations). */
+  situation: SituationVehicule | null
 }) {
   const router = useRouter()
   const { show } = useToast()
@@ -224,6 +247,42 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
   const estLibre = (id: string) => !dispo[id] || dispo[id].raison === null
   const creneauxDe = (id: string) => dispo[id]?.creneaux ?? []
 
+  // ── Disponibilité À L'INSTANT, pour « Démarrer maintenant » ────────────────
+  // Le panneau ci-dessus répond sur une période choisie ; ce formulaire-ci part
+  // tout de suite. Il interroge donc la même route sur la fenêtre que le serveur
+  // contrôle réellement (l'heure courante plus le repli d'une heure), pour que la
+  // liste ne propose jamais une voiture que l'enregistrement refuserait.
+  //
+  // Ajouté le 02/08/2026 : jusque-là la liste proposait toute la flotte, et Jeff
+  // a pu lancer un déplacement sur une Citroën C3 partie chez un client.
+  const [dispoNow, setDispoNow] = useState<Record<string, Dispo>>({})
+  const [dispoNowPret, setDispoNowPret] = useState(false)
+  useEffect(() => {
+    if (!showStartForm) return
+    const ctrl = new AbortController()
+    setDispoNowPret(false)
+    const debut = new Date()
+    const fin = new Date(debut.getTime() + 60 * 60 * 1000)
+    const params = new URLSearchParams({
+      start: toDatetimeLocal(debut.toISOString()),
+      end: toDatetimeLocal(fin.toISOString()),
+    })
+    fetch(`/api/vehicles/availability?${params}`, { signal: ctrl.signal })
+      .then(r => (r.ok ? r.json() : Promise.reject(new Error('indisponible'))))
+      .then(d => { setDispoNow(d.dispo ?? {}); setDispoNowPret(true) })
+      // Échec réseau : on laisse la liste complète plutôt que de bloquer tout
+      // départ. Le contrôle serveur reste le dernier mot.
+      .catch(e => { if (e?.name !== 'AbortError') setDispoNowPret(false) })
+    return () => ctrl.abort()
+  }, [showStartForm])
+
+  /** Motif qui empêche ce véhicule de partir maintenant, sinon null. */
+  const prisMaintenant = (id: string): string | null => {
+    if (!dispoNowPret) return null
+    const d = dispoNow[id]
+    return d?.raison ? (RAISON[d.raison] ?? 'indisponible') : null
+  }
+
   // Trois groupes dans cet ordre : libres sur toute la période, libres sur une
   // partie seulement, pris de bout en bout. L'ordre de la flotte est conservé
   // dans chaque groupe (tri stable).
@@ -286,7 +345,39 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
         >
           <Plus className="w-4 h-4" /> Démarrer maintenant
         </button>
+        {/* Choix d'un véhicule, comme dans Réservations : on veut savoir où en
+            est une voiture précise avant de lui poser un déplacement. */}
+        <VehiclePicker vehicles={vehicles} selected={vehiculeChoisi} basePath="/internal-trips" />
       </div>
+
+      {situation && (
+        <VehicleSituationCard
+          situation={situation}
+          action={
+            situation.libre ? (
+              <button
+                type="button"
+                onClick={() => { setPlanVehicleId(vehiculeChoisi ?? ''); setError(null); setShowPlanForm(true) }}
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-[#111111] bg-white px-3 py-2 rounded-lg"
+              >
+                <CalendarClock className="w-3.5 h-3.5" /> Planifier un déplacement
+              </button>
+            ) : (
+              // Voiture occupée : on ne ferme pas la porte, on montre les trous
+              // réellement libres entre deux locations. C'est la demande de Jeff
+              // du 02/08/2026, « prendre en compte les réservations entre dates
+              // disponibles ».
+              <button
+                type="button"
+                onClick={ouvrirDispo}
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-[#111111] bg-white px-3 py-2 rounded-lg"
+              >
+                <CalendarClock className="w-3.5 h-3.5" /> Voir les créneaux libres
+              </button>
+            )
+          }
+        />
+      )}
 
       {/* Recherche locale, toujours visible : c'est elle qui ouvre le panneau
           de disponibilité, même quand aucun déplacement n'existe encore. */}
@@ -383,7 +474,9 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
                       >
                         <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${couleurPastille}`} aria-hidden />
                         <span className="flex-1 min-w-0">
-                          <span className="block text-sm font-semibold text-gray-900 truncate">{v.plate} · {v.brand} {v.model}</span>
+                          <span className="block text-sm font-semibold text-gray-900 truncate">
+                            {vehicleName(v)} <span className="text-xs font-mono font-normal text-gray-400">{v.plate}</span>
+                          </span>
                           <span className={`block text-xs truncate ${couleurTexte}`}>{detail}</span>
                         </span>
                         <CalendarClock className="w-4 h-4 text-gray-300 flex-shrink-0" />
@@ -424,9 +517,9 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
             {plannedTrips.map(t => (
               <div key={t.id} className="bg-white rounded-2xl border-2 border-blue-100 shadow-sm p-4">
                 <div className="flex items-start justify-between mb-2">
-                  <div>
-                    <p className="font-bold text-gray-900">{t.vehicle?.plate}</p>
-                    <p className="text-xs text-gray-500">{t.vehicle?.brand} {t.vehicle?.model}</p>
+                  <div className="min-w-0">
+                    <p className="font-bold text-gray-900 truncate">{vehicleName(t.vehicle)}</p>
+                    <p className="text-xs text-gray-400 font-mono">{t.vehicle?.plate}</p>
                   </div>
                   <span className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded-full font-medium max-w-[55%] truncate">
                     {tripLabel(t)}
@@ -496,9 +589,9 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
             {activeTrips.map(t => (
               <div key={t.id} className="bg-white rounded-2xl border-2 border-green-200 shadow-sm p-4">
                 <div className="flex items-start justify-between mb-2">
-                  <div>
-                    <p className="font-bold text-gray-900">{t.vehicle?.plate}</p>
-                    <p className="text-xs text-gray-500">{t.vehicle?.brand} {t.vehicle?.model}</p>
+                  <div className="min-w-0">
+                    <p className="font-bold text-gray-900 truncate">{vehicleName(t.vehicle)}</p>
+                    <p className="text-xs text-gray-400 font-mono">{t.vehicle?.plate}</p>
                   </div>
                   <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium max-w-[55%] truncate">
                     {tripLabel(t)}
@@ -557,11 +650,12 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
                   <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className="font-semibold text-gray-900 text-sm">{t.vehicle?.plate}</p>
+                      <p className="font-semibold text-gray-900 text-sm truncate">{vehicleName(t.vehicle)}</p>
                       <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full truncate max-w-[50%]">{tripLabel(t)}</span>
                     </div>
                     <p className="text-xs text-gray-500">
-                      {t.user?.full_name} · {formatDateTime(t.start_datetime)}
+                      <span className="font-mono text-gray-400">{t.vehicle?.plate}</span>
+                      {t.user?.full_name ? ` · ${t.user.full_name}` : ''} · {formatDateTime(t.start_datetime)}
                     </p>
                   </div>
                   <div className="text-right flex-shrink-0">
@@ -595,7 +689,7 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
             <label htmlFor="plan-vehicle" className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Véhicule *</label>
             <select id="plan-vehicle" name="vehicle_id" required defaultValue={planVehicleId} className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white">
               <option value="">· Choisir ·</option>
-              {vehicles.map(v => <option key={v.id} value={v.id}>{v.plate} · {v.brand} {v.model}</option>)}
+              {vehicles.map(v => <option key={v.id} value={v.id}>{v.brand} {v.model} · {v.plate}</option>)}
             </select>
           </div>
           <div>
@@ -655,7 +749,7 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
       </Drawer>
 
       {/* Assign Drawer */}
-      <Drawer open={!!assigningTrip} onClose={reset} title={`Assigner · ${assigningTrip?.vehicle?.plate ?? ''}`}>
+      <Drawer open={!!assigningTrip} onClose={reset} title={`Assigner · ${vehicleName(assigningTrip?.vehicle)}`}>
         <form action={handleAssign} className="space-y-4">
           <div>
             <label htmlFor="assign-driver" className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Conducteur *</label>
@@ -672,7 +766,7 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
       </Drawer>
 
       {/* Start-planned Drawer */}
-      <Drawer open={!!startingPlanned} onClose={reset} title={`Démarrer · ${startingPlanned?.vehicle?.plate ?? ''}`}>
+      <Drawer open={!!startingPlanned} onClose={reset} title={`Démarrer · ${vehicleName(startingPlanned?.vehicle)}`}>
         <form action={handleStartPlanned} className="space-y-4">
           <div>
             <label htmlFor="startp-km" className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">
@@ -704,10 +798,23 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
               className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/20 text-sm bg-white"
             >
               <option value="">· Choisir ·</option>
-              {vehicles.map(v => (
-                <option key={v.id} value={v.id}>{v.plate} · {v.brand} {v.model}</option>
-              ))}
+              {/* Un véhicule occupé reste visible mais ne se choisit pas : le
+                  masquer laisserait croire qu'il n'existe pas. */}
+              {vehicles.map(v => {
+                const pris = prisMaintenant(v.id)
+                return (
+                  <option key={v.id} value={v.id} disabled={!!pris}>
+                    {v.brand} {v.model} · {v.plate}{pris ? ` — ${pris}` : ''}
+                  </option>
+                )
+              })}
             </select>
+            {dispoNowPret && (
+              <p className="text-[11px] text-gray-400 mt-1">
+                {vehicles.filter(v => !prisMaintenant(v.id)).length} véhicule(s) disponible(s) maintenant.
+                Les autres sont en location, au garage ou déjà en déplacement.
+              </p>
+            )}
           </div>
           <div>
             <label htmlFor="start-purpose" className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Motif *</label>
@@ -772,7 +879,7 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
       </Drawer>
 
       {/* End Drawer */}
-      <Drawer open={!!endingTrip} onClose={reset} title={`Terminer · ${endingTrip?.vehicle?.plate ?? ''}`}>
+      <Drawer open={!!endingTrip} onClose={reset} title={`Terminer · ${vehicleName(endingTrip?.vehicle)}`}>
         <form action={handleEnd} className="space-y-4">
           <div>
             <label htmlFor="end-km" className="block text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">
@@ -811,7 +918,7 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
       <Drawer
         open={!!editingTrip}
         onClose={reset}
-        title={`Modifier · ${editingTrip?.vehicle?.plate ?? ''}`}
+        title={`Modifier · ${vehicleName(editingTrip?.vehicle)}`}
         footer={
           <button type="submit" form="edit-trip-form" disabled={loading} className="w-full py-3 bg-[#111111] text-white rounded-xl font-semibold disabled:opacity-50 transition-colors active:scale-[.97]">
             {loading ? 'Enregistrement...' : 'Enregistrer'}
@@ -938,7 +1045,7 @@ export default function InternalTripsClient({ vehicles, trips, members, isManage
       <Drawer open={!!deletingTrip} onClose={reset} title="Supprimer le déplacement">
         <div className="space-y-4">
           <p className="text-sm text-gray-600">
-            Supprimer définitivement ce déplacement{deletingTrip?.vehicle?.plate ? ` (${deletingTrip.vehicle.plate})` : ''} ?
+            Supprimer définitivement ce déplacement{deletingTrip?.vehicle ? ` (${vehicleName(deletingTrip.vehicle)} · ${deletingTrip.vehicle.plate})` : ''} ?
             {deletingTrip?.status === 'termine' && ' Les charges de péages/frais liées seront aussi retirées de la comptabilité.'}
           </p>
           {error && <div className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{error}</div>}

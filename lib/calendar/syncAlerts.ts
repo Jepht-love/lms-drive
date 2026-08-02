@@ -45,7 +45,29 @@ export async function syncAlertsToCalendar(
     .select('id, source_key')
     .not('source_key', 'is', null)
 
-  const existingByKey = new Map((existing ?? []).map(e => [e.source_key as string, e.id as string]))
+  /**
+   * ⚠️ Clés qui n'appartiennent PAS aux alertes, et qu'il ne faut donc jamais
+   * effacer ici.
+   *
+   * Le nettoyage de fin de fonction supprime tout événement porteur d'une clé
+   * absente du tour courant. Tant que les alertes étaient seules à en poser, la
+   * règle tenait. Depuis que les déplacements internes posent « trip-<id> »
+   * (lib/calendar/syncInternalTrip.ts), chaque calcul d'alertes effaçait
+   * l'événement de CHAQUE déplacement : le tableau de bord en supprimait un
+   * juste après sa création, et aucun déplacement n'a jamais tenu au calendrier.
+   * Trouvé le 02/08/2026 en cherchant pourquoi un déplacement planifié
+   * n'apparaissait nulle part.
+   *
+   * Tout nouveau producteur de `source_key` doit ajouter son préfixe ici.
+   */
+  const PREFIXES_ETRANGERS = ['trip-', 'task-']
+  const estUneAlerte = (key: string) => !PREFIXES_ETRANGERS.some(p => key.startsWith(p))
+
+  const existingByKey = new Map(
+    (existing ?? [])
+      .filter(e => estUneAlerte(e.source_key as string))
+      .map(e => [e.source_key as string, e.id as string]),
+  )
   const seenKeys = new Set<string>()
 
   for (const alert of actionable) {

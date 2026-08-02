@@ -5,6 +5,7 @@ import BackButton from '@/components/ui/BackButton'
 import { formatDate } from '@/lib/utils'
 import { maintenanceType } from '@/lib/maintenance'
 import { fetchActiveInternalTrips, internalTripPurposeLabel } from '@/lib/vehicles/internalTrips'
+import { jourHeureAgence } from '@/lib/format/heureAgence'
 
 // Statuts considérés « immobilisés » — identique au filtre de /vehicles, mais
 // cette page explique POURQUOI chaque véhicule l'est (sinistre en cours,
@@ -125,7 +126,10 @@ export default async function ImmobilisesPage() {
               href = '/internal-trips'
               reasonIcon = <Briefcase className="w-4 h-4 text-indigo-500" />
               reasonText = `Déplacement · ${internalTripPurposeLabel(trip.purpose, trip.purposeNotes)}`
-              reasonSub = trip.endAt ? `retour prévu le ${formatDate(trip.endAt, "dd/MM 'à' HH:mm")}` : 'en cours'
+              // jourHeureAgence et pas formatDate : la page est calculée sur le
+              // serveur, et Vercel tourne en temps universel — l'heure de retour
+              // s'y affichait deux heures trop tôt l'été. Corrigé le 02/08/2026.
+              reasonSub = trip.endAt ? `retour prévu le ${jourHeureAgence(trip.endAt)}` : 'en cours'
             }
 
             if (accident) {

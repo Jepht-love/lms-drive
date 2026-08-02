@@ -52,6 +52,10 @@ const TYPE_META: Record<string, { label: string; badge: string }> = {
   livraison:       { label: 'Livraison',    badge: 'bg-purple-500 text-white' },
   recuperation:    { label: 'Récupération', badge: 'bg-purple-500 text-white' },
   tache:           { label: 'Tâche',        badge: 'bg-purple-500 text-white' },
+  // Ajouté le 02/08/2026 : sans entrée ici, un déplacement interne héritait de
+  // l'étiquette « Tâche » du repli, ce qui ne disait pas qu'une voiture était
+  // sortie avec quelqu'un.
+  deplacement_interne: { label: 'Déplacement', badge: 'bg-indigo-500 text-white' },
 }
 const DEFAULT_META = { label: 'Tâche', badge: 'bg-gray-500 text-white' }
 const metaFor = (t: string) => TYPE_META[t] ?? DEFAULT_META
@@ -170,12 +174,32 @@ export default function DashboardCalendar() {
     return () => { cancelled = true }
   }, [ancrage, reloadKey])
 
+  /**
+   * Un événement à cheval sur plusieurs jours apparaît CHAQUE jour qu'il couvre,
+   * pas seulement celui de son départ. Demande de Jeff du 02/08/2026 : un
+   * déplacement parti aujourd'hui et rendu demain doit se voir les deux jours,
+   * sinon la journée de demain paraît libre alors qu'une voiture est dehors.
+   *
+   * Borne de 31 jours : une saisie fautive (une fin en 2027) remplirait sinon
+   * toutes les journées du calendrier.
+   */
   const eventsByDay = useMemo(() => {
     const map = new Map<string, CalendarEvent[]>()
-    for (const e of events) {
-      const key = dayKey(new Date(e.start_at))
+    const ajouter = (key: string, e: CalendarEvent) => {
       const arr = map.get(key)
       if (arr) arr.push(e); else map.set(key, [e])
+    }
+    for (const e of events) {
+      const debut = new Date(e.start_at)
+      ajouter(dayKey(debut), e)
+      if (!e.end_at) continue
+      const fin = new Date(e.end_at)
+      const curseur = new Date(debut.getFullYear(), debut.getMonth(), debut.getDate())
+      for (let i = 0; i < 31; i++) {
+        curseur.setDate(curseur.getDate() + 1)
+        if (curseur > fin) break
+        ajouter(dayKey(curseur), e)
+      }
     }
     return map
   }, [events])
@@ -311,14 +335,42 @@ export default function DashboardCalendar() {
                   href={`/calendrier?event=${e.id}`}
                   className="flex items-center gap-2.5 py-1.5 px-1 rounded-lg hover:bg-gray-50 transition-colors"
                 >
-                  <span className="w-10 text-[11px] font-mono font-bold text-gray-500 flex-shrink-0 text-center">
-                    {format(new Date(e.start_at), 'HH:mm')}
+                  {/* Début au-dessus, fin en dessous : « de quelle heure à quelle
+                      heure » n'était visible nulle part (Jeff, 02/08/2026).
+                      Sur un jour APRÈS le départ, l'heure de début serait fausse :
+                      on ne montre alors que celle du retour. C'est ce qui
+                      distingue « parti à 19:18 » aujourd'hui de « rentre à
+                      00:00 » demain. */}
+                  <span className="w-10 flex-shrink-0 text-center">
+                    {dayKey(new Date(e.start_at)) === dayKey(selected) || !e.end_at ? (
+                      <>
+                        <span className="block text-[11px] font-mono font-bold text-gray-500">
+                          {format(new Date(e.start_at), 'HH:mm')}
+                        </span>
+                        {e.end_at
+                          && new Date(e.end_at) > new Date(e.start_at)
+                          && dayKey(new Date(e.end_at)) === dayKey(new Date(e.start_at)) && (
+                          <span className="block text-[10px] font-mono text-gray-300">
+                            {format(new Date(e.end_at), 'HH:mm')}
+                          </span>
+                        )}
+                      </>
+                    ) : (
+                      <span className="block text-[11px] font-mono font-bold text-gray-500">
+                        {format(new Date(e.end_at), 'HH:mm')}
+                      </span>
+                    )}
                   </span>
                   {/* La pastille rétrécit sur téléphone : à 390 px, ses 76 px
                       fixes plus la colonne de droite mangeaient la place et
                       coupaient la plaque (« Smart Fortwo · DQ… »). */}
-                  <span className={`text-[9px] font-black uppercase px-2 py-1 rounded-full flex-shrink-0 inline-flex items-center justify-center min-w-[52px] sm:min-w-[76px] ${meta.badge}`}>
-                    {meta.label}
+                  {/* Largeur FIXE, et non plus « au moins » : une pastille
+                      « RDV garage » ou « Déplacement » était plus large qu'une
+                      « Retour », et décalait le nom du véhicule d'une ligne à
+                      l'autre (Jeff, 02/08/2026). Toutes les lignes commencent
+                      maintenant au même endroit. */}
+                  <span className={`text-[8px] sm:text-[9px] font-black uppercase px-1.5 py-1 rounded-full flex-shrink-0 inline-flex items-center justify-center w-[80px] sm:w-[104px] ${meta.badge}`}>
+                    <span className="truncate">{meta.label}</span>
                   </span>
                   {/* Trois lignes : la voiture et sa plaque, ce qu'il y a à
                       faire, la personne concernée. Sans véhicule (un rendez-vous

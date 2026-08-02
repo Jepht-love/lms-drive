@@ -90,6 +90,21 @@ const ALERT_GROUPS: AlertGroup[] = [
     cardBg: 'bg-amber-50',  cardBorder: 'border-amber-100',  labelColor: 'text-amber-700',  iconColor: 'text-amber-500',  badgeBg: 'bg-amber-400',  badgeText: 'text-white' },
 ]
 
+// Étiquette des ÉVÉNEMENTS calendrier repris dans « Tâches du jour ». À ne pas
+// confondre avec TASK_TYPE_LABELS juste en dessous, qui nomme les lignes de la
+// table `tasks` (l'ancien mécanisme). Les libellés reprennent ceux du calendrier
+// du tableau de bord, pour qu'une même ligne ne change pas de nom d'un bloc à
+// l'autre.
+const CALENDAR_TYPE_LABELS: Record<string, string> = {
+  tache: 'Tâche',
+  rdv_client: 'RDV',
+  rdv_garage: 'RDV garage',
+  rdv_autre: 'RDV',
+  livraison: 'Livraison',
+  recuperation: 'Récupération',
+  deplacement_interne: 'Déplacement',
+}
+
 const TASK_TYPE_LABELS: Record<string, string> = {
   lavage:               'Lavage',
   preparation:          'Préparation',
@@ -540,17 +555,26 @@ export default async function DashboardPage() {
   const { data: rawCalendarTasks } = await supabase
     .from('calendar_events')
     .select('id, title, description, status, start_at, end_at, event_type, vehicle_ids, source_key, assigned_to, assigned_team_id, assignee:profiles!assigned_to(full_name), team:calendar_teams!assigned_team_id(name, color)')
-    .in('event_type', ['tache', 'rdv_client', 'rdv_garage', 'rdv_autre', 'livraison', 'recuperation'])
+    // « deplacement_interne » ajouté le 02/08/2026 : un déplacement planifié pour
+    // aujourd'hui n'apparaissait nulle part sur l'accueil, alors qu'il occupe une
+    // voiture et quelqu'un de l'équipe (constaté par Jeff). Les départs et retours
+    // de location restent hors de cette liste : ils ont déjà leurs deux sections
+    // dédiées plus haut, les ajouter ici les afficherait deux fois.
+    .in('event_type', ['tache', 'rdv_client', 'rdv_garage', 'rdv_autre', 'livraison', 'recuperation', 'deplacement_interne'])
     // Borne basse : la plus ancienne des deux fenêtres, pour ne rien perdre de
     // ce que la journée métier du calendrier capte avant minuit.
     .gte('start_at', (businessDayStart < todayStart ? businessDayStart : todayStart).toISOString())
     .lte('start_at', in7Days.toISOString())
+    // Une tâche terminée quitte la liste : chaque type se clôture par son propre
+    // parcours (état des lieux, retour de déplacement, intervention menée à son
+    // terme). Décision de Jeff du 02/08/2026, après essai d'une case à cocher :
+    // elle n'apportait rien et encombrait la ligne.
     .in('status', ['a_faire', 'en_cours'])
     .order('start_at', { ascending: true })
   const weekCalendarTasks = (rawCalendarTasks ?? []).filter(t => !t.source_key?.startsWith('task-'))
   // Même règle que pour les tâches ci-dessus (Jeff, 30/07/2026) : tout ce qui
-  // est prévu dans la journée et pas encore terminé reste ici, l'heure passée
-  // ou non. Le statut est déjà filtré à la lecture ('a_faire' / 'en_cours').
+  // est prévu dans la journée reste ici, l'heure passée ou non. Ce qui est fait
+  // y reste aussi, barré, pour garder la trace de la journée.
   const todayCalendarTasks = weekCalendarTasks.filter(t => {
     const debut = new Date(t.start_at)
     return debut >= todayStart && debut <= todayEnd
@@ -860,7 +884,7 @@ export default async function DashboardPage() {
                     <span className="w-12 text-sm font-black text-gray-900 font-mono text-center flex-shrink-0">
                       {format(new Date(r.start_datetime), 'HH:mm')}
                     </span>
-                    <span className={`text-[10px] font-black uppercase px-2.5 py-1.5 rounded-full flex-shrink-0 inline-flex items-center justify-center min-w-[64px] sm:min-w-[92px] ${
+                    <span className={`text-[9px] sm:text-[10px] font-black uppercase px-2 py-1.5 rounded-full flex-shrink-0 inline-flex items-center justify-center w-[92px] sm:w-[108px] ${
                       isQuickTurnaround ? 'bg-orange-500 text-white' : isToPrepare(r.id) ? 'bg-amber-500 text-white' : 'bg-black text-white'
                     }`}>
                       {isToPrepare(r.id) ? 'À PRÉPARER' : 'DÉPART'}
@@ -916,7 +940,7 @@ export default async function DashboardPage() {
                     <span className="w-12 text-sm font-black text-gray-900 font-mono text-center flex-shrink-0">
                       {format(new Date(r.end_datetime), 'HH:mm')}
                     </span>
-                    <span className={`text-[10px] font-black uppercase px-2.5 py-1.5 rounded-full flex-shrink-0 inline-flex items-center justify-center min-w-[64px] sm:min-w-[92px] ${
+                    <span className={`text-[9px] sm:text-[10px] font-black uppercase px-2 py-1.5 rounded-full flex-shrink-0 inline-flex items-center justify-center w-[92px] sm:w-[108px] ${
                       isLate ? 'bg-red-600 text-white' : isQuickTurnaround ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-600'
                     }`}>
                       {isLate ? 'RETOUR EN RETARD' : 'RETOUR'}
@@ -952,7 +976,7 @@ export default async function DashboardPage() {
                     <span className="w-12 text-sm font-mono font-bold text-gray-600 text-center flex-shrink-0">
                       {format(new Date(task.due_datetime), 'HH:mm')}
                     </span>
-                    <span className="text-[10px] font-black uppercase px-2.5 py-1.5 rounded-full flex-shrink-0 inline-flex items-center justify-center min-w-[64px] sm:min-w-[92px] bg-gray-100 text-gray-600">
+                    <span className="text-[9px] sm:text-[10px] font-black uppercase px-2 py-1.5 rounded-full flex-shrink-0 inline-flex items-center justify-center w-[92px] sm:w-[108px] bg-gray-100 text-gray-600">
                       {TASK_TYPE_LABELS[task.type ?? 'autre']}
                     </span>
                     <div className="flex-1 min-w-0">
@@ -992,14 +1016,34 @@ export default async function DashboardPage() {
               // En retard = l'heure de FIN est passée. Pas le début : un lavage
               // prévu de 9h à 10h n'est pas en retard à 9h05.
               const enRetard = new Date(t.end_at ?? t.start_at) < now
+              // La fin n'est affichée que si elle tombe le même jour et après le
+              // début : sinon la colonne annoncerait « 19:18 / 00:00 » sans dire
+              // que c'est le lendemain.
+              const finLisible = t.end_at && new Date(t.end_at) > new Date(t.start_at)
+                && format(new Date(t.end_at), 'yyyy-MM-dd') === format(new Date(t.start_at), 'yyyy-MM-dd')
               return (
                 <Link key={`caltask-${t.id}`} href={`/calendrier?event=${t.id}`}>
-                  <div className="flex items-center gap-4 px-4 py-4 transition-colors hover:bg-gray-50">
-                    <span className="w-12 text-sm font-mono font-bold text-gray-600 text-center flex-shrink-0">
-                      {format(new Date(t.start_at), 'HH:mm')}
+                  <div className={`flex items-center gap-4 px-4 py-4 transition-colors hover:bg-gray-50`}>
+                    {/* Début au-dessus, fin en dessous : « de quelle heure à
+                        quelle heure » était introuvable sur l'accueil (Jeff,
+                        02/08/2026). */}
+                    <span className="w-12 flex-shrink-0 text-center">
+                      <span className="block text-sm font-mono font-bold text-gray-600">
+                        {format(new Date(t.start_at), 'HH:mm')}
+                      </span>
+                      {finLisible && (
+                        <span className="block text-[11px] font-mono text-gray-400">
+                          {format(new Date(t.end_at), 'HH:mm')}
+                        </span>
+                      )}
                     </span>
-                    <span className="text-[10px] font-black uppercase px-2.5 py-1.5 rounded-full flex-shrink-0 inline-flex items-center justify-center min-w-[64px] sm:min-w-[92px] bg-gray-100 text-gray-600">
-                      TÂCHE
+                    {/* L'étiquette suit le type de l'événement. Elle disait
+                        « TÂCHE » pour tout, y compris pour un déplacement qui
+                        sort une voiture avec quelqu'un (Jeff, 02/08/2026). */}
+                    <span className={`text-[9px] sm:text-[10px] font-black uppercase px-2 py-1.5 rounded-full flex-shrink-0 inline-flex items-center justify-center w-[92px] sm:w-[108px] ${
+                      t.event_type === 'deplacement_interne' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-600'
+                    }`}>
+                      {CALENDAR_TYPE_LABELS[t.event_type] ?? 'Tâche'}
                     </span>
                     <div className="flex-1 min-w-0">
                       {taskVehicles.length > 0 && (

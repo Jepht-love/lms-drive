@@ -7,7 +7,7 @@ import type { createClient } from '@/lib/supabase/server'
  * fin nulle bloquerait le véhicule pour toujours. Même valeur que le bloc
  * calendrier (lib/calendar/syncInternalTrip.ts).
  */
-const FALLBACK_DURATION_MINUTES = 60
+export const FALLBACK_DURATION_MINUTES = 60
 
 const plusFallback = (startIso: string) =>
   new Date(new Date(startIso).getTime() + FALLBACK_DURATION_MINUTES * 60_000).toISOString()
@@ -71,6 +71,38 @@ export async function fetchActiveInternalTrips(
     })
   }
   return byVehicle
+}
+
+/**
+ * Statuts qui disent le véhicule réellement SORTI pour un client. Même liste que
+ * la page Véhicules (EN_LOCATION_STATUSES) : elle doit rester alignée.
+ */
+const EN_LOCATION_STATUSES = ['loue', 'mis_a_disposition']
+
+/**
+ * Faut-il AFFICHER ce véhicule comme « en déplacement professionnel » ?
+ *
+ * Règle unique de la superposition décrite dans `fetchActiveInternalTrips` : le
+ * statut en base ne bouge jamais, l'information est ajoutée à l'affichage. Un
+ * véhicule loué ou mis à disposition n'est jamais annoncé en déplacement, la
+ * location dit la vérité — un déplacement encore ouvert n'est alors qu'une ligne
+ * que personne n'a clôturée.
+ *
+ * Écrite ici et pas dans chaque écran : la liste des véhicules, le tableau de
+ * bord, la fiche d'un véhicule et la carte du véhicule choisi des réservations
+ * posent tous la même question. Ajoutée le 02/08/2026 en corrigeant la fiche
+ * véhicule, qui lisait le statut brut et affichait « Disponible » une voiture
+ * partie en déplacement (défaut remonté par le gérant).
+ *
+ * Ne PAS confondre avec la question posée par l'écran des immobilisés : lui
+ * cherche la RAISON à afficher et regarde donc si le statut a déjà une cause
+ * d'immobilisation à lui.
+ */
+export function estEnDeplacement(
+  vehicleStatus: string,
+  trip: ActiveInternalTrip | undefined,
+): trip is ActiveInternalTrip {
+  return !!trip && !EN_LOCATION_STATUSES.includes(vehicleStatus)
 }
 
 /**
