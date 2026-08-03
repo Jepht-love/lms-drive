@@ -89,7 +89,26 @@ export const VIDEO_CLAUSE = `L'état des lieux du véhicule mis à disposition s
  * citadines : certaines lignes changent de nature (frais de gestion en % côté
  * sportif, en euros côté citadine).
  */
-export function getFeesTable(category: string, isSmartFortwo = false) {
+/**
+ * Les deux montants du contrat que la grille tarifaire peut désormais fixer.
+ *
+ * ⚠️ **Un contrat déjà signé ne change jamais.** Ces valeurs doivent être
+ * recopiées dans le contrat au moment de la signature, et relues telles quelles
+ * ensuite. Les passer ici sert aux contrats À VENIR ; un contrat de juillet ne
+ * doit pas afficher les tarifs d'août (règle de Jeff, 03/08/2026).
+ */
+export interface MontantsContrat {
+  /** Franchise, toutes lignes de franchise du tableau. */
+  franchise?: number | null
+  /** Tarif horaire du retard de restitution. */
+  retardHeure?: number | null
+}
+
+export function getFeesTable(
+  category: string,
+  isSmartFortwo = false,
+  montants?: MontantsContrat | null,
+) {
   const isSport = category === 'sportif'
   // Franchise : 21 000 € en sportif, 15 000 € en citadine, 6 000 € pour la Smart
   // Fortwo. Le contrat papier « sportif » se contredit — son article 3 annonce
@@ -97,17 +116,35 @@ export function getFeesTable(category: string, isSmartFortwo = false) {
   // le 26/07/2026 en faveur de 15 000 €, PUIS REPRIS PAR JEFF LE 30/07/2026 :
   // c'est le tableau qui fait foi, 21 000 €, et c'est l'article 3 du contrat
   // papier qui est faux. Ne pas revenir à 15 000 € sans le lui redemander.
-  const franchise = isSmartFortwo ? 6000 : isSport ? 21000 : 15000
-  const retard = isSport ? 150 : 50
+  //
+  // Depuis le 03/08/2026, ces valeurs ne sont plus que le DERNIER RECOURS : la
+  // grille tarifaire du véhicule les fixe quand elle en porte. C'est ce qui
+  // permet au gérant de changer sa franchise sans passer par un développeur.
+  const utile = (v: number | null | undefined): v is number => v != null && Number.isFinite(v)
+  const franchise = utile(montants?.franchise)
+    ? montants!.franchise!
+    : isSmartFortwo ? 6000 : isSport ? 21000 : 15000
+  const retard = utile(montants?.retardHeure)
+    ? montants!.retardHeure!
+    : isSport ? 150 : 50
 
   // Côté citadine, le contrat mentionne l'exception Smart Fortwo dans la case
   // elle-même. On l'affiche uniquement quand le véhicule loué n'est pas la Smart
   // (pour elle, le montant applicable est déjà le bon).
-  const franchiseTxt = isSmartFortwo
-    ? '6 000 €'
-    : isSport
-      ? '21 000 €'
-      : '15 000 € (sauf Smart Fortwo : 6 000 €)'
+  // Mise en forme française : « 21 000 € ». Dès que la grille fixe la franchise,
+  // le texte suit sa valeur — y compris la mention de l'exception, qui n'aurait
+  // plus de sens si le gérant a rangé ses voitures autrement.
+  // `fmtEntier` et jamais `toLocaleString` : dans un PDF, ce dernier écrit
+  // « 15/000 € » (avertissement en tête de ce fichier).
+  const euros = (n: number) => `${fmtEntier(n)} €`
+  const franchiseTxt = utile(montants?.franchise)
+    ? euros(franchise)
+    : isSmartFortwo
+      ? '6 000 €'
+      : isSport
+        ? '21 000 €'
+        : '15 000 € (sauf Smart Fortwo : 6 000 €)'
+  const retardTxt = `${euros(retard)} par heure de retard`
 
   const rows = isSport
     ? [
@@ -120,7 +157,7 @@ export function getFeesTable(category: string, isSmartFortwo = false) {
         { label: 'Rayure par jantes', value: '500 €' },
         { label: 'Fissure jantes', value: '800 €' },
         { label: 'Casse anormale mécanique', value: 'Sur devis + 50 % de frais' },
-        { label: 'Retard restitution du véhicule', value: '150 € par heure de retard' },
+        { label: 'Retard restitution du véhicule', value: retardTxt },
         { label: 'Nettoyage véhicule intérieur / extérieur', value: '100 € ou sur devis si le montant des frais de nettoyage est supérieur' },
         { label: 'Déchirure et brûlure / tâches sièges / plafonnier', value: '1 000 € par élément ou sur devis si le montant des frais de remise en état est supérieur' },
         { label: 'Odeur cigarette ou autre', value: '500 €' },
@@ -150,7 +187,7 @@ export function getFeesTable(category: string, isSmartFortwo = false) {
         { label: 'Rayure par jantes', value: '300 €' },
         { label: 'Fissure jantes', value: '500 €' },
         { label: 'Casse anormale mécanique', value: 'Sur devis + 30 % de frais' },
-        { label: 'Retard restitution du véhicule', value: '50 € par heure de retard' },
+        { label: 'Retard restitution du véhicule', value: retardTxt },
         { label: 'Nettoyage véhicule intérieur / extérieur', value: '50 € ou sur devis si le montant des frais de nettoyage est supérieur' },
         { label: 'Déchirure et brûlure / tâches sièges / plafonnier', value: '200 € par élément ou sur devis si le montant des frais de remise en état est supérieur' },
         { label: 'Odeur cigarette ou autre', value: '300 €' },

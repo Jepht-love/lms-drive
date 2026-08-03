@@ -5,6 +5,7 @@ import { ArrowLeft } from 'lucide-react'
 import BackButton from '@/components/ui/BackButton'
 import InspectionFlow from '@/components/inspection/InspectionFlow'
 import { calculateRentalDays } from '@/lib/utils'
+import { tarifsDuVehicule } from '@/lib/pricing/resolve'
 
 export default async function ArrivalInspectionPage({ params }: { params: Promise<{ contractId: string }> }) {
   const { contractId } = await params
@@ -46,6 +47,11 @@ export default async function ArrivalInspectionPage({ params }: { params: Promis
     : 1
   const kmIncludedTotal = (reservation?.km_included ?? 200) * rentalDays
 
+  // Les tarifs du véhicule, grille comprise. Le retard était facturé 50 ou
+  // 150 €/h écrits en dur dans le code avant le 03/08/2026, quel que soit le
+  // réglage du gérant.
+  const tarifs = await tarifsDuVehicule(supabase, vehicle?.id)
+
   // Relevé de bord au départ (km + carburant) pour comparer à l'aller-retour
   const { data: departureInspection } = await supabase
     .from('inspections')
@@ -81,6 +87,8 @@ export default async function ArrivalInspectionPage({ params }: { params: Promis
         previousDamagedZones={(departureInspection?.damaged_zones as { id: string; label: string; severity: string; description?: string; photos?: string[] }[] | null) ?? []}
         kmIncluded={kmIncludedTotal}
         extraKmPrice={reservation?.extra_km_price ?? 2}
+        lateHourlyRate={tarifs.retardHeure}
+        insuranceDeductible={tarifs.franchise}
         // Forfait de location et acompte déjà encaissé : sans eux, l'écran de
         // retour n'affichait que les frais et le gérant ne pouvait pas savoir
         // ce que le client doit au total (remonté le 27/07/2026).

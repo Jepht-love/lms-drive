@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { Settings, Users, FileClock, Building2, ArrowLeft } from 'lucide-react'
+import Link from 'next/link'
+import { Settings, Users, FileClock, Building2, ArrowLeft, Tags, ChevronRight } from 'lucide-react'
 import BackButton from '@/components/ui/BackButton'
 import { getAgencySettings } from '@/lib/contracts/agency'
 import AgencySettingsForm from './AgencySettingsForm'
@@ -77,6 +78,22 @@ export default async function SettingsPage() {
           ))}
         </div>
       </div>
+
+      {/* Les grilles tarifaires vivent sur leur propre écran : neuf valeurs par
+          véhicule auraient doublé la longueur de celui-ci (Jeff, 02/08/2026). */}
+      <Link
+        href="/settings/tarifs"
+        className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center gap-3 hover:shadow-md transition-shadow"
+      >
+        <Tags className="w-4 h-4 text-gray-700 flex-shrink-0" />
+        <span className="flex-1 min-w-0">
+          <span className="block font-semibold text-gray-800">Grilles tarifaires</span>
+          <span className="block text-xs text-gray-400 mt-0.5">
+            Sportive, Citadine… Le seul endroit où se modifient les prix.
+          </span>
+        </span>
+        <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
+      </Link>
 
       {/* Notifications push */}
       <NotificationSettings />

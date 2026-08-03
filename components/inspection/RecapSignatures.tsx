@@ -14,7 +14,7 @@ import ZoneSignature from '@/components/signature/ZoneSignature'
 import VehicleInspectionMap from '@/components/vehicle-schema/VehicleInspectionMap'
 import DamageComparison from '@/components/vehicle-schema/DamageComparison'
 import { VEHICLE_ZONES, graviteLabel, type DamageEntry } from '@/components/vehicle-schema/inspection-types'
-import { getFeesTable, getLegalArticles, VIDEO_CLAUSE } from '@/lib/contracts/legal-articles'
+import { getFeesTable, getLegalArticles, VIDEO_CLAUSE, type MontantsContrat } from '@/lib/contracts/legal-articles'
 
 export interface ContratInfo {
   numero: string
@@ -62,6 +62,8 @@ export interface PhotoJointe {
 interface Props {
   type: 'depart' | 'arrivee'
   contrat: ContratInfo | null // null = convention inter-agences (pas de contrat locataire)
+  /** Franchise et tarif de retard fixés par la grille tarifaire du véhicule. */
+  montantsContrat?: MontantsContrat | null
   edl: RecapEdl
   retour?: RecapRetour | null
   damages: Record<string, DamageEntry[]>
@@ -115,7 +117,7 @@ function GaleriePhotos({ titre, photos }: { titre: string; photos: PhotoJointe[]
 export default function RecapSignatures({
   type, contrat, edl, retour, damages, photosJointes, previousDamages,
   reconnu, setReconnu, edlSig, setEdlSig, contratSig, setContratSig,
-  factureSig, setFactureSig, saving, error, onBack, onSubmit,
+  factureSig, setFactureSig, saving, error, onBack, onSubmit, montantsContrat,
 }: Props) {
   const isDepart = type === 'depart'
   const totalFraisRetour = retour
@@ -124,10 +126,17 @@ export default function RecapSignatures({
   // Facture de restitution : signature exigée uniquement s'il y a des frais
   const aDesFrais = !isDepart && totalFraisRetour > 0
 
-  const articles = contrat
+  // Mêmes montants que le contrat PDF et que son aperçu : ils viennent de la
+  // grille tarifaire du véhicule quand elle en porte (03/08/2026). Sans ça, le
+  // client signait un récapitulatif annonçant une autre franchise que son
+  // contrat.
+  const fees = contrat
+    ? getFeesTable(contrat.categorie, contrat.isSmartFortwo, montantsContrat)
+    : null
+  const articles = contrat && fees
     ? getLegalArticles({
-        franchise: getFeesTable(contrat.categorie, contrat.isSmartFortwo).franchise,
-        retardHeure: getFeesTable(contrat.categorie, contrat.isSmartFortwo).retard,
+        franchise: fees.franchise,
+        retardHeure: fees.retard,
         caution: contrat.caution,
       })
     : []

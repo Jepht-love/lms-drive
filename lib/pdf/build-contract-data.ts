@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { tarifsDuVehicule } from '@/lib/pricing/resolve'
 import { getAgencySettings } from '@/lib/contracts/agency'
 import type { ContractData, InspectionPDFData } from '@/lib/pdf/contract-template'
 import { readFileSync } from 'fs'
@@ -142,6 +143,11 @@ export async function buildContractPdfData(
   const v = r?.vehicle
   const c = r?.client
 
+  // La grille tarifaire du véhicule fixe la franchise et le tarif de retard du
+  // contrat depuis le 03/08/2026. Sans grille, les valeurs historiques du
+  // contrat papier s'appliquent : rien ne change pour les véhicules non rangés.
+  const tarifs = await tarifsDuVehicule(supabase, v?.id)
+
   // États des lieux complets (départ + retour)
   const { data: rawInspections } = await supabase
     .from('inspections')
@@ -273,6 +279,16 @@ export async function buildContractPdfData(
     vehicleColor: v?.color ?? undefined,
     vehicleCategory: v?.category ?? undefined,
     isSmartFortwo: v?.model?.toLowerCase().includes('smart') || v?.brand?.toLowerCase().includes('smart') || false,
+    // Les deux montants que la grille tarifaire du véhicule fixe désormais
+    // (03/08/2026). Ils étaient écrits en dur dans legal-articles.ts, donc
+    // impossibles à changer sans développeur.
+    //
+    // ⚠️ Un contrat SIGNÉ ne doit jamais changer. C'est l'archivage du PDF au
+    // moment de la signature qui le fige : ce fichier ne sert qu'à produire un
+    // document neuf. Ne jamais s'en servir pour réafficher un contrat ancien
+    // sans avoir figé ses montants à côté.
+    franchiseContrat: tarifs?.franchise ?? undefined,
+    retardHeureContrat: tarifs?.retardHeure ?? undefined,
     dailyPrice: r?.daily_price ?? 0,
     totalPrice: r?.total_price ?? 0,
     // Détail qui justifie le total, jour par jour (voir buildPriceBreakdown).

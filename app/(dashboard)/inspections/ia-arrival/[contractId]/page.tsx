@@ -4,6 +4,7 @@ import { ArrowLeft } from 'lucide-react'
 import BackButton from '@/components/ui/BackButton'
 import InspectionFlow from '@/components/inspection/InspectionFlow'
 import { calculateRentalDays } from '@/lib/utils'
+import { tarifsDuVehicule } from '@/lib/pricing/resolve'
 
 // EDL de retour d'une opération inter-agences SORTANTE — via le contrat
 // (convention) rattaché à l'opération. Pas de réservation client dans le flux :
@@ -46,6 +47,9 @@ export default async function IaArrivalInspectionPage({ params }: { params: Prom
   const kmPerDay = clientRes?.km_included ?? vehicle?.km_included_daily ?? 200
   const kmIncludedTotal = kmPerDay * rentalDays
   const extraKmPrice = clientRes?.extra_km_price ?? vehicle?.extra_km_price ?? 2
+  // Même règle que le retour classique : le tarif de retard vient de la grille
+  // du véhicule, plus du code (03/08/2026).
+  const tarifs = await tarifsDuVehicule(supabase, vehicle?.id)
 
   // Relevé de départ pour comparer km / dommages
   const { data: departureInspection } = await supabase
@@ -81,6 +85,8 @@ export default async function IaArrivalInspectionPage({ params }: { params: Prom
         previousDamagedZones={(departureInspection?.damaged_zones as { id: string; label: string; severity: string }[] | null) ?? []}
         kmIncluded={kmIncludedTotal}
         extraKmPrice={extraKmPrice}
+        lateHourlyRate={tarifs.retardHeure}
+        insuranceDeductible={tarifs.franchise}
       />
     </div>
   )

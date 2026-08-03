@@ -33,6 +33,14 @@ interface Props {
   fuelRangeAtDeparture?: number
   kmIncluded?: number
   extraKmPrice?: number
+  /**
+   * Tarif horaire du retard, résolu par la grille tarifaire du véhicule
+   * (lib/pricing/grid.ts). Il était écrit en dur à 50 ou 150 € avant le
+   * 03/08/2026, quel que soit ce que le gérant avait réglé.
+   */
+  lateHourlyRate?: number | null
+  /** Franchise du contrat, fixée par la même grille tarifaire. */
+  insuranceDeductible?: number | null
   /** Forfait de location facturé (total_price de la réservation). */
   rentalTotal?: number
   /** Déjà encaissé sur cette location (acompte ou paiement complet). */
@@ -99,6 +107,8 @@ export default function InspectionFlow({
   fuelRangeAtDeparture,
   kmIncluded = 200,
   extraKmPrice = 2,
+  lateHourlyRate = null,
+  insuranceDeductible = null,
   rentalTotal = 0,
   alreadyPaid = 0,
   previousDamagedZones = [],
@@ -346,7 +356,7 @@ export default function InspectionFlow({
     const { amount: extraKmAmount } = calculateExtraKm(
       kmAtDeparture ?? vehicleKm, kmReading, kmIncluded, extraKmPrice,
     )
-    return calculateLateFee(vehicleCategory, lateMinutes) + extraKmAmount + totalDamageFee
+    return calculateLateFee(lateMinutes, lateHourlyRate) + extraKmAmount + totalDamageFee
   }
 
   async function handleSubmit() {
@@ -508,7 +518,7 @@ export default function InspectionFlow({
         let lateFeeAmount = 0
         if (reservationEndDatetime) {
           lateMinutes = Math.max(0, Math.round((now.getTime() - new Date(reservationEndDatetime).getTime()) / 60000))
-          lateFeeAmount = calculateLateFee(vehicleCategory, lateMinutes)
+          lateFeeAmount = calculateLateFee(lateMinutes, lateHourlyRate)
         }
 
         // Calcul dépassement km
@@ -1291,7 +1301,7 @@ export default function InspectionFlow({
           const { extraKm, amount: extraKmAmount } = calculateExtraKm(
             kmAtDeparture ?? vehicleKm, kmReading, kmIncluded, extraKmPrice,
           )
-          const lateFeeAmount = calculateLateFee(vehicleCategory, lateMinutes)
+          const lateFeeAmount = calculateLateFee(lateMinutes, lateHourlyRate)
           retourRecap = {
             kmDepart: kmAtDeparture ?? vehicleKm,
             fuelDepart: fuelRangeAtDeparture ?? 0,
@@ -1351,6 +1361,7 @@ export default function InspectionFlow({
           <RecapSignatures
             type={type}
             contrat={contratInfo}
+            montantsContrat={{ franchise: insuranceDeductible, retardHeure: lateHourlyRate }}
             edl={{
               km: kmReading,
               fuelRangeKm,

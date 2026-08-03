@@ -52,6 +52,12 @@ export interface ContractData {
   vehicleColor?: string
   vehicleCategory?: string   // 'sportif' | 'citadine' | etc.
   isSmartFortwo?: boolean
+  /**
+   * Franchise et tarif de retard, fixés par la grille tarifaire du véhicule
+   * (03/08/2026). Absents, le contrat reprend ses valeurs historiques.
+   */
+  franchiseContrat?: number
+  retardHeureContrat?: number
   dailyPrice: number
   totalPrice: number
   kmIncluded?: number
@@ -727,7 +733,10 @@ export function ContractPDF({ data }: { data: ContractData }) {
   const hasReturnSig = !!arrInsp?.clientSignature
 
   const isSport = data.vehicleCategory === 'sportif'
-  const fees = getFeesTable(data.vehicleCategory ?? 'citadine', data.isSmartFortwo)
+  const fees = getFeesTable(data.vehicleCategory ?? 'citadine', data.isSmartFortwo, {
+    franchise: data.franchiseContrat,
+    retardHeure: data.retardHeureContrat,
+  })
   const articles = getLegalArticles({
     franchise: fees.franchise,
     retardHeure: fees.retard,

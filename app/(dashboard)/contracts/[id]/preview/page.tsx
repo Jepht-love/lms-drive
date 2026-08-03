@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import ContractPreviewClient, { type DepartInspection } from './ContractPreviewClient'
 import { getAgencySettings } from '@/lib/contracts/agency'
+import { tarifsDuVehicule } from '@/lib/pricing/resolve'
 
 export default async function ContractPreviewPage({
   params,
@@ -26,6 +27,7 @@ export default async function ContractPreviewPage({
   const reservation = contract.reservation as any
   const vehicle = reservation?.vehicle
   const client = reservation?.client
+  const tarifs = await tarifsDuVehicule(supabase, vehicle?.id)
 
   // État des lieux de DÉPART rattaché au contrat : affiché tel quel dans la
   // prévisualisation (km, propreté, dommages + schéma, photos, signature EDL)
@@ -81,6 +83,9 @@ export default async function ContractPreviewPage({
       agency={agency}
       chain={chain ?? null}
       departInspection={departInspection}
+      // Mêmes montants que le PDF : sans ça, l'aperçu à l'écran annoncerait une
+      // franchise et un tarif de retard différents du document généré.
+      montantsContrat={{ franchise: tarifs.franchise, retardHeure: tarifs.retardHeure }}
     />
   )
 }
