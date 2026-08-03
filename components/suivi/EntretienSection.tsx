@@ -3,7 +3,7 @@ import Link from 'next/link'
 import SmartSearch from '@/components/ui/SmartSearch'
 import { Wrench, ChevronRight, User } from 'lucide-react'
 import { formatPrice, formatDate } from '@/lib/utils'
-import { maintenanceType } from '@/lib/maintenance'
+import { maintenanceType, urgency, WORK_STATUSES_CLOS } from '@/lib/maintenance'
 import {
   computeVehicleNeeds,
   buildLastByType,
@@ -22,7 +22,7 @@ const SEV_ORDER: Record<NeedSeverity, number> = { overdue: 0, urgent: 1, soon: 2
 export default async function EntretienSection() {
   const supabase = await createClient()
 
-  const [{ data: vehicles }, { data: records }, { data: entretienTasks }] = await Promise.all([
+  const [{ data: vehicles }, { data: records }, { data: entretienTasks }, { data: ouvertes }] = await Promise.all([
     supabase
       .from('vehicles')
       .select('id, plate, brand, model, status, current_km, next_service_km, next_service_date, ct_date, maintenance_flags')
@@ -39,6 +39,15 @@ export default async function EntretienSection() {
       .eq('type', 'entretien')
       .in('status', ['a_faire', 'en_cours'])
       .not('vehicle_id', 'is', null),
+    // Les interventions dont le travail n'est pas fini (02/08/2026). C'est ce
+    // que le gérant veut voir en premier : combien de dossiers ouverts sur ce
+    // véhicule, à quel point ça presse, et qui s'en occupe.
+    supabase
+      .from('maintenance_records')
+      .select(`id, vehicle_id, urgency, due_date, work_status,
+        assignee:profiles!maintenance_records_assigned_to_fkey(full_name),
+        taker:profiles!maintenance_records_taken_by_fkey(full_name)`)
+      .not('work_status', 'in', `(${WORK_STATUSES_CLOS.join(',')})`),
   ])
 
   const assigneeByVehicle = new Map<string, string>()
@@ -48,6 +57,28 @@ export default async function EntretienSection() {
     if (t.vehicle_id && name && !assigneeByVehicle.has(t.vehicle_id)) {
       assigneeByVehicle.set(t.vehicle_id, name)
     }
+  }
+
+  // Le suivi du travail, par véhicule : combien de dossiers ouverts, la pire
+  // urgence des trois niveaux, une échéance dépassée, et le premier nom trouvé.
+  // Une échéance dépassée compte comme une urgence critique, exactement comme
+  // dans les alertes : les deux écrans doivent dire la même chose.
+  const maintenant = new Date()
+  const RANG: Record<string, number> = { critique: 0, haute: 1, normale: 2 }
+  const suiviParVehicule = new Map<string, { n: number; pire: string; depassee: boolean; qui: string | null }>()
+  for (const it of ouvertes ?? []) {
+    if (!it.vehicle_id) continue
+    const nom = Array.isArray((it as any).taker) ? (it as any).taker[0] : (it as any).taker
+    const des = Array.isArray((it as any).assignee) ? (it as any).assignee[0] : (it as any).assignee
+    const personne = (nom as any)?.full_name ?? (des as any)?.full_name ?? null
+    const depassee = Boolean(it.due_date && new Date(`${it.due_date}T23:59:59`) < maintenant)
+    const cumul = suiviParVehicule.get(it.vehicle_id)
+      ?? { n: 0, pire: 'normale', depassee: false, qui: null }
+    cumul.n += 1
+    if (RANG[(it.urgency as string) ?? 'normale'] < RANG[cumul.pire]) cumul.pire = it.urgency as string
+    if (depassee) cumul.depassee = true
+    if (!cumul.qui && personne) cumul.qui = personne
+    suiviParVehicule.set(it.vehicle_id, cumul)
   }
 
   // Agrégation par véhicule (records triés date desc → 1er vu = dernier)
@@ -71,7 +102,14 @@ export default async function EntretienSection() {
   const now = new Date()
   const enriched = (vehicles ?? []).map(v => {
     const needs = computeVehicleNeeds(v, buildLastByType(recordsByVehicle.get(v.id) ?? []), now)
-    return { v, agg: byVehicle.get(v.id), badges: groupNeedsForBadges(needs), worst: worstSeverity(needs), assignee: assigneeByVehicle.get(v.id) }
+    const suivi = suiviParVehicule.get(v.id)
+    return {
+      v, agg: byVehicle.get(v.id), badges: groupNeedsForBadges(needs), worst: worstSeverity(needs),
+      // La personne inscrite sur une intervention prime sur l'ancienne tâche
+      // d'entretien : c'est elle qui reflète l'état réel depuis le 02/08/2026.
+      assignee: suivi?.qui ?? assigneeByVehicle.get(v.id),
+      suivi,
+    }
   })
   enriched.sort((a, b) => SEV_ORDER[a.worst] - SEV_ORDER[b.worst])
 
@@ -107,7 +145,7 @@ export default async function EntretienSection() {
         </div>
       ) : (
         <div className="space-y-2">
-          {enriched.map(({ v, agg, badges, assignee }) => (
+          {enriched.map(({ v, agg, badges, assignee, suivi }) => (
             <Link
               key={v.id}
               href={`/maintenance/${v.id}`}
@@ -137,8 +175,22 @@ export default async function EntretienSection() {
                       </span>
                     )}
                   </div>
-                  {badges.length > 0 && (
+                  {(badges.length > 0 || suivi) && (
                     <div className="mt-2 flex flex-wrap gap-1.5">
+                      {/* Les dossiers ouverts en tête : c'est du travail engagé,
+                          alors que les autres pastilles annoncent des échéances
+                          à venir. Une échéance dépassée se dit en rouge, comme
+                          dans les alertes. */}
+                      {suivi && (
+                        <span className={`text-xs px-2 py-0.5 rounded-lg font-semibold border ${
+                          suivi.depassee || suivi.pire === 'critique' ? 'bg-red-50 text-red-700 border-red-100'
+                          : suivi.pire === 'haute' ? 'bg-amber-50 text-amber-700 border-amber-100'
+                          : 'bg-gray-50 text-gray-600 border-gray-200'
+                        }`}>
+                          {suivi.n} intervention{suivi.n > 1 ? 's' : ''} en cours
+                          {suivi.depassee ? ' · en retard' : suivi.pire !== 'normale' ? ` · ${urgency(suivi.pire).label.toLowerCase()}` : ''}
+                        </span>
+                      )}
                       {badges.map(b => (
                         <span key={b.key} className={`text-xs px-2 py-0.5 rounded-lg font-semibold border ${NEED_BADGE[b.severity]}`}>
                           {b.key === 'degradation'

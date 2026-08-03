@@ -4,7 +4,10 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { SERVICE_INTERVALS } from '@/lib/maintenance-health'
-import { maintenanceType } from '@/lib/maintenance'
+import {
+  maintenanceType, URGENCIES, WORK_STATUSES, WORK_STATUSES_CLOS,
+  correctionSoumiseAControle, type WorkStatusKey, type MaintenancePart,
+} from '@/lib/maintenance'
 import { instantDepuisSaisie } from '@/lib/format/heureAgence'
 import { maintenanceTypeForDamageType, expenseCategoryForDamageType } from '@/lib/vehicles/damage-catalog'
 import { assertPeriodOpen } from '@/lib/accounting/period-lock'
@@ -14,6 +17,13 @@ import type { MaintenanceFlag } from '@/types/database'
 // visible au calendrier/tâches du jour) — carburant et lavage sont trop
 // courts pour ça et restent gérés séparément ci-dessous.
 const GARAGE_TYPES = new Set(['revision', 'vidange', 'pneus', 'freins', 'reparation', 'carrosserie', 'controle_technique', 'autre'])
+
+/** Les valeurs acceptées, pour ne jamais écrire en base ce que la contrainte refuse. */
+const URGENCY_KEYS: string[] = URGENCIES.map(u => u.key)
+const WORK_STATUS_KEYS: string[] = WORK_STATUSES.map(s => s.key)
+
+/** Rôles autorisés à clore ou annuler : la clôture engage un montant (Jeff, 02/08/2026). */
+const ROLES_QUI_CLOTURENT = ['gerant', 'associe']
 
 export async function createMaintenanceRecord(formData: FormData) {
   const supabase = await createClient()
@@ -81,6 +91,17 @@ export async function createMaintenanceRecord(formData: FormData) {
     amount:             enReparation ? 0 : (Number.isFinite(amount) ? amount : 0),
     provider:           (formData.get('provider') as string)?.trim() || null,
     notes:              (formData.get('notes') as string)?.trim() || null,
+    // ─── Le suivi du travail (migration 074, 02/08/2026) ───────────────────
+    // Qui s'en occupe, pour quand, et à quel point ça presse. L'urgence décide
+    // de l'entrée dans les alertes ; la date limite est facultative, mais une
+    // fois dépassée elle fait monter l'intervention en urgent.
+    urgency:     URGENCY_KEYS.includes(formData.get('urgency') as string)
+                   ? (formData.get('urgency') as string) : 'normale',
+    due_date:    (formData.get('due_date') as string) || null,
+    assigned_to: (formData.get('assigned_to') as string) || null,
+    // Désigner quelqu'un ne veut pas dire qu'il a pris l'intervention : il devra
+    // s'en saisir lui-même, ce qui fera passer le statut à « prise en charge ».
+    work_status: 'a_traiter' as const,
     ...(enReparation ? {
       quote_amount: devisTotal > 0 ? devisTotal : null,
       quote_status: (formData.get('quote_status') as string) === 'valide' ? 'valide' : 'brouillon',
@@ -217,6 +238,489 @@ export async function createMaintenanceRecord(formData: FormData) {
 }
 
 /**
+ * « Je prends en charge » : celui qui clique inscrit son nom sur l'intervention
+ * et la fait passer de « à traiter » à « prise en charge ».
+ *
+ * Attend l'identifiant de l'intervention. Produit : `taken_by`, `taken_at` et le
+ * statut de suivi. Ne touche à rien d'autre, et surtout pas à l'argent.
+ *
+ * Pourquoi une prise volontaire plutôt qu'une assignation par un gérant (Jeff,
+ * 02/08/2026) : sur le terrain, celui qui voit le problème est celui qui s'en
+ * occupe. Un gérant peut quand même désigner quelqu'un à la création
+ * (`assigned_to`), ce qui n'empêche personne de se saisir de l'intervention.
+ *
+ * Ce qu'il ne faut pas casser : une intervention déjà prise ne se reprend pas en
+ * silence, sinon deux personnes se croiraient chacune responsable.
+ */
+export async function prendreEnChargeIntervention(recordId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié' }
+
+  const { data: rec } = await supabase
+    .from('maintenance_records')
+    .select('id, vehicle_id, work_status, taken_by, taken_by_profile:profiles!maintenance_records_taken_by_fkey(full_name)')
+    .eq('id', recordId)
+    .single()
+  if (!rec) return { error: 'Intervention introuvable' }
+  if (rec.taken_by && rec.taken_by !== user.id) {
+    const qui = Array.isArray((rec as any).taken_by_profile)
+      ? (rec as any).taken_by_profile[0] : (rec as any).taken_by_profile
+    return { error: `${qui?.full_name ?? 'Quelqu\'un'} s'en occupe déjà.` }
+  }
+  if (WORK_STATUSES_CLOS.includes(rec.work_status as WorkStatusKey)) {
+    return { error: 'Cette intervention est close.' }
+  }
+
+  const { error } = await supabase
+    .from('maintenance_records')
+    .update({
+      taken_by: user.id,
+      taken_at: new Date().toISOString(),
+      // On n'écrase pas un statut déjà plus avancé : quelqu'un peut se saisir
+      // d'une intervention dont le rendez-vous est déjà pris.
+      ...(rec.work_status === 'a_traiter' ? { work_status: 'prise_en_charge' } : {}),
+    })
+    .eq('id', recordId)
+  if (error) return { error: error.message }
+
+  await supabase.from('audit_logs').insert({
+    user_id: user.id,
+    action: 'intervention_prise_en_charge',
+    entity_type: 'maintenance_records',
+    entity_id: recordId,
+    metadata: {},
+  })
+
+  revalidatePath(`/maintenance/${rec.vehicle_id}`)
+  revalidatePath('/suivi')
+  revalidatePath('/')
+  return { success: true }
+}
+
+/**
+ * Fait avancer le suivi du travail d'une intervention : à traiter, prise en
+ * charge, rendez-vous programmé, en cours, terminée, annulée.
+ *
+ * Attend l'identifiant et le statut visé. Produit le nouveau statut et, pour une
+ * clôture, l'heure de fermeture. **Ne touche jamais à l'argent** : une
+ * intervention terminée n'est pas une intervention payée, le règlement reste un
+ * geste à part (settleIntervention / markMaintenancePaid).
+ *
+ * Qui a le droit : tout le monde fait avancer une intervention, mais **seuls un
+ * gérant, un associé ou un administrateur la terminent ou l'annulent** — la
+ * clôture engage un montant (règle de Jeff du 02/08/2026).
+ */
+export async function changerStatutIntervention(recordId: string, statut: WorkStatusKey) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié' }
+  if (!WORK_STATUS_KEYS.includes(statut)) return { error: 'Statut inconnu' }
+
+  const { data: profile } = await supabase
+    .from('profiles').select('role, is_admin').eq('id', user.id).single()
+  const peutClore = profile?.is_admin || ROLES_QUI_CLOTURENT.includes(profile?.role ?? '')
+  if (WORK_STATUSES_CLOS.includes(statut) && !peutClore) {
+    return { error: 'Seuls un gérant ou un associé peuvent terminer ou annuler une intervention.' }
+  }
+
+  const { data: rec } = await supabase
+    .from('maintenance_records').select('id, vehicle_id').eq('id', recordId).single()
+  if (!rec) return { error: 'Intervention introuvable' }
+
+  const clos = WORK_STATUSES_CLOS.includes(statut)
+  const { error } = await supabase
+    .from('maintenance_records')
+    .update({ work_status: statut, closed_at: clos ? new Date().toISOString() : null })
+    .eq('id', recordId)
+  if (error) return { error: error.message }
+
+  await supabase.from('audit_logs').insert({
+    user_id: user.id,
+    action: 'intervention_statut',
+    entity_type: 'maintenance_records',
+    entity_id: recordId,
+    metadata: { statut },
+  })
+
+  revalidatePath(`/maintenance/${rec.vehicle_id}`)
+  revalidatePath('/suivi')
+  revalidatePath('/')
+  return { success: true }
+}
+
+/**
+ * Clôture une intervention : le COMPTE RENDU de ce qui a réellement été fait.
+ *
+ * Attend l'identifiant et le formulaire de clôture. Produit l'intervention
+ * complétée, ses pièces, son justificatif rangé dans Documents, le kilométrage
+ * du véhicule avancé, et le statut de travail passé à « terminée ».
+ *
+ * **Pourquoi un écran à part** (demande du gérant, 02/08/2026) : planifier une
+ * intervention et rendre compte de ce qui a été fait sont deux moments
+ * différents, avec deux séries d'informations différentes. Les mélanger dans un
+ * seul formulaire obligeait à tout ressaisir à l'avance, et laissait clore une
+ * intervention sans rien renseigner du tout.
+ *
+ * Les onze informations qu'il exige : véhicule, nature exacte, pièces remplacées,
+ * garage, date, prix des pièces, prix de la main d'œuvre, coût total,
+ * kilométrage, observations, facture. Le véhicule est déjà connu, le prix des
+ * pièces se calcule ; tout le reste se saisit ici.
+ *
+ * Qui a le droit : **gérant, associé ou administrateur**, comme toute clôture —
+ * elle engage un montant.
+ *
+ * Ce qu'il ne faut pas casser : le coût total d'une réparation de dégâts vient
+ * du règlement dégât par dégât (`settleIntervention`). Cette action ne l'écrase
+ * jamais dans ce cas, elle ne complète que le reste.
+ */
+export async function cloturerIntervention(recordId: string, formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié' }
+
+  const { data: profile } = await supabase
+    .from('profiles').select('role, is_admin').eq('id', user.id).single()
+  const peut = profile?.is_admin || ROLES_QUI_CLOTURENT.includes(profile?.role ?? '')
+  if (!peut) return { error: 'Seuls un gérant ou un associé peuvent clôturer une intervention.' }
+
+  const { data: rec } = await supabase
+    .from('maintenance_records')
+    .select('id, vehicle_id, type, amount, work_status')
+    .eq('id', recordId)
+    .single()
+  if (!rec) return { error: 'Intervention introuvable' }
+
+  let pieces: MaintenancePart[] = []
+  try {
+    const brut = formData.get('parts') as string | null
+    if (brut) pieces = (JSON.parse(brut) as MaintenancePart[])
+      .filter(p => (p.label ?? '').trim().length > 0)
+      .map(p => ({
+        label: String(p.label).trim(),
+        quantity: Number(p.quantity) || 1,
+        unit_price: Number(p.unit_price) || 0,
+      }))
+  } catch {
+    return { error: 'Pièces illisibles' }
+  }
+
+  const nature   = (formData.get('description') as string)?.trim()
+  const garage   = (formData.get('provider') as string)?.trim()
+  const date     = (formData.get('date') as string)?.trim()
+  const kmRaw    = (formData.get('km_at_intervention') as string)?.trim()
+  const laborRaw = (formData.get('labor_cost') as string)?.trim()
+  const totalRaw = (formData.get('amount') as string)?.trim()
+
+  // Le gérant demande que ces informations soient renseignées, pas qu'elles
+  // soient facultatives : sans elles, le compte rendu ne sert à rien.
+  if (!nature)  return { error: "Indiquez la nature exacte de l'intervention." }
+  if (!garage)  return { error: 'Indiquez le garage ou le prestataire.' }
+  if (!date)    return { error: "Indiquez la date de l'intervention." }
+  if (!kmRaw)   return { error: 'Indiquez le kilométrage du véhicule.' }
+
+  const km    = parseInt(kmRaw, 10)
+  const labor = laborRaw ? parseFloat(laborRaw.replace(',', '.')) : 0
+  const total = totalRaw ? parseFloat(totalRaw.replace(',', '.')) : 0
+  // Une réparation de dégâts garde le total venu du règlement.
+  const degatsRattaches = ((await supabase
+    .from('vehicles').select('maintenance_flags').eq('id', rec.vehicle_id).single())
+    .data?.maintenance_flags as MaintenanceFlag[] | null ?? [])
+    .some(f => f.intervention_id === recordId)
+
+  const { error } = await supabase
+    .from('maintenance_records')
+    .update({
+      description: nature,
+      provider: garage,
+      date,
+      km_at_intervention: Number.isFinite(km) ? km : null,
+      labor_cost: Number.isFinite(labor) ? labor : null,
+      notes: (formData.get('notes') as string)?.trim() || null,
+      work_status: 'terminee',
+      closed_at: new Date().toISOString(),
+      ...(degatsRattaches ? {} : { amount: Number.isFinite(total) ? total : 0 }),
+    })
+    .eq('id', recordId)
+  if (error) return { error: error.message }
+
+  await supabase.from('maintenance_parts').delete().eq('maintenance_id', recordId)
+  if (pieces.length > 0) {
+    const { error: pErr } = await supabase
+      .from('maintenance_parts')
+      .insert(pieces.map(p => ({ ...p, maintenance_id: recordId })))
+    if (pErr) return { error: pErr.message }
+  }
+
+  // Le compteur du véhicule avance si l'intervention l'a vu plus loin.
+  if (Number.isFinite(km)) {
+    await supabase
+      .from('vehicles').update({ current_km: km }).eq('id', rec.vehicle_id).lt('current_km', km)
+  }
+
+  // Facture ou justificatif, rangé dans Documents › Véhicule comme à la création.
+  const justificatif = formData.get('justificatif') as File | null
+  if (justificatif && justificatif.size > 0) {
+    const ext = justificatif.name.split('.').pop() || 'pdf'
+    const path = `vehicule/facture_entretien/${Date.now()}-${rec.vehicle_id}.${ext}`
+    const ab = await justificatif.arrayBuffer()
+    const { error: upErr } = await supabase.storage
+      .from('documents').upload(path, ab, { contentType: justificatif.type })
+    if (!upErr) {
+      const { data: veh } = await supabase
+        .from('vehicles').select('brand, model, plate').eq('id', rec.vehicle_id).single()
+      const vehLabel = veh ? `${veh.brand} ${veh.model}${veh.plate ? ` (${veh.plate})` : ''}` : ''
+      await supabase.from('documents').insert({
+        category: 'vehicule',
+        subcategory: 'facture_entretien',
+        name: `${maintenanceType(rec.type).label} · ${vehLabel} · ${date}`,
+        file_url: path,
+        file_type: justificatif.type,
+        file_size: justificatif.size,
+        entity_id: rec.vehicle_id,
+        entity_type: 'vehicle',
+        is_auto_generated: false,
+        created_by: user.id,
+      })
+    }
+  }
+
+  await supabase.from('audit_logs').insert({
+    user_id: user.id,
+    action: 'intervention_cloturee',
+    entity_type: 'maintenance_records',
+    entity_id: recordId,
+    metadata: { total, labor, pieces: pieces.length },
+  })
+
+  revalidatePath(`/maintenance/${rec.vehicle_id}`)
+  revalidatePath('/suivi')
+  revalidatePath('/documents')
+  revalidatePath('/')
+  return { success: true }
+}
+
+/**
+ * Modifie une intervention déjà enregistrée.
+ *
+ * Attend l'identifiant et le formulaire complet, y compris les pièces
+ * remplacées et le prix de la main d'œuvre. Produit l'intervention à jour, ses
+ * pièces réécrites, et, quand le montant change, soit la correction de
+ * l'écriture comptable, soit une demande de validation.
+ *
+ * Trois règles, toutes voulues par Jeff :
+ *
+ * 1. **Toucher à un montant exige un motif écrit.** Le reste se modifie
+ *    librement.
+ * 2. **Une intervention déjà réglée CORRIGE son écriture comptable**, elle n'en
+ *    crée jamais une seconde : sinon la même réparation compterait deux fois
+ *    dans les dépenses.
+ * 3. **Au-delà de 20 % ou 20 € d'écart** (le plus petit des deux), et si
+ *    l'agence a allumé le contrôle, rien ne bouge tant qu'un AUTRE gérant ou
+ *    associé n'a pas répondu. L'ancien montant reste en place en attendant.
+ *
+ * Ce qu'il ne faut pas casser : la référence `maintenance:<id>` est l'unique
+ * lien vers l'écriture comptable d'un entretien courant. Une réparation de
+ * dégâts en a une PAR DÉGÂT (`maintenance:<id>:<dégât>`) et son montant total
+ * ne se corrige pas ici : il vient du règlement, dégât par dégât.
+ */
+export async function updateMaintenanceRecord(recordId: string, formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié' }
+
+  const { data: rec } = await supabase
+    .from('maintenance_records')
+    .select('id, vehicle_id, type, amount, paid_at, work_status')
+    .eq('id', recordId)
+    .single()
+  if (!rec) return { error: 'Intervention introuvable' }
+
+  // Les pièces remplacées, réécrites en bloc : plus simple et plus sûr que de
+  // suivre les ajouts et retraits ligne à ligne dans un formulaire.
+  let pieces: MaintenancePart[] = []
+  try {
+    const brut = formData.get('parts') as string | null
+    if (brut) pieces = (JSON.parse(brut) as MaintenancePart[])
+      .filter(p => (p.label ?? '').trim().length > 0)
+      .map(p => ({
+        label: String(p.label).trim(),
+        quantity: Number(p.quantity) || 1,
+        unit_price: Number(p.unit_price) || 0,
+      }))
+  } catch {
+    return { error: 'Pièces illisibles' }
+  }
+
+  const laborRaw = (formData.get('labor_cost') as string)?.trim()
+  const labor = laborRaw ? parseFloat(laborRaw.replace(',', '.')) : null
+  const amountRaw = (formData.get('amount') as string)?.trim()
+  const amountSaisi = amountRaw ? parseFloat(amountRaw.replace(',', '.')) : 0
+  const kmRaw = (formData.get('km_at_intervention') as string)?.trim()
+  const km = kmRaw ? parseInt(kmRaw, 10) : null
+
+  const ancien = rec.amount ?? 0
+  const nouveau = Number.isFinite(amountSaisi) ? amountSaisi : 0
+  const montantChange = Math.abs(nouveau - ancien) > 0.004
+  const motif = (formData.get('reason') as string)?.trim() || ''
+  if (montantChange && motif.length < 3) {
+    return { error: 'Indiquez pourquoi le montant change.' }
+  }
+
+  // Le contrôle ne s'applique que si l'agence l'a allumé, et jamais à la
+  // première saisie : corriger 0 € en 250 € est une saisie, pas une correction.
+  const { data: agence } = await supabase
+    .from('agency_settings').select('require_amount_validation').limit(1).maybeSingle()
+  const controleActif = Boolean(agence?.require_amount_validation)
+  const enAttente = montantChange && ancien > 0 && controleActif
+    && correctionSoumiseAControle(ancien, nouveau)
+
+  const payload: Record<string, unknown> = {
+    description: (formData.get('description') as string)?.trim() || null,
+    date:        (formData.get('date') as string) || undefined,
+    km_at_intervention: Number.isFinite(km as number) ? km : null,
+    provider:    (formData.get('provider') as string)?.trim() || null,
+    notes:       (formData.get('notes') as string)?.trim() || null,
+    labor_cost:  Number.isFinite(labor as number) ? labor : null,
+    urgency:     URGENCY_KEYS.includes(formData.get('urgency') as string)
+                   ? (formData.get('urgency') as string) : undefined,
+    due_date:    (formData.get('due_date') as string) || null,
+    assigned_to: (formData.get('assigned_to') as string) || null,
+  }
+  // Le montant n'est écrit tout de suite que si personne n'a à valider.
+  if (montantChange && !enAttente) payload.amount = nouveau
+
+  const { error } = await supabase.from('maintenance_records').update(payload).eq('id', recordId)
+  if (error) return { error: error.message }
+
+  await supabase.from('maintenance_parts').delete().eq('maintenance_id', recordId)
+  if (pieces.length > 0) {
+    const { error: pErr } = await supabase
+      .from('maintenance_parts')
+      .insert(pieces.map(p => ({ ...p, maintenance_id: recordId })))
+    if (pErr) return { error: pErr.message }
+  }
+
+  if (enAttente) {
+    const { error: dErr } = await supabase.from('maintenance_amount_requests').insert({
+      maintenance_id: recordId,
+      requested_by: user.id,
+      old_amount: ancien,
+      new_amount: nouveau,
+      reason: motif,
+    })
+    if (dErr) return { error: dErr.message }
+    await supabase.from('audit_logs').insert({
+      user_id: user.id, action: 'intervention_correction_demandee',
+      entity_type: 'maintenance_records', entity_id: recordId,
+      metadata: { ancien, nouveau, motif },
+    })
+    revalidatePath(`/maintenance/${rec.vehicle_id}`)
+    return { success: true, enAttente: true }
+  }
+
+  // Intervention déjà réglée : son écriture comptable doit suivre le nouveau
+  // montant, sans jamais être dupliquée.
+  if (montantChange && rec.paid_at) {
+    const admin = createAdminClient()
+    await admin
+      .from('financial_transactions')
+      .update({ amount: nouveau })
+      .eq('reference', `maintenance:${recordId}`)
+  }
+
+  await supabase.from('audit_logs').insert({
+    user_id: user.id,
+    action: 'maintenance_updated',
+    entity_type: 'maintenance_records',
+    entity_id: recordId,
+    metadata: montantChange ? { ancien, nouveau, motif } : {},
+  })
+
+  revalidatePath(`/maintenance/${rec.vehicle_id}`)
+  revalidatePath('/suivi')
+  revalidatePath('/accounting')
+  return { success: true }
+}
+
+/**
+ * Répond à une demande de correction de montant : la valider applique le
+ * nouveau montant et corrige l'écriture comptable ; la refuser laisse tout en
+ * l'état.
+ *
+ * **Personne ne valide sa propre demande** — c'est tout l'intérêt du contrôle.
+ * Réservé aux gérants, associés et administrateurs.
+ */
+export async function repondreDemandeMontant(
+  requestId: string,
+  decision: 'validee' | 'refusee',
+  note?: string,
+) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Non authentifié' }
+
+  const { data: profile } = await supabase
+    .from('profiles').select('role, is_admin').eq('id', user.id).single()
+  const peut = profile?.is_admin || ROLES_QUI_CLOTURENT.includes(profile?.role ?? '')
+  if (!peut) return { error: 'Seuls un gérant ou un associé peuvent répondre à une demande.' }
+
+  const { data: dem } = await supabase
+    .from('maintenance_amount_requests')
+    .select('id, maintenance_id, requested_by, new_amount, status')
+    .eq('id', requestId)
+    .single()
+  if (!dem) return { error: 'Demande introuvable' }
+  if (dem.status !== 'en_attente') return { error: 'Cette demande a déjà été traitée.' }
+  if (dem.requested_by === user.id) {
+    return { error: 'Vous ne pouvez pas valider votre propre correction.' }
+  }
+
+  const { error } = await supabase
+    .from('maintenance_amount_requests')
+    .update({
+      status: decision,
+      reviewed_by: user.id,
+      reviewed_at: new Date().toISOString(),
+      review_note: note?.trim() || null,
+    })
+    .eq('id', requestId)
+  if (error) return { error: error.message }
+
+  const { data: rec } = await supabase
+    .from('maintenance_records')
+    .select('id, vehicle_id, paid_at')
+    .eq('id', dem.maintenance_id)
+    .single()
+
+  if (decision === 'validee' && rec) {
+    await supabase
+      .from('maintenance_records')
+      .update({ amount: dem.new_amount })
+      .eq('id', rec.id)
+    if (rec.paid_at) {
+      const admin = createAdminClient()
+      await admin
+        .from('financial_transactions')
+        .update({ amount: dem.new_amount })
+        .eq('reference', `maintenance:${rec.id}`)
+    }
+  }
+
+  await supabase.from('audit_logs').insert({
+    user_id: user.id,
+    action: decision === 'validee' ? 'intervention_correction_validee' : 'intervention_correction_refusee',
+    entity_type: 'maintenance_records',
+    entity_id: dem.maintenance_id,
+    metadata: { montant: dem.new_amount, note: note ?? null },
+  })
+
+  if (rec) revalidatePath(`/maintenance/${rec.vehicle_id}`)
+  revalidatePath('/accounting')
+  return { success: true }
+}
+
+/**
  * Supprime une intervention d'entretien et nettoie ses artefacts : la charge
  * comptable liée (reference `maintenance:<id>`, si l'intervention avait été
  * réglée) et, best-effort, le RDV garage au calendrier (même véhicule / même
@@ -286,7 +790,7 @@ export async function markMaintenancePaid(recordId: string, method: string) {
 
   const { data: rec } = await supabase
     .from('maintenance_records')
-    .select('id, vehicle_id, type, description, amount, date, paid_at')
+    .select('id, vehicle_id, type, description, amount, date, paid_at, work_status')
     .eq('id', recordId)
     .single()
   if (!rec) return { error: 'Intervention introuvable' }
@@ -294,7 +798,16 @@ export async function markMaintenancePaid(recordId: string, method: string) {
   const today = new Date().toISOString().slice(0, 10)
   const { error } = await supabase
     .from('maintenance_records')
-    .update({ paid_at: today, paid_method: method })
+    .update({
+      paid_at: today,
+      paid_method: method,
+      // Payer le garage clôt le travail s'il ne l'était pas déjà : c'est le seul
+      // endroit où l'argent décide du travail (02/08/2026). Une intervention déjà
+      // terminée ou annulée garde son statut.
+      ...(WORK_STATUSES_CLOS.includes(rec.work_status as WorkStatusKey)
+        ? {}
+        : { work_status: 'terminee', closed_at: new Date().toISOString() }),
+    })
     .eq('id', recordId)
   if (error) return { error: error.message }
 
@@ -368,7 +881,7 @@ export async function settleIntervention(
 
   const { data: rec } = await supabase
     .from('maintenance_records')
-    .select('id, vehicle_id, date, paid_at')
+    .select('id, vehicle_id, date, paid_at, work_status')
     .eq('id', recordId)
     .single()
   if (!rec) return { error: 'Intervention introuvable' }
@@ -437,7 +950,14 @@ export async function settleIntervention(
 
   const { error: recErr } = await supabase
     .from('maintenance_records')
-    .update({ amount: total, paid_at: today, paid_method: method })
+    .update({
+      amount: total, paid_at: today, paid_method: method,
+      // Le garage a facturé, donc il a fini : le travail se clôt en même temps,
+      // sauf si quelqu'un l'avait déjà clos ou annulé.
+      ...(WORK_STATUSES_CLOS.includes(rec.work_status as WorkStatusKey)
+        ? {}
+        : { work_status: 'terminee', closed_at: new Date().toISOString() }),
+    })
     .eq('id', recordId)
   if (recErr) return { error: recErr.message }
 

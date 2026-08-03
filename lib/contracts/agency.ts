@@ -14,6 +14,12 @@ export interface AgencySettings {
   fuel_rate_per_liter: number
   default_deposit: number
   insurance_deductible: number
+  /**
+   * Contrôle des corrections de montant sur les interventions (migration 075).
+   * Éteint par défaut : chez un client où personne d'autre ne peut valider,
+   * l'allumer bloquerait toute correction.
+   */
+  require_amount_validation?: boolean
 }
 
 export const AGENCY_DEFAULTS: AgencySettings = {

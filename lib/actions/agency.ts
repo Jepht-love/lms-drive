@@ -32,6 +32,8 @@ export async function updateAgencySettings(formData: FormData) {
     fuel_rate_per_liter:  num('fuel_rate_per_liter'),
     default_deposit:      num('default_deposit'),
     insurance_deductible: num('insurance_deductible'),
+    // Une case non cochée n'envoie rien : son absence vaut « éteint ».
+    require_amount_validation: formData.get('require_amount_validation') != null,
     updated_at:           new Date().toISOString(),
   }
 

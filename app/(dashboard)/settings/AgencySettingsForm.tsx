@@ -79,6 +79,32 @@ export default function AgencySettingsForm({ settings }: { settings: AgencySetti
         </div>
       </div>
 
+      {/* Contrôle des corrections de montant · interrupteur d'agence, éteint par
+          défaut. Chez un client où personne d'autre ne peut valider, l'allumer
+          bloquerait toute correction : c'est pour ça que ce n'est pas le
+          comportement par défaut (Jeff, 01/08/2026). */}
+      <div>
+        <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-3">Contrôle des montants</p>
+        <label className="flex items-start gap-3 cursor-pointer bg-white border border-gray-200 rounded-xl p-3">
+          <input
+            type="checkbox"
+            name="require_amount_validation"
+            defaultChecked={settings.require_amount_validation ?? false}
+            className="mt-0.5 w-4 h-4 accent-gray-900 flex-shrink-0"
+          />
+          <span className="min-w-0">
+            <span className="block text-sm font-semibold text-gray-900">
+              Faire valider les corrections de montant
+            </span>
+            <span className="block text-[11px] text-gray-400 mt-0.5">
+              Au-delà de 20 % ou 20 € d&apos;écart, corriger le montant d&apos;une intervention
+              attendra la réponse d&apos;un autre gérant ou associé. Personne ne valide sa propre
+              correction. Sans cette option, la correction s&apos;applique aussitôt et reste tracée.
+            </span>
+          </span>
+        </label>
+      </div>
+
       <div className="flex items-center gap-3">
         <button
           type="submit"

@@ -7,7 +7,7 @@ import { formatPrice } from '@/lib/utils'
 import type { MaintenanceRecord } from '@/lib/maintenance'
 import type { MaintenanceFlag } from '@/types/database'
 import { isManagerRole } from '@/lib/auth/roles'
-import MaintenanceHistory from './MaintenanceHistory'
+import MaintenanceHistory, { type DemandeMontant } from './MaintenanceHistory'
 import VehicleFacts from './VehicleFacts'
 
 export default async function VehicleMaintenancePage({
@@ -31,15 +31,34 @@ export default async function VehicleMaintenancePage({
   // ou un prestataire voit le dégât et son type, jamais l'argent.
   const { data: { user } } = await supabase.auth.getUser()
   const { data: profile } = user
-    ? await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle()
+    ? await supabase.from('profiles').select('role, is_admin').eq('id', user.id).maybeSingle()
     : { data: null }
   const canSeeAmounts = isManagerRole((profile as { role?: string } | null)?.role)
+  // Terminer ou annuler engage un montant : réservé aux managers (Jeff, 02/08/2026).
+  // Faire simplement avancer une intervention reste ouvert à tout le monde.
+  const canClose = Boolean(
+    (profile as { is_admin?: boolean } | null)?.is_admin
+    || isManagerRole((profile as { role?: string } | null)?.role),
+  )
 
+  // Les deux jointures nomment qui est concerné : la personne DÉSIGNÉE à la
+  // création et celle qui s'est effectivement MISE DESSUS. Les deux peuvent
+  // différer, et c'est voulu.
   const { data: records } = await supabase
     .from('maintenance_records')
-    .select('*')
+    .select(`*,
+      assignee:profiles!maintenance_records_assigned_to_fkey(full_name),
+      taker:profiles!maintenance_records_taken_by_fkey(full_name)`)
     .eq('vehicle_id', vehicleId)
     .order('date', { ascending: false })
+
+  // Les corrections de montant en attente : elles s'affichent sur l'intervention
+  // concernée, avec les boutons Valider et Refuser pour qui a le droit.
+  const { data: demandes } = await supabase
+    .from('maintenance_amount_requests')
+    .select(`id, maintenance_id, requested_by, old_amount, new_amount, reason,
+      requester:profiles!maintenance_amount_requests_requested_by_fkey(full_name)`)
+    .eq('status', 'en_attente')
 
   const list  = (records ?? []) as MaintenanceRecord[]
   const total = list.reduce((s, r) => s + (r.amount ?? 0), 0)
@@ -98,7 +117,13 @@ export default async function VehicleMaintenancePage({
 
       {/* Historique filtrable. Les dégâts lui sont passés pour que le règlement
           d'une réparation se saisisse dégât par dégât (règle du 01/08/2026). */}
-      <MaintenanceHistory records={list} flags={(vehicle.maintenance_flags ?? []) as MaintenanceFlag[]} />
+      <MaintenanceHistory
+        records={list}
+        flags={(vehicle.maintenance_flags ?? []) as MaintenanceFlag[]}
+        canClose={canClose}
+        currentUserId={user?.id ?? null}
+        demandes={(demandes ?? []) as unknown as DemandeMontant[]}
+      />
 
     </div>
   )

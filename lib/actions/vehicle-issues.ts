@@ -97,7 +97,12 @@ export async function reportVehicleIssues(vehicleId: string, issues: NewIssue[],
 export async function updateVehicleIssue(
   vehicleId: string,
   flagId: string,
-  patch: { label?: string; damage_type?: string; origin?: string; severity?: MaintenanceFlag['severity'] },
+  patch: {
+    label?: string; damage_type?: string; origin?: string
+    severity?: MaintenanceFlag['severity']
+    /** Devis du garage, estimé dès la déclaration (Jeff, 02/08/2026). `null` l'efface. */
+    quote_amount?: number | null
+  },
 ) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -116,6 +121,10 @@ export async function updateVehicleIssue(
     ...target,
     ...(label ? { label } : {}),
     ...(patch.severity ? { severity: patch.severity } : {}),
+    // Le devis se corrige toujours, même sur un dégât venu d'un état des lieux :
+    // c'est le garage qui le donne, il n'a rien à voir avec ce qui a été facturé
+    // au client (02/08/2026).
+    ...(patch.quote_amount !== undefined ? { quote_amount: patch.quote_amount } : {}),
     ...(venuDunEtatDesLieux ? {} : {
       ...(patch.damage_type ? { damage_type: patch.damage_type } : {}),
       ...(patch.origin ? { origin: patch.origin } : {}),

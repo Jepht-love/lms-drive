@@ -62,6 +62,7 @@ export default function VehicleFacts({ vehicleId, flags, canSeeAmounts }: Props)
   const [damageType, setDamageType] = useState('')
   const [origin, setOrigin] = useState('usure')
   const [severity, setSeverity] = useState<MaintenanceFlag['severity']>('attention')
+  const [devis, setDevis] = useState('')
   const [showRepaired, setShowRepaired] = useState(false)
   const [pending, startTransition] = useTransition()
 
@@ -74,7 +75,7 @@ export default function VehicleFacts({ vehicleId, flags, canSeeAmounts }: Props)
 
   function ferme() {
     setAdding(false); setEditing(null)
-    setLabel(''); setDamageType(''); setOrigin('usure'); setSeverity('attention')
+    setLabel(''); setDamageType(''); setOrigin('usure'); setSeverity('attention'); setDevis('')
   }
 
   function ouvreCorrection(f: MaintenanceFlag) {
@@ -84,14 +85,20 @@ export default function VehicleFacts({ vehicleId, flags, canSeeAmounts }: Props)
     setDamageType(f.damage_type ?? '')
     setOrigin(f.origin ?? 'usure')
     setSeverity(f.severity)
+    setDevis(f.quote_amount != null ? String(f.quote_amount) : '')
   }
 
   function enregistre() {
     const l = label.trim()
     if (!l || (!damageType && !verrouille)) return
+    // Le devis se saisit dès la déclaration du dommage (Jeff, 02/08/2026) : il
+    // suit ensuite le dégât et se retrouve prérempli quand on l'envoie au garage,
+    // au lieu d'être ressaisi de mémoire.
+    const devisSaisi = devis.trim() ? parseFloat(devis.replace(',', '.')) : null
+    const quote = devisSaisi != null && Number.isFinite(devisSaisi) ? devisSaisi : null
     startTransition(async () => {
       const r = editing
-        ? await updateVehicleIssue(vehicleId, editing.id, { label: l, damage_type: damageType, origin, severity })
+        ? await updateVehicleIssue(vehicleId, editing.id, { label: l, damage_type: damageType, origin, severity, quote_amount: quote })
         : await reportVehicleIssues(vehicleId, [{
             category: 'manuel',
             label: l,
@@ -100,6 +107,7 @@ export default function VehicleFacts({ vehicleId, flags, canSeeAmounts }: Props)
             source_id: null,
             damage_type: damageType,
             origin,
+            quote_amount: quote,
             // Un fait saisi à la main n'est rattaché à aucune réservation et n'a rien
             // été facturé : c'est un coût pour la société, pas une recette.
             reservation_id: null,
@@ -211,6 +219,32 @@ export default function VehicleFacts({ vehicleId, flags, canSeeAmounts }: Props)
             </div>
           </div>
 
+          {/* Le devis, dès la déclaration. Il suit le dommage et arrive
+              prérempli quand on l'envoie au garage : avant le 02/08/2026 il ne
+              pouvait se saisir qu'au moment de créer l'intervention, donc de
+              mémoire. */}
+          {canSeeAmounts && (
+            <div>
+              <label htmlFor="vehicle-fact-devis" className="block text-xs font-medium text-gray-600 mb-1 uppercase tracking-wide">
+                Devis du garage (optionnel)
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  id="vehicle-fact-devis"
+                  type="number" step="0.01" min="0" inputMode="decimal"
+                  value={devis}
+                  onChange={e => setDevis(e.target.value)}
+                  placeholder="montant estimé"
+                  className="flex-1 min-w-0 px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
+                />
+                <span className="text-sm text-gray-400 flex-shrink-0">€</span>
+              </div>
+              <p className="text-[10px] text-gray-400 mt-1">
+                Rien n&apos;est enregistré en comptabilité : un devis n&apos;est pas une dépense.
+              </p>
+            </div>
+          )}
+
           <div className="flex gap-2">
             <button type="button"
               onClick={ferme}
@@ -239,6 +273,9 @@ export default function VehicleFacts({ vehicleId, flags, canSeeAmounts }: Props)
               <DamageRow flag={f} onEdit={() => ouvreCorrection(f)} />
               <p className="text-[10px] text-gray-400 px-1">
                 {damageTypeLabel(f.damage_type)} · {damageOriginLabel(f.origin)}
+                {canSeeAmounts && f.quote_amount != null && (
+                  <span> · devis {formatPrice(f.quote_amount)}</span>
+                )}
                 {canSeeAmounts && f.billed_amount != null && (
                   <span className="text-emerald-600 font-semibold"> · facturé {formatPrice(f.billed_amount)}</span>
                 )}

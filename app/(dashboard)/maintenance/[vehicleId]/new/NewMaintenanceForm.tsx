@@ -22,7 +22,7 @@ import { useState, useTransition, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { AlertTriangle } from 'lucide-react'
 import DatePickerField from '@/components/ui/DatePickerField'
-import { MAINTENANCE_TYPES } from '@/lib/maintenance'
+import { MAINTENANCE_TYPES, URGENCIES, type UrgencyKey } from '@/lib/maintenance'
 import { createMaintenanceRecord } from '@/lib/actions/maintenance'
 import { damageTypeLabel, damageOriginLabel } from '@/lib/vehicles/damage-catalog'
 import { formatPrice } from '@/lib/utils'
@@ -35,13 +35,16 @@ interface Props {
   /** Dégâts déjà réparés : sert à distinguer « rien à réparer » de « rien saisi ». */
   repairedCount: number
   canSeeAmounts: boolean
+  /** L'équipe à qui confier l'intervention, prestataires exclus. */
+  equipe: { id: string; full_name: string | null }[]
 }
 
-export default function NewMaintenanceForm({ vehicleId, currentKm, damages, repairedCount, canSeeAmounts }: Props) {
+export default function NewMaintenanceForm({ vehicleId, currentKm, damages, repairedCount, canSeeAmounts, equipe }: Props) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [type, setType] = useState('revision')
+  const [urgence, setUrgence] = useState<UrgencyKey>('normale')
   /** flagId → devis saisi (chaîne, pour laisser le champ vide tant qu'on ne sait pas). */
   const [choisis, setChoisis] = useState<Record<string, string>>({})
 
@@ -57,7 +60,12 @@ export default function NewMaintenanceForm({ vehicleId, currentKm, damages, repa
     setChoisis(prev => {
       const copie = { ...prev }
       if (flagId in copie) delete copie[flagId]
-      else copie[flagId] = ''
+      // Le devis déjà saisi à la déclaration du dommage remonte ici tout seul
+      // (Jeff, 02/08/2026) : il ne se ressaisit plus de mémoire.
+      else {
+        const dejaChiffre = damages.find(d => d.id === flagId)?.quote_amount
+        copie[flagId] = dejaChiffre != null ? String(dejaChiffre) : ''
+      }
       return copie
     })
   }
@@ -235,6 +243,55 @@ export default function NewMaintenanceForm({ vehicleId, currentKm, damages, repa
           <textarea id="notes" name="notes" rows={3} required={!enReparation && type === 'autre'}
             placeholder={!enReparation && type === 'autre' ? "Quel est ce type d'intervention ?" : 'Notes complémentaires…'}
             className={`${inputCls} resize-none ${!enReparation && type === 'autre' ? 'border-amber-200 bg-amber-50' : ''}`} />
+        </div>
+
+        {/* ── Le suivi du travail (02/08/2026) ───────────────────────────────
+            Le gérant veut savoir qui fait quoi, pour quand, et à quel point ça
+            presse. L'urgence décide de l'entrée dans les alertes : critique en
+            urgent, haute en important, normale n'alerte pas. */}
+        <div className="pt-1 border-t border-gray-100">
+          <span className={`${labelCls} block pt-3`}>Urgence</span>
+          <input type="hidden" name="urgency" value={urgence} />
+          <div className="grid grid-cols-3 gap-2">
+            {URGENCIES.map(u => (
+              <button
+                key={u.key}
+                type="button"
+                onClick={() => setUrgence(u.key)}
+                className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold border transition-colors ${
+                  urgence === u.key
+                    ? 'bg-[#111111] border-[#111111] text-white'
+                    : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${urgence === u.key ? 'bg-white' : u.dot}`} />
+                {u.label}
+              </button>
+            ))}
+          </div>
+          <p className="text-[11px] text-gray-400 mt-1.5">
+            {urgence === 'critique' ? 'Apparaîtra dans les alertes urgentes.'
+              : urgence === 'haute' ? 'Apparaîtra dans les alertes importantes.'
+              : "N'apparaîtra pas dans les alertes tant que la date limite n'est pas dépassée."}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className={labelCls} htmlFor="due_date">Date limite (optionnel)</label>
+            <DatePickerField id="due_date" name="due_date" className={inputCls} />
+          </div>
+          <div>
+            <label className={labelCls} htmlFor="assigned_to">Confiée à</label>
+            <select id="assigned_to" name="assigned_to" className={inputCls} defaultValue="">
+              {/* Libellé court : « Personne pour l'instant » se coupait dans la
+                  liste déroulante en largeur téléphone. */}
+              <option value="">Personne</option>
+              {equipe.map(m => (
+                <option key={m.id} value={m.id}>{m.full_name ?? 'Sans nom'}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
         <div>

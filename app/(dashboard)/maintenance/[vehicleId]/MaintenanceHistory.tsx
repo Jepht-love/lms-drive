@@ -2,13 +2,21 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { FileText, Check, BadgeEuro, Trash2 } from 'lucide-react'
+import Link from 'next/link'
+import { FileText, Check, BadgeEuro, Trash2, UserRound, Pencil, ShieldAlert } from 'lucide-react'
 import { formatPrice, formatDate } from '@/lib/utils'
-import { MAINTENANCE_TYPES, MAINTENANCE_ANGLES, maintenanceType, angleOfType, type MaintenanceRecord } from '@/lib/maintenance'
+import {
+  MAINTENANCE_TYPES, MAINTENANCE_ANGLES, maintenanceType, angleOfType,
+  WORK_STATUSES, WORK_STATUSES_CLOS, workStatus, urgency,
+  type MaintenanceRecord, type WorkStatusKey,
+} from '@/lib/maintenance'
 import { PAYMENT_METHODS, paymentMethodLabel } from '@/lib/accounting/categories'
-import { markMaintenancePaid, deleteMaintenanceRecord, settleIntervention } from '@/lib/actions/maintenance'
+import {
+  markMaintenancePaid, deleteMaintenanceRecord, settleIntervention,
+  prendreEnChargeIntervention, changerStatutIntervention, repondreDemandeMontant,
+} from '@/lib/actions/maintenance'
 import { useToast } from '@/components/Toast'
-import { damageOriginLabel } from '@/lib/vehicles/damage-catalog'
+import { damageOriginLabel, damageTypeLabel } from '@/lib/vehicles/damage-catalog'
 import type { MaintenanceFlag } from '@/types/database'
 
 /**
@@ -21,21 +29,69 @@ import type { MaintenanceFlag } from '@/types/database'
  * a payé de sa poche. Une intervention sans dégât (vidange, contrôle technique)
  * garde l'ancien règlement en un seul montant.
  */
+/** Une correction de montant qui attend la réponse d'un autre manager. */
+export interface DemandeMontant {
+  id: string
+  maintenance_id: string
+  requested_by: string
+  old_amount: number
+  new_amount: number
+  reason: string
+  requester?: { full_name: string | null } | null
+}
+
 export default function MaintenanceHistory({
   records,
   flags = [],
+  canClose = false,
+  currentUserId = null,
+  demandes = [],
 }: {
   records: MaintenanceRecord[]
   flags?: MaintenanceFlag[]
+  /** Gérant, associé ou administrateur : eux seuls terminent ou annulent. */
+  canClose?: boolean
+  currentUserId?: string | null
+  /** Les corrections de montant en attente, toutes interventions confondues. */
+  demandes?: DemandeMontant[]
 }) {
   const router = useRouter()
   const { show: toast } = useToast()
   const [filter, setFilter] = useState<string>('tous')
   const [openPay, setOpenPay] = useState<string | null>(null)
   const [confirmDel, setConfirmDel] = useState<string | null>(null)
+  const [openStatut, setOpenStatut] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
   /** flagId → montant facturé par le garage, saisi à l'écran. */
   const [reels, setReels] = useState<Record<string, string>>({})
+
+  function prendre(id: string) {
+    startTransition(async () => {
+      const r = await prendreEnChargeIntervention(id)
+      if (r?.error) { toast(r.error, 'error'); return }
+      router.refresh()
+      toast('Vous vous en occupez')
+    })
+  }
+
+  function repondre(id: string, decision: 'validee' | 'refusee') {
+    startTransition(async () => {
+      const r = await repondreDemandeMontant(id, decision)
+      if (r?.error) { toast(r.error, 'error'); return }
+      router.refresh()
+      toast(decision === 'validee' ? 'Correction validée' : 'Correction refusée')
+    })
+  }
+
+  function changerStatut(id: string, statut: WorkStatusKey) {
+    startTransition(async () => {
+      const r = await changerStatutIntervention(id, statut)
+      if (r?.error) { toast(r.error, 'error'); return }
+      setOpenStatut(null)
+      router.refresh()
+      toast(`Intervention ${workStatus(statut).label.toLowerCase()}`)
+    })
+  }
 
   function regler(recordId: string, degats: MaintenanceFlag[], method: string) {
     const lignes = degats.map(d => ({
@@ -152,13 +208,32 @@ export default function MaintenanceHistory({
           const amount = r.amount ?? 0
           const degats = flags.filter(f => f.intervention_id === r.id)
           const aRegler = degats.filter(f => !f.repaired_at)
+          // ── Le suivi du travail (02/08/2026) ────────────────────────────────
+          const etat = workStatus(r.work_status)
+          const niv  = urgency(r.urgency)
+          const qui  = r.taker?.full_name ?? null
+          const designe = r.assignee?.full_name ?? null
+          const echeanceDepassee = Boolean(
+            r.due_date && etat.ouvert && new Date(`${r.due_date}T23:59:59`) < new Date(),
+          )
+          const librePourMoi = etat.ouvert && !r.taken_by
+          const cestMoi = Boolean(currentUserId && r.taken_by === currentUserId)
+          const demande = demandes.find(d => d.maintenance_id === r.id)
           return (
             <div key={r.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
               <div className="flex items-start justify-between gap-3 mb-2">
                 <div className="min-w-0">
+                  {/* Une intervention qui répare des dégâts n'a PAS de type
+                      unique : elle porte une carrosserie, un pneu et une vitre à
+                      la fois. L'étiquette annonçait « CARROSSERIE » pour tout,
+                      déduite du premier dégât, ce qui était faux et trompeur
+                      (Jeff, 02/08/2026). On liste les natures réelles à la
+                      place. */}
                   <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-gray-400">
                     <span className={`w-1.5 h-1.5 rounded-full ${t.dot}`} />
-                    {t.label}
+                    {degats.length > 0
+                      ? [...new Set(degats.map(d => damageTypeLabel(d.damage_type)))].join(' · ')
+                      : t.label}
                   </span>
                   {r.description && (
                     <p className="text-sm font-medium text-gray-900 mt-0.5">{r.description}</p>
@@ -166,6 +241,20 @@ export default function MaintenanceHistory({
                 </div>
                 <div className="flex items-center gap-1.5 flex-shrink-0">
                   <span className="text-sm font-black text-gray-900">{formatPrice(amount)}</span>
+                  {/* Le crayon rouvre l'intervention préremplie. Avant le
+                      02/08/2026 il fallait la supprimer et la ressaisir, ce qui
+                      effaçait au passage son écriture comptable. */}
+                  {/* `inline-flex items-center` est indispensable : sans lui,
+                      l'icône d'un lien se pose sur la ligne de base du texte et
+                      tombait 8 px plus haut que celle du bouton voisin, qui est
+                      centrée (Jeff, 02/08/2026). */}
+                  <Link
+                    href={`/maintenance/${r.vehicle_id}/${r.id}/edit`}
+                    className="p-1.5 inline-flex items-center justify-center text-gray-300 rounded-lg hover:bg-gray-100 hover:text-gray-600 transition-colors"
+                    title="Modifier"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </Link>
                   <button type="button"
                     onClick={() => setConfirmDel(confirmDel === r.id ? null : r.id)}
                     className="p-1.5 text-gray-300 rounded-lg hover:bg-red-50 hover:text-red-500 transition-colors"
@@ -190,6 +279,41 @@ export default function MaintenanceHistory({
                   </>
                 )}
               </div>
+              {/* ── Où en est le travail ────────────────────────────────────
+                  Trois informations sur une ligne : l'état, l'urgence quand
+                  elle n'est pas normale, l'échéance quand il y en a une. Les
+                  pastilles sont en largeur fixe pour que deux interventions
+                  l'une sous l'autre restent alignées (règle du 02/08/2026). */}
+              <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-full inline-flex items-center justify-center w-[112px] ${etat.badge}`}>
+                  <span className="truncate">{etat.label}</span>
+                </span>
+                {niv.key !== 'normale' && etat.ouvert && (
+                  <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-full inline-flex items-center justify-center w-[76px] ${niv.badge}`}>
+                    <span className="truncate">{niv.label}</span>
+                  </span>
+                )}
+                {r.due_date && etat.ouvert && (
+                  <span className={`text-[11px] font-semibold ${echeanceDepassee ? 'text-red-600' : 'text-gray-400'}`}>
+                    {echeanceDepassee ? 'Échéance dépassée le ' : 'Pour le '}{formatDate(r.due_date)}
+                  </span>
+                )}
+              </div>
+
+              {/* Qui s'en charge. « Confiée à » est la personne désignée à la
+                  création, « s'en occupe » celle qui s'est mise dessus : les
+                  deux peuvent différer, et c'est une information utile. */}
+              <p className="text-[11px] text-gray-400 mt-1.5 flex items-center gap-1">
+                <UserRound className="w-3 h-3 flex-shrink-0" />
+                {/* Le libellé exact demandé par le gérant : « Pris en charge
+                    par… ». Ne pas le reformuler. */}
+                {qui
+                  ? <span className="font-medium text-gray-600">Pris en charge par {qui}</span>
+                  : designe
+                    ? <span>Confiée à {designe}, personne ne s&apos;en est encore saisi</span>
+                    : <span className="font-semibold text-amber-600">Personne ne s&apos;en occupe</span>}
+              </p>
+
               {r.notes && (
                 <p className="text-xs text-gray-500 mt-2 leading-relaxed whitespace-pre-wrap">{r.notes}</p>
               )}
@@ -202,6 +326,110 @@ export default function MaintenanceHistory({
                 >
                   <FileText className="w-3 h-3" /> Voir la facture
                 </a>
+              )}
+
+              {/* ── Une correction de montant attend une réponse ────────────
+                  Contrôle anti-fraude voulu par Jeff : rien ne bouge tant qu'un
+                  AUTRE gérant ou associé n'a pas répondu, et personne ne valide
+                  sa propre demande. Le bouton est donc masqué à l'auteur. */}
+              {demande && (
+                <div className="mt-3 pt-3 border-t border-amber-100 bg-amber-50 -mx-4 -mb-4 px-4 py-3 rounded-b-2xl">
+                  <p className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+                    <ShieldAlert className="w-3.5 h-3.5 flex-shrink-0" />
+                    Correction en attente : {formatPrice(demande.old_amount)} → {formatPrice(demande.new_amount)}
+                  </p>
+                  <p className="text-[11px] text-amber-800 mt-0.5">
+                    {demande.reason}
+                    {demande.requester?.full_name ? ` · demandée par ${demande.requester.full_name}` : ''}
+                  </p>
+                  {canClose && demande.requested_by !== currentUserId ? (
+                    <div className="flex items-center gap-2 mt-2">
+                      <button type="button" disabled={pending}
+                        onClick={() => repondre(demande.id, 'validee')}
+                        className="px-3 py-1.5 rounded-lg text-xs font-bold bg-[#111111] text-white disabled:opacity-40">
+                        Valider
+                      </button>
+                      <button type="button" disabled={pending}
+                        onClick={() => repondre(demande.id, 'refusee')}
+                        className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-amber-300 text-amber-800 disabled:opacity-40">
+                        Refuser
+                      </button>
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-amber-700 mt-1.5">
+                      {demande.requested_by === currentUserId
+                        ? 'Vous ne pouvez pas valider votre propre correction.'
+                        : 'Un gérant ou un associé doit répondre.'}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* ── Faire avancer le travail ────────────────────────────────
+                  « Je prends en charge » inscrit son nom et passe l'intervention
+                  en « prise en charge » : sur le terrain, celui qui voit le
+                  problème est celui qui s'en occupe (Jeff, 02/08/2026).
+                  Terminer et annuler restent aux gérants et associés, parce que
+                  la clôture engage un montant. */}
+              {etat.ouvert && (
+                <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-2 flex-wrap">
+                  {librePourMoi && (
+                    <button type="button"
+                      onClick={() => prendre(r.id)}
+                      disabled={pending}
+                      className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-[#111111] rounded-lg px-3 py-1.5 hover:bg-gray-800 disabled:opacity-40"
+                    >
+                      <UserRound className="w-3.5 h-3.5" /> Je prends en charge
+                    </button>
+                  )}
+                  {cestMoi && (
+                    <span className="text-[11px] font-semibold text-blue-600">Vous vous en occupez</span>
+                  )}
+                  <button type="button"
+                    onClick={() => setOpenStatut(openStatut === r.id ? null : r.id)}
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-600 border border-gray-200 rounded-lg px-2.5 py-1.5 hover:bg-gray-50 ml-auto"
+                  >
+                    Changer l&apos;état
+                  </button>
+                </div>
+              )}
+
+              {openStatut === r.id && (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {WORK_STATUSES.map(s => {
+                    const interdit = WORK_STATUSES_CLOS.includes(s.key) && !canClose
+                    // `inline-flex items-center` parce que « Terminée » est un
+                    // lien et les cinq autres des boutons : sans ça son texte se
+                    // pose sur la ligne de base et la pastille ne tombe pas à la
+                    // même hauteur que ses voisines (Jeff, 02/08/2026).
+                    const cls = `px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-colors disabled:opacity-40 inline-flex items-center justify-center ${
+                      s.key === r.work_status
+                        ? 'bg-[#111111] border-[#111111] text-white'
+                        : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+                    }`
+                    // « Terminée » n'est pas un simple changement d'état : elle
+                    // ouvre le compte rendu de ce qui a été fait, que le gérant
+                    // exige (02/08/2026). On ne clôt plus sans le remplir.
+                    if (s.key === 'terminee' && !interdit) {
+                      return (
+                        <Link key={s.key} href={`/maintenance/${r.vehicle_id}/${r.id}/cloture`} className={cls}>
+                          {s.label}
+                        </Link>
+                      )
+                    }
+                    return (
+                      <button type="button"
+                        key={s.key}
+                        disabled={pending || interdit || s.key === r.work_status}
+                        onClick={() => changerStatut(r.id, s.key)}
+                        title={interdit ? 'Réservé au gérant et aux associés' : undefined}
+                        className={cls}
+                      >
+                        {s.label}
+                      </button>
+                    )
+                  })}
+                </div>
               )}
 
               {/* Réparation de dégâts : le règlement se saisit ligne par ligne, et

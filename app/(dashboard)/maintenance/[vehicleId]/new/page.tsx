@@ -56,6 +56,15 @@ export default async function NewMaintenancePage({
   const enAttente = tous.filter(f => !f.repaired_at && !f.intervention_id)
   const reparés = tous.filter(f => f.repaired_at).length
 
+  // L'équipe à qui confier l'intervention (02/08/2026). Les prestataires ne sont
+  // pas proposés : ils n'ont pas accès à l'application au quotidien, et une
+  // intervention confiée à quelqu'un qui ne la verra jamais reste bloquée.
+  const { data: equipe } = await supabase
+    .from('profiles')
+    .select('id, full_name, role')
+    .neq('role', 'prestataire')
+    .order('full_name')
+
   return (
     <div className="space-y-4 pb-4">
       <BackButton
@@ -78,6 +87,7 @@ export default async function NewMaintenancePage({
         damages={enAttente}
         repairedCount={reparés}
         canSeeAmounts={canSeeAmounts}
+        equipe={(equipe ?? []) as { id: string; full_name: string | null }[]}
       />
     </div>
   )
