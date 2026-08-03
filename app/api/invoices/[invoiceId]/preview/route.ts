@@ -13,8 +13,12 @@ import { createElement } from 'react'
  * revenir ajuster les lignes, puis envoyer. Lecture seule via le client
  * utilisateur (fonctionne même sans clé service).
  */
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ invoiceId: string }> }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ invoiceId: string }> }) {
   const { invoiceId } = await params
+  // `?download=1` force l'enregistrement du fichier au lieu de l'ouvrir dans la
+  // visionneuse du navigateur : sur téléphone, celle-ci s'affiche en plein écran
+  // sans bouton retour et l'application semble bloquée (remonté le 03/08/2026).
+  const enTelechargement = req.nextUrl.searchParams.get('download') === '1'
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
@@ -56,7 +60,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ inv
   return new NextResponse(new Uint8Array(buffer), {
     headers: {
       'Content-Type': 'application/pdf',
-      'Content-Disposition': `inline; filename="apercu-${invoice.invoice_number}.pdf"`,
+      'Content-Disposition': `${enTelechargement ? 'attachment' : 'inline'}; filename="apercu-${invoice.invoice_number}.pdf"`,
     },
   })
 }

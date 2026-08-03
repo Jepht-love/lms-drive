@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useState, useTransition } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Receipt, Plus, Trash2, Mail, Check, Loader2, AlertTriangle, Eye, Ban } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
@@ -18,7 +19,7 @@ interface Invoice {
   due_date?: string | null
 }
 
-export default function InvoiceCard({ invoice }: { invoice: Invoice }) {
+export default function InvoiceCard({ invoice, reservationId }: { invoice: Invoice; reservationId: string }) {
   const router = useRouter()
   // Identité de ligne, stable tant que la ligne existe : sans elle, supprimer
   // une ligne ferait glisser le contenu saisi des lignes suivantes.
@@ -220,15 +221,15 @@ export default function InvoiceCard({ invoice }: { invoice: Invoice }) {
       {error && <p className="text-xs text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
 
       <div className="flex gap-2">
-        <a
-          href={`/api/invoices/${invoice.id}/preview`}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={e => { if (dirty) { e.preventDefault(); setError('Enregistre tes modifications avant de prévisualiser le PDF.') } }}
+        {/* Aperçu dans l'application, plus le PDF brut en nouvel onglet : sur
+            téléphone la visionneuse s'ouvrait sans retour possible (03/08/2026). */}
+        <Link
+          href={`/reservations/${reservationId}/facture`}
+          onClick={e => { if (dirty) { e.preventDefault(); setError('Enregistre tes modifications avant de prévisualiser la facture.') } }}
           className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold border border-gray-200 ${dirty ? 'text-gray-300 cursor-not-allowed' : 'text-gray-700 hover:bg-gray-50'}`}
         >
           <Eye className="w-3.5 h-3.5" /> Prévisualiser
-        </a>
+        </Link>
         {dirty && (
           <button type="button" onClick={onSave} disabled={saving}
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-50">

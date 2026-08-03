@@ -343,7 +343,7 @@ export default async function ReservationPage({
       />
 
       {/* ─── Facture de restitution (frais complémentaires) ─── */}
-      {invoice && <InvoiceCard invoice={invoice as any} />}
+      {invoice && <InvoiceCard invoice={invoice as any} reservationId={id} />}
 
       {/* ─── Actions statut ─── */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">

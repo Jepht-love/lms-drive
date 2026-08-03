@@ -4,6 +4,7 @@ import { fr } from 'date-fns/locale'
 import { fmtNombre } from './nombres'
 import { TZDate } from '@date-fns/tz'
 import { BUSINESS_TZ } from '@/lib/calendar/constants'
+import { MENTIONS_LEGALES_FACTURE } from '@/lib/invoices/mentions-legales'
 
 /**
  * Toute date imprimée passe par l'heure de l'agence. `format(new Date(...))` met
@@ -67,15 +68,9 @@ const s = StyleSheet.create({
   footer: { position: 'absolute', bottom: 24, left: 36, fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#1e293b' },
 })
 
-const LEGAL_LINES = (companyName: string) => [
-  "La présente facture fait suite à la restitution du véhicule mentionné ci-dessus et aux constatations effectuées lors de l'état du véhicule au retour, conformément aux conditions prévues dans le contrat de location préalablement signé par le client.",
-  "Les frais facturés correspondent aux dommages constatés, frais annexes, immobilisation du véhicule et prestations nécessaires à la remise en état, tels que prévus par les conditions générales du contrat de location accepté par le client.",
-  "Le règlement de la présente facture est exigible dans un délai maximum de 15 jours à compter de sa date d'émission.",
-  "À défaut de paiement dans ce délai, des pénalités de retard seront appliquées conformément aux articles 1231-6 et 1344-1 du Code civil, calculées sur la base du taux d'intérêt légal en vigueur.",
-  "Conformément à l'article L441-10 du Code de commerce, tout retard de paiement pourra également entraîner l'application d'une indemnité forfaitaire pour frais de recouvrement de 40 euros, sans préjudice de toute indemnisation complémentaire en cas de frais supérieurs.",
-  `À défaut de règlement dans les délais impartis, ${companyName} se réserve le droit d'engager toute procédure de recouvrement amiable ou judiciaire, ainsi que la transmission du dossier à un organisme de recouvrement ou à un officier ministériel compétent.`,
-  'La présente facture vaut mise en demeure de paiement.',
-]
+// Les mentions légales vivent dans `lib/invoices/mentions-legales.ts` depuis le
+// 03/08/2026 : l'aperçu à l'écran affiche exactement le même texte que le PDF.
+const LEGAL_LINES = MENTIONS_LEGALES_FACTURE
 
 export function InvoicePDF({ data }: { data: InvoiceData }) {
   return (
