@@ -9,9 +9,8 @@
 // porte douze valeurs par véhicule, il aurait doublé la longueur d'un écran déjà
 // long. Le gérant y accède par un lien depuis Paramètres.
 //
-// Ce qu'il attend : rien dans l'adresse. Il lit lui-même les grilles, tous les
-// véhicules actifs et les réglages d'agence (qui servent de dernier recours pour
-// une voiture sans grille).
+// Ce qu'il attend : rien dans l'adresse. Il lit lui-même les grilles et tous les
+// véhicules actifs.
 //
 // Ce qu'il ne faut pas casser : rattacher une voiture à une grille ne réécrit
 // aucun de ses prix. La grille ne fournit que les quatre valeurs communes que
@@ -22,7 +21,6 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { ArrowLeft, Tags } from 'lucide-react'
 import BackButton from '@/components/ui/BackButton'
-import { getAgencySettings } from '@/lib/contracts/agency'
 import type { PricingGrid } from '@/lib/pricing/grid'
 import { getFeesTable } from '@/lib/contracts/legal-articles'
 import { postesDeLaCategorie } from '@/lib/contracts/frais-restitution'
@@ -38,7 +36,7 @@ export default async function TarifsPage() {
   // Les prix ne se fixent qu'au niveau gérant ou administrateur.
   if (!(profile?.is_admin || profile?.role === 'gerant')) redirect('/')
 
-  const [{ data: grilles }, { data: vehicules }, agence] = await Promise.all([
+  const [{ data: grilles }, { data: vehicules }] = await Promise.all([
     supabase.from('pricing_grids').select('*').order('name'),
     supabase
       .from('vehicles')
@@ -48,7 +46,6 @@ export default async function TarifsPage() {
         unlimited_km_price`)
       .eq('is_active', true)
       .order('brand'),
-    getAgencySettings(supabase),
   ])
 
   // Les deux listes de frais de restitution, avec leur corbeille. Une liste sans
@@ -57,7 +54,10 @@ export default async function TarifsPage() {
   const blocsFrais = await Promise.all(
     ([
       { scope: 'sportif' as const, titre: 'Véhicules sportifs', categorie: 'sportif' },
-      { scope: 'standard' as const, titre: 'Reste du parc', categorie: 'citadine' },
+      // Titre voulu par Jeff le 03/08/2026. Le périmètre reste bien tout ce qui
+      // n'est pas sportif (citadine, berline, SUV, utilitaire) : c'est le nom
+      // qui change, pas la règle de `scopeDuVehicule`.
+      { scope: 'standard' as const, titre: 'Véhicules citadines', categorie: 'citadine' },
     ]).map(async ({ scope, titre, categorie }) => {
       const [{ postes, personnalise }, { data: corbeille }] = await Promise.all([
         postesDeLaCategorie(supabase, scope),
@@ -108,7 +108,6 @@ export default async function TarifsPage() {
       <GrillesTarifaires
         grilles={(grilles ?? []) as PricingGrid[]}
         vehicules={(vehicules ?? []) as VehiculeTarife[]}
-        agence={agence}
       />
 
       {/* Les frais de restitution du contrat. Les montants de franchise et de

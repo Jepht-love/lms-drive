@@ -42,6 +42,24 @@ export default async function SettingsPage() {
         </div>
       </div>
 
+      {/* Le renvoi vers les grilles est remonté en tête d'écran le 03/08/2026
+          (remarque 11), à la place du bloc « Tarifs par défaut » qui vivait dans
+          le formulaire d'agence. C'est le premier geste du gérant sur cet écran :
+          il n'a plus à le chercher sous la liste de l'équipe. */}
+      <Link
+        href="/settings/tarifs"
+        className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center gap-3 hover:shadow-md transition-shadow"
+      >
+        <Tags className="w-5 h-5 text-gray-900 flex-shrink-0" />
+        <span className="flex-1 min-w-0">
+          <span className="block font-black text-gray-900">Ouvrir les grilles tarifaires</span>
+          <span className="block text-xs text-gray-400 mt-0.5">
+            Sportive, Citadine… Le seul endroit où se modifient les prix.
+          </span>
+        </span>
+        <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
+      </Link>
+
       {/* Informations agence */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
         <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
@@ -78,22 +96,6 @@ export default async function SettingsPage() {
           ))}
         </div>
       </div>
-
-      {/* Les grilles tarifaires vivent sur leur propre écran : neuf valeurs par
-          véhicule auraient doublé la longueur de celui-ci (Jeff, 02/08/2026). */}
-      <Link
-        href="/settings/tarifs"
-        className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center gap-3 hover:shadow-md transition-shadow"
-      >
-        <Tags className="w-4 h-4 text-gray-700 flex-shrink-0" />
-        <span className="flex-1 min-w-0">
-          <span className="block font-semibold text-gray-800">Grilles tarifaires</span>
-          <span className="block text-xs text-gray-400 mt-0.5">
-            Sportive, Citadine… Le seul endroit où se modifient les prix.
-          </span>
-        </span>
-        <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
-      </Link>
 
       {/* Notifications push */}
       <NotificationSettings />

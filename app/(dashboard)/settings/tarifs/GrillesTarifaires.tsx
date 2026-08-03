@@ -23,7 +23,6 @@ import { Plus, Trash2, ChevronDown, ChevronUp, X, Pencil } from 'lucide-react'
 import { useToast } from '@/components/Toast'
 import { formatPrice } from '@/lib/utils'
 import { CHAMPS_VEHICULE, CHAMPS_GRILLE, type PricingGrid } from '@/lib/pricing/grid'
-import type { AgencySettings } from '@/lib/contracts/agency'
 import {
   creerGrille, majGrille, supprimerGrille, attacherVehicule, majTarifsVehicule,
 } from '@/lib/actions/pricing-grids'
@@ -48,10 +47,9 @@ export interface VehiculeTarife {
 interface Props {
   grilles: PricingGrid[]
   vehicules: VehiculeTarife[]
-  agence: AgencySettings
 }
 
-export default function GrillesTarifaires({ grilles, vehicules, agence }: Props) {
+export default function GrillesTarifaires({ grilles, vehicules }: Props) {
   const router = useRouter()
   const { show: toast } = useToast()
   const [pending, startTransition] = useTransition()
@@ -139,20 +137,11 @@ export default function GrillesTarifaires({ grilles, vehicules, agence }: Props)
   return (
     <div className="space-y-4">
 
-      {/* ── Les valeurs communes actuelles, pour comparaison ─────────────────
-          Elles viennent des paramètres de l'agence et servent de dernier recours
-          pour une voiture sans grille. */}
-      <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4">
-        <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400">
-          Sans grille, une voiture retombe sur ces valeurs
-        </p>
-        <p className="text-xs text-gray-500 mt-1.5">
-          Retard {formatPrice(agence.late_hourly_rate)}/h ·
-          Carburant {formatPrice(agence.fuel_rate_per_liter)}/L · Franchise {formatPrice(agence.insurance_deductible)}
-        </p>
-      </div>
-
-      {/* ── Les grilles ─────────────────────────────────────────────────────── */}
+      {/* ── Les grilles ───────────────────────────────────────────────────────
+          L'encadré « Sans grille, une voiture retombe sur ces valeurs » a été
+          retiré le 03/08/2026 : il rappelait les tarifs de secours de l'agence,
+          que le gérant lisait comme des tarifs actifs. Ils existent toujours en
+          base, ils ne s'affichent plus nulle part. */}
       {grilles.map(g => {
         const siennes = vehicules.filter(v => v.pricing_grid_id === g.id)
         const libres = vehicules.filter(v => !v.pricing_grid_id)

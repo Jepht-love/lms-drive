@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronDown, ChevronRight, ScrollText, Plus, Trash2, ArrowUp, ArrowDown, Check, RotateCcw, Lock, AlertTriangle } from 'lucide-react'
+import { ChevronDown, ChevronRight, ScrollText, Plus, Trash2, ArrowUp, ArrowDown, Check, RotateCcw, Lock, AlertTriangle, Pencil } from 'lucide-react'
 import { useToast } from '@/components/Toast'
 import { valeurImprimee, type PosteFrais, type ScopeFrais } from '@/lib/contracts/frais-restitution'
 import {
@@ -110,24 +110,47 @@ export default function FraisRestitution({ blocs }: { blocs: BlocFrais[] }) {
         const estOuvert = ouvert === bloc.scope
         return (
           <div key={bloc.scope} className="border-b border-gray-100 last:border-b-0">
-            <button
-              type="button"
-              onClick={() => setOuvert(estOuvert ? null : bloc.scope)}
-              className="w-full flex items-center gap-2 px-4 py-3 text-left hover:bg-gray-50 transition-colors"
-            >
-              {estOuvert
-                ? <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                : <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />}
-              <span className="text-sm font-bold text-gray-900 flex-1">{bloc.titre}</span>
-              {!bloc.personnalise && (
-                <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full flex-shrink-0">
-                  Contrat type
+            {/* Même en-tête que les grilles tarifaires (Jeff, 03/08/2026) : le
+                crayon se voit sans rien déplier. Il vivait avant sous les 27
+                lignes, sous forme de bouton, et personne ne le trouvait. */}
+            <div className="w-full flex items-center gap-2 px-4 py-3">
+              <button
+                type="button"
+                onClick={() => setOuvert(estOuvert ? null : bloc.scope)}
+                className="flex-1 min-w-0 flex items-center gap-2 text-left -my-1 py-1"
+              >
+                {estOuvert
+                  ? <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                  : <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />}
+                <span className="text-sm font-bold text-gray-900 flex-1 min-w-0 truncate">{bloc.titre}</span>
+                {!bloc.personnalise && (
+                  <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full flex-shrink-0">
+                    Contrat type
+                  </span>
+                )}
+                <span className="text-[11px] text-gray-400 flex-shrink-0 w-[70px] text-right">
+                  {bloc.postes.length} postes
                 </span>
-              )}
-              <span className="text-[11px] text-gray-400 flex-shrink-0 w-[70px] text-right">
-                {bloc.postes.length} postes
-              </span>
-            </button>
+              </button>
+              {/* Le crayon reste affiché même quand la liste est déjà reprise en
+                  main : sinon le bloc d'à côté perdrait son alignement, et rien
+                  ne dirait plus qu'elle se modifie. Sur une liste déjà reprise
+                  il déplie, sans rien réécrire. */}
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => {
+                  setOuvert(bloc.scope)
+                  if (!bloc.personnalise) {
+                    action(() => reprendreContratType(bloc.scope), 'Liste reprise, tu peux la modifier')
+                  }
+                }}
+                className="w-7 flex-shrink-0 p-1.5 text-gray-300 rounded-lg hover:bg-gray-100 hover:text-gray-600 inline-flex items-center justify-center disabled:opacity-40"
+                title="Modifier ces frais"
+              >
+                <Pencil className="w-4 h-4" />
+              </button>
+            </div>
 
             {estOuvert && (
               <div className="px-4 pb-4">
@@ -142,17 +165,6 @@ export default function FraisRestitution({ blocs }: { blocs: BlocFrais[] }) {
                         </span>
                       </div>
                     ))}
-                    <button
-                      type="button"
-                      disabled={pending}
-                      onClick={() => action(
-                        () => reprendreContratType(bloc.scope),
-                        'Liste reprise, tu peux la modifier',
-                      )}
-                      className="mt-4 w-full py-2.5 rounded-xl text-sm font-semibold bg-[#111111] text-white hover:bg-gray-800 transition-colors disabled:opacity-40"
-                    >
-                      Modifier ces frais
-                    </button>
                   </>
                 ) : (
                   <>

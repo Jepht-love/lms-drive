@@ -1,8 +1,6 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import Link from 'next/link'
-import { Tags } from 'lucide-react'
 import { updateAgencySettings } from '@/lib/actions/agency'
 import type { AgencySettings } from '@/lib/contracts/agency'
 
@@ -50,43 +48,15 @@ export default function AgencySettingsForm({ settings }: { settings: AgencySetti
         </div>
       </div>
 
-      {/* Les six tarifs se saisissaient ici et n'étaient lus par personne : la
-          facturation prend le prix porté par la voiture, puis celui de sa grille.
-          Le gérant réglait donc des valeurs sans effet (remarque 6 du
-          03/08/2026). Ils restent affichés, en lecture, parce qu'ils servent
-          encore de dernier recours à une voiture sans grille — et se modifient
-          désormais là où tous les autres prix se modifient. */}
-      <div>
-        <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-3">Tarifs par défaut</p>
-        <div className="bg-gray-50 border border-gray-200 rounded-xl p-3">
-          <p className="text-[11px] text-gray-500 mb-3">
-            Valeurs de secours, appliquées à une voiture qui n&apos;appartient à aucune grille.
-            Les prix se règlent dans les grilles tarifaires.
-          </p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-3 gap-y-2">
-            {[
-              // « Retard (€/jour) » retiré le 03/08/2026 : le retard se facture
-              // uniquement à l'heure, et ce champ ne pilotait rien.
-              { l: 'Km sup. (€/km)',   v: settings.extra_km_rate },
-              { l: 'Retard (€/h)',     v: settings.late_hourly_rate },
-              { l: 'Carburant (€/L)',  v: settings.fuel_rate_per_liter },
-              { l: 'Caution (€)',      v: settings.default_deposit },
-              { l: 'Franchise (€)',    v: settings.insurance_deductible },
-            ].map(t => (
-              <div key={t.l}>
-                <p className={label}>{t.l}</p>
-                <p className="text-sm font-bold text-gray-900">{t.v ?? '—'}</p>
-              </div>
-            ))}
-          </div>
-          <Link
-            href="/settings/tarifs"
-            className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-700 hover:text-gray-900 transition-colors"
-          >
-            <Tags className="w-4 h-4" /> Ouvrir les grilles tarifaires
-          </Link>
-        </div>
-      </div>
+      {/* Le bloc « Tarifs par défaut » a été retiré le 03/08/2026 (remarque 11).
+          Ces six valeurs ne servent que de dernier recours à une voiture sans
+          grille : les afficher ici, même en lecture, faisait croire au gérant
+          qu'il consultait ses tarifs réels. Le renvoi vers les grilles a pris
+          leur place, en haut de l'écran Paramètres.
+
+          ⚠️ Elles restent en base et `updateAgencySettings` continue de les
+          accepter : un champ absent du formulaire n'est plus écrasé. Ne pas
+          rétablir une écriture systématique, elle les viderait. */}
 
       {/* Contrôle des corrections de montant · interrupteur d'agence, éteint par
           défaut. Chez un client où personne d'autre ne peut valider, l'allumer
