@@ -56,6 +56,25 @@ export default async function NewMaintenancePage({
   const enAttente = tous.filter(f => !f.repaired_at && !f.intervention_id)
   const reparés = tous.filter(f => f.repaired_at).length
 
+  // Les autres voitures qui peuvent monter dans le même rendez-vous (Jeff,
+  // remarque 38.C). Chacune arrive avec son kilométrage et ses dégâts en
+  // attente : sans ça il faudrait ressortir de l'écran pour aller les chercher.
+  const { data: autres } = await supabase
+    .from('vehicles')
+    .select('id, brand, model, plate, current_km, maintenance_flags')
+    .eq('is_active', true)
+    .neq('id', vehicleId)
+    .order('brand')
+
+  const autresVehicules = (autres ?? []).map(v => ({
+    id: v.id,
+    label: `${v.brand} ${v.model}`,
+    plate: v.plate as string | null,
+    currentKm: (v.current_km as number | null) ?? null,
+    damages: ((v.maintenance_flags ?? []) as MaintenanceFlag[])
+      .filter(f => !f.repaired_at && !f.intervention_id),
+  }))
+
   // L'équipe à qui confier l'intervention (02/08/2026). Les prestataires ne sont
   // pas proposés : ils n'ont pas accès à l'application au quotidien, et une
   // intervention confiée à quelqu'un qui ne la verra jamais reste bloquée.
@@ -83,11 +102,14 @@ export default async function NewMaintenancePage({
 
       <NewMaintenanceForm
         vehicleId={vehicleId}
+        vehicleLabel={`${vehicle.brand} ${vehicle.model}`}
+        vehiclePlate={vehicle.plate ?? null}
         currentKm={vehicle.current_km ?? null}
         damages={enAttente}
         repairedCount={reparés}
         canSeeAmounts={canSeeAmounts}
         equipe={(equipe ?? []) as { id: string; full_name: string | null }[]}
+        autresVehicules={autresVehicules}
       />
     </div>
   )

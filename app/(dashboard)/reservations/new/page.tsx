@@ -17,7 +17,7 @@ export default async function NewReservationPage({
   const backHref = from && from.startsWith('/') ? from : '/reservations'
 
   const [{ data: vehicles }, { data: clients }] = await Promise.all([
-    supabase.from('vehicles').select('id, plate, brand, model, daily_price, weekly_price, price_day_weekend, price_weekend_full, deposit_amount, km_included_daily, extra_km_price').eq('is_active', true).order('brand'),
+    supabase.from('vehicles').select('id, plate, brand, model, daily_price, weekly_price, price_day_weekend, price_weekend_full, deposit_amount, km_included_daily, extra_km_price, unlimited_km_price').eq('is_active', true).order('brand'),
     supabase.from('clients').select('id, first_name, last_name, phone, status, address, id_doc_front_path, id_doc_back_path, license_front_path').order('last_name'),
   ])
 

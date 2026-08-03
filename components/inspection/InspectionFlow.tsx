@@ -35,6 +35,16 @@ interface Props {
   kmIncluded?: number
   extraKmPrice?: number
   /**
+   * L'option « kilométrage illimité » a été vendue sur cette location.
+   *
+   * Elle éteint **la facturation du dépassement, et elle seule** : aucune ligne
+   * « kilomètres supplémentaires » n'apparaît, quel que soit le compteur. Le
+   * relevé du kilométrage, lui, continue toujours — c'est lui qui fait vivre
+   * `vehicles.current_km`, les échéances d'entretien et le contrôle technique.
+   * Ne jamais s'en servir pour sauter la saisie du compteur (Jeff, 03/08/2026).
+   */
+  kmIllimite?: boolean
+  /**
    * Tarif horaire du retard, résolu par la grille tarifaire du véhicule
    * (lib/pricing/grid.ts). Il était écrit en dur à 50 ou 150 € avant le
    * 03/08/2026, quel que soit ce que le gérant avait réglé.
@@ -114,6 +124,7 @@ export default function InspectionFlow({
   fuelRangeAtDeparture,
   kmIncluded = 200,
   extraKmPrice = 2,
+  kmIllimite = false,
   lateHourlyRate = null,
   insuranceDeductible = null,
   postesFrais = null,
@@ -361,9 +372,11 @@ export default function InspectionFlow({
     const lateMinutes = reservationEndDatetime
       ? Math.max(0, Math.round((Date.now() - new Date(reservationEndDatetime).getTime()) / 60000))
       : 0
-    const { amount: extraKmAmount } = calculateExtraKm(
-      kmAtDeparture ?? vehicleKm, kmReading, kmIncluded, extraKmPrice,
-    )
+    // Sous kilométrage illimité, le dépassement ne se facture pas : le client
+    // l'a déjà payé à la réservation.
+    const { amount: extraKmAmount } = kmIllimite
+      ? { amount: 0 }
+      : calculateExtraKm(kmAtDeparture ?? vehicleKm, kmReading, kmIncluded, extraKmPrice)
     return calculateLateFee(lateMinutes, lateHourlyRate) + extraKmAmount + totalDamageFee
   }
 
@@ -529,14 +542,13 @@ export default function InspectionFlow({
           lateFeeAmount = calculateLateFee(lateMinutes, lateHourlyRate)
         }
 
-        // Calcul dépassement km
+        // Calcul dépassement km. Sous kilométrage illimité, on enregistre bien
+        // les kilomètres parcourus au-delà de l'inclus (le suivi du parc en a
+        // besoin) mais on ne facture rien : le client a payé l'option.
         const depKm = kmAtDeparture ?? vehicleKm
-        const { extraKm: extraKmCount, amount: extraKmAmount } = calculateExtraKm(
-          depKm,
-          kmReading,
-          kmIncluded,
-          extraKmPrice,
-        )
+        const dep = calculateExtraKm(depKm, kmReading, kmIncluded, extraKmPrice)
+        const extraKmCount = dep.extraKm
+        const extraKmAmount = kmIllimite ? 0 : dep.amount
 
         if (reservationId) await supabase.from('reservations').update({
           status: 'terminee',
@@ -708,6 +720,10 @@ export default function InspectionFlow({
                 </div>
               )}
 
+              {/* Sous kilométrage illimité, la ligne apparaît quand même mais à
+                  0 € : le client doit voir que ses kilomètres en trop ont été
+                  relevés et qu'ils ne lui sont pas comptés. Une ligne absente
+                  laisserait croire à un oubli (Jeff, 03/08/2026). */}
               {computedFees.extraKmCount > 0 && (
                 <div className="flex items-center justify-between px-5 py-4">
                   <div className="flex items-center gap-3">
@@ -716,10 +732,16 @@ export default function InspectionFlow({
                     </div>
                     <div>
                       <p className="text-sm font-semibold text-gray-900">Dépassement kilométrique</p>
-                      <p className="text-xs text-gray-400">{computedFees.extraKmCount} km × {extraKmPrice} €/km</p>
+                      <p className="text-xs text-gray-400">
+                        {kmIllimite
+                          ? `${computedFees.extraKmCount} km au-delà de l'inclus · kilométrage illimité`
+                          : `${computedFees.extraKmCount} km × ${extraKmPrice} €/km`}
+                      </p>
                     </div>
                   </div>
-                  <span className="text-base font-bold text-orange-600">+{computedFees.extraKmAmount.toLocaleString('fr-FR')} €</span>
+                  <span className={`text-base font-bold ${kmIllimite ? 'text-green-600' : 'text-orange-600'}`}>
+                    {kmIllimite ? 'Non facturé' : `+${computedFees.extraKmAmount.toLocaleString('fr-FR')} €`}
+                  </span>
                 </div>
               )}
 
@@ -975,8 +997,14 @@ export default function InspectionFlow({
                 <Gauge className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
                 <p className="text-[10px] text-gray-300">
                   Départ : <strong className="text-white">{(kmAtDeparture ?? vehicleKm).toLocaleString('fr-FR')} km</strong>
-                  {' · '}Inclus : <strong className="text-white">{kmIncluded.toLocaleString('fr-FR')} km</strong>
-                  {' · '}Sup : <strong className="text-white">{extraKmPrice} €/km</strong>
+                  {kmIllimite ? (
+                    <> · <strong className="text-white">Kilométrage illimité</strong></>
+                  ) : (
+                    <>
+                      {' · '}Inclus : <strong className="text-white">{kmIncluded.toLocaleString('fr-FR')} km</strong>
+                      {' · '}Sup : <strong className="text-white">{extraKmPrice} €/km</strong>
+                    </>
+                  )}
                 </p>
               </div>
             )}

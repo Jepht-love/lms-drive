@@ -24,6 +24,7 @@ export default async function ArrivalInspectionPage({ params }: { params: Promis
         end_datetime,
         km_included,
         extra_km_price,
+        unlimited_km,
         daily_price,
         total_price,
         payment_amount,
@@ -92,6 +93,7 @@ export default async function ArrivalInspectionPage({ params }: { params: Promis
         previousDamagedZones={(departureInspection?.damaged_zones as { id: string; label: string; severity: string; description?: string; photos?: string[] }[] | null) ?? []}
         kmIncluded={kmIncludedTotal}
         extraKmPrice={reservation?.extra_km_price ?? 2}
+        kmIllimite={Boolean(reservation?.unlimited_km)}
         lateHourlyRate={tarifs.retardHeure}
         insuranceDeductible={tarifs.franchise}
         // Forfait de location et acompte déjà encaissé : sans eux, l'écran de

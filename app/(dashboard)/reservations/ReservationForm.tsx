@@ -32,6 +32,8 @@ interface Vehicle {
   price_weekend_full: number | null
   deposit_amount: number | null; km_included_daily: number | null
   extra_km_price: number | null
+  /** Prix de l'option kilométrage illimité. Vide = option non proposée. */
+  unlimited_km_price: number | null
 }
 
 interface Client {
@@ -66,6 +68,11 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
   const [dailyPrice, setDailyPrice] = useState('')
   const [creatingNewClient, setCreatingNewClient] = useState(false)
   const [acompte, setAcompte] = useState('')
+  // Option kilométrage illimité (Jeff, 03/08/2026). Le prix vient du véhicule
+  // et reste corrigeable à la main : le gérant l'offre parfois pour emporter
+  // une location. Le montant saisi est celui qui sera facturé et imprimé.
+  const [kmIllimite, setKmIllimite] = useState(false)
+  const [prixKmIllimite, setPrixKmIllimite] = useState('')
   // Prix négocié : le gérant écrase le tarif calculé pour accorder une remise.
   // Remplace l'ancienne case « Réduction » — la remise est désormais DÉDUITE de
   // l'écart avec le barème, comme dans « Modifier les dates & tarif ». Demande
@@ -98,6 +105,15 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
     if (selectedVehicle?.daily_price) {
       setDailyPrice(selectedVehicle.daily_price.toString())
     }
+    // Changer de voiture change le prix de l'option, et parfois la fait
+    // disparaître : garder la case cochée avec l'ancien montant facturerait un
+    // illimité que la nouvelle voiture ne propose pas.
+    setKmIllimite(false)
+    setPrixKmIllimite(
+      selectedVehicle?.unlimited_km_price != null
+        ? String(selectedVehicle.unlimited_km_price)
+        : '',
+    )
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedVehicleId])
 
@@ -170,8 +186,17 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
 
   // Le total dépend des dates : les jours de week-end coûtent plus cher. On
   // récupère aussi le DÉTAIL, pour que le gérant puisse justifier le montant.
+  // L'option se propose sur TOUTES les voitures (Jeff, 03/08/2026). Elle était
+  // d'abord conditionnée au prix réglé dans la grille tarifaire ; en pratique la
+  // case ne s'affichait nulle part, sans que rien ne l'explique. Le prix de la
+  // grille sert désormais de valeur proposée, rien de plus : l'agent la corrige
+  // ou la laisse vide, et **vide veut dire offert**.
+  const montantIllimite = kmIllimite
+    ? Math.max(0, Number((prixKmIllimite || '').replace(',', '.')) || 0)
+    : null
+
   const breakdown = days > 0 && dailyPrice
-    ? rentalPriceBreakdown(ratesFor(Number(dailyPrice), selectedVehicle), startDatetime, days)
+    ? rentalPriceBreakdown(ratesFor(Number(dailyPrice), selectedVehicle, montantIllimite), startDatetime, days)
     : { lines: [], total: 0 }
   const totalPrice = breakdown.total
   const negotiated = customTotal === '' ? null : Math.max(0, Number(customTotal) || 0)
@@ -420,7 +445,54 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
                 defaultValue={selectedVehicle?.km_included_daily?.toString() ?? ''}
                 inputMode="numeric"
                 enterKeyHint="next"
+                // Sous illimité, le forfait par jour ne pilote plus rien à la
+                // facturation. Il reste enregistré (le suivi du parc s'en sert)
+                // mais on le grise pour ne pas laisser croire qu'il compte.
+                disabled={kmIllimite}
+                className={kmIllimite ? 'opacity-40' : undefined}
               />
+              {/* ── Kilométrage illimité (Jeff, remarque 12 du 03/08/2026) ──
+                  Sa place est ici, contre le forfait qu'il remplace, et non en
+                  bas du bloc : c'est au moment de renseigner les kilomètres
+                  qu'on décide de les rendre illimités. N'apparaît que si la
+                  voiture porte un prix pour l'option. */}
+              <div className={`mt-2 rounded-lg border p-2.5 transition-colors ${
+                kmIllimite ? 'border-foreground/20 bg-muted' : 'border-border'
+              }`}>
+                  <label className="flex items-start gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={kmIllimite}
+                      onChange={e => setKmIllimite(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 shrink-0 accent-foreground"
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-xs font-semibold leading-tight">Kilométrage illimité</span>
+                      <span className="block text-[11px] leading-snug text-muted-foreground mt-0.5">
+                        Rien de facturé au retour, le compteur reste relevé.
+                      </span>
+                    </span>
+                  </label>
+                  {kmIllimite && (
+                    <div className="mt-2 flex items-center gap-1.5 pl-6">
+                      <Input
+                        id="unlimited_km_price"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        inputMode="decimal"
+                        aria-label="Montant du kilométrage illimité"
+                        value={prixKmIllimite}
+                        onChange={e => setPrixKmIllimite(e.target.value)}
+                        placeholder="0"
+                        className="h-9 w-24 min-w-0"
+                      />
+                      <span className="text-xs text-muted-foreground">
+                        € {Number(prixKmIllimite || 0) === 0 ? '· offert' : 'pour la location'}
+                      </span>
+                    </div>
+                  )}
+                </div>
             </div>
             <div>
               <Label htmlFor="extra_km_price" className={labelClass}>Supplément KM (€/km)</Label>
@@ -477,6 +549,9 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
             </div>
           </div>
 
+          <input type="hidden" name="unlimited_km" value={montantIllimite != null ? '1' : ''} />
+          <input type="hidden" name="unlimited_km_amount" value={montantIllimite ?? ''} />
+
           {/* Rappel des règles tarifaires, repris de « Modifier les dates & tarif ». */}
           {(rates?.price_day_weekend || rates?.price_weekend_full || rates?.weekly_price) && (
             <div className="mt-4 space-y-1">
@@ -529,6 +604,15 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
                         <span className="text-muted-foreground capitalize">{dayLabel(l.from)} → {dayLabel(l.to)}</span>
                         <span className="flex items-center gap-2">
                           <span className="text-green-700">Forfait week-end, au lieu de {formatPrice(l.instead)}</span>
+                          <span className="font-semibold text-foreground tabular-nums">{formatPrice(l.amount)}</span>
+                        </span>
+                      </>
+                    )}
+                    {l.kind === 'unlimitedKm' && (
+                      <>
+                        <span className="text-muted-foreground">Kilométrage illimité</span>
+                        <span className="flex items-center gap-2">
+                          {l.amount === 0 && <span className="text-green-700">Offert</span>}
                           <span className="font-semibold text-foreground tabular-nums">{formatPrice(l.amount)}</span>
                         </span>
                       </>

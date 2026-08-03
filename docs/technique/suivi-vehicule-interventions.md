@@ -120,8 +120,45 @@ Deux détails qui ont leur raison d'être :
 - **Le contrôle est éteint par défaut** : chez un client où personne d'autre ne peut valider,
   l'allumer bloquerait toute correction.
 
+## Le rendez-vous garage est partagé (lot 3, 03/08/2026)
+
+Le créneau au calendrier n'appartient plus à une intervention : **c'est le passage au garage
+lui-même**. Avant, deux réparations de types différents sur la même voiture le même jour
+produisaient deux lignes « 08:00 RDV GARAGE Renault Captur » (remarque 43 de Jeff).
+
+| Ce qui a changé | Où |
+|---|---|
+| L'heure du rendez-vous se saisit, préremplie à 8 h | `NewMaintenanceForm.tsx`, champ `time` |
+| Plusieurs voitures dans un rendez-vous, une intervention par voiture | champ `vehicles` (JSON) |
+| Un créneau existant à la même date **et à la même heure** est complété, pas dupliqué | `createMaintenanceRecord` |
+| Supprimer une intervention retire son véhicule, le créneau ne meurt que s'il est vide | `retirerDuRdvGarage` |
+| `maintenance_records.calendar_event_id` relie l'un à l'autre | migration 078 |
+
+**Le kilométrage et le montant sont portés PAR VOITURE.** Un montant commun aux trois voitures
+d'un même rendez-vous multiplierait la dépense par trois en comptabilité. C'est la raison
+d'être du champ `vehicles` plutôt que d'un simple `vehicle_ids`.
+
+**Le titre du créneau suit le nombre de voitures** : « Révision · Renault Captur » tant qu'il
+n'y a qu'une voiture et qu'une intervention, « Garage · Renault Captur » dès qu'il y en a
+plusieurs sur la même voiture, « Garage · 3 véhicules » au-delà. Le retrait d'un véhicule
+recalcule ce titre, sinon le calendrier annoncerait une voiture qui n'y va plus.
+
+⚠️ **`calendar_event_id` est NULL sur tout l'historique d'avant la migration 078.** La
+suppression retombe alors sur l'ancienne recherche par date et par véhicule. Ne pas retirer
+cette branche tant que ces lignes existent en base.
+
+⚠️ **Le calage automatique de l'heure ne joue plus que sur 8 h.** Un rendez-vous du jour posé
+à l'heure par défaut alors que 8 h est passé se cale sur la prochaine demi-heure (remarque 5).
+Une heure choisie exprès est respectée telle quelle : rattraper un rendez-vous passé du jour
+est un usage légitime.
+
+**Vérifié à l'écran le 03/08/2026** : trois interventions sur deux voitures ont produit un
+seul créneau ; supprimer la deuxième intervention d'une voiture l'a laissée dans le créneau ;
+supprimer sa dernière l'en a sortie ; supprimer la dernière de toutes a effacé le créneau. Les
+données de test ont été retirées et les deux véhicules remis en « disponible ».
+
 ## Ce qui reste à faire
 
-Lot 3 : le rendez-vous garage devient un passage au garage partagé entre plusieurs véhicules
-(remarque 43), l'heure du rendez-vous devient saisissable (38.A), et supprimer une intervention
-retire son véhicule du créneau au lieu d'effacer le créneau entier.
+**38.E, toujours ouvert** : créer une intervention immobilise le véhicule, et **rien ne le
+remet jamais en disponible**. Constaté à nouveau pendant les essais du 03/08/2026, où il a
+fallu remettre les deux véhicules à la main.

@@ -1124,17 +1124,42 @@ export default async function DashboardPage() {
                       {CALENDAR_TYPE_LABELS[t.event_type] ?? 'Tâche'}
                     </span>
                     <div className="flex-1 min-w-0">
-                      {taskVehicles.length > 0 && (
-                        <p className="text-sm font-bold text-gray-900 sm:truncate">
-                          {taskVehicles.map((tv: any, i: number) => (
-                            <span key={tv.id ?? i}>
-                              {i > 0 && ', '}
-                              <LigneVehicule v={tv} tonPlaque="text-gray-400" />
-                            </span>
-                          ))}
+                      {/* La première voiture, puis une pastille « +N » pour les
+                          suivantes (03/08/2026, passage au garage partagé). Les
+                          énumérer toutes faisait exploser la carte sur quatre
+                          lignes en largeur téléphone, avec une plaque coupée en
+                          deux, et les tronquait sur tablette. La ligne garde
+                          ainsi exactement la hauteur des autres, et le détail
+                          reste à un clic. */}
+                      {taskVehicles.length === 1 && (
+                        <p className="text-sm font-bold text-gray-900 truncate">
+                          <LigneVehicule v={taskVehicles[0]} tonPlaque="text-gray-400" />
                         </p>
                       )}
-                      <p className={`sm:truncate ${taskVehicles.length > 0 ? 'text-xs text-gray-500' : 'text-sm font-bold text-gray-900'}`}>
+                      {taskVehicles.length > 1 && (
+                        <p className="text-sm font-bold text-gray-900 flex items-baseline gap-1">
+                          {/* Sur téléphone, la colonne de gauche (heure et
+                              étiquette) ne laisse pas la place au modèle ET à la
+                              plaque ET au compteur : on garde la PLAQUE, c'est
+                              elle qui identifie la voiture sur le terrain. Le
+                              modèle revient dès qu'il y a la place. Le point
+                              séparateur suit le modèle, pour ne jamais rester
+                              orphelin en tête de ligne. */}
+                          <span className="hidden sm:inline min-w-0 truncate">
+                            {[taskVehicles[0].brand, taskVehicles[0].model].filter(Boolean).join(' ')}
+                            <span className="text-gray-400 font-mono"> ·</span>
+                          </span>
+                          {taskVehicles[0].plate && (
+                            <span className="flex-shrink-0 font-mono text-gray-900 sm:text-gray-400">
+                              {taskVehicles[0].plate}
+                            </span>
+                          )}
+                          <span className="flex-shrink-0 text-[10px] font-black text-gray-500 bg-gray-100 rounded-full px-1.5 py-0.5">
+                            +{taskVehicles.length - 1}
+                          </span>
+                        </p>
+                      )}
+                      <p className={`truncate ${taskVehicles.length > 0 ? 'text-xs text-gray-500' : 'text-sm font-bold text-gray-900'}`}>
                         {t.title}
                       </p>
                       {/* La même troisième ligne que partout ailleurs sur cet

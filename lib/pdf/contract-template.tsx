@@ -69,6 +69,8 @@ export interface ContractData {
   dailyPrice: number
   totalPrice: number
   kmIncluded?: number
+  /** L'option kilométrage illimité a été vendue : ni forfait ni supplément. */
+  kmIllimite?: boolean
   extraKmPrice?: number
   /**
    * Le détail qui justifie le total : une ligne par journée facturée, ou une
@@ -863,11 +865,19 @@ export function ContractPDF({ data }: { data: ContractData }) {
           <Text style={s.sectionTitle}>Tarification</Text>
           <View style={s.box}>
             <View style={s.row}><Text style={s.label}>Prix par jour appliqué</Text><Text style={s.value}>{fmtMoney(data.dailyPrice)}</Text></View>
-            {data.kmIncluded && (
-              <View style={s.row}><Text style={s.label}>KM inclus / jour</Text><Text style={s.value}>{data.kmIncluded} km</Text></View>
-            )}
-            {data.extraKmPrice && (
-              <View style={s.row}><Text style={s.label}>Supplément KM</Text><Text style={s.value}>{fmtMoney(data.extraKmPrice)} / km</Text></View>
+            {/* Sous kilométrage illimité, ni forfait ni supplément : les afficher
+                contredirait l'option que le client vient de payer (03/08/2026). */}
+            {data.kmIllimite ? (
+              <View style={s.row}><Text style={s.label}>Kilométrage</Text><Text style={s.value}>Illimité</Text></View>
+            ) : (
+              <>
+                {data.kmIncluded && (
+                  <View style={s.row}><Text style={s.label}>KM inclus / jour</Text><Text style={s.value}>{data.kmIncluded} km</Text></View>
+                )}
+                {data.extraKmPrice && (
+                  <View style={s.row}><Text style={s.label}>Supplément KM</Text><Text style={s.value}>{fmtMoney(data.extraKmPrice)} / km</Text></View>
+                )}
+              </>
             )}
           </View>
 

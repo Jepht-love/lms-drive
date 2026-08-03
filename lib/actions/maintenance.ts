@@ -25,76 +25,69 @@ const WORK_STATUS_KEYS: string[] = WORK_STATUSES.map(s => s.key)
 /** Rôles autorisés à clore ou annuler : la clôture engage un montant (Jeff, 02/08/2026). */
 const ROLES_QUI_CLOTURENT = ['gerant', 'associe']
 
+/**
+ * Un véhicule du rendez-vous, tel que le formulaire l'envoie.
+ *
+ * Chaque véhicule porte SON kilométrage, SON montant et SES dégâts : un passage
+ * au garage à trois voitures produit trois interventions distinctes, chacune
+ * avec son argent (Jeff, remarque 38.C). Un montant global aurait obligé à le
+ * répartir à la main, donc à inventer des chiffres.
+ */
+interface VehiculeDuRdv {
+  id: string
+  km?: string | null
+  amount?: string | null
+  damages?: { flagId: string; quote: number | null }[]
+}
+
+/** L'heure par défaut d'un passage au garage, si le formulaire n'en donne pas. */
+const HEURE_GARAGE_DEFAUT = '08:00'
+
 export async function createMaintenanceRecord(formData: FormData) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non authentifié' }
 
-  const vehicleId = formData.get('vehicle_id') as string
-  if (!vehicleId) return { error: 'Véhicule manquant' }
-
-  const kmRaw     = (formData.get('km_at_intervention') as string)?.trim()
-  const amountRaw = (formData.get('amount') as string)?.trim()
-  const km     = kmRaw ? parseInt(kmRaw, 10) : null
-  const amount = amountRaw ? parseFloat(amountRaw.replace(',', '.')) : 0
-
-  // ─── Dégâts rattachés à cette intervention ───────────────────────────────────
-  // Ajouté le 01/08/2026. Une intervention peut réparer plusieurs dégâts, chacun
-  // avec SON devis : le garage évalue séparément une portière et une vitre, et
-  // c'est cette évaluation que la comptabilité doit pouvoir lire ensuite.
-  // Aucun montant n'est écrit en comptabilité ici : un devis n'est pas une
-  // dépense, elle n'existera qu'au règlement du garage.
-  let choisis: { flagId: string; quote: number | null }[] = []
+  // ─── Les véhicules du rendez-vous ────────────────────────────────────────────
+  // Depuis le 03/08/2026 le formulaire envoie une liste. L'ancienne forme (un
+  // `vehicle_id` seul) reste acceptée : d'autres écrans l'appellent encore.
+  let vehicules: VehiculeDuRdv[] = []
   try {
-    const brut = formData.get('damage_flags') as string | null
-    if (brut) choisis = JSON.parse(brut)
+    const brut = formData.get('vehicles') as string | null
+    if (brut) vehicules = JSON.parse(brut)
   } catch {
-    return { error: 'Dégâts illisibles' }
+    return { error: 'Véhicules illisibles' }
   }
 
-  const flagsVehicule = choisis.length > 0
-    ? ((await supabase.from('vehicles').select('maintenance_flags').eq('id', vehicleId).single())
-        .data?.maintenance_flags as MaintenanceFlag[] | null) ?? []
-    : []
-  const reparés = flagsVehicule.filter(f => choisis.some(c => c.flagId === f.id))
-
-  // Un dégât déjà pris en charge ou déjà réparé ne doit jamais repartir au garage :
-  // ce serait la même réparation payée deux fois.
-  if (reparés.some(f => f.repaired_at || f.intervention_id)) {
-    return { error: 'Un des dégâts est déjà réparé ou déjà rattaché à une intervention' }
+  if (vehicules.length === 0) {
+    const vehicleId = formData.get('vehicle_id') as string
+    if (!vehicleId) return { error: 'Véhicule manquant' }
+    let damages: { flagId: string; quote: number | null }[] = []
+    try {
+      const brut = formData.get('damage_flags') as string | null
+      if (brut) damages = JSON.parse(brut)
+    } catch {
+      return { error: 'Dégâts illisibles' }
+    }
+    vehicules = [{
+      id: vehicleId,
+      km: formData.get('km_at_intervention') as string | null,
+      amount: formData.get('amount') as string | null,
+      damages,
+    }]
   }
-  if (choisis.length > 0 && reparés.length !== choisis.length) {
-    return { error: 'Un des dégâts est introuvable sur ce véhicule' }
-  }
 
-  const enReparation = reparés.length > 0
-  const devisTotal = choisis.reduce((s, c) => s + (c.quote ?? 0), 0)
+  const vus = new Set<string>()
+  vehicules = vehicules.filter(v => v?.id && !vus.has(v.id) && vus.add(v.id))
+  if (vehicules.length === 0) return { error: 'Véhicule manquant' }
 
-  // Toutes les réparations d'une même location se rattachent à elle. Dès que les
-  // dégâts viennent de locations différentes, on ne rattache rien : la ventilation
-  // se fait alors dégât par dégât, pas au niveau de l'intervention.
-  const locations = [...new Set(reparés.map(f => f.reservation_id).filter(Boolean))]
-
-  const payload = {
-    vehicle_id:         vehicleId,
-    // En réparation, le type se déduit du premier dégât : l'agent n'a pas à
-    // rechoisir ce que le catalogue sait déjà.
-    type: enReparation
-      ? maintenanceTypeForDamageType(reparés[0].damage_type)
-      : (formData.get('type') as string) || 'autre',
-    description: enReparation
-      ? reparés.map(f => f.label).join(' · ')
-      : (formData.get('description') as string)?.trim() || null,
-    date:               (formData.get('date') as string) || new Date().toISOString().slice(0, 10),
-    km_at_intervention: Number.isFinite(km as number) ? km : null,
-    // Le montant réel reste à 0 tant que le garage n'a pas facturé.
-    amount:             enReparation ? 0 : (Number.isFinite(amount) ? amount : 0),
-    provider:           (formData.get('provider') as string)?.trim() || null,
-    notes:              (formData.get('notes') as string)?.trim() || null,
-    // ─── Le suivi du travail (migration 074, 02/08/2026) ───────────────────
-    // Qui s'en occupe, pour quand, et à quel point ça presse. L'urgence décide
-    // de l'entrée dans les alertes ; la date limite est facultative, mais une
-    // fois dépassée elle fait monter l'intervention en urgent.
+  // ─── Ce qui est commun à tout le rendez-vous ─────────────────────────────────
+  const dateRdv = (formData.get('date') as string) || new Date().toISOString().slice(0, 10)
+  const heureRdv = ((formData.get('time') as string) || '').trim() || HEURE_GARAGE_DEFAUT
+  const commun = {
+    date:        dateRdv,
+    provider:    (formData.get('provider') as string)?.trim() || null,
+    notes:       (formData.get('notes') as string)?.trim() || null,
     urgency:     URGENCY_KEYS.includes(formData.get('urgency') as string)
                    ? (formData.get('urgency') as string) : 'normale',
     due_date:    (formData.get('due_date') as string) || null,
@@ -102,108 +95,217 @@ export async function createMaintenanceRecord(formData: FormData) {
     // Désigner quelqu'un ne veut pas dire qu'il a pris l'intervention : il devra
     // s'en saisir lui-même, ce qui fera passer le statut à « prise en charge ».
     work_status: 'a_traiter' as const,
-    ...(enReparation ? {
-      quote_amount: devisTotal > 0 ? devisTotal : null,
-      quote_status: (formData.get('quote_status') as string) === 'valide' ? 'valide' : 'brouillon',
-      reservation_id: locations.length === 1 ? locations[0] : null,
-    } : {}),
   }
+  const typeSaisi = (formData.get('type') as string) || 'autre'
+  const descriptionSaisie = (formData.get('description') as string)?.trim() || null
+  const statutDevis = (formData.get('quote_status') as string) === 'valide' ? 'valide' : 'brouillon'
 
-  const { data, error } = await supabase
-    .from('maintenance_records')
-    .insert(payload)
-    .select('id')
-    .single()
+  const creees: { id: string; vehicleId: string; type: string; amount: number }[] = []
 
-  if (error) return { error: error.message }
+  for (const v of vehicules) {
+    // ─── Dégâts rattachés à cette intervention ─────────────────────────────────
+    // Ajouté le 01/08/2026. Une intervention peut réparer plusieurs dégâts, chacun
+    // avec SON devis : le garage évalue séparément une portière et une vitre, et
+    // c'est cette évaluation que la comptabilité doit pouvoir lire ensuite.
+    // Aucun montant n'est écrit en comptabilité ici : un devis n'est pas une
+    // dépense, elle n'existera qu'au règlement du garage.
+    const choisis = v.damages ?? []
 
-  // Les dégâts pris en charge portent désormais l'intervention et leur devis.
-  if (enReparation) {
-    const majFlags = flagsVehicule.map(f => {
-      const c = choisis.find(x => x.flagId === f.id)
-      return c ? { ...f, intervention_id: data.id, quote_amount: c.quote ?? null } : f
-    })
-    const { error: flagErr } = await supabase
-      .from('vehicles')
-      .update({ maintenance_flags: majFlags })
-      .eq('id', vehicleId)
-    // Une intervention sans ses dégâts serait un fantôme : on annule plutôt que
-    // de laisser les deux moitiés se désynchroniser.
-    if (flagErr) {
-      await supabase.from('maintenance_records').delete().eq('id', data.id)
-      return { error: flagErr.message }
+    const flagsVehicule = choisis.length > 0
+      ? ((await supabase.from('vehicles').select('maintenance_flags').eq('id', v.id).single())
+          .data?.maintenance_flags as MaintenanceFlag[] | null) ?? []
+      : []
+    const reparés = flagsVehicule.filter(f => choisis.some(c => c.flagId === f.id))
+
+    // Un dégât déjà pris en charge ou déjà réparé ne doit jamais repartir au garage :
+    // ce serait la même réparation payée deux fois.
+    if (reparés.some(f => f.repaired_at || f.intervention_id)) {
+      return { error: 'Un des dégâts est déjà réparé ou déjà rattaché à une intervention' }
+    }
+    if (choisis.length > 0 && reparés.length !== choisis.length) {
+      return { error: 'Un des dégâts est introuvable sur ce véhicule' }
+    }
+
+    const enReparation = reparés.length > 0
+    const devisTotal = choisis.reduce((s, c) => s + (c.quote ?? 0), 0)
+
+    const kmRaw     = (v.km ?? '').trim()
+    const amountRaw = (v.amount ?? '').trim()
+    const km     = kmRaw ? parseInt(kmRaw, 10) : null
+    const amount = amountRaw ? parseFloat(amountRaw.replace(',', '.')) : 0
+
+    // Toutes les réparations d'une même location se rattachent à elle. Dès que les
+    // dégâts viennent de locations différentes, on ne rattache rien : la ventilation
+    // se fait alors dégât par dégât, pas au niveau de l'intervention.
+    const locations = [...new Set(reparés.map(f => f.reservation_id).filter(Boolean))]
+
+    const payload = {
+      vehicle_id: v.id,
+      // En réparation, le type se déduit du premier dégât : l'agent n'a pas à
+      // rechoisir ce que le catalogue sait déjà.
+      type: enReparation ? maintenanceTypeForDamageType(reparés[0].damage_type) : typeSaisi,
+      description: enReparation ? reparés.map(f => f.label).join(' · ') : descriptionSaisie,
+      km_at_intervention: Number.isFinite(km as number) ? km : null,
+      // Le montant réel reste à 0 tant que le garage n'a pas facturé.
+      amount: enReparation ? 0 : (Number.isFinite(amount) ? amount : 0),
+      // ─── Le suivi du travail (migration 074, 02/08/2026) ───────────────────
+      // Qui s'en occupe, pour quand, et à quel point ça presse. L'urgence décide
+      // de l'entrée dans les alertes ; la date limite est facultative, mais une
+      // fois dépassée elle fait monter l'intervention en urgent.
+      ...commun,
+      ...(enReparation ? {
+        quote_amount: devisTotal > 0 ? devisTotal : null,
+        quote_status: statutDevis,
+        reservation_id: locations.length === 1 ? locations[0] : null,
+      } : {}),
+    }
+
+    const { data, error } = await supabase
+      .from('maintenance_records')
+      .insert(payload)
+      .select('id')
+      .single()
+
+    if (error) return { error: error.message }
+    creees.push({ id: data.id, vehicleId: v.id, type: payload.type, amount: payload.amount })
+
+    // Les dégâts pris en charge portent désormais l'intervention et leur devis.
+    if (enReparation) {
+      const majFlags = flagsVehicule.map(f => {
+        const c = choisis.find(x => x.flagId === f.id)
+        return c ? { ...f, intervention_id: data.id, quote_amount: c.quote ?? null } : f
+      })
+      const { error: flagErr } = await supabase
+        .from('vehicles')
+        .update({ maintenance_flags: majFlags })
+        .eq('id', v.id)
+      // Une intervention sans ses dégâts serait un fantôme : on annule plutôt que
+      // de laisser les deux moitiés se désynchroniser.
+      if (flagErr) {
+        await supabase.from('maintenance_records').delete().eq('id', data.id)
+        return { error: flagErr.message }
+      }
+    }
+
+    // Avance le km courant du véhicule si l'intervention est plus récente
+    if (payload.km_at_intervention != null) {
+      await supabase
+        .from('vehicles')
+        .update({ current_km: payload.km_at_intervention })
+        .eq('id', v.id)
+        .lt('current_km', payload.km_at_intervention)
+    }
+
+    // Cycle d'entretien : un entretien (révision/vidange) planifie automatiquement
+    // le prochain à +15 000 km (et +12 mois) → pilote les alertes 500/200 km.
+    if ((payload.type === 'revision' || payload.type === 'vidange') && payload.km_at_intervention != null) {
+      const nextDate = new Date(dateRdv)
+      nextDate.setMonth(nextDate.getMonth() + SERVICE_INTERVALS.entretien.months)
+      await supabase
+        .from('vehicles')
+        .update({
+          next_service_km: payload.km_at_intervention + SERVICE_INTERVALS.entretien.km,
+          next_service_date: nextDate.toISOString().slice(0, 10),
+        })
+        .eq('id', v.id)
+    }
+
+    // Met à jour la date de dernier lavage
+    if (payload.type === 'lavage') {
+      await supabase.from('vehicles').update({ last_wash_date: dateRdv }).eq('id', v.id)
     }
   }
 
-  // Avance le km courant du véhicule si l'intervention est plus récente
-  if (payload.km_at_intervention != null) {
-    await supabase
+  // ─── Le passage au garage, une seule ligne au calendrier ─────────────────────
+  // Le créneau n'appartient plus à une intervention : c'est le passage lui-même,
+  // partagé par toutes les voitures qui y vont et par toutes les réparations
+  // qu'on y fait faire (remarque 43 de Jeff). Deux réparations de types
+  // différents sur la même voiture le même jour donnaient deux lignes.
+  const auGarage = creees.filter(c => GARAGE_TYPES.has(c.type))
+  if (auGarage.length > 0) {
+    const admin = createAdminClient()
+    const { data: vehicles } = await supabase
       .from('vehicles')
-      .update({ current_km: payload.km_at_intervention })
-      .eq('id', vehicleId)
-      .lt('current_km', payload.km_at_intervention)
-  }
+      .select('id, brand, model, status')
+      .in('id', auGarage.map(c => c.vehicleId))
+    const parId = new Map((vehicles ?? []).map(v => [v.id, v]))
 
-  // Cycle d'entretien : un entretien (révision/vidange) planifie automatiquement
-  // le prochain à +15 000 km (et +12 mois) → pilote les alertes 500/200 km.
-  if ((payload.type === 'revision' || payload.type === 'vidange') && payload.km_at_intervention != null) {
-    const nextDate = new Date(payload.date)
-    nextDate.setMonth(nextDate.getMonth() + SERVICE_INTERVALS.entretien.months)
-    await supabase
-      .from('vehicles')
-      .update({
-        next_service_km: payload.km_at_intervention + SERVICE_INTERVALS.entretien.km,
-        next_service_date: nextDate.toISOString().slice(0, 10),
-      })
-      .eq('id', vehicleId)
-  }
+    // L'heure saisie est celle de l'agence, pas celle du fuseau du serveur.
+    let startAt = new Date(instantDepuisSaisie(`${dateRdv}T${heureRdv}:00`))
+    const today = new Date().toISOString().slice(0, 10)
+    const isUpcoming = dateRdv >= today
+    // Un rendez-vous noté pour AUJOURD'HUI sans qu'on touche à l'heure se posait
+    // quand même à 8 h du matin : il naissait dépassé, quittait aussitôt
+    // « Tâches du jour » et basculait en alerte sans que rien ne l'explique
+    // (Jeff, remarque 5 du 03/08/2026). On le cale alors sur la prochaine
+    // demi-heure ronde. Une heure choisie exprès, elle, est respectée telle
+    // quelle : rattraper un rendez-vous passé du jour est un usage légitime.
+    if (isUpcoming && heureRdv === HEURE_GARAGE_DEFAUT && startAt.getTime() < Date.now()) {
+      const finDuJour = new Date(instantDepuisSaisie(`${dateRdv}T23:30:00`))
+      const dans30min = new Date(Date.now() + 30 * 60_000)
+      dans30min.setMinutes(dans30min.getMinutes() >= 30 ? 30 : 0, 0, 0)
+      // Jamais au-delà du jour choisi : un rendez-vous saisi à 23 h 50 se
+      // poserait sinon le lendemain, hors de la journée qu'on vient d'indiquer.
+      startAt = dans30min > finDuJour ? finDuJour : dans30min
+    }
+    const endAt = new Date(startAt.getTime() + 60 * 60_000)
 
-  // Met à jour la date de dernier lavage
-  if (payload.type === 'lavage') {
-    await supabase.from('vehicles').update({ last_wash_date: payload.date }).eq('id', vehicleId)
-  }
+    // Un créneau déjà posé à cette date et à cette heure est le même passage :
+    // on le complète au lieu d'en créer un second.
+    const { data: existant } = await admin
+      .from('calendar_events')
+      .select('id, vehicle_ids, notes')
+      .eq('event_type', 'rdv_garage')
+      .eq('start_at', startAt.toISOString())
+      .maybeSingle()
 
-  // Intervention atelier (hors carburant/lavage) → RDV visible au calendrier
-  // et tâches du jour, + immobilisation si le véhicule était disponible et
-  // que la date n'est pas déjà passée (sinon c'est un simple historique).
-  if (GARAGE_TYPES.has(payload.type)) {
-    const { data: vehicle } = await supabase
-      .from('vehicles').select('brand, model, status').eq('id', vehicleId).single()
+    const dejaOccupe = Boolean(existant)
+    const idsVehicules = [...new Set([
+      ...((existant?.vehicle_ids as string[] | null) ?? []),
+      ...auGarage.map(c => c.vehicleId),
+    ])]
+    // Les notes s'ajoutent les unes aux autres : le gérant doit lire d'un coup
+    // d'œil tout ce qui part au garage sur ce créneau, pas seulement la dernière
+    // intervention saisie.
+    const notes = [existant?.notes, descriptionSaisie]
+      .map(n => (n ?? '').trim()).filter(Boolean)
+      .filter((n, i, tous) => tous.indexOf(n) === i)
+      .join(' · ') || null
+    const titre = titreRdvGarage(idsVehicules, parId, auGarage, dejaOccupe)
 
-    if (vehicle) {
-      const admin = createAdminClient()
-      // 8 h du matin à l'agence, pas 8 h au fuseau du serveur.
-      let startAt = new Date(instantDepuisSaisie(`${payload.date}T08:00:00`))
-      const today = new Date().toISOString().slice(0, 10)
-      const isUpcoming = payload.date >= today
-      // Une intervention notée pour AUJOURD'HUI en fin de journée se posait
-      // quand même à 8 h du matin : le rendez-vous naissait dépassé, quittait
-      // aussitôt « Tâches du jour » et basculait en alerte, sans que rien ne
-      // l'explique (Jeff, remarque 5 du 03/08/2026). On le cale alors sur la
-      // prochaine demi-heure ronde, pour qu'il reste une mission du jour.
-      // L'heure exacte reste à saisir : c'est le chantier mis de côté (lot 3).
-      if (isUpcoming && startAt.getTime() < Date.now()) {
-        const finDuJour = new Date(instantDepuisSaisie(`${payload.date}T23:30:00`))
-        const dans30min = new Date(Date.now() + 30 * 60_000)
-        dans30min.setMinutes(dans30min.getMinutes() >= 30 ? 30 : 0, 0, 0)
-        // Jamais au-delà du jour choisi : un rendez-vous saisi à 23 h 50 se
-        // poserait sinon le lendemain, hors de la journée qu'on vient d'indiquer.
-        startAt = dans30min > finDuJour ? finDuJour : dans30min
-      }
-      const endAt = new Date(startAt.getTime() + 60 * 60_000)
-
-      await admin.from('calendar_events').insert({
-        title: `${maintenanceType(payload.type).label} · ${vehicle.brand} ${vehicle.model}`,
+    let eventId = existant?.id as string | undefined
+    if (eventId) {
+      await admin.from('calendar_events')
+        .update({ title: titre, vehicle_ids: idsVehicules, notes })
+        .eq('id', eventId)
+    } else {
+      const { data: cree } = await admin.from('calendar_events').insert({
+        title: titre,
         event_type: 'rdv_garage',
         status: isUpcoming ? 'a_faire' : 'termine',
         start_at: startAt.toISOString(),
         end_at: endAt.toISOString(),
-        vehicle_ids: [vehicleId],
-        notes: payload.description,
-      })
+        vehicle_ids: idsVehicules,
+        notes,
+      }).select('id').single()
+      eventId = cree?.id
+    }
 
-      if (isUpcoming && vehicle.status === 'disponible') {
-        await admin.from('vehicles').update({ status: 'maintenance' }).eq('id', vehicleId)
+    // Le lien retour : c'est lui qui permet de ne retirer qu'un véhicule quand on
+    // supprime une intervention, au lieu d'effacer le rendez-vous des autres.
+    if (eventId) {
+      await admin.from('maintenance_records')
+        .update({ calendar_event_id: eventId })
+        .in('id', auGarage.map(c => c.id))
+    }
+
+    if (isUpcoming) {
+      const aImmobiliser = auGarage
+        .map(c => parId.get(c.vehicleId))
+        .filter(v => v && v.status === 'disponible')
+        .map(v => v!.id)
+      if (aImmobiliser.length > 0) {
+        await admin.from('vehicles').update({ status: 'maintenance' }).in('id', aImmobiliser)
       }
     }
   }
@@ -211,23 +313,26 @@ export async function createMaintenanceRecord(formData: FormData) {
   // Justificatif optionnel (facture garage, devis…) → rangé automatiquement dans
   // Documents › Véhicule. Choix gérant : le document n'apparaît QUE si un fichier
   // est réellement joint (la dépense, elle, va en compta au règlement).
+  // Une seule pièce pour tout le rendez-vous : elle se range sur le premier
+  // véhicule, celui depuis lequel le rendez-vous a été saisi.
+  const principal = creees[0]
   const justificatif = formData.get('justificatif') as File | null
-  if (justificatif && justificatif.size > 0) {
+  if (principal && justificatif && justificatif.size > 0) {
     const ext = justificatif.name.split('.').pop() || 'pdf'
-    const path = `vehicule/facture_entretien/${Date.now()}-${vehicleId}.${ext}`
+    const path = `vehicule/facture_entretien/${Date.now()}-${principal.vehicleId}.${ext}`
     const ab = await justificatif.arrayBuffer()
     const { error: upErr } = await supabase.storage.from('documents').upload(path, ab, { contentType: justificatif.type })
     if (!upErr) {
-      const { data: veh } = await supabase.from('vehicles').select('brand, model, plate').eq('id', vehicleId).single()
+      const { data: veh } = await supabase.from('vehicles').select('brand, model, plate').eq('id', principal.vehicleId).single()
       const vehLabel = veh ? `${veh.brand} ${veh.model}${veh.plate ? ` (${veh.plate})` : ''}` : ''
       await supabase.from('documents').insert({
         category: 'vehicule',
         subcategory: 'facture_entretien',
-        name: `${maintenanceType(payload.type).label} · ${vehLabel} · ${payload.date}`,
+        name: `${maintenanceType(principal.type).label} · ${vehLabel} · ${dateRdv}`,
         file_url: path,
         file_type: justificatif.type,
         file_size: justificatif.size,
-        entity_id: vehicleId,
+        entity_id: principal.vehicleId,
         entity_type: 'vehicle',
         is_auto_generated: false,
         created_by: user.id,
@@ -235,20 +340,43 @@ export async function createMaintenanceRecord(formData: FormData) {
     }
   }
 
-  await supabase.from('audit_logs').insert({
+  await supabase.from('audit_logs').insert(creees.map(c => ({
     user_id: user.id,
     action: 'maintenance_created',
     entity_type: 'maintenance_records',
-    entity_id: data.id,
-    metadata: { vehicle_id: vehicleId, type: payload.type, amount: payload.amount },
-  })
+    entity_id: c.id,
+    metadata: { vehicle_id: c.vehicleId, type: c.type, amount: c.amount },
+  })))
 
-  revalidatePath(`/maintenance/${vehicleId}`)
+  for (const c of creees) revalidatePath(`/maintenance/${c.vehicleId}`)
   revalidatePath('/maintenance')
   revalidatePath('/')
   revalidatePath('/calendrier')
   revalidatePath('/vehicles')
   return { success: true }
+}
+
+/**
+ * Le titre du créneau au calendrier.
+ *
+ * Un seul véhicule et une seule intervention : le titre d'avant, mot pour mot
+ * (« Révision · Renault Captur »), pour ne rien changer à ce que le gérant lit
+ * déjà. Dès qu'il y a plusieurs interventions ou plusieurs voitures, le créneau
+ * n'appartient plus à une intervention : il devient le passage au garage.
+ */
+function titreRdvGarage(
+  idsVehicules: string[],
+  parId: Map<string, { brand: string; model: string }>,
+  interventions: { vehicleId: string; type: string }[],
+  dejaOccupe: boolean,
+): string {
+  if (idsVehicules.length > 1) return `Garage · ${idsVehicules.length} véhicules`
+  const v = parId.get(idsVehicules[0])
+  const nom = v ? `${v.brand} ${v.model}` : 'Véhicule'
+  if (interventions.length === 1 && !dejaOccupe) {
+    return `${maintenanceType(interventions[0].type).label} · ${nom}`
+  }
+  return `Garage · ${nom}`
 }
 
 /**
@@ -748,7 +876,7 @@ export async function deleteMaintenanceRecord(recordId: string) {
 
   const { data: rec } = await supabase
     .from('maintenance_records')
-    .select('id, vehicle_id, type, date')
+    .select('id, vehicle_id, type, date, calendar_event_id')
     .eq('id', recordId)
     .single()
   if (!rec) return { error: 'Intervention introuvable' }
@@ -757,13 +885,7 @@ export async function deleteMaintenanceRecord(recordId: string) {
   await admin.from('financial_transactions').delete().eq('reference', `maintenance:${recordId}`)
 
   if (GARAGE_TYPES.has(rec.type)) {
-    await admin
-      .from('calendar_events')
-      .delete()
-      .eq('event_type', 'rdv_garage')
-      .contains('vehicle_ids', [rec.vehicle_id])
-      .gte('start_at', `${rec.date}T00:00:00`)
-      .lte('start_at', `${rec.date}T23:59:59`)
+    await retirerDuRdvGarage(admin, rec)
   }
 
   const { error } = await supabase.from('maintenance_records').delete().eq('id', recordId)
@@ -780,6 +902,85 @@ export async function deleteMaintenanceRecord(recordId: string) {
   revalidatePath('/calendrier')
   revalidatePath('/')
   return { success: true }
+}
+
+/**
+ * Retire une intervention de son passage au garage.
+ *
+ * Attend l'intervention qu'on supprime. Produit : le véhicule quitte le créneau
+ * du calendrier **seulement s'il n'a plus rien à y faire**, et le créneau ne
+ * disparaît que s'il ne reste personne dessus.
+ *
+ * Pourquoi c'est écrit à part (Jeff, remarque 43 du 03/08/2026) : la suppression
+ * effaçait le créneau entier. Avec un rendez-vous partagé, annuler la révision
+ * d'une voiture aurait fait disparaître du calendrier le passage des trois
+ * autres, sans que personne ne s'en aperçoive avant le jour du garage.
+ *
+ * ⚠️ `calendar_event_id` est NULL sur tout l'historique d'avant la migration 078.
+ * On retombe alors sur la recherche par date et par véhicule, l'ancien
+ * comportement : ne pas supprimer cette branche tant que ces lignes existent.
+ */
+async function retirerDuRdvGarage(
+  admin: ReturnType<typeof createAdminClient>,
+  rec: { id: string; vehicle_id: string; date: string; calendar_event_id?: string | null },
+) {
+  if (!rec.calendar_event_id) {
+    await admin
+      .from('calendar_events')
+      .delete()
+      .eq('event_type', 'rdv_garage')
+      .contains('vehicle_ids', [rec.vehicle_id])
+      .gte('start_at', `${rec.date}T00:00:00`)
+      .lte('start_at', `${rec.date}T23:59:59`)
+    return
+  }
+
+  const { data: event } = await admin
+    .from('calendar_events')
+    .select('id, vehicle_ids')
+    .eq('id', rec.calendar_event_id)
+    .maybeSingle()
+  if (!event) return
+
+  // Les autres interventions encore vivantes sur ce même créneau.
+  const { data: restantes } = await admin
+    .from('maintenance_records')
+    .select('id, vehicle_id')
+    .eq('calendar_event_id', rec.calendar_event_id)
+    .neq('id', rec.id)
+
+  const vehiculesRestants = [...new Set((restantes ?? []).map(r => r.vehicle_id))]
+
+  if (vehiculesRestants.length === 0) {
+    await admin.from('calendar_events').delete().eq('id', rec.calendar_event_id)
+    return
+  }
+
+  // Ce véhicule a-t-il encore autre chose à faire sur ce créneau ? Si oui, il y
+  // reste : deux réparations sur la même voiture, on n'en annule qu'une.
+  const idsRestants = ((event.vehicle_ids as string[] | null) ?? [])
+    .filter(id => vehiculesRestants.includes(id))
+  if (idsRestants.length === 0) {
+    await admin.from('calendar_events').delete().eq('id', rec.calendar_event_id)
+    return
+  }
+
+  // Le titre suit : « Garage · 3 véhicules » doit devenir « Garage · 2 véhicules »,
+  // sinon le calendrier annonce une voiture qui n'y va plus.
+  const { data: veh } = await admin
+    .from('vehicles').select('id, brand, model').in('id', idsRestants)
+  const parId = new Map((veh ?? []).map(v => [v.id, v]))
+  const typesRestants = (restantes ?? [])
+    .filter(r => idsRestants.includes(r.vehicle_id))
+    .map(r => ({ vehicleId: r.vehicle_id, type: '' }))
+
+  await admin
+    .from('calendar_events')
+    .update({
+      vehicle_ids: idsRestants,
+      title: titreRdvGarage(idsRestants, parId, typesRestants, true),
+    })
+    .eq('id', rec.calendar_event_id)
 }
 
 // Catégorie comptable selon le type d'intervention (réparation vs entretien courant).

@@ -206,13 +206,14 @@ function buildPriceBreakdownRecord(rates: RentalRates, start: string | Date, day
       weekendFull: rates.weekendFull ?? null,
       weekly: rates.weekly ?? null,
     },
-    lines: lines.map(l => (
-      l.kind === 'day'
-        ? { kind: l.kind, date: toYMD(l.date), weekend: l.weekend, amount: l.amount }
-        : l.kind === 'week'
-          ? { kind: l.kind, from: toYMD(l.from), to: toYMD(l.to), amount: l.amount }
-          : { kind: l.kind, from: toYMD(l.from), to: toYMD(l.to), amount: l.amount, instead: l.instead }
-    )),
+    lines: lines.map(l => {
+      if (l.kind === 'day') return { kind: l.kind, date: toYMD(l.date), weekend: l.weekend, amount: l.amount }
+      if (l.kind === 'week') return { kind: l.kind, from: toYMD(l.from), to: toYMD(l.to), amount: l.amount }
+      // L'option kilométrage illimité n'a ni date ni durée : elle se vend une
+      // fois pour toute la location.
+      if (l.kind === 'unlimitedKm') return { kind: l.kind, amount: l.amount }
+      return { kind: l.kind, from: toYMD(l.from), to: toYMD(l.to), amount: l.amount, instead: l.instead }
+    }),
     total,
     days,
     computedAt: new Date().toISOString(),
@@ -443,9 +444,18 @@ export async function createReservation(formData: FormData) {
     .eq('id', vehicleId)
     .single()
 
+  // Option kilométrage illimité (Jeff, 03/08/2026). Le montant est celui que
+  // l'agent a sous les yeux, pas celui du véhicule : il reste corrigeable, et
+  // **0 € est une valeur valable**, elle veut dire « offert ».
+  const illimiteVendu = formData.get('unlimited_km') === '1'
+  const illimiteMontantRaw = ((formData.get('unlimited_km_amount') as string) ?? '').trim()
+  const unlimitedKmPrice = illimiteVendu
+    ? Math.max(0, Number(illimiteMontantRaw.replace(',', '.')) || 0)
+    : null
+
   const days = calculateRentalDays(startInstant, endInstant)
   // Le prix dépend des DATES : les jours de week-end sont facturés plus cher.
-  const grossPrice = calculateRentalPrice(ratesFor(dailyPrice, vehicle), startDatetime, days)
+  const grossPrice = calculateRentalPrice(ratesFor(dailyPrice, vehicle, unlimitedKmPrice), startDatetime, days)
 
   // Remise fidélité client appliquée automatiquement (tolérant à l'absence de la
   // colonne discount_percent avant la migration 019 → remise 0).
@@ -488,10 +498,16 @@ export async function createReservation(formData: FormData) {
     start_datetime: startInstant,
     end_datetime: endInstant,
     // Photographie de la ventilation, pour l'analyse ultérieure des offres.
-    price_breakdown: buildPriceBreakdownRecord(ratesFor(dailyPrice, vehicle), startDatetime, days),
+    price_breakdown: buildPriceBreakdownRecord(ratesFor(dailyPrice, vehicle, unlimitedKmPrice), startDatetime, days),
     status: 'option' as ReservationStatus,
     daily_price: dailyPrice,
     total_price: totalPrice,
+    // Le montant est figé ici : le prix de l'option peut changer demain, une
+    // location signée hier garde ce qu'elle a facturé.
+    unlimited_km: illimiteVendu,
+    unlimited_km_price: unlimitedKmPrice,
+    // Les kilomètres inclus restent enregistrés même sous illimité : ils servent
+    // au suivi du parc, pas seulement à la facture.
     km_included: formData.get('km_included') ? Number(formData.get('km_included')) : vehicle?.km_included_daily ?? null,
     extra_km_price: formData.get('extra_km_price') ? Number(formData.get('extra_km_price')) : vehicle?.extra_km_price ?? null,
     deposit_amount: formData.get('deposit_amount') ? Number(formData.get('deposit_amount')) : null,

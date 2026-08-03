@@ -31,12 +31,15 @@ export default async function IaArrivalInspectionPage({ params }: { params: Prom
   // Le forfait/jour vient de la réservation client adossée si elle existe, sinon
   // du véhicule, sinon 200 par défaut. `inter_agency_rentals` ne stocke pas de
   // forfait km propre, d'où l'ancien calcul plat (200) qui sous-estimait le seuil.
-  type ClientRes = { km_included: number | null; extra_km_price: number | null; start_datetime: string; end_datetime: string }
+  type ClientRes = {
+    km_included: number | null; extra_km_price: number | null
+    start_datetime: string; end_datetime: string; unlimited_km: boolean | null
+  }
   let clientRes: ClientRes | null = null
   if (op?.client_reservation_id) {
     const { data } = await supabase
       .from('reservations')
-      .select('km_included, extra_km_price, start_datetime, end_datetime')
+      .select('km_included, extra_km_price, start_datetime, end_datetime, unlimited_km')
       .eq('id', op.client_reservation_id)
       .maybeSingle()
     clientRes = data as ClientRes | null
@@ -90,6 +93,7 @@ export default async function IaArrivalInspectionPage({ params }: { params: Prom
         previousDamagedZones={(departureInspection?.damaged_zones as { id: string; label: string; severity: string }[] | null) ?? []}
         kmIncluded={kmIncludedTotal}
         extraKmPrice={extraKmPrice}
+        kmIllimite={Boolean(clientRes?.unlimited_km)}
         lateHourlyRate={tarifs.retardHeure}
         insuranceDeductible={tarifs.franchise}
       />

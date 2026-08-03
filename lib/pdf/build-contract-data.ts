@@ -29,7 +29,13 @@ function buildPriceBreakdown(r: any, v: any) {
   const days = calculateRentalDays(r.start_datetime, r.end_datetime)
   if (days <= 0) return undefined
   const startWall = businessNow(new Date(r.start_datetime))
-  const { lines } = rentalPriceBreakdown(ratesFor(Number(r.daily_price ?? 0), v), startWall, days)
+  // L'option kilométrage illimité, si elle a été vendue : elle doit figurer au
+  // contrat, avec son montant. Sans elle le client signerait un total qu'aucune
+  // ligne n'explique (Jeff, 03/08/2026).
+  const illimite = r.unlimited_km ? Number(r.unlimited_km_price ?? 0) : null
+  const { lines } = rentalPriceBreakdown(
+    ratesFor(Number(r.daily_price ?? 0), v, illimite), startWall, days,
+  )
   if (!lines.length) return undefined
   const jour = (d: Date) => format(d, 'EEEE d MMMM', { locale: fr })
   return lines.map(l => {
@@ -38,6 +44,15 @@ function buildPriceBreakdown(r: any, v: any) {
     }
     if (l.kind === 'week') {
       return { label: `${jour(l.from)} → ${jour(l.to)}`, detail: 'Forfait semaine 7 jours', amount: l.amount }
+    }
+    if (l.kind === 'unlimitedKm') {
+      return {
+        label: 'Kilométrage illimité',
+        detail: l.amount === 0
+          ? 'Option offerte, aucun kilomètre supplémentaire facturé'
+          : 'Option, aucun kilomètre supplémentaire facturé',
+        amount: l.amount,
+      }
     }
     return {
       label: `${jour(l.from)} → ${jour(l.to)}`,
@@ -314,6 +329,7 @@ export async function buildContractPdfData(
     priceWeek: v?.weekly_price ?? undefined,
     kmIncludedWeekend: v?.km_included_weekend ?? undefined,
     kmIncludedWeek: v?.km_included_week ?? undefined,
+    kmIllimite: Boolean(r?.unlimited_km),
     depositAmount: r?.deposit_amount ?? undefined,
     depositMethod: r?.deposit_method ?? undefined,
     depositDeducted: r?.deposit_deducted > 0 ? r.deposit_deducted : undefined,

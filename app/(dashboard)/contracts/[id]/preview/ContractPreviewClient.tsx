@@ -70,7 +70,12 @@ export default function ContractPreviewClient({ contract, reservation, vehicle, 
     const days = calculateRentalDays(reservation.start_datetime, reservation.end_datetime)
     if (days <= 0) return []
     const { lines } = rentalPriceBreakdown(
-      ratesFor(Number(reservation.daily_price ?? 0), vehicle),
+      ratesFor(
+        Number(reservation.daily_price ?? 0),
+        vehicle,
+        // L'aperçu doit dire exactement ce que le PDF imprime, option comprise.
+        reservation.unlimited_km ? Number(reservation.unlimited_km_price ?? 0) : null,
+      ),
       new Date(reservation.start_datetime),
       days,
     )
@@ -81,6 +86,16 @@ export default function ContractPreviewClient({ contract, reservation, vehicle, 
       }
       if (l.kind === 'week') {
         return { label: `${jour(l.from)} → ${jour(l.to)}`, detail: 'Forfait semaine 7 jours', amount: l.amount, highlight: true }
+      }
+      if (l.kind === 'unlimitedKm') {
+        return {
+          label: 'Kilométrage illimité',
+          detail: l.amount === 0
+            ? 'Option offerte, aucun kilomètre supplémentaire facturé'
+            : 'Option, aucun kilomètre supplémentaire facturé',
+          amount: l.amount,
+          highlight: true,
+        }
       }
       return {
         label: `${jour(l.from)} → ${jour(l.to)}`,

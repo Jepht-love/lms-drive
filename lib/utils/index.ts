@@ -109,6 +109,14 @@ export interface RentalRates {
   weekendFull?: number | null
   /** Forfait 7 jours. `null` → pas de forfait semaine. */
   weekly?: number | null
+  /**
+   * Option « kilométrage illimité », si elle a été vendue sur cette location.
+   *
+   * `null` ou absent → l'option n'est pas vendue, rien ne s'ajoute. `0` → elle
+   * est vendue et offerte : la ligne apparaît quand même au détail, à 0 €, sinon
+   * le contrat ne dirait pas au client ce qu'il a obtenu (Jeff, 03/08/2026).
+   */
+  unlimitedKm?: number | null
 }
 
 /**
@@ -126,6 +134,8 @@ export type RentalPriceLine =
   | { kind: 'week'; from: Date; to: Date; amount: number }
   /** Forfait week-end complet, qui remplace les trois journées du week-end. */
   | { kind: 'weekendFull'; from: Date; to: Date; amount: number; instead: number }
+  /** Option kilométrage illimité, vendue une fois pour toute la location. */
+  | { kind: 'unlimitedKm'; amount: number }
 
 /**
  * Prix d'une location, jour par jour.
@@ -156,7 +166,7 @@ export function rentalPriceBreakdown(
   days: number,
 ): { lines: RentalPriceLine[]; total: number } {
   if (days <= 0) return { lines: [], total: 0 }
-  const { daily, weekend = null, weekendFull = null, weekly = null } = rates
+  const { daily, weekend = null, weekendFull = null, weekly = null, unlimitedKm = null } = rates
 
   const dayOfWeek = (offset: number): Date => {
     const d = new Date(start)
@@ -210,6 +220,13 @@ export function rentalPriceBreakdown(
     }
   }
 
+  // L'option se vend UNE FOIS pour toute la location, pas par jour : elle
+  // s'ajoute après le calcul des journées, jamais dedans (Jeff, 03/08/2026).
+  if (unlimitedKm != null) {
+    lines.push({ kind: 'unlimitedKm', amount: unlimitedKm })
+    total += unlimitedKm
+  }
+
   return { lines, total: Math.round(total * 100) / 100 }
 }
 
@@ -236,6 +253,12 @@ export function ratesFor(
     price_weekend_full?: number | null
     weekly_price?: number | null
   } | null,
+  /**
+   * Montant de l'option kilométrage illimité **réellement vendue** sur cette
+   * location. Il ne se déduit pas du véhicule : une voiture peut proposer
+   * l'option sans que le client l'ait prise.
+   */
+  unlimitedKm?: number | null,
 ): RentalRates {
   const atBareme = vehicle?.daily_price != null
     && Number(vehicle.daily_price) === Number(dailyPrice)
@@ -244,6 +267,7 @@ export function ratesFor(
     weekend: atBareme ? (vehicle?.price_day_weekend ?? null) : null,
     weekendFull: atBareme ? (vehicle?.price_weekend_full ?? null) : null,
     weekly: vehicle?.weekly_price ?? null,
+    unlimitedKm: unlimitedKm ?? null,
   }
 }
 

@@ -97,15 +97,19 @@ export async function proxy(request: NextRequest) {
   return supabaseResponse
 }
 
-// `simulateur.html` et `simulateur.js` sont laissés passer sans session : c'est
-// l'outil de travail de l'éditeur, qui ouvre l'application dans un cadre de la
-// taille d'un téléphone. Sans cette exception, l'adresse partait sur /login, la
-// connexion ramenait à l'accueil, et l'outil ne s'ouvrait jamais (constaté le
-// 30/07/2026 sur le navigateur de test). Rien n'est exposé pour autant :
-// l'application affichée DANS le cadre reste protégée, et ces deux fichiers sont
-// ignorés par git — ils n'existent sur aucun déploiement client, où l'adresse ne
-// mène donc à rien. Le lien vers l'outil est dans le menu, section « Éditeur »,
-// visible uniquement en développement.
+// `simulateur.html` / `simulateur.js` et `cartographie.html` sont laissés passer
+// sans session : ce sont les outils de travail de l'éditeur (le simulateur ouvre
+// l'application dans un cadre de la taille d'un téléphone ; la cartographie est le
+// document de travail annotable des onglets, préparé pour la réunion avec le
+// gérant, ajouté le 03/08/2026). Sans cette exception, l'adresse partait sur
+// /login, la connexion ramenait à l'accueil, et l'outil ne s'ouvrait jamais
+// (constaté le 30/07/2026 sur le navigateur de test). Rien de sensible n'est
+// exposé : le simulateur affiche l'application DANS un cadre, et celle-ci reste
+// protégée ; la cartographie ne montre que des écrans redessinés, sans donnée
+// réelle. Ces outils sont volontairement suivis et déployés (depuis le 01/08/2026
+// pour le simulateur) pour que l'éditeur puisse annoter depuis n'importe quel
+// poste. Le lien vers l'outil est dans le menu, section « Éditeur », visible
+// uniquement pour le super-administrateur.
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|manifest.json|robots.txt|sw.js|offline|apple-touch-icon.png|simulateur\\.html|simulateur\\.js|api/health|api/notifications|api/cron|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|manifest.json|robots.txt|sw.js|offline|apple-touch-icon.png|simulateur\\.html|simulateur\\.js|cartographie\\.html|api/health|api/notifications|api/cron|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
 }
