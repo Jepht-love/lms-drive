@@ -1,3 +1,5 @@
+import type { PosteFrais } from '@/lib/contracts/frais-restitution'
+
 export type VehicleView = 'top' | 'front' | 'rear' | 'left' | 'right'
 
 export type DamageSeverity = 'rayure' | 'dommage' | 'attention'
@@ -96,8 +98,34 @@ export function tarifDommage(
   type: string | undefined,
   zoneId: string | undefined,
   vehicleCategory: string | undefined,
+  /**
+   * Le tableau des frais réglé par le gérant (03/08/2026). Fourni, c'est LUI qui
+   * fixe le montant proposé : le client doit se voir facturer ce qu'il a signé.
+   * Absent, les montants du contrat type s'appliquent, comme avant.
+   */
+  postesFrais?: PosteFrais[] | null,
 ): TarifDommage {
   const sport = vehicleCategory === 'sportif'
+  const brut = tarifDuContratType(type, zoneId, sport)
+  if (!postesFrais || !brut.typeId) return brut
+  // Un poste retiré de la liste n'a plus de tarif : la facture arrivera sans
+  // prix sur cette ligne, et c'est ce qui a été annoncé à la suppression.
+  const poste = postesFrais.find(p => p.damageKey === brut.typeId)
+  if (!poste) return { ...brut, montant: null, mention: 'Montant à saisir' }
+  return {
+    ...brut,
+    ligne: poste.label,
+    montant: poste.amount,
+    mention: poste.amount == null ? (poste.note ?? 'Montant à saisir') : undefined,
+  }
+}
+
+/** Les montants du contrat type, ceux qui s'appliquent sans personnalisation. */
+function tarifDuContratType(
+  type: string | undefined,
+  zoneId: string | undefined,
+  sport: boolean,
+): TarifDommage {
   const surDevis = (): TarifDommage => ({
     montant: null,
     ligne: 'Dommage carrosserie',

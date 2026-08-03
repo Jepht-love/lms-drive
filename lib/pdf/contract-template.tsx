@@ -7,6 +7,7 @@ import { TZDate } from '@date-fns/tz'
 import { BUSINESS_TZ } from '@/lib/calendar/constants'
 import { fr } from 'date-fns/locale'
 import { getLegalArticles, getFeesTable, VIDEO_CLAUSE } from '@/lib/contracts/legal-articles'
+import type { PosteFrais } from '@/lib/contracts/frais-restitution'
 import { fmtEntier } from './nombres'
 import { EDL_ZONES, zoneBox, EDL_IMG } from '@/components/vehicle-schema/edl-zones'
 
@@ -58,6 +59,13 @@ export interface ContractData {
    */
   franchiseContrat?: number
   retardHeureContrat?: number
+  /**
+   * Les postes du tableau des frais de restitution, tels que le gérant les a
+   * réglés (03/08/2026). Absents, le contrat imprime le contrat type. Ils
+   * arrivent construits par `build-contract-data.ts` : ce modèle ne lit jamais
+   * la base lui-même, il tourne aussi hors serveur.
+   */
+  postesFrais?: PosteFrais[] | null
   dailyPrice: number
   totalPrice: number
   kmIncluded?: number
@@ -736,7 +744,7 @@ export function ContractPDF({ data }: { data: ContractData }) {
   const fees = getFeesTable(data.vehicleCategory ?? 'citadine', data.isSmartFortwo, {
     franchise: data.franchiseContrat,
     retardHeure: data.retardHeureContrat,
-  })
+  }, data.postesFrais)
   const articles = getLegalArticles({
     franchise: fees.franchise,
     retardHeure: fees.retard,

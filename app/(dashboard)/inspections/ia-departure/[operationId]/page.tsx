@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import BackButton from '@/components/ui/BackButton'
 import InspectionFlow from '@/components/inspection/InspectionFlow'
+import { postesDeLaCategorie, scopeDuVehicule } from '@/lib/contracts/frais-restitution'
 import { generateContractNumber } from '@/lib/utils'
 
 // EDL de départ d'une opération inter-agences SORTANTE (notre véhicule prêté à
@@ -24,6 +25,9 @@ export default async function IaDepartureInspectionPage({ params }: { params: Pr
   if (!op || op.direction !== 'out' || !op.vehicle_id) notFound()
 
   const vehicle = (Array.isArray(op.vehicles) ? op.vehicles[0] : op.vehicles) as any
+  // Le tableau des frais de restitution réglé par le gérant : il fixe le prix
+  // proposé pour un dommage et ce qui s'imprime au récapitulatif de signature.
+  const { postes: postesFrais } = await postesDeLaCategorie(supabase, scopeDuVehicule(vehicle?.category))
   const agency = Array.isArray(op.partner_agencies) ? op.partner_agencies[0] : op.partner_agencies
 
   // Contrat (convention) existant ? sinon le créer maintenant.
@@ -78,6 +82,7 @@ export default async function IaDepartureInspectionPage({ params }: { params: Pr
         </div>
       </div>
       <InspectionFlow
+        postesFrais={postesFrais}
         type="depart"
         contractId={contract.id}
         vehicleId={vehicle?.id ?? ''}

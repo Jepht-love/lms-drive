@@ -15,6 +15,7 @@ import VehicleInspectionMap from '@/components/vehicle-schema/VehicleInspectionM
 import DamageComparison from '@/components/vehicle-schema/DamageComparison'
 import { VEHICLE_ZONES, graviteLabel, type DamageEntry } from '@/components/vehicle-schema/inspection-types'
 import { getFeesTable, getLegalArticles, VIDEO_CLAUSE, type MontantsContrat } from '@/lib/contracts/legal-articles'
+import type { PosteFrais } from '@/lib/contracts/frais-restitution'
 
 export interface ContratInfo {
   numero: string
@@ -64,6 +65,8 @@ interface Props {
   contrat: ContratInfo | null // null = convention inter-agences (pas de contrat locataire)
   /** Franchise et tarif de retard fixés par la grille tarifaire du véhicule. */
   montantsContrat?: MontantsContrat | null
+  /** Le tableau des frais réglé par le gérant, même liste que le contrat PDF. */
+  postesFrais?: PosteFrais[] | null
   edl: RecapEdl
   retour?: RecapRetour | null
   damages: Record<string, DamageEntry[]>
@@ -117,7 +120,7 @@ function GaleriePhotos({ titre, photos }: { titre: string; photos: PhotoJointe[]
 export default function RecapSignatures({
   type, contrat, edl, retour, damages, photosJointes, previousDamages,
   reconnu, setReconnu, edlSig, setEdlSig, contratSig, setContratSig,
-  factureSig, setFactureSig, saving, error, onBack, onSubmit, montantsContrat,
+  factureSig, setFactureSig, saving, error, onBack, onSubmit, montantsContrat, postesFrais,
 }: Props) {
   const isDepart = type === 'depart'
   const totalFraisRetour = retour
@@ -131,7 +134,7 @@ export default function RecapSignatures({
   // client signait un récapitulatif annonçant une autre franchise que son
   // contrat.
   const fees = contrat
-    ? getFeesTable(contrat.categorie, contrat.isSmartFortwo, montantsContrat)
+    ? getFeesTable(contrat.categorie, contrat.isSmartFortwo, montantsContrat, postesFrais)
     : null
   const articles = contrat && fees
     ? getLegalArticles({

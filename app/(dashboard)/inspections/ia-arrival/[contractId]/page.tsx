@@ -5,6 +5,7 @@ import BackButton from '@/components/ui/BackButton'
 import InspectionFlow from '@/components/inspection/InspectionFlow'
 import { calculateRentalDays } from '@/lib/utils'
 import { tarifsDuVehicule } from '@/lib/pricing/resolve'
+import { postesDeLaCategorie, scopeDuVehicule } from '@/lib/contracts/frais-restitution'
 
 // EDL de retour d'une opération inter-agences SORTANTE — via le contrat
 // (convention) rattaché à l'opération. Pas de réservation client dans le flux :
@@ -50,6 +51,9 @@ export default async function IaArrivalInspectionPage({ params }: { params: Prom
   // Même règle que le retour classique : le tarif de retard vient de la grille
   // du véhicule, plus du code (03/08/2026).
   const tarifs = await tarifsDuVehicule(supabase, vehicle?.id)
+  // Le tableau des frais de restitution réglé par le gérant : il fixe le prix
+  // proposé pour un dommage et ce qui s'imprime au récapitulatif de signature.
+  const { postes: postesFrais } = await postesDeLaCategorie(supabase, scopeDuVehicule(vehicle?.category))
 
   // Relevé de départ pour comparer km / dommages
   const { data: departureInspection } = await supabase
@@ -74,6 +78,7 @@ export default async function IaArrivalInspectionPage({ params }: { params: Prom
         </div>
       </div>
       <InspectionFlow
+        postesFrais={postesFrais}
         type="arrivee"
         contractId={contractId}
         vehicleId={vehicle?.id ?? ''}

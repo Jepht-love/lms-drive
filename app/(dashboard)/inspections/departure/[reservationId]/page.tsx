@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import BackButton from '@/components/ui/BackButton'
 import InspectionFlow from '@/components/inspection/InspectionFlow'
+import { postesDeLaCategorie, scopeDuVehicule } from '@/lib/contracts/frais-restitution'
 import { generateContractNumber } from '@/lib/utils'
 
 export default async function DepartureInspectionPage({ params }: { params: Promise<{ reservationId: string }> }) {
@@ -68,6 +69,9 @@ export default async function DepartureInspectionPage({ params }: { params: Prom
   if (!contract) notFound()
 
   const vehicle = reservation.vehicle as any
+  // Le tableau des frais de restitution réglé par le gérant : il fixe le prix
+  // proposé pour un dommage et ce qui s'imprime au récapitulatif de signature.
+  const { postes: postesFrais } = await postesDeLaCategorie(supabase, scopeDuVehicule(vehicle?.category))
   const client = reservation.client as any
 
   // Contrat prévisualisé + signé sur la page de l'EDL (ticket SAV 21/07).
@@ -105,6 +109,7 @@ export default async function DepartureInspectionPage({ params }: { params: Prom
         </div>
       </div>
       <InspectionFlow
+        postesFrais={postesFrais}
         type="depart"
         contractId={contract.id}
         vehicleId={vehicle?.id ?? ''}

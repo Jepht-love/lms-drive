@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import ContractPreviewClient, { type DepartInspection } from './ContractPreviewClient'
 import { getAgencySettings } from '@/lib/contracts/agency'
 import { tarifsDuVehicule } from '@/lib/pricing/resolve'
+import { postesDeLaCategorie, scopeDuVehicule } from '@/lib/contracts/frais-restitution'
 
 export default async function ContractPreviewPage({
   params,
@@ -28,6 +29,7 @@ export default async function ContractPreviewPage({
   const vehicle = reservation?.vehicle
   const client = reservation?.client
   const tarifs = await tarifsDuVehicule(supabase, vehicle?.id)
+  const { postes: postesFrais } = await postesDeLaCategorie(supabase, scopeDuVehicule(vehicle?.category))
 
   // État des lieux de DÉPART rattaché au contrat : affiché tel quel dans la
   // prévisualisation (km, propreté, dommages + schéma, photos, signature EDL)
@@ -86,6 +88,10 @@ export default async function ContractPreviewPage({
       // Mêmes montants que le PDF : sans ça, l'aperçu à l'écran annoncerait une
       // franchise et un tarif de retard différents du document généré.
       montantsContrat={{ franchise: tarifs.franchise, retardHeure: tarifs.retardHeure }}
+      // Le tableau des frais réglé par le gérant, ou le contrat type. Même
+      // liste que celle du PDF : le client ne doit pas lire à l'écran un
+      // montant différent de celui qu'il signe.
+      postesFrais={postesFrais}
     />
   )
 }

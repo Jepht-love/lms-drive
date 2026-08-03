@@ -6,6 +6,7 @@ import BackButton from '@/components/ui/BackButton'
 import InspectionFlow from '@/components/inspection/InspectionFlow'
 import { calculateRentalDays } from '@/lib/utils'
 import { tarifsDuVehicule } from '@/lib/pricing/resolve'
+import { postesDeLaCategorie, scopeDuVehicule } from '@/lib/contracts/frais-restitution'
 
 export default async function ArrivalInspectionPage({ params }: { params: Promise<{ contractId: string }> }) {
   const { contractId } = await params
@@ -51,6 +52,9 @@ export default async function ArrivalInspectionPage({ params }: { params: Promis
   // 150 €/h écrits en dur dans le code avant le 03/08/2026, quel que soit le
   // réglage du gérant.
   const tarifs = await tarifsDuVehicule(supabase, vehicle?.id)
+  // Le tableau des frais de restitution réglé par le gérant : il fixe le prix
+  // proposé pour un dommage et ce qui s'imprime au récapitulatif de signature.
+  const { postes: postesFrais } = await postesDeLaCategorie(supabase, scopeDuVehicule(vehicle?.category))
 
   // Relevé de bord au départ (km + carburant) pour comparer à l'aller-retour
   const { data: departureInspection } = await supabase
@@ -75,6 +79,7 @@ export default async function ArrivalInspectionPage({ params }: { params: Promis
         </div>
       </div>
       <InspectionFlow
+        postesFrais={postesFrais}
         type="arrivee"
         contractId={contractId}
         vehicleId={vehicle?.id ?? ''}

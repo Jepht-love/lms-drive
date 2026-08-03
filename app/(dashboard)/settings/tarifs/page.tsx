@@ -24,7 +24,10 @@ import { ArrowLeft, Tags } from 'lucide-react'
 import BackButton from '@/components/ui/BackButton'
 import { getAgencySettings } from '@/lib/contracts/agency'
 import type { PricingGrid } from '@/lib/pricing/grid'
+import { getFeesTable } from '@/lib/contracts/legal-articles'
+import { postesDeLaCategorie } from '@/lib/contracts/frais-restitution'
 import GrillesTarifaires, { type VehiculeTarife } from './GrillesTarifaires'
+import FraisRestitution from './FraisRestitution'
 
 export default async function TarifsPage() {
   const supabase = await createClient()
@@ -48,6 +51,43 @@ export default async function TarifsPage() {
     getAgencySettings(supabase),
   ])
 
+  // Les deux listes de frais de restitution, avec leur corbeille. Une liste sans
+  // aucune ligne en base s'affiche en lecture : c'est le contrat type, celui qui
+  // s'imprime tant que le gérant n'a rien repris en main.
+  const blocsFrais = await Promise.all(
+    ([
+      { scope: 'sportif' as const, titre: 'Véhicules sportifs', categorie: 'sportif' },
+      { scope: 'standard' as const, titre: 'Reste du parc', categorie: 'citadine' },
+    ]).map(async ({ scope, titre, categorie }) => {
+      const [{ postes, personnalise }, { data: corbeille }] = await Promise.all([
+        postesDeLaCategorie(supabase, scope),
+        supabase
+          .from('restitution_fees')
+          .select('id, label, amount, note, damage_key, source')
+          .eq('scope', scope)
+          .not('deleted_at', 'is', null)
+          .order('position', { ascending: true }),
+      ])
+      const reference = getFeesTable(categorie)
+      return {
+        scope,
+        titre,
+        personnalise,
+        postes,
+        corbeille: (corbeille ?? []).map(r => ({
+          id: r.id,
+          label: r.label,
+          amount: r.amount != null ? Number(r.amount) : null,
+          note: r.note ?? null,
+          damageKey: r.damage_key ?? null,
+          source: (r.source as 'franchise' | 'retard' | null) ?? null,
+        })),
+        franchiseTxt: reference.rows.find(l => l.label === 'Franchise dommage')?.value ?? '—',
+        retardTxt: reference.rows.find(l => l.label === 'Retard restitution du véhicule')?.value ?? '—',
+      }
+    }),
+  )
+
   return (
     <div className="space-y-5">
       <BackButton fallbackHref="/settings" className="inline-flex items-center gap-1.5 text-sm text-gray-400 font-medium hover:text-gray-700 transition-colors">
@@ -60,8 +100,7 @@ export default async function TarifsPage() {
           <h1 className="text-xl font-black text-gray-900">Grilles tarifaires</h1>
           <p className="text-sm text-gray-400 mt-0.5">
             Un prix se change ici, et nulle part ailleurs. Ranger une voiture dans une grille
-            ne touche pas à ses tarifs : la grille n&apos;apporte que le retard, le carburant
-            et la franchise.
+            ne touche pas à ses tarifs.
           </p>
         </div>
       </div>
@@ -71,6 +110,11 @@ export default async function TarifsPage() {
         vehicules={(vehicules ?? []) as VehiculeTarife[]}
         agence={agence}
       />
+
+      {/* Les frais de restitution du contrat. Les montants de franchise et de
+          retard affichés ici sont ceux du contrat type : sur un contrat réel,
+          c'est la grille tarifaire du véhicule qui les fixe. */}
+      <FraisRestitution blocs={blocsFrais} />
     </div>
   )
 }

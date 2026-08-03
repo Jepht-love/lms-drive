@@ -8,6 +8,7 @@ import BackButton from '@/components/ui/BackButton'
 import VehicleInspectionMap from '@/components/vehicle-schema/VehicleInspectionMap'
 import { graviteLabel, type DamageEntry, type DamageSeverity } from '@/components/vehicle-schema/inspection-types'
 import { getLegalArticles, getFeesTable, VIDEO_CLAUSE, type MontantsContrat } from '@/lib/contracts/legal-articles'
+import type { PosteFrais } from '@/lib/contracts/frais-restitution'
 import { calculateRentalDays, rentalPriceBreakdown, ratesFor, formatDate } from '@/lib/utils'
 
 // État des lieux de départ assemblé côté serveur (page.tsx) pour être relu dans
@@ -35,6 +36,11 @@ interface Props {
   departInspection?: DepartInspection | null
   /** Franchise et tarif de retard résolus par la grille tarifaire du véhicule. */
   montantsContrat?: MontantsContrat | null
+  /**
+   * Le tableau des frais de restitution réglé par le gérant. Absent, l'aperçu
+   * imprime le contrat type — exactement ce que le PDF imprimera.
+   */
+  postesFrais?: PosteFrais[] | null
 }
 
 const CLEANLINESS_LABELS: Record<number, string> = {
@@ -56,7 +62,7 @@ function formatPrice(n?: number) {
   return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(n)
 }
 
-export default function ContractPreviewClient({ contract, reservation, vehicle, client, agency, chain, departInspection, montantsContrat }: Props) {
+export default function ContractPreviewClient({ contract, reservation, vehicle, client, agency, chain, departInspection, montantsContrat, postesFrais }: Props) {
   // Détail du prix facturé, calculé par la MÊME fonction que le formulaire et le
   // PDF — jamais une seconde implémentation de la règle tarifaire.
   const priceLines = useMemo(() => {
@@ -111,7 +117,7 @@ export default function ContractPreviewClient({ contract, reservation, vehicle, 
     false
   // Les montants viennent de la grille tarifaire du véhicule, comme dans le PDF
   // (03/08/2026). Sans grille, ce sont les valeurs historiques du contrat papier.
-  const fees = getFeesTable(vehicle?.category ?? 'citadine', isSmartFortwo, montantsContrat)
+  const fees = getFeesTable(vehicle?.category ?? 'citadine', isSmartFortwo, montantsContrat, postesFrais)
   const articles = getLegalArticles({
     franchise: fees.franchise,
     retardHeure: fees.retard,

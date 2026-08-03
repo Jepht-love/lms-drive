@@ -11,7 +11,11 @@ interface VehicleFormProps {
 }
 
 const FUEL_TYPES = ['essence', 'diesel', 'hybride', 'electrique']
-const CATEGORIES = ['citadine', 'berline', 'suv', 'utilitaire']
+// « sportif » manquait alors que la catégorie EXISTE en base et déclenche le
+// barème sportif du contrat (franchise, retard, tableau des frais). Modifier la
+// BMW i8 depuis ce formulaire lui faisait donc perdre ses tarifs sans un mot.
+// Ajouté le 03/08/2026.
+const CATEGORIES = ['citadine', 'berline', 'suv', 'utilitaire', 'sportif']
 const TRANSMISSIONS = ['manuelle', 'automatique']
 
 export default function VehicleForm({ action, vehicle }: VehicleFormProps) {

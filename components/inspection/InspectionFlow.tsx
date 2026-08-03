@@ -6,10 +6,11 @@ import VehicleInspectionMap from '@/components/vehicle-schema/VehicleInspectionM
 import RecapSignatures, { type ContratInfo } from '@/components/inspection/RecapSignatures'
 import { MANDATORY_PHOTOS } from '@/components/vehicle-schema/zones'
 import { VEHICLE_ZONES as NEW_ZONES, INTERIOR_DAMAGE_ITEMS, graviteLabel, tarifDommage, type DamageEntry } from '@/components/vehicle-schema/inspection-types'
+import type { PosteFrais } from '@/lib/contracts/frais-restitution'
 import { useSavSection } from '@/lib/sav/context'
 import { createClient } from '@/lib/supabase/client'
 import { compressImageToBase64 } from '@/lib/utils'
-import { calculateLateFee, calculateExtraKm } from '@/lib/calculations/fees'
+import { calculateLateFee, calculateExtraKm, RETARD_HORAIRE_DEFAUT, TOLERANCE_RETARD_MINUTES } from '@/lib/calculations/fees'
 import { reportVehicleIssues } from '@/lib/actions/vehicle-issues'
 import { markReservationDeparted } from '@/lib/actions/reservations'
 import { buildDamageFlag } from '@/lib/maintenance-health'
@@ -41,6 +42,12 @@ interface Props {
   lateHourlyRate?: number | null
   /** Franchise du contrat, fixée par la même grille tarifaire. */
   insuranceDeductible?: number | null
+  /**
+   * Le tableau des frais de restitution réglé par le gérant. Il fixe le montant
+   * proposé pour chaque dommage constaté : le client doit se voir facturer ce
+   * qu'il a signé au contrat (03/08/2026).
+   */
+  postesFrais?: PosteFrais[] | null
   /** Forfait de location facturé (total_price de la réservation). */
   rentalTotal?: number
   /** Déjà encaissé sur cette location (acompte ou paiement complet). */
@@ -109,6 +116,7 @@ export default function InspectionFlow({
   extraKmPrice = 2,
   lateHourlyRate = null,
   insuranceDeductible = null,
+  postesFrais = null,
   rentalTotal = 0,
   alreadyPaid = 0,
   previousDamagedZones = [],
@@ -276,7 +284,7 @@ export default function InspectionFlow({
   // tout le monde. Quand le contrat renvoie à un devis, rien n'est proposé et
   // l'agent saisit le montant.
   function tarifZone(zoneId: string) {
-    return tarifDommage(damages[zoneId]?.[0]?.type, zoneId, vehicleCategory)
+    return tarifDommage(damages[zoneId]?.[0]?.type, zoneId, vehicleCategory, postesFrais)
   }
   function priceForZone(zoneId: string): number {
     const stored = damagePrices[zoneId]
@@ -688,7 +696,11 @@ export default function InspectionFlow({
                     <div>
                       <p className="text-sm font-semibold text-gray-900">Retard de restitution</p>
                       <p className="text-xs text-gray-400">
-                        {computedFees.lateMinutes} min · tolérance 60 min · {vehicleCategory === 'sportif' ? '150' : '50'} €/h
+                        {/* Le tarif affiché était écrit en dur (150 ou 50 selon la
+                            catégorie) alors que le calcul prend celui de la grille :
+                            à 15 €/h réglés, l'écran annonçait 50 €/h (03/08/2026). */}
+                        {computedFees.lateMinutes} min · tolérance {TOLERANCE_RETARD_MINUTES} min ·{' '}
+                        {(lateHourlyRate ?? RETARD_HORAIRE_DEFAUT).toLocaleString('fr-FR')} €/h
                       </p>
                     </div>
                   </div>
@@ -1362,6 +1374,7 @@ export default function InspectionFlow({
             type={type}
             contrat={contratInfo}
             montantsContrat={{ franchise: insuranceDeductible, retardHeure: lateHourlyRate }}
+            postesFrais={postesFrais}
             edl={{
               km: kmReading,
               fuelRangeKm,

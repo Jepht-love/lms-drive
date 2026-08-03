@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { tarifsDuVehicule } from '@/lib/pricing/resolve'
+import { postesDeLaCategorie, scopeDuVehicule } from '@/lib/contracts/frais-restitution'
 import { getAgencySettings } from '@/lib/contracts/agency'
 import type { ContractData, InspectionPDFData } from '@/lib/pdf/contract-template'
 import { readFileSync } from 'fs'
@@ -148,6 +149,10 @@ export async function buildContractPdfData(
   // contrat papier s'appliquent : rien ne change pour les véhicules non rangés.
   const tarifs = await tarifsDuVehicule(supabase, v?.id)
 
+  // Le tableau des frais de restitution, tel que le gérant l'a réglé. Sa liste
+  // vide = le contrat type, donc le tableau imprimé jusqu'au 03/08/2026.
+  const { postes: postesFrais } = await postesDeLaCategorie(supabase, scopeDuVehicule(v?.category))
+
   // États des lieux complets (départ + retour)
   const { data: rawInspections } = await supabase
     .from('inspections')
@@ -289,6 +294,7 @@ export async function buildContractPdfData(
     // sans avoir figé ses montants à côté.
     franchiseContrat: tarifs?.franchise ?? undefined,
     retardHeureContrat: tarifs?.retardHeure ?? undefined,
+    postesFrais,
     dailyPrice: r?.daily_price ?? 0,
     totalPrice: r?.total_price ?? 0,
     // Détail qui justifie le total, jour par jour (voir buildPriceBreakdown).

@@ -4,6 +4,7 @@
 // Ce texte est imprimé dans un PDF : on formate les montants avec `fmtEntier`
 // et jamais avec `toLocaleString`, qui produirait « 15/000 € » (voir nombres.ts).
 import { fmtEntier } from '@/lib/pdf/nombres'
+import { CONTRAT_TYPE, valeurImprimee, type PosteFrais } from '@/lib/contracts/frais-restitution'
 
 export interface LegalArticlesParams {
   franchise: number   // 21000 en sportif, 15000 en citadine, 6000 pour la Smart Fortwo
@@ -108,6 +109,12 @@ export function getFeesTable(
   category: string,
   isSmartFortwo = false,
   montants?: MontantsContrat | null,
+  /**
+   * Les postes en vigueur, lus par `postesDeLaCategorie`. Absents = contrat type.
+   * Ils arrivent en paramètre et ne se lisent pas ici : cette fonction tourne
+   * aussi dans le navigateur (aperçu du contrat), où il n'y a pas de base.
+   */
+  postes?: PosteFrais[] | null,
 ) {
   const isSport = category === 'sportif'
   // Franchise : 21 000 € en sportif, 15 000 € en citadine, 6 000 € pour la Smart
@@ -146,66 +153,15 @@ export function getFeesTable(
         : '15 000 € (sauf Smart Fortwo : 6 000 €)'
   const retardTxt = `${euros(retard)} par heure de retard`
 
-  const rows = isSport
-    ? [
-        { label: 'Franchise responsabilité civile', value: franchiseTxt },
-        { label: 'Franchise dommage', value: franchiseTxt },
-        { label: 'Franchise vol', value: franchiseTxt },
-        { label: 'Franchise carburant', value: 'Selon écart + 50 € de frais de service' },
-        { label: 'Rayure légère', value: '500 €' },
-        { label: 'Rayure profonde', value: '800 €' },
-        { label: 'Rayure par jantes', value: '500 €' },
-        { label: 'Fissure jantes', value: '800 €' },
-        { label: 'Casse anormale mécanique', value: 'Sur devis + 50 % de frais' },
-        { label: 'Retard restitution du véhicule', value: retardTxt },
-        { label: 'Nettoyage véhicule intérieur / extérieur', value: '100 € ou sur devis si le montant des frais de nettoyage est supérieur' },
-        { label: 'Déchirure et brûlure / tâches sièges / plafonnier', value: '1 000 € par élément ou sur devis si le montant des frais de remise en état est supérieur' },
-        { label: 'Odeur cigarette ou autre', value: '500 €' },
-        { label: 'Perte clés du véhicule', value: '500 €' },
-        { label: 'Utilisation anormale du véhicule (circuit, drift run, course-poursuite…)', value: '5 000 €' },
-        { label: 'Usure anormale pneu (crevaison, hernie, abîmé)', value: '700 €' },
-        { label: 'Usure anormale freinage', value: '800 €' },
-        { label: 'Contravention au Code de la route', value: 'Montant de la contravention + 50 % de frais de gestion' },
-        { label: 'Frais de sortie de fourrière', value: 'Frais facturés par la fourrière + 200 € de frais de déplacement et de gestion' },
-        { label: 'Frais de saisie judiciaire', value: '500 € par jour d\'immobilisation' },
-        { label: 'Franchise incendie', value: franchiseTxt },
-        { label: 'Jour d\'immobilisation pour réparation', value: '500 €' },
-        { label: 'Dommage carrosserie', value: 'Sur devis + 50 %' },
-        { label: 'Pare-brise, vitre cassé', value: '5 000 €' },
-        { label: 'Tapis manquant', value: '300 €' },
-        { label: 'Frais juridique', value: 'Coût de la procédure + 50 %' },
-        // Le contrat papier imprime « 10 00€ » — coquille de saisie, lue comme 1 000 €.
-        { label: 'Erreur carburant (Gazole, éthanol interdit)', value: '1 000 €' },
-      ]
-    : [
-        { label: 'Franchise responsabilité civile', value: franchiseTxt },
-        { label: 'Franchise dommage', value: franchiseTxt },
-        { label: 'Franchise vol', value: franchiseTxt },
-        { label: 'Franchise carburant', value: 'Selon écart + 20 € de frais de service' },
-        { label: 'Rayure légère', value: '300 €' },
-        { label: 'Rayure profonde', value: '500 €' },
-        { label: 'Rayure par jantes', value: '300 €' },
-        { label: 'Fissure jantes', value: '500 €' },
-        { label: 'Casse anormale mécanique', value: 'Sur devis + 30 % de frais' },
-        { label: 'Retard restitution du véhicule', value: retardTxt },
-        { label: 'Nettoyage véhicule intérieur / extérieur', value: '50 € ou sur devis si le montant des frais de nettoyage est supérieur' },
-        { label: 'Déchirure et brûlure / tâches sièges / plafonnier', value: '200 € par élément ou sur devis si le montant des frais de remise en état est supérieur' },
-        { label: 'Odeur cigarette ou autre', value: '300 €' },
-        { label: 'Perte clés du véhicule', value: '300 €' },
-        { label: 'Utilisation anormale du véhicule (circuit, drift run, course-poursuite…)', value: '5 000 €' },
-        { label: 'Usure anormale pneu (crevaison, hernie, abîmé)', value: '400 €' },
-        { label: 'Usure anormale freinage', value: '300 €' },
-        { label: 'Contravention au Code de la route / Péage', value: 'Montant de la contravention + 50 € de frais de gestion' },
-        { label: 'Frais de sortie de fourrière', value: 'Frais facturés par la fourrière + 200 € de frais de déplacement et de gestion' },
-        { label: 'Frais de saisie judiciaire', value: '70 € par jour d\'immobilisation' },
-        { label: 'Franchise incendie', value: franchiseTxt },
-        { label: 'Jour d\'immobilisation pour réparation', value: '70 €' },
-        { label: 'Dommage carrosserie', value: 'Sur devis + 30 %' },
-        { label: 'Pare-brise, vitre cassé', value: '1 000 €' },
-        { label: 'Tapis manquant', value: '150 €' },
-        { label: 'Frais juridique', value: 'Coût de la procédure + 30 %' },
-        { label: 'Erreur carburant (Gazole, éthanol interdit)', value: '200 €' },
-      ]
+  // Les 27 postes viennent de `lib/contracts/frais-restitution.ts` depuis le
+  // 03/08/2026 : le gérant peut les modifier, et ce fichier n'en garde plus de
+  // copie. `postes` non fourni = contrat type, donc exactement ce qui s'imprimait
+  // avant. Les lignes de franchise et de retard ignorent leur propre montant :
+  // elles affichent celui de la grille tarifaire, résolu juste au-dessus.
+  const rows = (postes ?? CONTRAT_TYPE[isSport ? 'sportif' : 'standard']).map(p => ({
+    label: p.label,
+    value: valeurImprimee(p, { franchiseTxt, retardTxt }),
+  }))
 
   return { franchise, retard, rows }
 }
