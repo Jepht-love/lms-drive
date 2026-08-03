@@ -28,7 +28,12 @@ export async function syncAlertsToCalendar(
   //               le 27/07 dès l'ajout de ces alertes : « 12:00 RETOUR ... » et
   //               « 12:00 TÂCHE — RETOUR DU JOUR ... » côte à côte dans les
   //               tâches du jour, pour la même voiture et le même client.
-  const ALREADY_ON_CALENDAR_TYPES = ['retard', 'lavage', 'depart_imminent', 'retour_jour']
+  //   'intervention' : un passage au garage a DÉJÀ son créneau au calendrier,
+  //               posé par createMaintenanceRecord. Le recopier ici afficherait
+  //               deux fois la même réparation le même jour. Ajouté le
+  //               02/08/2026, quand les interventions sont entrées dans les
+  //               alertes.
+  const ALREADY_ON_CALENDAR_TYPES = ['retard', 'lavage', 'depart_imminent', 'retour_jour', 'intervention']
   const actionable = alerts.filter(a =>
     (a.category === 'urgent' || a.category === 'important') &&
     !ALREADY_ON_CALENDAR_TYPES.includes(a.type) &&

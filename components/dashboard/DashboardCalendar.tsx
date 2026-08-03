@@ -303,12 +303,21 @@ export default function DashboardCalendar() {
 
       {/* Détail du jour sélectionné */}
       <div className="mt-4 pt-3 border-t border-gray-50">
-        <div className="flex items-center justify-between mb-2">
+        {/* Le même `px-1` que les lignes en dessous : sans lui, le titre et le
+            compteur étaient décalés de 4 px vers l'extérieur, et ni le bord
+            gauche ni le bord droit ne tombaient sur ceux des lignes
+            (Jeff, 02/08/2026). */}
+        <div className="flex items-center justify-between mb-2 px-1">
           <p className="text-[11px] font-black uppercase tracking-widest text-gray-500">
             {isSameDay(selected, new Date()) ? "Aujourd'hui" : format(selected, 'EEEE d MMMM', { locale: fr })}
           </p>
+          {/* La MÊME largeur que la colonne « qui s'en charge » des lignes, et
+              aligné à gauche comme elle : collé au bord droit, le compteur
+              démarrait 46 px plus à droite que « À assigner » et « Lanani Sami »
+              juste en dessous (Jeff, 02/08/2026). Sur téléphone la colonne
+              n'existe pas, le compteur reste donc à droite. */}
           {selectedEvents.length > 0 && (
-            <span className="text-[10px] font-bold text-gray-400">
+            <span className="text-[10px] font-bold text-gray-400 sm:w-[88px] sm:text-left">
               {selectedEvents.length} tâche{selectedEvents.length > 1 ? 's' : ''}
             </span>
           )}
@@ -394,11 +403,17 @@ export default function DashboardCalendar() {
                       ) : null}
                     </span>
                   </div>
-                  {name ? (
-                    <span className="hidden sm:block text-[10px] text-gray-400 flex-shrink-0 max-w-[64px] truncate">{name}</span>
-                  ) : toAssign ? (
-                    <span className="hidden sm:block text-[10px] font-bold text-amber-600 flex-shrink-0">À assigner</span>
-                  ) : null}
+                  {/* Colonne de largeur FIXE, alignée à gauche, et toujours
+                      présente même quand personne n'est assigné. Alignée à
+                      droite et dimensionnée par son texte, « À assigner » et
+                      « Lanani Sami » ne commençaient pas au même endroit, et la
+                      colonne du milieu changeait de largeur d'une ligne à
+                      l'autre (Jeff, 02/08/2026). */}
+                  <span className={`hidden sm:block w-[88px] flex-shrink-0 truncate text-[10px] ${
+                    toAssign ? 'font-bold text-amber-600' : 'text-gray-400'
+                  }`}>
+                    {name ?? (toAssign ? 'À assigner' : '')}
+                  </span>
                 </Link>
               )
             })}

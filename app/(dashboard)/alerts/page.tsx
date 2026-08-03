@@ -21,6 +21,7 @@ function AlertIcon({ type }: { type: string }) {
   if (type === 'revision') return <Wrench     className={cls} />
   if (type === 'lavage')   return <Wrench     className={cls} />
   if (type === 'tache')    return <Clock      className={cls} />
+  if (type === 'intervention') return <Wrench className={cls} />
   return <AlertTriangle className={cls} />
 }
 

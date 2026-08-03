@@ -3,10 +3,34 @@ import { differenceInDays } from 'date-fns'
 // Ces alertes partent en notification poussée sur le téléphone : leurs heures
 // sont donc mises en forme par le serveur, qui vit en temps universel. Sans ce
 // détour, un retour prévu à 13:00 s'annonce « à 11:00 » l'été.
-import { heureAgence, dateAgence, fmtAgence, bornesDuJourAgence } from '@/lib/format/heureAgence'
+import { heureAgence, dateAgence, fmtAgence } from '@/lib/format/heureAgence'
+import { urgency, workStatus, WORK_STATUSES_CLOS, maintenanceType } from '@/lib/maintenance'
 
 /** Jour et mois seuls : « 04/08 ». Assez pour une échéance à quelques jours. */
 const jourMois = (v: string) => fmtAgence(v, { day: '2-digit', month: '2-digit' })
+
+/**
+ * Retard à partir duquel une tâche non faite passe d'« important » à « urgent ».
+ * Une journée entière : en deçà, c'est un retard de la journée, qui se rattrape ;
+ * au-delà, plus personne ne s'en occupe et ça doit sauter aux yeux.
+ * Règle donnée par Jeff le 02/08/2026, valable pour les tâches comme pour les
+ * rendez-vous du calendrier. Personne ne la saisit, elle se calcule.
+ */
+const HEURES_RETARD_URGENT = 24
+
+/**
+ * Les types d'événements du calendrier qui deviennent une alerte une fois leur
+ * heure de fin passée (section « 4 bis » plus bas).
+ *
+ * Exporté parce que le tableau de bord doit exclure EXACTEMENT ce que cette
+ * fonction ramasse : ce qui devient une alerte quitte « Tâches du jour ». Les
+ * deux listes doivent donc rester la même. Un déplacement interne n'en fait pas
+ * partie : il se clôt par son retour, pas en cochant une case, et il reste donc
+ * visible dans la journée.
+ */
+export const TYPES_EVENEMENT_QUI_ALERTENT = [
+  'tache', 'rdv_client', 'rdv_garage', 'rdv_autre', 'livraison', 'recuperation',
+] as const
 
 export interface AppAlert {
   id: string
@@ -103,15 +127,15 @@ export async function fetchAllAlerts(
   const limiteRetard = new Date(now.getTime() - tolerance * 60_000)
 
   /**
-   * Minuit ce matin, à l'heure française. C'est LA frontière : tout ce qui est
-   * daté d'aujourd'hui appartient aux « Tâches du jour » du tableau de bord et
-   * n'a rien à faire ici ; tout ce qui date d'hier ou avant, et qui n'est
-   * toujours pas fait, devient une alerte. Règle de Jeff du 30/07/2026 :
-   * « à minuit une, ça bascule ». Elle remplace la tolérance de 30 minutes du
-   * 28/07, qui sortait une tâche de la liste du jour alors qu'elle était encore
-   * à faire dans la journée.
+   * ⚠️ La frontière entre « Tâches du jour » et « Alertes » n'est plus minuit.
+   * Elle l'a été du 30/07 au 02/08/2026 (« à minuit une, ça bascule »), après
+   * une tolérance de 30 minutes le 28/07. Le gérant a tranché autrement le
+   * 02/08 : **dès que l'heure prévue est passée**, la tâche quitte la liste du
+   * jour et devient une alerte. Les deux blocs se suivent sur l'accueil, donc
+   * rien ne se perd, la tâche descend simplement d'un cran.
+   * Le pendant de cette règle vit dans app/(dashboard)/page.tsx, qui doit
+   * exclure exactement ce que cette fonction ramasse.
    */
-  const minuitCeMatin = bornesDuJourAgence(now).debut
 
   // ── 1. Contrats non signés ──────────────────────────────────────────────────
   const { data: contracts } = await supabase
@@ -278,26 +302,95 @@ export async function fetchAllAlerts(
     }
   })
 
+  // ── 3 bis. Interventions ouvertes ───────────────────────────────────────────
+  // Demandée par le gérant le 02/08/2026 : une intervention doit entrer dans les
+  // alertes selon son urgence, et en sortir dès qu'elle est terminée.
+  //
+  // La règle, tranchée par Jeff le même jour :
+  //   · critique → bloc urgent
+  //   · haute    → bloc important
+  //   · normale  → n'alerte pas (sinon l'écran se noie sous les vidanges)
+  //   · date limite dépassée → urgent, quelle que soit l'urgence d'origine
+  //
+  // Ce qu'il ne faut pas casser : le filtre porte sur `work_status`, PAS sur
+  // `paid_at`. Une intervention terminée mais pas encore payée n'est plus du
+  // travail à faire, c'est une facture à régler, et ça se voit ailleurs.
+  const { data: interventionsOuvertes } = await supabase
+    .from('maintenance_records')
+    .select(`id, type, description, urgency, due_date, work_status, vehicle_id,
+      vehicles(plate, brand, model, color),
+      assignee:profiles!maintenance_records_assigned_to_fkey(full_name),
+      taker:profiles!maintenance_records_taken_by_fkey(full_name)`)
+    .not('work_status', 'in', `(${WORK_STATUSES_CLOS.join(',')})`)
+    .order('due_date', { ascending: true, nullsFirst: false })
+
+  for (const it of interventionsOuvertes ?? []) {
+    const niveau = urgency(it.urgency as string)
+    const enRetard = Boolean(it.due_date && new Date(`${it.due_date}T23:59:59`) < now)
+    const bloc = enRetard ? 'urgent' : niveau.alerte
+    if (!bloc) continue
+
+    const v = Array.isArray(it.vehicles) ? it.vehicles[0] : it.vehicles
+    const qui = Array.isArray((it as any).taker) ? (it as any).taker[0] : (it as any).taker
+    const designe = Array.isArray((it as any).assignee) ? (it as any).assignee[0] : (it as any).assignee
+    const personne = (qui as any)?.full_name ?? (designe as any)?.full_name ?? null
+    const etat = workStatus(it.work_status as string).label
+    const intitule = it.description || maintenanceType(it.type as string).label
+
+    alerts.push({
+      id: `interv-${it.id}`,
+      category: bloc,
+      urgent: bloc === 'urgent',
+      type: 'intervention',
+      label: enRetard ? 'Intervention en retard' : 'Intervention à traiter',
+      sublabel: [
+        v ? vLabel(v) : null,
+        intitule,
+        personne ?? 'non assignée',
+        enRetard ? `échéance dépassée le ${jourMois(it.due_date as string)}` : etat,
+      ].filter(Boolean).join(' · '),
+      pushBody: [
+        intitule,
+        v ? vPush(v) : null,
+        personne ? `Confiée à ${personne}` : 'Non attribuée',
+        enRetard ? `Échéance dépassée le ${dateAgence(it.due_date as string)}` : etat,
+      ].filter(Boolean).join('\n'),
+      href: `/maintenance/${it.vehicle_id}`,
+      date: it.due_date ?? undefined,
+      vehicleId: it.vehicle_id ?? undefined,
+      calendarTitle: enRetard ? 'Intervention en retard' : 'Intervention à traiter',
+      personLabel: personne ?? undefined,
+    })
+  }
+
   // ── 4. Tâches en retard ─────────────────────────────────────────────────────
-  // Seulement celles des journées PRÉCÉDENTES : une tâche du jour même reste
-  // dans « Tâches du jour », en rouge, jusqu'au bout de la journée.
+  // DÈS QUE L'HEURE EST PASSÉE, et non plus depuis les journées précédentes :
+  // le gérant veut que « Tâches du jour » et « Alertes » soient complémentaires,
+  // une tâche dépassée quitte la première et apparaît dans la seconde (demande
+  // du 02/08/2026, qui remplace la frontière de minuit du 30/07). Les deux blocs
+  // se suivent sur la page d'accueil : la tâche descend d'un cran, elle ne
+  // disparaît pas.
   const { data: overdueTasks } = await supabase
     .from('tasks')
     .select(`id, title, type, due_datetime, vehicle_id, reservation_id,
       vehicles(plate, brand, model, color),
       profiles!tasks_assigned_to_fkey(full_name)`)
     .eq('status', 'a_faire')
-    .lt('due_datetime', minuitCeMatin.toISOString())
+    .lt('due_datetime', now.toISOString())
     .order('due_datetime', { ascending: true })
 
   overdueTasks?.forEach(t => {
     const v = Array.isArray(t.vehicles)  ? t.vehicles[0]  : t.vehicles
     const a = Array.isArray(t.profiles)  ? t.profiles[0]  : t.profiles
     const lateHours = Math.round((now.getTime() - new Date(t.due_datetime).getTime()) / 3600000)
+    // Au-delà d'une journée de retard, la tâche monte dans le bloc « urgent ».
+    // En deçà, elle reste « important ». Personne ne saisit rien : c'est le
+    // retard accumulé qui décide (Jeff, 02/08/2026).
+    const enUrgence = lateHours >= HEURES_RETARD_URGENT
     alerts.push({
       id: `task-${t.id}`,
-      category: 'important',
-      urgent: false,
+      category: enUrgence ? 'urgent' : 'important',
+      urgent: enUrgence,
       type: 'tache',
       label: 'Tâche en retard',
       sublabel: `${t.title}${(v as any)?.plate ? ` · ${vLabel(v)}` : ''}${(a as any)?.full_name ? ` · ${(a as any).full_name}` : ''} · ${lateHours}h de retard`,
@@ -336,7 +429,7 @@ export async function fetchAllAlerts(
   const { data: overdueEvents } = await supabase
     .from('calendar_events')
     .select('id, title, event_type, end_at, reservation_id, vehicle_ids, vehicle_id, assignee:profiles!assigned_to(full_name)')
-    .in('event_type', ['tache', 'rdv_client', 'rdv_garage', 'rdv_autre', 'livraison', 'recuperation'])
+    .in('event_type', [...TYPES_EVENEMENT_QUI_ALERTENT])
     .in('status', ['a_faire', 'en_cours'])
     .is('source_key', null)
     // Les tâches que l'application fabrique elle-même (lavage avant location,
@@ -350,9 +443,11 @@ export async function fetchAllAlerts(
     // Le doublon qu'évitait l'ancien filtre est désormais traité en fin de
     // fonction, réservation par réservation.
     .gte('end_at', retard7j.toISOString())
-    // Frontière : le début de la journée métier, pas une tolérance en minutes.
-    // Une tâche du jour même appartient à « Tâches du jour » (Jeff, 30/07/2026).
-    .lt('end_at', minuitCeMatin.toISOString())
+    // Frontière : l'heure de fin dépassée, tout simplement. C'était le début de
+    // la journée métier jusqu'au 02/08/2026 ; le gérant veut la bascule dès que
+    // l'heure est passée, pour que « Tâches du jour » et « Alertes » ne montrent
+    // jamais la même chose en même temps.
+    .lt('end_at', now.toISOString())
     .order('end_at', { ascending: true })
 
   // Le véhicule d'une tâche vit à DEUX endroits selon qui l'a créée :
@@ -397,10 +492,14 @@ export async function fetchAllAlerts(
       ),
     )
     const intitule = finRepeteLeVehicule ? ev.title.split(' · ')[0] : ev.title
+    // Même règle que les tâches juste au-dessus : au-delà d'une journée de
+    // retard, l'alerte monte en urgent. Sans ça, deux choses également en retard
+    // tombaient dans deux blocs différents selon leur provenance.
+    const enUrgence = minutes >= HEURES_RETARD_URGENT * 60
     alerts.push({
       id: `event-${ev.id}`,
-      category: 'important',
-      urgent: false,
+      category: enUrgence ? 'urgent' : 'important',
+      urgent: enUrgence,
       type: 'tache',
       label: 'Tâche en retard',
       sublabel: [

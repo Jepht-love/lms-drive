@@ -21,7 +21,7 @@ Un onglet clos ne se rouvre que si Jeff le rouvre.
 
 | # | Étape | Source | Charge | État |
 |---|---|---|---|---|
-| **A0** | Le véhicule en déplacement affiché disponible | J · 40.1 | 3 h | ✅ fait le 02/08, non commité |
+| **A0** | Le véhicule en déplacement affiché disponible | J · 40.1 | 3 h | ✅ fait et poussé le 02/08 (`2337228`) |
 | **A1** | Tableau de bord et Alertes | G + J · 45 | 1 j | à faire |
 | **A2** | Suivi véhicule, le suivi complet d'une intervention | G + J · 38, 43 | 3 à 4 j | à faire |
 | **A3** | Paramètres, les grilles tarifaires | G | 2 à 3 j | à faire |

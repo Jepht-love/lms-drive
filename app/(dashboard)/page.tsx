@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { fetchAllAlerts, seuilRetardMinutes } from '@/lib/utils/alerts'
+import { fetchAllAlerts, seuilRetardMinutes, TYPES_EVENEMENT_QUI_ALERTENT } from '@/lib/utils/alerts'
 import { fetchActiveInternalTrips } from '@/lib/vehicles/internalTrips'
 import Link from 'next/link'
 import {
@@ -82,6 +82,10 @@ const ALERT_GROUPS: AlertGroup[] = [
     cardBg: 'bg-cyan-50',   cardBorder: 'border-cyan-100',   labelColor: 'text-cyan-700',   iconColor: 'text-cyan-500',   badgeBg: 'bg-cyan-500',   badgeText: 'text-white' },
   { type: 'tache',      label: 'Tâche en retard',        icon: Clock,         href: '/calendrier',
     cardBg: 'bg-gray-50',   cardBorder: 'border-gray-200',   labelColor: 'text-gray-600',   iconColor: 'text-gray-400',   badgeBg: 'bg-gray-400',   badgeText: 'text-white' },
+  // Les interventions ouvertes, entrées dans les alertes le 02/08/2026 : une
+  // critique ou une échéance dépassée doit se voir depuis l'accueil.
+  { type: 'intervention', label: 'Intervention à traiter', icon: Wrench,      href: '/suivi',
+    cardBg: 'bg-purple-50', cardBorder: 'border-purple-100', labelColor: 'text-purple-700', iconColor: 'text-purple-500', badgeBg: 'bg-purple-500', badgeText: 'text-white' },
   { type: 'infraction', label: 'Infraction non réglée',  icon: AlertTriangle, href: '/suivi?tab=infractions',
     cardBg: 'bg-orange-50', cardBorder: 'border-orange-100', labelColor: 'text-orange-700', iconColor: 'text-orange-500', badgeBg: 'bg-orange-500', badgeText: 'text-white' },
   { type: 'sinistre',   label: 'Sinistre en cours',      icon: AlertTriangle, href: '/suivi?tab=sinistres',
@@ -189,6 +193,15 @@ export default async function DashboardPage() {
   // journée à 22h l'été, deux heures avant le gérant.
   const { debut: todayStart, fin: todayEnd } = bornesDuJourAgence(now)
   const in7Days    = addDays(now, 7)
+  // ⚠️ `now` ci-dessus est l'heure MURALE française posée dans le fuseau du
+  // serveur : parfait pour découper des journées, faux pour répondre à « cette
+  // heure est-elle passée ? ». Sur Vercel, qui tourne en temps universel, il est
+  // en avance de deux heures l'été sur l'instant réel. Une tâche aurait donc été
+  // déclarée dépassée deux heures avant que lib/utils/alerts.ts, qui compare au
+  // vrai instant, ne la reprenne en alerte : deux heures pendant lesquelles elle
+  // n'aurait été visible nulle part. Tout ce qui décide d'un retard passe donc
+  // par cet instant-ci (02/08/2026).
+  const maintenantReel = new Date()
 
   // "Journée métier" (7h → 3h le lendemain), même fenêtre que le calendrier
   // (lib/calendar/dateUtils.ts) — sans ça, un départ entre minuit et 3h du
@@ -528,18 +541,22 @@ export default async function DashboardPage() {
   // « Tâches du jour » = journée métier courante (7h→3h, comme le calendrier)
   // OU jour civil (rétro-compatibilité, ne masque rien de ce qui s'affichait).
   //
-  // RÈGLE ARRÊTÉE PAR JEFF LE 30/07/2026, elle remplace celle du 28/07 :
-  // on voit ici ce qui doit être fait aujourd'hui ET qui ne l'est pas encore.
-  // Une tâche dont l'heure est passée RESTE donc dans la liste, marquée en
-  // rouge, jusqu'à la fin de la journée : elle est toujours à faire, la sortir
-  // revenait à la faire oublier. Elle ne devient une alerte que le lendemain,
-  // quand elle n'appartient plus à la journée en cours (lib/utils/alerts.ts,
-  // sections 4 et 4 bis, qui s'arrêtent au début de la journée métier).
+  // RÈGLE ARRÊTÉE PAR LE GÉRANT LE 02/08/2026, elle remplace celle du 30/07
+  // (« à minuit une, ça bascule ») : les deux blocs de l'accueil doivent être
+  // complémentaires, jamais redondants. Une tâche encore À FAIRE dont l'heure
+  // est passée quitte donc cette liste À LA MINUTE et réapparaît juste en
+  // dessous, dans « Alertes ». Elle ne se perd pas, elle descend d'un cran.
+  //
+  // Une tâche EN COURS reste ici, l'heure passée ou non : quelqu'un s'en occupe
+  // en ce moment, et lib/utils/alerts.ts ne ramasse que les `a_faire`. Les deux
+  // fichiers doivent rester d'accord, sinon une tâche s'affiche deux fois ou
+  // disparaît des deux écrans.
   // Une tâche terminée disparaît, elle n'est plus « à faire ».
   const todayTasks = (weekTasks ?? []).filter(t => {
     const d = new Date(t.due_datetime)
     if (d < todayStart || d > todayEnd) return false
-    return t.status !== 'termine'
+    if (t.status === 'termine') return false
+    return !(t.status === 'a_faire' && d < maintenantReel)
   })
 
   // ── Tâches calendrier du jour (lavage, CT, assurance, révision, infraction,
@@ -572,12 +589,20 @@ export default async function DashboardPage() {
     .in('status', ['a_faire', 'en_cours'])
     .order('start_at', { ascending: true })
   const weekCalendarTasks = (rawCalendarTasks ?? []).filter(t => !t.source_key?.startsWith('task-'))
-  // Même règle que pour les tâches ci-dessus (Jeff, 30/07/2026) : tout ce qui
-  // est prévu dans la journée reste ici, l'heure passée ou non. Ce qui est fait
-  // y reste aussi, barré, pour garder la trace de la journée.
+  // Même règle que pour les tâches ci-dessus (gérant, 02/08/2026) : ce qui est
+  // devenu une alerte quitte cette liste. Le miroir exact de la section « 4 bis »
+  // de lib/utils/alerts.ts — mêmes types, même condition sur la clé d'origine,
+  // même frontière sur l'heure de FIN. Tout ce qui n'y entre pas reste ici : un
+  // déplacement interne (il se clôt par son retour), une copie d'alerte déjà
+  // comptée ailleurs, un rendez-vous encore à venir.
   const todayCalendarTasks = weekCalendarTasks.filter(t => {
     const debut = new Date(t.start_at)
-    return debut >= todayStart && debut <= todayEnd
+    if (debut < todayStart || debut > todayEnd) return false
+    const devientUneAlerte =
+      TYPES_EVENEMENT_QUI_ALERTENT.includes(t.event_type as any)
+      && !t.source_key
+      && new Date(t.end_at ?? t.start_at) < maintenantReel
+    return !devientUneAlerte
   })
   const vehicleById = new Map((vehicles ?? []).map(v => [v.id, v]))
 
@@ -587,6 +612,9 @@ export default async function DashboardPage() {
 
   // ── Alertes ───────────────────────────────────────────────────────────────
   const alerts = await fetchAllAlerts(supabase)
+  // Ce qui a quitté « Tâches du jour » parce que l'heure est passée : sert à
+  // renvoyer vers les alertes quand la liste du jour se retrouve vide.
+  const tachesEnRetard = alerts.filter(a => a.type === 'tache').length
 
   // ─────────────────────────────────────────────────────────────────────────
 
@@ -855,11 +883,29 @@ export default async function DashboardPage() {
 
         {departsAujourdhui.length === 0 && retoursAujourdhui.length === 0 && (todayTasks?.length ?? 0) === 0 && todayCalendarTasks.length === 0 ? (
           <div className="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm text-center">
-            <CheckCircle2 className="w-10 h-10 text-gray-200 mx-auto mb-3" />
-            <p className="text-sm text-gray-400 font-medium">Aucune mission aujourd'hui</p>
-            <Link href="/calendrier" className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-black underline underline-offset-2">
-              <Plus className="w-3.5 h-3.5" /> Créer une tâche
-            </Link>
+            {/* Depuis le 02/08/2026, une tâche dépassée quitte cette liste pour
+                les alertes. Sans ce renvoi, l'écran annoncerait « aucune mission »
+                alors qu'il reste du travail en retard trois blocs plus bas :
+                exactement le contresens que la complémentarité doit éviter. */}
+            {tachesEnRetard > 0 ? (
+              <>
+                <Clock className="w-10 h-10 text-red-200 mx-auto mb-3" />
+                <p className="text-sm text-gray-500 font-medium">
+                  Plus rien de prévu aujourd'hui, mais {tachesEnRetard} tâche{tachesEnRetard > 1 ? 's' : ''} en retard
+                </p>
+                <Link href="/alerts" className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-red-600 underline underline-offset-2">
+                  Voir les alertes
+                </Link>
+              </>
+            ) : (
+              <>
+                <CheckCircle2 className="w-10 h-10 text-gray-200 mx-auto mb-3" />
+                <p className="text-sm text-gray-400 font-medium">Aucune mission aujourd'hui</p>
+                <Link href="/calendrier" className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-black underline underline-offset-2">
+                  <Plus className="w-3.5 h-3.5" /> Créer une tâche
+                </Link>
+              </>
+            )}
           </div>
         ) : (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden divide-y divide-gray-50">
@@ -969,7 +1015,9 @@ export default async function DashboardPage() {
             {(todayTasks ?? []).map(task => {
               const tv       = Array.isArray((task as any).vehicles) ? (task as any).vehicles[0] : (task as any).vehicles
               const assignee = Array.isArray((task as any).profiles) ? (task as any).profiles[0] : (task as any).profiles
-              const isTaskLate = task.status === 'a_faire' && new Date(task.due_datetime) < now
+              // Ne reste ici en retard qu'une tâche EN COURS : celles encore
+              // « à faire » et dépassées sont passées dans les alertes.
+              const isTaskLate = new Date(task.due_datetime) < maintenantReel
               return (
                 <Link key={`task-${task.id}`} href={taskActionHref(task)}>
                   <div className={`flex items-center gap-4 px-4 py-4 transition-colors ${isTaskLate ? 'bg-red-50/60 hover:bg-red-50' : 'hover:bg-gray-50'}`}>
@@ -979,20 +1027,35 @@ export default async function DashboardPage() {
                     <span className="text-[9px] sm:text-[10px] font-black uppercase px-2 py-1.5 rounded-full flex-shrink-0 inline-flex items-center justify-center w-[92px] sm:w-[108px] bg-gray-100 text-gray-600">
                       {TASK_TYPE_LABELS[task.type ?? 'autre']}
                     </span>
+                    {/* Trois lignes, le même gabarit que les départs, les retours
+                        et les tâches du calendrier : la voiture, ce qu'il y a à
+                        faire, puis qui s'en charge. Le véhicule et la personne
+                        tenaient sur une seule ligne à rallonge (« George Alex
+                        Romeo · À assigner »), qui se repliait au hasard de la
+                        longueur du texte : d'une ligne à l'autre, « À assigner »
+                        ne tombait jamais au même endroit (Jeff, remarque 45). */}
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-gray-900 truncate">{task.title}</p>
-                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                        {tv && <span className="text-[10px] text-gray-400"><LigneVehicule v={tv as any} /></span>}
-                        {assignee
-                          ? <span className="text-[10px] text-gray-400">{tv ? '· ' : ''}{(assignee as any).full_name}</span>
-                          : <span className="text-[10px] font-semibold text-amber-600">{tv ? '· ' : ''}À assigner</span>}
-                      </div>
+                      {tv
+                        ? <p className="text-sm font-bold text-gray-900 sm:truncate"><LigneVehicule v={tv as any} /></p>
+                        : <p className="text-sm font-bold text-gray-900 sm:truncate">{task.title}</p>}
+                      {tv && <p className="text-xs text-gray-500 sm:truncate">{task.title}</p>}
+                      <AssigneeLine name={(assignee as any)?.full_name ?? null} />
+                      {/* Sur téléphone l'état passe ici, faute de place à droite —
+                          même règle que les lignes du calendrier juste en dessous. */}
+                      {isTaskLate && (
+                        <p className="sm:hidden text-[10px] font-black uppercase text-red-600 mt-1">En retard</p>
+                      )}
                     </div>
-                    <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-full flex-shrink-0 ${
+                    {/* Largeur FIXE, et chevron comme les lignes voisines : sans
+                        eux, « À faire » et « Tâche en retard » n'avaient pas la
+                        même largeur, et cette famille de lignes s'arrêtait 20 px
+                        avant les autres (Jeff, 02/08/2026). */}
+                    <span className={`hidden sm:inline-flex items-center justify-center text-[10px] font-black uppercase px-2 py-1 rounded-full flex-shrink-0 w-[112px] ${
                       isTaskLate ? 'bg-red-600 text-white' : TASK_STATUS_BADGE[task.status] ?? 'bg-gray-100 text-gray-600'
                     }`}>
-                      {isTaskLate ? 'TÂCHE EN RETARD' : TASK_STATUS_LABEL[task.status] ?? task.status}
+                      <span className="truncate">{isTaskLate ? 'En retard' : TASK_STATUS_LABEL[task.status] ?? task.status}</span>
                     </span>
+                    <ChevronRight className="w-4 h-4 text-gray-200 flex-shrink-0" />
                   </div>
                 </Link>
               )
@@ -1015,7 +1078,7 @@ export default async function DashboardPage() {
               const personne = (t as any).description || assignee
               // En retard = l'heure de FIN est passée. Pas le début : un lavage
               // prévu de 9h à 10h n'est pas en retard à 9h05.
-              const enRetard = new Date(t.end_at ?? t.start_at) < now
+              const enRetard = new Date(t.end_at ?? t.start_at) < maintenantReel
               // La fin n'est affichée que si elle tombe le même jour et après le
               // début : sinon la colonne annoncerait « 19:18 / 00:00 » sans dire
               // que c'est le lendemain.
@@ -1056,26 +1119,32 @@ export default async function DashboardPage() {
                           ))}
                         </p>
                       )}
-                      <p className={`sm:truncate ${taskVehicles.length > 0 ? 'text-xs text-gray-500 mt-0.5' : 'text-sm font-bold text-gray-900'}`}>
+                      <p className={`sm:truncate ${taskVehicles.length > 0 ? 'text-xs text-gray-500' : 'text-sm font-bold text-gray-900'}`}>
                         {t.title}
                       </p>
-                      <p className="sm:truncate mt-0.5">
-                        {personne
-                          ? <span className="text-[11px] text-gray-400">{personne}</span>
-                          : <span className="text-[11px] font-semibold text-amber-600">Non attribué</span>}
-                        {/* Sur téléphone l'état passe ici, faute de place à droite. */}
-                        {enRetard && <span className="sm:hidden text-[10px] font-black uppercase text-red-600"> · En retard</span>}
-                      </p>
+                      {/* La même troisième ligne que partout ailleurs sur cet
+                          écran : icône, puis le nom ou « À assigner » en ambre.
+                          Elle disait « Non attribué » sans icône, et ne tombait
+                          donc pas à la même hauteur que les lignes voisines
+                          (Jeff, remarque 45). */}
+                      <AssigneeLine name={personne || null} />
+                      {/* Sur téléphone l'état passe ici, faute de place à droite. */}
+                      {enRetard && (
+                        <p className="sm:hidden text-[10px] font-black uppercase text-red-600 mt-1">En retard</p>
+                      )}
                     </div>
                     {/* L'heure est passée mais la tâche est toujours à faire :
                         elle reste dans la liste (Jeff, 30/07/2026) et le dit en
                         rouge, pour ne pas se confondre avec celles à l'heure. */}
-                    <span className={`hidden sm:inline-flex text-[10px] font-black uppercase px-2 py-1 rounded-full flex-shrink-0 ${
+                    {/* Largeur FIXE, la même que la famille de lignes du dessus :
+                        « En retard » est plus large qu'« À faire », et le
+                        chevron reculait d'une ligne à l'autre (Jeff, 02/08/2026). */}
+                    <span className={`hidden sm:inline-flex items-center justify-center text-[10px] font-black uppercase px-2 py-1 rounded-full flex-shrink-0 w-[112px] ${
                       enRetard ? 'bg-red-600 text-white'
                       : t.status === 'en_cours' ? 'bg-blue-50 text-blue-700'
                       : 'bg-gray-100 text-gray-600'
                     }`}>
-                      {enRetard ? 'En retard' : t.status === 'en_cours' ? 'En cours' : 'À faire'}
+                      <span className="truncate">{enRetard ? 'En retard' : t.status === 'en_cours' ? 'En cours' : 'À faire'}</span>
                     </span>
                     <ChevronRight className="w-4 h-4 text-gray-200 flex-shrink-0" />
                   </div>
