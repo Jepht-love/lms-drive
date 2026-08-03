@@ -20,21 +20,27 @@ export async function updateAgencySettings(formData: FormData) {
     return Number.isFinite(n) ? n : null
   }
 
-  const payload = {
+  const payload: Record<string, unknown> = {
     company_name:         str('company_name') ?? 'LMS Agency',
     siret:                str('siret'),
     address:              str('address'),
     phone:                str('phone'),
     email:                str('email'),
-    extra_km_rate:        num('extra_km_rate'),
-    late_hourly_rate:     num('late_hourly_rate'),
-    late_daily_rate:      num('late_daily_rate'),
-    fuel_rate_per_liter:  num('fuel_rate_per_liter'),
-    default_deposit:      num('default_deposit'),
-    insurance_deductible: num('insurance_deductible'),
     // Une case non cochée n'envoie rien : son absence vaut « éteint ».
     require_amount_validation: formData.get('require_amount_validation') != null,
     updated_at:           new Date().toISOString(),
+  }
+
+  // Les six tarifs de secours ne sont plus saisis dans l'écran Paramètres depuis
+  // le 03/08/2026 : ils s'y affichent en lecture et se règlent dans les grilles
+  // tarifaires. Un champ absent du formulaire ne doit donc RIEN écraser, sinon
+  // enregistrer la raison sociale viderait la franchise de secours. Ils restent
+  // acceptés s'ils sont envoyés, pour ne casser aucun appel existant.
+  for (const champ of [
+    'extra_km_rate', 'late_hourly_rate', 'late_daily_rate',
+    'fuel_rate_per_liter', 'default_deposit', 'insurance_deductible',
+  ]) {
+    if (formData.get(champ) != null) payload[champ] = num(champ)
   }
 
   // Singleton : update la ligne existante, sinon insert

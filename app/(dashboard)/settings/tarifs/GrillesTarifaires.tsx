@@ -61,6 +61,16 @@ export default function GrillesTarifaires({ grilles, vehicules, agence }: Props)
   const [edition, setEdition] = useState<string | null>(null)
   /** véhicule → { champ → valeur saisie }, tant que rien n'est enregistré. */
   const [saisies, setSaisies] = useState<Record<string, Record<string, string>>>({})
+  /**
+   * Ce qui attend une confirmation. Supprimer une grille et retirer une voiture
+   * partaient au premier clic, sans retour possible : une erreur de doigt sur le
+   * téléphone effaçait une grille (demande de Jeff, 03/08/2026).
+   */
+  const [confirmation, setConfirmation] = useState<
+    | { genre: 'grille'; id: string; nom: string; nbVoitures: number }
+    | { genre: 'voiture'; id: string; grilleId: string; nom: string }
+    | null
+  >(null)
 
   const sansGrille = vehicules.filter(v => !v.pricing_grid_id)
 
@@ -137,7 +147,7 @@ export default function GrillesTarifaires({ grilles, vehicules, agence }: Props)
           Sans grille, une voiture retombe sur ces valeurs
         </p>
         <p className="text-xs text-gray-500 mt-1.5">
-          Retard {formatPrice(agence.late_hourly_rate)}/h · {formatPrice(agence.late_daily_rate)}/jour ·
+          Retard {formatPrice(agence.late_hourly_rate)}/h ·
           Carburant {formatPrice(agence.fuel_rate_per_liter)}/L · Franchise {formatPrice(agence.insurance_deductible)}
         </p>
       </div>
@@ -157,7 +167,7 @@ export default function GrillesTarifaires({ grilles, vehicules, agence }: Props)
               <form onSubmit={e => soumettreGrille(e, g.id)} className="p-4 border-b border-gray-100 space-y-3">
                 <input name="name" defaultValue={g.name} required aria-label="Nom de la grille"
                   className="w-full font-black uppercase tracking-wide text-sm border border-gray-200 rounded-lg px-2.5 py-2 focus:outline-none focus:border-gray-400" />
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   {CHAMPS_GRILLE.map(c => (
                     <div key={c.cle}>
                       <label className={labelCls} htmlFor={`${g.id}-${c.cle}`}>{c.court}</label>
@@ -191,8 +201,8 @@ export default function GrillesTarifaires({ grilles, vehicules, agence }: Props)
                     title="Modifier la grille">
                     <Pencil className="w-4 h-4" />
                   </button>
-                  <button type="button" onClick={() => supprimer(g.id, g.name, siennes.length)}
-                    disabled={pending}
+                  <button type="button" disabled={pending}
+                    onClick={() => setConfirmation({ genre: 'grille', id: g.id, nom: g.name, nbVoitures: siennes.length })}
                     className="p-1.5 text-gray-300 rounded-lg hover:bg-red-50 hover:text-red-500 flex-shrink-0 inline-flex items-center justify-center"
                     title="Supprimer la grille">
                     <Trash2 className="w-4 h-4" />
@@ -203,7 +213,10 @@ export default function GrillesTarifaires({ grilles, vehicules, agence }: Props)
                 {/* Largeur bornée : sur un grand écran, `justify-between` étalait
                     « Retard/h » et « 25,00 € » aux deux extrémités de la page,
                     avec un vide au milieu. La maquette les montre groupés. */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 mt-2 max-w-xl">
+                {/* Trois colonnes depuis le retrait du retard à la journée
+                    (03/08/2026) : à deux, la franchise se retrouvait seule sur
+                    une deuxième ligne, son montant aligné au milieu de la carte. */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-6 mt-2 max-w-2xl">
                   {CHAMPS_GRILLE.map(c => {
                     const v = (g as unknown as Record<string, number | null>)[c.cle]
                     return (
@@ -215,6 +228,49 @@ export default function GrillesTarifaires({ grilles, vehicules, agence }: Props)
                       </div>
                     )
                   })}
+                </div>
+              </div>
+            )}
+
+            {/* ── Ce qui attend une confirmation ────────────────────────────────
+                Rien ne part au premier clic : la bande nomme ce qui va disparaître
+                et ce que ça change, et le geste ne s'exécute qu'au second clic. */}
+            {confirmation && (
+              (confirmation.genre === 'grille' && confirmation.id === g.id) ||
+              (confirmation.genre === 'voiture' && confirmation.grilleId === g.id)
+            ) && (
+              <div className="mx-4 mt-4 flex flex-col sm:flex-row sm:items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5">
+                <span className="text-[11px] text-amber-800 flex-1 min-w-0">
+                  {confirmation.genre === 'grille' ? (
+                    <>
+                      Supprimer la grille <strong>{confirmation.nom}</strong>{' '}? C&apos;est définitif.
+                      {confirmation.nbVoitures > 1 && (
+                        <> Ses {confirmation.nbVoitures} voitures gardent leurs propres prix et
+                          retombent sur les valeurs de secours.</>
+                      )}
+                      {confirmation.nbVoitures === 1 && (
+                        <> Sa voiture garde ses propres prix et retombe sur les valeurs de secours.</>
+                      )}
+                    </>
+                  ) : (
+                    <>Retirer <strong>{confirmation.nom}</strong>{' '}de cette grille ? Elle garde ses propres
+                      prix et retombe sur les valeurs de secours pour le retard, le carburant et la franchise.</>
+                  )}
+                </span>
+                <div className="flex gap-2 flex-shrink-0">
+                  <button type="button" onClick={() => setConfirmation(null)} disabled={pending}
+                    className="px-3 py-1.5 rounded-lg text-[11px] font-semibold border border-amber-200 text-amber-800 disabled:opacity-40">
+                    Annuler
+                  </button>
+                  <button type="button" disabled={pending}
+                    onClick={() => {
+                      if (confirmation.genre === 'grille') supprimer(confirmation.id, confirmation.nom, confirmation.nbVoitures)
+                      else attacher(confirmation.id, null)
+                      setConfirmation(null)
+                    }}
+                    className="px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-amber-600 text-white disabled:opacity-40">
+                    {confirmation.genre === 'grille' ? 'Supprimer' : 'Retirer'}
+                  </button>
                 </div>
               </div>
             )}
@@ -270,7 +326,8 @@ export default function GrillesTarifaires({ grilles, vehicules, agence }: Props)
                             {deplie
                               ? <ChevronUp className="w-4 h-4 text-gray-300 flex-shrink-0" />
                               : <ChevronDown className="w-4 h-4 text-gray-300 flex-shrink-0" />}
-                            <button type="button" onClick={() => attacher(v.id, null)} disabled={pending}
+                            <button type="button" disabled={pending}
+                              onClick={() => setConfirmation({ genre: 'voiture', id: v.id, grilleId: g.id, nom: `${v.brand} ${v.model}` })}
                               className="p-1.5 text-gray-300 rounded-lg hover:bg-red-50 hover:text-red-500 flex-shrink-0 inline-flex items-center justify-center"
                               title="Retirer de la grille">
                               <X className="w-4 h-4" />
@@ -353,7 +410,8 @@ export default function GrillesTarifaires({ grilles, vehicules, agence }: Props)
                                     className="px-2 py-1.5 rounded-lg text-xs font-bold bg-[#111111] text-white disabled:opacity-30">
                                     OK
                                   </button>
-                                  <button type="button" onClick={() => attacher(v.id, null)} disabled={pending}
+                                  <button type="button" disabled={pending}
+                                    onClick={() => setConfirmation({ genre: 'voiture', id: v.id, grilleId: g.id, nom: `${v.brand} ${v.model}` })}
                                     className="p-1.5 text-gray-300 rounded-lg hover:bg-red-50 hover:text-red-500 inline-flex items-center justify-center"
                                     title="Retirer de la grille">
                                     <X className="w-4 h-4" />
@@ -380,7 +438,7 @@ export default function GrillesTarifaires({ grilles, vehicules, agence }: Props)
             <label className={labelCls} htmlFor="nouvelle-grille">Nom de la grille</label>
             <input id="nouvelle-grille" name="name" required placeholder="Ex : Sportive" className={inputCls} />
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             {CHAMPS_GRILLE.map(c => (
               <div key={c.cle}>
                 <label className={labelCls} htmlFor={`new-${c.cle}`}>{c.court}</label>

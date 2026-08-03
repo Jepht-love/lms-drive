@@ -32,7 +32,14 @@ async function verifieDroit() {
   return { erreur: null, supabase, user }
 }
 
-/** Les quatre valeurs communes, lues du formulaire. Vide veut dire « non renseigné ». */
+/**
+ * Les valeurs communes, lues du formulaire. Vide veut dire « non renseigné ».
+ *
+ * ⚠️ Un champ ABSENT du formulaire n'est pas touché, un champ vide l'est. La
+ * nuance compte : « retard à la journée » a quitté l'écran le 03/08/2026, et
+ * sans cette précaution, enregistrer une grille aurait effacé sa valeur en base
+ * sans que personne ne l'ait demandé.
+ */
 function valeursCommunes(formData: FormData) {
   const nombre = (cle: string) => {
     const brut = (formData.get(cle) as string | null)?.trim()
@@ -40,12 +47,11 @@ function valeursCommunes(formData: FormData) {
     const n = parseFloat(brut.replace(',', '.'))
     return Number.isFinite(n) ? n : null
   }
-  return {
-    late_hourly_rate:     nombre('late_hourly_rate'),
-    late_daily_rate:      nombre('late_daily_rate'),
-    fuel_rate_per_liter:  nombre('fuel_rate_per_liter'),
-    insurance_deductible: nombre('insurance_deductible'),
+  const valeurs: Record<string, number | null> = {}
+  for (const cle of ['late_hourly_rate', 'late_daily_rate', 'fuel_rate_per_liter', 'insurance_deductible']) {
+    if (formData.get(cle) != null) valeurs[cle] = nombre(cle)
   }
+  return valeurs
 }
 
 export async function creerGrille(formData: FormData) {

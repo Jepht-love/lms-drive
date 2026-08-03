@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import Link from 'next/link'
+import { Tags } from 'lucide-react'
 import { updateAgencySettings } from '@/lib/actions/agency'
 import type { AgencySettings } from '@/lib/contracts/agency'
 
@@ -48,34 +50,41 @@ export default function AgencySettingsForm({ settings }: { settings: AgencySetti
         </div>
       </div>
 
-      {/* Tarifs par défaut */}
+      {/* Les six tarifs se saisissaient ici et n'étaient lus par personne : la
+          facturation prend le prix porté par la voiture, puis celui de sa grille.
+          Le gérant réglait donc des valeurs sans effet (remarque 6 du
+          03/08/2026). Ils restent affichés, en lecture, parce qu'ils servent
+          encore de dernier recours à une voiture sans grille — et se modifient
+          désormais là où tous les autres prix se modifient. */}
       <div>
         <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-3">Tarifs par défaut</p>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          <div>
-            <label className={label} htmlFor="extra_km_rate">Km sup. (€/km)</label>
-            <input id="extra_km_rate" name="extra_km_rate" type="number" step="0.01" defaultValue={settings.extra_km_rate} className={input} />
+        <div className="bg-gray-50 border border-gray-200 rounded-xl p-3">
+          <p className="text-[11px] text-gray-500 mb-3">
+            Valeurs de secours, appliquées à une voiture qui n&apos;appartient à aucune grille.
+            Les prix se règlent dans les grilles tarifaires.
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-3 gap-y-2">
+            {[
+              // « Retard (€/jour) » retiré le 03/08/2026 : le retard se facture
+              // uniquement à l'heure, et ce champ ne pilotait rien.
+              { l: 'Km sup. (€/km)',   v: settings.extra_km_rate },
+              { l: 'Retard (€/h)',     v: settings.late_hourly_rate },
+              { l: 'Carburant (€/L)',  v: settings.fuel_rate_per_liter },
+              { l: 'Caution (€)',      v: settings.default_deposit },
+              { l: 'Franchise (€)',    v: settings.insurance_deductible },
+            ].map(t => (
+              <div key={t.l}>
+                <p className={label}>{t.l}</p>
+                <p className="text-sm font-bold text-gray-900">{t.v ?? '—'}</p>
+              </div>
+            ))}
           </div>
-          <div>
-            <label className={label} htmlFor="late_hourly_rate">Retard (€/h)</label>
-            <input id="late_hourly_rate" name="late_hourly_rate" type="number" step="0.5" defaultValue={settings.late_hourly_rate} className={input} />
-          </div>
-          <div>
-            <label className={label} htmlFor="late_daily_rate">Retard (€/jour)</label>
-            <input id="late_daily_rate" name="late_daily_rate" type="number" step="1" defaultValue={settings.late_daily_rate} className={input} />
-          </div>
-          <div>
-            <label className={label} htmlFor="fuel_rate_per_liter">Carburant (€/L)</label>
-            <input id="fuel_rate_per_liter" name="fuel_rate_per_liter" type="number" step="0.01" defaultValue={settings.fuel_rate_per_liter} className={input} />
-          </div>
-          <div>
-            <label className={label} htmlFor="default_deposit">Caution (€)</label>
-            <input id="default_deposit" name="default_deposit" type="number" step="1" defaultValue={settings.default_deposit} className={input} />
-          </div>
-          <div>
-            <label className={label} htmlFor="insurance_deductible">Franchise (€)</label>
-            <input id="insurance_deductible" name="insurance_deductible" type="number" step="1" defaultValue={settings.insurance_deductible} className={input} />
-          </div>
+          <Link
+            href="/settings/tarifs"
+            className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-700 hover:text-gray-900 transition-colors"
+          >
+            <Tags className="w-4 h-4" /> Ouvrir les grilles tarifaires
+          </Link>
         </div>
       </div>
 

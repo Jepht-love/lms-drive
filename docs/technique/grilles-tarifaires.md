@@ -61,18 +61,78 @@ sans avoir figé ses montants à côté, sinon un contrat de juillet afficherait
 
 ## Les grilles de LMS Drive, montées le 03/08/2026
 
-| Grille | Retard/h | Retard/j | Carburant | Franchise | Voitures |
-|---|---|---|---|---|---|
-| Sportive | 150 € | 80 € | 2,20 €/L | 21 000 € | BMW i8 |
-| Citadine | 50 € | 80 € | 2,20 €/L | 15 000 € | 5 voitures |
-| Citadine · franchise réduite | 50 € | 80 € | 2,20 €/L | 6 000 € | Smart Fortwo |
+| Grille | Retard/h | Carburant | Franchise | Voitures |
+|---|---|---|---|---|
+| Sportive | 150 € | 2,20 €/L | 21 000 € | BMW i8 |
+| Citadine | 50 € | 2,20 €/L | 15 000 € | 5 voitures |
+| Citadine · franchise réduite | 50 € | 2,20 €/L | 6 000 € | Smart Fortwo |
+
+## Le retard se facture à l'heure, et à rien d'autre — décision du 03/08/2026
+
+Une grille portait un « retard à la journée » de 80 €. Ce n'était le choix de personne : le
+`DEFAULT 80` de la migration `007_agency_settings.sql`, recopié de proche en proche. Aucun
+calcul ne l'a jamais lu, et il laissait croire à un forfait journalier inexistant — à 50 €/h,
+une journée de retard vaut 1 200 €, pas 80 €.
+
+**Le champ a quitté les écrans** (grilles et paramètres). Le retard se calcule par
+`calculateLateFee` : tolérance, puis tarif horaire par heure entamée. Le gérant corrige le
+montant à la main sur la facture de restitution quand il le juge nécessaire.
+
+La colonne `late_daily_rate` reste en base, dormante, et `valeursCommunes` ne l'écrase plus :
+un champ absent du formulaire n'est plus touché. Sans cette précaution, enregistrer une grille
+aurait effacé la valeur silencieusement.
+
+**Corrigé au passage :** l'état des lieux de retour annonçait « 150 €/h » ou « 50 €/h » écrits
+en dur sous le montant du retard, alors que le calcul prenait déjà le tarif de la grille. À
+15 €/h réglés, l'écran affichait 50 €/h.
 
 La troisième existe parce que la Smart Fortwo a toujours eu une franchise différente. Si un
 jour la franchise doit pouvoir se poser voiture par voiture, elle descendra au niveau du
 véhicule et cette grille disparaîtra.
 
-## Ce qui reste en dur dans le contrat
+## Les frais de restitution se règlent depuis l'application — 03/08/2026
 
-Les forfaits de dégâts (rayure 500 €, jantes 800 €, pare-brise 5 000 €…) et le texte des
-articles juridiques. Ce sont des valeurs propres à LMS Drive : elles devront descendre en
-configuration avant qu'un autre client reprenne ce contrat.
+Les 27 postes du tableau des frais (rayure, jantes, pare-brise, fourrière…) ne sont plus
+écrits en dur : ils vivent dans `restitution_fees`, deux listes (`sportif` et `standard`), et
+le gérant les ajoute, renomme, retarife, réordonne ou retire depuis `/settings/tarifs`.
+
+| Fichier | Rôle |
+|---|---|
+| `lib/contracts/frais-restitution.ts` | le contrat type, la lecture, la mise en forme d'une valeur |
+| `lib/actions/restitution-fees.ts` | les écritures, réservées au gérant |
+| `app/(dashboard)/settings/tarifs/FraisRestitution.tsx` | l'écran |
+| `supabase/migrations/077_frais_restitution.sql` | la table, **créée vide** |
+
+**Trois règles à ne pas casser :**
+
+1. **Une catégorie est tout ou rien.** Rien en base = le contrat type du code s'imprime, donc
+   le contrat d'avant le 03/08/2026 à la virgule près. Le bouton « Modifier ces frais »
+   recopie les 27 postes d'un coup : modifier une ligne seule ferait disparaître les 26 autres.
+2. **Les franchises et le retard ne se saisissent pas dans cette liste** (colonne `source`).
+   Ils viennent de la grille tarifaire du véhicule ; les rendre saisissables ferait afficher
+   deux chiffres contradictoires sur le même contrat.
+3. **`damage_key` relie un poste au constat de l'état des lieux.** C'est lui qui fait qu'une
+   rayure profonde constatée propose 500 € dans la facture. Un poste retiré prive le dommage
+   de son tarif : la facture arrive sans prix, et l'écran le dit avant de retirer.
+
+Les quatre écrans qui impriment ces montants (PDF, aperçu écran, récapitulatif de signature,
+état des lieux) reçoivent **la même liste**, résolue côté serveur par `postesDeLaCategorie`.
+`tarifDommage` tourne dans le navigateur : ne jamais lui faire lire la base, les postes doivent
+lui arriver en paramètre.
+
+**Restent dans le code, pour toujours :** le texte des 14 articles juridiques. Décision de
+Jeff du 03/08/2026, pour ne pas exposer le contrat à une réécriture approximative.
+
+**Piège corrigé au passage :** la catégorie « sportif » n'existait pas dans le formulaire du
+véhicule (citadine, berline, SUV, utilitaire) alors qu'elle déclenche tout le barème sportif.
+Modifier la BMW i8 lui faisait perdre ses tarifs sans un mot.
+
+## Les tarifs d'agence ne se saisissent plus dans Paramètres — 03/08/2026
+
+Les six champs de `agency_settings` s'affichaient en saisie alors qu'aucune facture ne les
+lisait (le gérant réglait 1 €/km pendant qu'on facturait 2 €). Ils y sont désormais **en
+lecture**, présentés comme des valeurs de secours, avec un renvoi vers cet écran.
+
+Conséquence à ne pas casser dans `lib/actions/agency.ts` : un champ tarifaire **absent** du
+formulaire n'écrase plus rien. Sans cette précaution, enregistrer la raison sociale viderait
+la franchise de secours. Les six restent acceptés s'ils sont envoyés.

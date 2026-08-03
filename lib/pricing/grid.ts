@@ -140,13 +140,23 @@ export const CHAMPS_VEHICULE = [
   { cle: 'extra_km_price',     label: 'Supplément km',  court: '€/km',   unite: '€' },
   { cle: 'km_included_daily',  label: 'Km inclus/j',    court: 'Km/j',   unite: '' },
   { cle: 'km_included_week',   label: 'Km inclus/sem',  court: 'Km/sem', unite: '' },
-  { cle: 'unlimited_km_price', label: 'Km illimité',    court: 'Illim.', unite: '€' },
+  { cle: 'unlimited_km_price', label: 'Km illimité',    court: 'Km illim.', unite: '€' },
 ] as const
 
-/** Les quatre valeurs communes d'une grille, dans l'ordre de l'écran. */
+/**
+ * Les valeurs communes d'une grille, dans l'ordre de l'écran.
+ *
+ * ⚠️ « Retard à la journée » (`late_daily_rate`) a été RETIRÉ de l'écran le
+ * 03/08/2026, sur décision de Jeff. Le retard se facture uniquement à l'heure
+ * (`calculateLateFee` : tolérance, puis tarif horaire par heure entamée), et le
+ * gérant corrige le montant à la main sur la facture de restitution s'il le
+ * souhaite. La valeur affichée, 80 €, n'était même pas un choix : c'était le
+ * `DEFAULT 80` de la migration 007. Elle n'a jamais été lue par personne, et
+ * laissée à l'écran elle laissait croire à un forfait journalier inexistant.
+ * La colonne reste en base, dormante, pour ne rien casser.
+ */
 export const CHAMPS_GRILLE = [
   { cle: 'late_hourly_rate',     label: 'Retard à l’heure',   court: 'Retard/h', unite: '€' },
-  { cle: 'late_daily_rate',      label: 'Retard à la journée', court: 'Retard/j', unite: '€' },
   { cle: 'fuel_rate_per_liter',  label: 'Carburant',           court: 'Carburant', unite: '€/L' },
   { cle: 'insurance_deductible', label: 'Franchise',           court: 'Franchise', unite: '€' },
 ] as const
