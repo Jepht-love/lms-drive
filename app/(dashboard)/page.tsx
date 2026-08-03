@@ -872,11 +872,26 @@ export default async function DashboardPage() {
               dure, pas une mission du jour, et il vit maintenant dans les
               alertes, juste en dessous. Les deux pastilles de comptage sont
               parties avec, elles annonçaient ces lignes-là. */}
-          {aPreparerAujourdhui.length > 0 && (
+          {(aPreparerAujourdhui.length > 0 || tachesEnRetard > 0) && (
             <div className="flex items-center gap-2 mt-2 flex-wrap">
-              <span className="text-[10px] font-bold text-amber-600 bg-amber-50 border border-amber-100 px-2.5 py-1 rounded-full whitespace-nowrap">
-                {aPreparerAujourdhui.length} à préparer
-              </span>
+              {aPreparerAujourdhui.length > 0 && (
+                <span className="text-[10px] font-bold text-amber-600 bg-amber-50 border border-amber-100 px-2.5 py-1 rounded-full whitespace-nowrap">
+                  {aPreparerAujourdhui.length} à préparer
+                </span>
+              )}
+              {/* Où est passé un rendez-vous dont l'heure est dépassée. Le
+                  renvoi n'existait que sur une liste VIDE : un rendez-vous créé
+                  après coup (planifié à 8h, saisi à 23h) devenait une alerte à
+                  la seconde et semblait s'être évaporé (Jeff, remarque 5 du
+                  03/08/2026). */}
+              {tachesEnRetard > 0 && (
+                <Link
+                  href="/alerts"
+                  className="text-[10px] font-bold text-red-600 bg-red-50 border border-red-100 px-2.5 py-1 rounded-full whitespace-nowrap hover:bg-red-100 transition-colors"
+                >
+                  {tachesEnRetard} passée{tachesEnRetard > 1 ? 's' : ''} en alerte, heure dépassée
+                </Link>
+              )}
             </div>
           )}
         </div>

@@ -173,10 +173,24 @@ export async function createMaintenanceRecord(formData: FormData) {
     if (vehicle) {
       const admin = createAdminClient()
       // 8 h du matin à l'agence, pas 8 h au fuseau du serveur.
-      const startAt = new Date(instantDepuisSaisie(`${payload.date}T08:00:00`))
-      const endAt = new Date(startAt.getTime() + 60 * 60_000)
+      let startAt = new Date(instantDepuisSaisie(`${payload.date}T08:00:00`))
       const today = new Date().toISOString().slice(0, 10)
       const isUpcoming = payload.date >= today
+      // Une intervention notée pour AUJOURD'HUI en fin de journée se posait
+      // quand même à 8 h du matin : le rendez-vous naissait dépassé, quittait
+      // aussitôt « Tâches du jour » et basculait en alerte, sans que rien ne
+      // l'explique (Jeff, remarque 5 du 03/08/2026). On le cale alors sur la
+      // prochaine demi-heure ronde, pour qu'il reste une mission du jour.
+      // L'heure exacte reste à saisir : c'est le chantier mis de côté (lot 3).
+      if (isUpcoming && startAt.getTime() < Date.now()) {
+        const finDuJour = new Date(instantDepuisSaisie(`${payload.date}T23:30:00`))
+        const dans30min = new Date(Date.now() + 30 * 60_000)
+        dans30min.setMinutes(dans30min.getMinutes() >= 30 ? 30 : 0, 0, 0)
+        // Jamais au-delà du jour choisi : un rendez-vous saisi à 23 h 50 se
+        // poserait sinon le lendemain, hors de la journée qu'on vient d'indiquer.
+        startAt = dans30min > finDuJour ? finDuJour : dans30min
+      }
+      const endAt = new Date(startAt.getTime() + 60 * 60_000)
 
       await admin.from('calendar_events').insert({
         title: `${maintenanceType(payload.type).label} · ${vehicle.brand} ${vehicle.model}`,
