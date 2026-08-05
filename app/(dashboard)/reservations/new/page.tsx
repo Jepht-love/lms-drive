@@ -16,10 +16,27 @@ export default async function NewReservationPage({
   // On n'accepte qu'un chemin interne (commençant par « / ») par sécurité.
   const backHref = from && from.startsWith('/') ? from : '/reservations'
 
-  const [{ data: vehicles }, { data: clients }] = await Promise.all([
+  const [{ data: vehicles }, { data: clients }, { data: clientDocs }] = await Promise.all([
     supabase.from('vehicles').select('id, plate, brand, model, daily_price, weekly_price, price_day_weekend, price_weekend_full, deposit_amount, km_included_daily, extra_km_price, unlimited_km_price').eq('is_active', true).order('brand'),
-    supabase.from('clients').select('id, first_name, last_name, phone, status, address, id_doc_front_path, id_doc_back_path, license_front_path').order('last_name'),
+    supabase.from('clients').select('id, first_name, last_name, phone, status, address, id_doc_front_path, id_doc_back_path, license_front_path, id_doc_type, license_number').order('last_name'),
+    // Documents importés rattachés aux clients (Système A). Sert à juger le dossier
+    // « complet » exactement comme la fiche client, sinon la réservation annonce
+    // « incomplet » sur un client dont les pièces ont été importées (corrigé 05/08/2026).
+    supabase.from('documents').select('entity_id, subcategory').eq('entity_type', 'client').eq('is_auto_generated', false),
   ])
+
+  // Sous-catégories des pièces importées, regroupées par client.
+  const subsByClient = new Map<string, string[]>()
+  for (const d of clientDocs ?? []) {
+    if (!d.entity_id || !d.subcategory) continue
+    const arr = subsByClient.get(d.entity_id) ?? []
+    arr.push(d.subcategory)
+    subsByClient.set(d.entity_id, arr)
+  }
+  const clientsAvecPieces = (clients ?? []).map(c => ({
+    ...c,
+    docSubcategories: subsByClient.get(c.id) ?? [],
+  }))
 
   return (
     <div className="space-y-6">
@@ -33,7 +50,7 @@ export default async function NewReservationPage({
       <ReservationForm
         action={createReservation}
         vehicles={vehicles ?? []}
-        clients={clients ?? []}
+        clients={clientsAvecPieces}
         defaultClientId={clientId}
         defaultVehicleId={vehicleId}
         defaultStartDatetime={start}

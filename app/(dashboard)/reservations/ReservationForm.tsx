@@ -42,6 +42,11 @@ interface Client {
   id_doc_front_path?: string | null
   id_doc_back_path?: string | null
   license_front_path?: string | null
+  id_doc_type?: string | null
+  license_number?: string | null
+  // Sous-catégories des pièces importées (Système A), pour juger le dossier
+  // exactement comme la fiche client.
+  docSubcategories?: string[]
 }
 
 interface Props {
