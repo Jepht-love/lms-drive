@@ -189,3 +189,74 @@ d'un coup touche une quarantaine d'écrans déjà validés par le gérant.
   redemande.
 - **Une dépense de 320 € du 01/08** vient d'un test de bout en bout sur le dégât
   d'essai « Porte avant droite ». Même décision : on n'y touche pas.
+
+## ⚠️ Priorité (décidée le 05/08/2026)
+
+Les remarques **#13 à #24** viennent de retours pris **avec le gérant en direct** :
+elles ont un **poids de priorité supérieur** au `PLAN-REMARQUES.md`. Ce n'est pas un
+ordre strict « tout #13-24 avant tout le plan » : c'est une **règle d'arbitrage** —
+**en cas de choix entre une modif du plan et une des #13-24, la #13-24 l'emporte.**
+Plusieurs recoupent d'ailleurs l'ancien plan et le ferment en même temps :
+#13 = 38.C, #15 = 38.E, #23 touche #8.
+
+## 7. Nouvelles remarques du 03/08/2026 (relevées du simulateur, clé `lms_remarques`)
+
+Cinq remarques ajoutées par Jeff, encore à faire. Les douze autres de la même
+série sont marquées ✅ FAIT dans son outil.
+
+- **#13 · Intervention à plusieurs véhicules** (`/maintenance/…/new`). Quand on
+  ajoute un deuxième véhicule à une intervention, seul le premier passe en
+  immobilisé. **Tous les véhicules d'une intervention doivent passer en
+  immobilisation**, pas seulement un.
+- **#14 · Comptabilité, pièces justificatives** (`/accounting`). Rattacher chaque
+  mouvement +/- à sa pièce : contrat de location, facture garage, facture de
+  restitution… **Chaque mouvement doit porter son document.**
+- **#15 · Clôture d'un déplacement** (`/internal-trips`). Clôturer n'importe quel
+  déplacement, professionnel ou réparation, **doit remettre le véhicule en
+  disponible**.
+- **#16 · Réservation immédiate** (`/reservations/new`). La réservation ne sert
+  aujourd'hui qu'au futur. Ajouter un mode **« Départ »** pour une location qui
+  commence maintenant : au clic, **la date et l'heure sont déjà préremplies**.
+- **#17 · Alertes** (`/alerts`). Pouvoir **supprimer une alerte à la main** en cas
+  de rush, quand on n'a pas le temps de clôturer la tâche qui l'a déclenchée.
+
+## 8. Remarques du 04/08/2026 (#18 à #24, relevées du simulateur)
+
+Sept remarques ajoutées. **Plusieurs sont de gros chantiers** (refonte du menu au
+format shadcn, rubrique « En cours », geste de retour par glissement), pas des
+corrections rapides : à cadrer avant de lancer.
+
+- **#18 · Heures / fuseau** (`/`, `/calendrier`). Jeff a cru voir un décalage
+  horaire. **Vérifier que toutes les heures affichées sont en heure française**,
+  pas en temps universel. Rejoint le piège connu `BUSINESS_TZ` (heures mises en
+  forme côté serveur).
+- **#19 · Menu horizontal au format shadcn** (zone dessinée sur `/`, 283×843 px).
+  Faire tomber la barre de menu verticale à l'horizontale, style `ui.shadcn.com` :
+  les **3 tirets** pour ouvrir le menu, le **« ? » du SAV** passé de l'autre côté,
+  la **date** aussi, le tout vraiment interactif. **Ajouter un onglet « Départ »**
+  (logo ⏱️) entre Réservation et Calendrier. Demande d'ensemble : **appliquer le
+  design shadcn à l'application.**
+- **#20 · Onglet « Départ » = départ instantané** (`/reservations/...`). Précision
+  sur la #16 : le « Départ » est une location qui **démarre maintenant**. Garder la
+  fonctionnalité, mais dans le **nouvel onglet Départ**, pas dans Réservations
+  (qui reste pour le futur).
+- **#21 · Rubrique « En cours » sur le tableau de bord** (zone dessinée sur `/`,
+  1142×98 px). Une tâche du jour a un bouton **« démarré »** ; démarrée, elle
+  bascule dans **« En cours »**. Un **pop-up** la suit sans quitter le tableau de
+  bord (ex. un déplacement affecté : le collaborateur reçoit la notification, clique
+  démarrer, ouvre le pop-up, remplit les détails, clôture). **Démarrer / terminer
+  une tâche ou une intervention met le véhicule disponible ou immobilisé**
+  automatiquement. Une tâche non démarrée bascule en alerte. But : centraliser la
+  décision pour les collaborateurs, sans les envoyer dans tous les onglets. Format
+  shadcn.
+- **#22 · Complément #21** (`/`). Rappelle aussi la suppression manuelle des
+  alertes (déjà #17), motif : le rush.
+- **#23 · Acompte** (`/reservations/...`). Trois boutons acompte → **n'en garder
+  qu'un**, à la création de la réservation ; supprimer le pop-up des deux autres.
+  Dans « Paiement de la location », **griser l'acompte** (déjà saisi à l'étape
+  précédente) et **déduire son montant du total**.
+- **#24 · Retour par glissement** (toute l'app). Ajouter le geste **swipe depuis le
+  bord gauche vers la droite** pour revenir à l'écran précédent (comme iOS natif,
+  Snapchat, LinkedIn), **interactif** et **restaurant l'état** de l'écran précédent
+  (défilement, données). À poser globalement sur toutes les pages compatibles, et
+  **retirer le bouton retour** qu'il remplace.

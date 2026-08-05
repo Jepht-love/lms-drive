@@ -40,6 +40,8 @@ document.documentElement.innerHTML = `<head><title>Simulateur — LMS Drive</tit
  #pj{flex:1;font-size:12px;color:#30d158;text-align:left;line-height:1.4}
  label.fichier{background:#3a3a3c;color:#fff;border-radius:999px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer}
  #fichiers{display:none}
+ #calque{position:fixed;top:74px;left:0;right:0;bottom:0;z-index:65;cursor:crosshair;display:none}
+ #rectdessin{position:fixed;border:2px solid #30d158;background:rgba(48,209,88,.15);z-index:66;pointer-events:none;border-radius:5px;display:none}
 </style></head><body>
  <div id="entete"><div class="barre">
    <button data-w="375" data-h="812">iPhone mini</button>
@@ -49,9 +51,12 @@ document.documentElement.innerHTML = `<head><title>Simulateur — LMS Drive</tit
    <button data-w="1180" data-h="820">iPad paysage</button>
    <button id="btn-note">💬 Commenter</button>
    <button id="btn-libre">✍️ Remarque libre</button>
+   <button id="btn-zone">⬛ Dessiner une zone</button>
    <button id="btn-liste">Mes remarques (<span id="nb">0</span>)</button>
  </div><div class="taille" id="taille"></div></div>
  <div id="zone"><iframe id="tel" src="/"></iframe></div>
+ <div id="calque"></div>
+ <div id="rectdessin"></div>
  <div id="panneau"><h3>Mes remarques</h3><div id="liste"></div></div>
  <div id="selListe"></div>
  <div id="selection"><span id="compte"></span><button id="vider">Tout vider</button><button id="ecrire" class="blanc">Écrire la remarque</button></div>
@@ -60,7 +65,8 @@ document.documentElement.innerHTML = `<head><title>Simulateur — LMS Drive</tit
 localStorage.setItem('lms_remarques', garde);
 'html ok';
 const cadre=document.getElementById('tel'),t=document.getElementById('taille');
-function poser(w,h,btn){const e=Math.min(1,(window.innerHeight-120)/h);cadre.style.width=w+'px';cadre.style.height=h+'px';cadre.style.transform='scale('+e+')';cadre.style.transformOrigin='top center';document.getElementById('zone').style.height=Math.round(h*e)+'px';t.textContent=w+' × '+h+' px'+(e<1?' (réduit à '+Math.round(e*100)+' %)':'');document.querySelectorAll('.barre button[data-w]').forEach(b=>b.classList.toggle('on',b===btn));}
+let dev={w:393,h:852};
+function poser(w,h,btn){dev={w,h};const e=Math.min(1,(window.innerHeight-120)/h);cadre.style.width=w+'px';cadre.style.height=h+'px';cadre.style.transform='scale('+e+')';cadre.style.transformOrigin='top center';document.getElementById('zone').style.height=Math.round(h*e)+'px';t.textContent=w+' × '+h+' px'+(e<1?' (réduit à '+Math.round(e*100)+' %)':'');document.querySelectorAll('.barre button[data-w]').forEach(b=>b.classList.toggle('on',b===btn));}
 document.querySelectorAll('.barre button[data-w]').forEach(b=>b.addEventListener('click',()=>poser(+b.dataset.w,+b.dataset.h,b)));
 poser(393,852,document.querySelector('.barre button[data-w="393"]'));
 const CLE='lms_remarques';
@@ -76,7 +82,7 @@ function retirer(i){const c=choisis[i];try{if(c.el){c.el.style.outline='';c.el.s
 function majBarre(){const n=choisis.length;compte.textContent=n+' élément'+(n>1?'s':'')+(listeOuverte?' ▾':' ▸');barreSel.style.display=n?'flex':'none';if(!n)listeOuverte=false;selListe.style.display=(n&&listeOuverte)?'block':'none';selListe.innerHTML=choisis.map((c,i)=>`<div class="lg"><span class="num">${i+1}</span><span class="txt">${c.page} → ${c.element}</span><span class="x" data-i="${i}">×</span></div>`).join('');selListe.querySelectorAll('.x').forEach(x=>x.onclick=()=>retirer(+x.dataset.i));}
 function viderSelection(){choisis.forEach(c=>{try{if(c.el){c.el.style.outline='';c.el.style.background='';}}catch{}});choisis=[];listeOuverte=false;majBarre();}
 function majPJ(){zonePJ.textContent=pieces.length?'📎 '+pieces.join(', '):'';}
-function rendre(){const n=lire();nb.textContent=n.length;liste.innerHTML=n.length?n.map((r,i)=>{const ou=(r.elements||[{page:r.page,element:r.element}]).map(e=>e.page+' → '+e.element).join('<br>');const pj=(r.captures&&r.captures.length)?`<span class="pj">📎 ${r.captures.join(', ')}</span>`:'';return `<div class="note"><span class="sup" data-i="${i}">×</span><span class="no">#${i+1}</span><span class="ou">${ou}</span><span class="quoi">${r.texte}</span>${pj}</div>`;}).join(''):'<div class="note">Aucune remarque.</div>';liste.querySelectorAll('.sup').forEach(s=>s.onclick=()=>{const n2=lire();n2.splice(+s.dataset.i,1);ecrire(n2);rendre();});}
+function rendre(){const n=lire();nb.textContent=n.length;liste.innerHTML=n.length?n.map((r,i)=>{const ou=r.zone?('🟦 Zone · '+r.zone.page+' · '+r.zone.rect.w+'×'+r.zone.rect.h+' px à ('+r.zone.rect.x+','+r.zone.rect.y+')'):(r.elements||[{page:r.page,element:r.element}]).map(e=>e.page+' → '+e.element).join('<br>');const pj=(r.captures&&r.captures.length)?`<span class="pj">📎 ${r.captures.join(', ')}</span>`:'';return `<div class="note"><span class="sup" data-i="${i}">×</span><span class="no">#${i+1}</span><span class="ou">${ou}</span><span class="quoi">${r.texte}</span>${pj}</div>`;}).join(''):'<div class="note">Aucune remarque.</div>';liste.querySelectorAll('.sup').forEach(s=>s.onclick=()=>{const n2=lire();n2.splice(+s.dataset.i,1);ecrire(n2);rendre();});}
 function brancher(){const d=cadre.contentDocument;if(!d)return;
  d.addEventListener('mouseover',e=>{if(!mode)return;if(choisis.some(c=>c.el===e.target))return;e.target.style.outline='2px dashed #0a84ff';e.target.style.outlineOffset='-2px';},true);
  d.addEventListener('mouseout',e=>{if(choisis.some(c=>c.el===e.target))return;e.target.style.outline='';},true);
@@ -84,7 +90,7 @@ function brancher(){const d=cadre.contentDocument;if(!d)return;
 cadre.addEventListener('load',()=>{choisis=choisis.map(c=>({page:c.page,element:c.element,el:null}));majBarre();brancher();});brancher();
 compte.onclick=()=>{listeOuverte=!listeOuverte;majBarre();};
 champFichiers.onchange=()=>{pieces=[...pieces,...Array.from(champFichiers.files).map(f=>f.name)];majPJ();champFichiers.value='';};
-document.getElementById('btn-note').onclick=e=>{mode=!mode;e.target.classList.toggle('rouge',mode);e.target.textContent=mode?'💬 Mode remarque ACTIF':'💬 Commenter';};
+document.getElementById('btn-note').onclick=e=>{mode=!mode;if(mode&&zoneMode){zoneMode=false;majBoutonZone();}e.target.classList.toggle('rouge',mode);e.target.textContent=mode?'💬 Mode remarque ACTIF':'💬 Commenter';};
 /* Remarque libre : ouvrir la fenêtre de saisie SANS avoir rien sélectionné.
    Ajouté le 30/07/2026 — jusque-là il fallait désigner au moins un élément à
    l'écran, ce qui empêchait d'écrire ce qui ne se montre pas du doigt : une
@@ -94,9 +100,33 @@ document.getElementById('btn-libre').onclick=()=>{viderSelection();let p='/';try
 document.getElementById('btn-liste').onclick=()=>{panneau.style.display=panneau.style.display==='block'?'none':'block';rendre();};
 document.getElementById('vider').onclick=viderSelection;
 document.getElementById('ecrire').onclick=()=>{cible.innerHTML=choisis.map((c,i)=>(i+1)+'. '+c.page+' → '+c.element).join('<br>');txt.value='';pieces=[];majPJ();barreSel.style.display='none';selListe.style.display='none';saisie.style.display='block';txt.focus();};
-document.getElementById('annuler').onclick=()=>{saisie.style.display='none';majBarre();};
+document.getElementById('annuler').onclick=()=>{saisie.style.display='none';effacerZoneDessin();pendingZone=null;majBarre();};
 /* Une remarque part dès qu'il y a du texte, avec ou sans élément désigné : sans
    sélection elle est rattachée à la page affichée (« remarque générale »). */
-document.getElementById('ok').onclick=()=>{const v=txt.value.trim();if(v){let p='/';try{p=cadre.contentWindow.location.pathname}catch{}const ou=choisis.length?choisis.map(c=>({page:c.page,element:c.element})):[{page:p,element:'remarque générale'}];const n=lire();n.push({elements:ou,texte:v,captures:pieces,taille:cadre.style.width});ecrire(n);}saisie.style.display='none';pieces=[];majPJ();viderSelection();rendre();};
+document.getElementById('ok').onclick=()=>{const v=txt.value.trim();if(v){const n=lire();if(pendingZone){n.push({zone:pendingZone,texte:v,captures:pieces});}else{let p='/';try{p=cadre.contentWindow.location.pathname}catch{}const ou=choisis.length?choisis.map(c=>({page:c.page,element:c.element})):[{page:p,element:'remarque générale'}];n.push({elements:ou,texte:v,captures:pieces,taille:cadre.style.width});}ecrire(n);}saisie.style.display='none';pieces=[];majPJ();effacerZoneDessin();pendingZone=null;viderSelection();rendre();};
+/* ── Dessiner une zone (ajouté 03/08/2026) ───────────────────────────────────
+   Tracer un rectangle sur l'écran simulé pour cadrer un design à créer. Le
+   rectangle est converti en pixels de l'APPAREIL (indépendants du zoom du
+   simulateur), enregistré avec la page affichée et la taille d'appareil, puis
+   décrit dans la fenêtre de saisie. Réutilise le même stockage (lms_remarques),
+   comme entrée { zone:{page,device,rect}, texte }. Sert à placer une nouvelle
+   UI au bon endroit sans deviner. Exclusif avec le mode remarque. */
+const calque=document.getElementById('calque'),rectDessin=document.getElementById('rectdessin');
+let zoneMode=false,pendingZone=null,dessin=null;
+function effacerZoneDessin(){rectDessin.style.display='none';}
+function majBoutonZone(){const b=document.getElementById('btn-zone');b.classList.toggle('rouge',zoneMode);b.textContent=zoneMode?'⬛ Zone ACTIVE — trace le rectangle':'⬛ Dessiner une zone';calque.style.display=zoneMode?'block':'none';}
+document.getElementById('btn-zone').onclick=()=>{zoneMode=!zoneMode;if(zoneMode&&mode){mode=false;const bn=document.getElementById('btn-note');bn.classList.remove('rouge');bn.textContent='💬 Commenter';}majBoutonZone();};
+calque.addEventListener('mousedown',ev=>{if(!zoneMode)return;dessin={sx:ev.clientX,sy:ev.clientY,r:cadre.getBoundingClientRect()};rectDessin.style.display='block';rectDessin.style.left=ev.clientX+'px';rectDessin.style.top=ev.clientY+'px';rectDessin.style.width='0px';rectDessin.style.height='0px';ev.preventDefault();});
+window.addEventListener('mousemove',ev=>{if(!dessin)return;const x=Math.min(ev.clientX,dessin.sx),y=Math.min(ev.clientY,dessin.sy);rectDessin.style.left=x+'px';rectDessin.style.top=y+'px';rectDessin.style.width=Math.abs(ev.clientX-dessin.sx)+'px';rectDessin.style.height=Math.abs(ev.clientY-dessin.sy)+'px';});
+window.addEventListener('mouseup',ev=>{if(!dessin)return;const d=dessin;dessin=null;const r=d.r,e=r.width/dev.w;
+ let x=(Math.min(ev.clientX,d.sx)-r.left)/e,y=(Math.min(ev.clientY,d.sy)-r.top)/e,w=Math.abs(ev.clientX-d.sx)/e,h=Math.abs(ev.clientY-d.sy)/e;
+ x=Math.round(Math.max(0,Math.min(x,dev.w)));y=Math.round(Math.max(0,Math.min(y,dev.h)));w=Math.round(Math.min(w,dev.w-x));h=Math.round(Math.min(h,dev.h-y));
+ if(w<8||h<8){effacerZoneDessin();return;}
+ let p='/';try{p=cadre.contentWindow.location.pathname}catch{}
+ pendingZone={page:p,device:{w:dev.w,h:dev.h},rect:{x,y,w,h}};
+ cible.textContent='🟦 Zone sur '+p+' — '+w+'×'+h+' px à ('+x+','+y+') sur écran '+dev.w+'×'+dev.h;
+ txt.value='';pieces=[];majPJ();txt.placeholder="Décris l'UI/UX voulu dans cette zone…";saisie.style.display='block';txt.focus();
+ zoneMode=false;majBoutonZone();
+});
 rendre();majBarre();majPJ();
 'simulateur prêt · ' + lire().length + ' remarques';
