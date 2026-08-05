@@ -300,9 +300,16 @@ export async function createMaintenanceRecord(formData: FormData) {
     }
 
     if (isUpcoming) {
+      // Tous les véhicules du passage au garage s'immobilisent, y compris un
+      // véhicule en location : déclarer une intervention pendant une location
+      // signifie qu'un problème l'a interrompue (accident, fourrière), la voiture
+      // doit donc apparaître immobilisée (Jeff, remarque 13 du 05/08/2026). Avant,
+      // le filtre `status === 'disponible'` laissait libre tout véhicule qui n'était
+      // pas disponible : le 2e véhicule d'un même rendez-vous restait « disponible ».
+      // On saute seulement ceux déjà immobilisés, pour ne pas réécrire pour rien.
       const aImmobiliser = auGarage
         .map(c => parId.get(c.vehicleId))
-        .filter(v => v && v.status === 'disponible')
+        .filter(v => v && v.status !== 'maintenance')
         .map(v => v!.id)
       if (aImmobiliser.length > 0) {
         await admin.from('vehicles').update({ status: 'maintenance' }).in('id', aImmobiliser)

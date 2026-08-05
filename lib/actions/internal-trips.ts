@@ -152,6 +152,12 @@ export async function endTrip(tripId: string, formData: FormData) {
   revalidatePath('/internal-trips')
   revalidatePath('/calendrier')
   revalidatePath('/')
+  // Le statut « en déplacement » est calculé à partir des déplacements actifs.
+  // Sans rafraîchir ces écrans, un véhicule dont on vient de clôturer le
+  // déplacement continuait de s'y afficher indisponible (remarque 15, 05/08/2026).
+  revalidatePath('/vehicles')
+  revalidatePath(`/vehicles/${trip.vehicle_id}`)
+  revalidatePath('/vehicles/immobilises')
   return { success: true }
 }
 
