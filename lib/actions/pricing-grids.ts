@@ -14,6 +14,11 @@
 // Ce qu'il ne faut pas casser : supprimer une grille ne supprime aucune voiture
 // (`ON DELETE SET NULL` en base). Une voiture sans grille facture ses propres
 // valeurs, exactement comme avant l'existence des grilles.
+//
+// Chaque mouvement laisse une trace dans le journal d'audit (comme le reste de
+// l'appli), pour qu'on sache QUI a changé un prix (demande de Jeff du
+// 06/08/2026). La trace ne bloque jamais l'action : un journal en échec ne doit
+// pas empêcher l'enregistrement du prix.
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
@@ -54,36 +59,62 @@ function valeursCommunes(formData: FormData) {
   return valeurs
 }
 
+/**
+ * Trace un mouvement de grille dans le journal d'audit, au même format que le
+ * reste de l'appli (`user_id`, `action`, `entity_type`, `entity_id`, `metadata`).
+ * On n'attend PAS son résultat au sens où un échec n'est pas remonté : une trace
+ * manquante vaut mieux qu'un prix refusé. La règle `audit_insert_self`
+ * (migration 063) exige `user_id = auth.uid()`, d'où le passage de l'identifiant.
+ */
+async function journal(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  action: string,
+  entityType: string,
+  entityId: string | null,
+  metadata: Record<string, unknown>,
+) {
+  await supabase.from('audit_logs').insert({
+    user_id: userId, action, entity_type: entityType, entity_id: entityId, metadata,
+  })
+}
+
 export async function creerGrille(formData: FormData) {
-  const { erreur, supabase } = await verifieDroit()
-  if (erreur) return { error: erreur }
+  const { erreur, supabase, user } = await verifieDroit()
+  if (erreur || !user) return { error: erreur ?? 'Non authentifié' }
 
   const name = (formData.get('name') as string)?.trim()
   if (!name) return { error: 'Donnez un nom à la grille.' }
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('pricing_grids')
     .insert({ name, ...valeursCommunes(formData) })
+    .select('id').single()
   if (error) return { error: error.message }
+
+  await journal(supabase, user.id, 'grille_created', 'pricing_grids', data.id, { name })
 
   revalidatePath('/settings')
   return { success: true }
 }
 
 export async function majGrille(grilleId: string, formData: FormData) {
-  const { erreur, supabase } = await verifieDroit()
-  if (erreur) return { error: erreur }
+  const { erreur, supabase, user } = await verifieDroit()
+  if (erreur || !user) return { error: erreur ?? 'Non authentifié' }
 
   const name = (formData.get('name') as string)?.trim()
+  const valeurs = valeursCommunes(formData)
   const { error } = await supabase
     .from('pricing_grids')
     .update({
       ...(name ? { name } : {}),
-      ...valeursCommunes(formData),
+      ...valeurs,
       updated_at: new Date().toISOString(),
     })
     .eq('id', grilleId)
   if (error) return { error: error.message }
+
+  await journal(supabase, user.id, 'grille_updated', 'pricing_grids', grilleId, { name: name ?? null, ...valeurs })
 
   revalidatePath('/settings')
   revalidatePath('/vehicles')
@@ -95,11 +126,13 @@ export async function majGrille(grilleId: string, formData: FormData) {
  * repartent simplement sans grille et facturent leurs propres valeurs.
  */
 export async function supprimerGrille(grilleId: string) {
-  const { erreur, supabase } = await verifieDroit()
-  if (erreur) return { error: erreur }
+  const { erreur, supabase, user } = await verifieDroit()
+  if (erreur || !user) return { error: erreur ?? 'Non authentifié' }
 
   const { error } = await supabase.from('pricing_grids').delete().eq('id', grilleId)
   if (error) return { error: error.message }
+
+  await journal(supabase, user.id, 'grille_deleted', 'pricing_grids', grilleId, {})
 
   revalidatePath('/settings')
   revalidatePath('/vehicles')
@@ -114,12 +147,18 @@ export async function supprimerGrille(grilleId: string) {
  * qu'aucune facture ne change de montant le jour où le gérant range ses voitures.
  */
 export async function attacherVehicule(vehicleId: string, grilleId: string | null) {
-  const { erreur, supabase } = await verifieDroit()
-  if (erreur) return { error: erreur }
+  const { erreur, supabase, user } = await verifieDroit()
+  if (erreur || !user) return { error: erreur ?? 'Non authentifié' }
 
   const { error } = await supabase
     .from('vehicles').update({ pricing_grid_id: grilleId }).eq('id', vehicleId)
   if (error) return { error: error.message }
+
+  await journal(
+    supabase, user.id,
+    grilleId ? 'vehicle_grid_attached' : 'vehicle_grid_detached',
+    'vehicles', vehicleId, { pricing_grid_id: grilleId },
+  )
 
   revalidatePath('/settings')
   revalidatePath('/vehicles')
@@ -136,8 +175,8 @@ export async function attacherVehicule(vehicleId: string, grilleId: string | nul
  * valable**, elle veut dire « inclus, sans supplément ».
  */
 export async function majTarifsVehicule(vehicleId: string, valeurs: Record<string, string>) {
-  const { erreur, supabase } = await verifieDroit()
-  if (erreur) return { error: erreur }
+  const { erreur, supabase, user } = await verifieDroit()
+  if (erreur || !user) return { error: erreur ?? 'Non authentifié' }
 
   const CHAMPS_AUTORISES = [
     'daily_price', 'price_day_weekend', 'price_weekend_full', 'weekly_price',
@@ -160,6 +199,10 @@ export async function majTarifsVehicule(vehicleId: string, valeurs: Record<strin
 
   const { error } = await supabase.from('vehicles').update(patch).eq('id', vehicleId)
   if (error) return { error: error.message }
+
+  // La trace la plus importante pour le gérant : qui a changé quel prix, et vers
+  // quelle valeur. `patch` porte exactement les champs modifiés.
+  await journal(supabase, user.id, 'vehicle_prices_updated', 'vehicles', vehicleId, patch)
 
   revalidatePath('/settings')
   revalidatePath('/vehicles')

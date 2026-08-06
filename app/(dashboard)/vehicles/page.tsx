@@ -3,6 +3,8 @@ import Link from 'next/link'
 import { Plus, Car, Wrench } from 'lucide-react'
 import VehiclesGridSwipeable from './VehiclesGridSwipeable'
 import SmartSearch from '@/components/ui/SmartSearch'
+import BoutonEcritureBloque from '@/components/ui/BoutonEcritureBloque'
+import { peutEcrireVehicules } from '@/lib/roles'
 import type { Vehicle } from '@/types/database'
 import { fetchActiveInternalTrips, internalTripPurposeLabel } from '@/lib/vehicles/internalTrips'
 import {
@@ -53,6 +55,14 @@ export default async function VehiclesPage({
 }) {
   const { status, need, q } = await searchParams
   const supabase = await createClient()
+
+  // Qui a le droit d'ajouter/modifier un véhicule : le gérant et l'admin. Pour
+  // les autres, le bouton « Ajouter » est grisé (décision du 06/08/2026), ils
+  // voient la flotte mais ne l'écrivent pas.
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: profil } = await supabase
+    .from('profiles').select('role, is_admin').eq('id', user?.id ?? '').single()
+  const peutEcrire = peutEcrireVehicules(profil)
 
   const { data: vehiclesRaw } = await supabase
     .from('vehicles')
@@ -239,13 +249,26 @@ export default async function VehiclesPage({
             )}
           </p>
         </div>
-        <Link
-          href="/vehicles/new"
-          className="flex items-center gap-2 px-4 py-2.5 bg-[#111111] text-white rounded-xl font-semibold hover:bg-gray-800 transition-colors text-sm active:scale-[.98]"
-        >
-          <Plus className="w-4 h-4" />
-          Ajouter
-        </Link>
+        {peutEcrire ? (
+          <Link
+            href="/vehicles/new"
+            className="flex items-center gap-2 px-4 py-2.5 bg-[#111111] text-white rounded-xl font-semibold hover:bg-gray-800 transition-colors text-sm active:scale-[.98]"
+          >
+            <Plus className="w-4 h-4" />
+            Ajouter
+          </Link>
+        ) : (
+          // Même encombrement que le bouton actif, mais grisé. Le clic ne crée
+          // rien : il enregistre la tentative dans le journal d'audit et affiche
+          // « réservé au gérant ». L'associé en parle au gérant.
+          <BoutonEcritureBloque
+            genre="ajout"
+            className="flex items-center gap-2 px-4 py-2.5 bg-gray-100 text-gray-400 rounded-xl font-semibold text-sm cursor-not-allowed"
+          >
+            <Plus className="w-4 h-4" />
+            Ajouter
+          </BoutonEcritureBloque>
+        )}
       </div>
 
       {/* Recherche */}
@@ -339,12 +362,21 @@ export default async function VehiclesPage({
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 text-center">
           <Car className="w-12 h-12 text-gray-200 mx-auto mb-4" />
           <p className="text-gray-400 font-medium text-sm">Aucun véhicule dans la flotte</p>
-          <Link
-            href="/vehicles/new"
-            className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-black underline underline-offset-2"
-          >
-            <Plus className="w-4 h-4" /> Ajouter le premier véhicule
-          </Link>
+          {peutEcrire ? (
+            <Link
+              href="/vehicles/new"
+              className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-black underline underline-offset-2"
+            >
+              <Plus className="w-4 h-4" /> Ajouter le premier véhicule
+            </Link>
+          ) : (
+            <BoutonEcritureBloque
+              genre="ajout"
+              className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-gray-300 cursor-not-allowed"
+            >
+              <Plus className="w-4 h-4" /> Ajouter le premier véhicule
+            </BoutonEcritureBloque>
+          )}
         </div>
       ) : vehicles.length === 0 ? (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 text-center">

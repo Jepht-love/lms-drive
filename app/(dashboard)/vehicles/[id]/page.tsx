@@ -1,13 +1,15 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Edit, Calendar, Wrench, AlertTriangle, FileText, TrendingUp, Briefcase } from 'lucide-react'
+import { ArrowLeft, Edit, Calendar, Wrench, AlertTriangle, FileText, TrendingUp, Briefcase, Trash2 } from 'lucide-react'
 import BackButton from '@/components/ui/BackButton'
 import { getVehicleStatusColor, getVehicleStatusLabel, formatDate, formatPrice } from '@/lib/utils'
 import VehicleStatusButton from '../VehicleStatusButton'
 import VehicleMaintenanceCard from './VehicleMaintenanceCard'
 import DeleteButton from '@/components/ui/DeleteButton'
+import BoutonEcritureBloque from '@/components/ui/BoutonEcritureBloque'
 import { deleteVehicle } from '@/lib/actions/delete'
+import { peutEcrireVehicules } from '@/lib/roles'
 import { computeVehicleNeeds, buildLastByType } from '@/lib/maintenance-health'
 import { fetchActiveInternalTrips, estEnDeplacement, internalTripPurposeLabel } from '@/lib/vehicles/internalTrips'
 import { jourHeureAgence } from '@/lib/format/heureAgence'
@@ -34,8 +36,11 @@ export default async function VehiclePage({ params }: { params: Promise<{ id: st
   // Les données financières (CA, rentabilité, charges) sont réservées aux managers.
   const { data: { user } } = await supabase.auth.getUser()
   const { data: caller } = await supabase
-    .from('profiles').select('role').eq('id', user?.id ?? '').single()
+    .from('profiles').select('role, is_admin').eq('id', user?.id ?? '').single()
   const isManager = caller?.role === 'gerant' || caller?.role === 'associe'
+  // Modifier ou supprimer un véhicule : gérant et admin seulement (06/08/2026).
+  // L'associé voit la fiche et ses prix, mais les boutons d'écriture sont grisés.
+  const peutEcrire = peutEcrireVehicules(caller)
 
   // Ces sept lectures sont indépendantes : les enchaîner en série cumulait autant
   // d'aller-retours réseau. En parallèle, la latence de la page retombe à celle
@@ -249,15 +254,31 @@ export default async function VehiclePage({ params }: { params: Promise<{ id: st
           <Link href={`/maintenance/${id}`} className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 rounded-xl text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors">
             <Wrench className="w-4 h-4" /> Entretien
           </Link>
-          <Link href={`/vehicles/${id}/edit`} className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 rounded-xl text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors">
-            <Edit className="w-4 h-4" /> Modifier
-          </Link>
-          <DeleteButton
-            onConfirm={deleteVehicle.bind(null, id)}
-            label="Supprimer le véhicule"
-            confirmMessage={`Supprimer ${vehicle.brand} ${vehicle.model} (${vehicle.plate}) ? Le véhicule sera archivé.`}
-            variant="text"
-          />
+          {/* Modifier et Supprimer : gérant et admin seulement. Pour l'associé,
+              même encombrement mais grisé, aucune action au clic (06/08/2026). */}
+          {peutEcrire ? (
+            <Link href={`/vehicles/${id}/edit`} className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 rounded-xl text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors">
+              <Edit className="w-4 h-4" /> Modifier
+            </Link>
+          ) : (
+            <BoutonEcritureBloque genre="modification" vehicleId={id}
+              className="flex items-center gap-2 px-4 py-2.5 border border-gray-100 rounded-xl text-gray-300 text-sm font-medium cursor-not-allowed">
+              <Edit className="w-4 h-4" /> Modifier
+            </BoutonEcritureBloque>
+          )}
+          {peutEcrire ? (
+            <DeleteButton
+              onConfirm={deleteVehicle.bind(null, id)}
+              label="Supprimer le véhicule"
+              confirmMessage={`Supprimer ${vehicle.brand} ${vehicle.model} (${vehicle.plate}) ? Le véhicule sera archivé.`}
+              variant="text"
+            />
+          ) : (
+            <BoutonEcritureBloque genre="suppression" vehicleId={id}
+              className="flex items-center gap-2 px-4 py-2.5 text-gray-300 rounded-xl text-sm font-medium cursor-not-allowed w-full">
+              <Trash2 className="w-4 h-4" /> Supprimer le véhicule
+            </BoutonEcritureBloque>
+          )}
         </div>
       </div>
 

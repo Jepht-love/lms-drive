@@ -56,6 +56,31 @@ export async function createVehicle(formData: FormData) {
   redirect(`/vehicles/${data.id}`)
 }
 
+/**
+ * Trace dans le journal d'audit qu'un utilisateur a TENTÉ d'ajouter, modifier ou
+ * supprimer un véhicule (donc un prix) alors qu'il n'en a pas le droit. Appelée
+ * par le bouton grisé côté écran : le geste ne fait rien, mais on sait qui a
+ * essayé (demande de Jeff du 06/08/2026, contrôle des prix). N'écrit jamais un
+ * véhicule, ne renvoie pas d'erreur : une trace en plus ne doit rien casser.
+ * La règle `audit_insert_self` (migration 063) laisse chacun journaliser sa
+ * propre action (`user_id = auth.uid()`).
+ */
+export async function journaliserTentativeEcritureVehicule(
+  genre: 'ajout' | 'modification' | 'suppression',
+  vehicleId?: string,
+) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+  await supabase.from('audit_logs').insert({
+    user_id: user.id,
+    action: 'vehicle_write_blocked',
+    entity_type: 'vehicles',
+    entity_id: vehicleId ?? null,
+    metadata: { genre },
+  })
+}
+
 export async function updateVehicle(id: string, formData: FormData) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

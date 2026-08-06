@@ -219,6 +219,8 @@ série sont marquées ✅ FAIT dans son outil.
   commence maintenant : au clic, **la date et l'heure sont déjà préremplies**.
 - **#17 · Alertes** (`/alerts`). Pouvoir **supprimer une alerte à la main** en cas
   de rush, quand on n'a pas le temps de clôturer la tâche qui l'a déclenchée.
+  **+ suppression par lots** (précisé le 06/08/2026) : cocher plusieurs alertes et
+  les retirer d'un coup.
 
 ## 8. Remarques du 04/08/2026 (#18 à #24, relevées du simulateur)
 
@@ -298,3 +300,54 @@ corrections rapides : à cadrer avant de lancer.
   redemander les mêmes infos au client. Une section « Non finalisé » liste ces
   réservations en cours. **Gros chantier, plan requis** (où stocker le brouillon,
   quand il expire, comment il se reprend, quand il devient une vraie réservation).
+
+## 11. Remarques du 06/08/2026 (#29, #30), relevées du simulateur
+
+- **#29 · Paiement de la location à simplifier** (écran de paiement d'une résa).
+  Sur « Paiement de la location », il veut **plus simple, au format facture, une
+  ligne par élément** : l'**acompte encaissé** s'il y en a un **avec son mode de
+  paiement** (repris de la fenêtre précédente, à la création), puis le **reste à
+  payer**, et la possibilité d'ajouter un moyen de paiement. **Recoupe #23, #8 et
+  J·42.2** : c'est le même sujet acompte/paiement, à traiter d'un seul tenant.
+- **#30 · Récap départ : le loueur affiche encore « LMS Drive »**
+  (`/inspections/departure/…`, le récapitulatif « Contrat de location … LOUEUR LMS
+  Drive LOCATAIRE »). Son mot : « toujours pas ». **Censé corrigé par `2287d9b`**
+  (l'encadré Loueur complet a été câblé dans la page départ + `RecapSignatures`).
+  **Régression à vérifier à l'écran** : soit il a testé avant le déploiement, soit
+  la boîte n'affiche que le nom sans les coordonnées. Défaut de socle (nom client en
+  dur), part aussi chez Smart Loc s'il reste.
+
+## 12. Trouvé le 06/08/2026
+
+- **⚠️ Bug de socle + décision prix : l'écriture des véhicules revient au gérant.**
+  La règle d'accès `vehicles_write_managers` (migration 002) s'appuyait sur
+  `get_user_role()` qui **ignore `is_admin`** (migration 001) : le
+  super-administrateur ne pouvait ni créer un véhicule, ni **attacher une voiture à
+  une grille ou corriger un prix depuis la grille** (ces actions écrivent dans
+  `vehicles`, même verrou). D'où le « on ne peut pas ajouter de véhicule ».
+  **Migration `080_ecriture_vehicules_gerant.sql`** (écrite le 06/08, PAS encore
+  appliquée) : helper `is_admin_user()` + règle d'écriture des véhicules réservée
+  au **gérant et au super-admin**. **Décision de Jeff du 06/08 : l'associé est
+  retiré de l'écriture** (le prix vit sur la fiche du véhicule, le laisser écrire le
+  laissait changer un prix). L'associé **voit tout** (lecture ouverte), et **parle
+  au gérant** pour toute modification. Le contrôle fin par profil (confidentialité
+  des prix, demande/approbation) = plus tard. **Même motif sur `clients`,
+  `reservations`, etc., non touché ici** ; `is_admin_user()` resservira.
+  **Côté écran (fait le 06/08, pas commité)** : boutons « Ajouter » (liste
+  véhicules) et « Modifier » / « Supprimer » (fiche véhicule) **grisés** pour
+  l'associé, même gabarit, aucune action au clic (repère `peutEcrireVehicules`
+  dans `lib/roles.ts`). L'écran des grilles, lui, redirige déjà tout non-gérant.
+  Le gérant/admin gardent les boutons actifs (vérifié). **Reste à voir** : le
+  rendu grisé lui-même, sur un compte associé (pas testé, pas de session associé).
+  **Le journal d'audit trace désormais chaque mouvement de grille** (création,
+  renommage, suppression, rattachement, et surtout `vehicle_prices_updated` = qui
+  a changé quel prix), dans `lib/actions/pricing-grids.ts`. **Et la TENTATIVE
+  bloquée** : le bouton grisé n'est pas mort, il enregistre `vehicle_write_blocked`
+  (genre ajout / modification / suppression, qui a cliqué) puis affiche « réservé
+  au gérant » — composant `components/ui/BoutonEcritureBloque.tsx`, action
+  `journaliserTentativeEcritureVehicule` (`lib/actions/vehicles.ts`). Demande de
+  Jeff : savoir qui a *voulu* toucher un prix, pas seulement qui l'a fait.
+- **La facture normalisée** (`docs/PLAN-FACTURATION-NORMALISEE.md`) rejoint la
+  liste des chantiers, à sa place quand Jeff donnera le GO. C'est le format officiel
+  de la facture de restitution, réutilisé aussi par les infractions (#9/#11) et le
+  point ouvert du PDF (libellé des frais de retard).
