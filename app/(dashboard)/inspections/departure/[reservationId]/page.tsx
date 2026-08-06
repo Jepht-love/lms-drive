@@ -5,6 +5,7 @@ import { ArrowLeft } from 'lucide-react'
 import BackButton from '@/components/ui/BackButton'
 import InspectionFlow from '@/components/inspection/InspectionFlow'
 import { postesDeLaCategorie, scopeDuVehicule } from '@/lib/contracts/frais-restitution'
+import { getAgencySettings } from '@/lib/contracts/agency'
 import { generateContractNumber } from '@/lib/utils'
 
 export default async function DepartureInspectionPage({ params }: { params: Promise<{ reservationId: string }> }) {
@@ -15,7 +16,7 @@ export default async function DepartureInspectionPage({ params }: { params: Prom
     supabase.auth.getUser(),
     supabase
       .from('reservations')
-      .select('*, vehicle:vehicles(*), client:clients(first_name, last_name, phone, address)')
+      .select('*, vehicle:vehicles(*), client:clients(first_name, last_name, phone, address, postal_code, city, email)')
       .eq('id', reservationId)
       .single(),
   ])
@@ -73,15 +74,29 @@ export default async function DepartureInspectionPage({ params }: { params: Prom
   // proposé pour un dommage et ce qui s'imprime au récapitulatif de signature.
   const { postes: postesFrais } = await postesDeLaCategorie(supabase, scopeDuVehicule(vehicle?.category))
   const client = reservation.client as any
+  // Coordonnées de l'agence (le loueur), pour l'en-tête du contrat au départ :
+  // même encadré Loueur que l'aperçu et le PDF, jamais « LMS Drive » en dur.
+  const agency = await getAgencySettings(supabase)
 
   // Contrat prévisualisé + signé sur la page de l'EDL (ticket SAV 21/07).
   // Déjà signé en amont → pas de re-signature : le flux ne demande que l'EDL.
   const dejaSigne = contract.status === 'signe' || contract.status === 'cloture'
   const contratInfo = dejaSigne ? null : {
     numero: contract.contract_number ?? '',
+    loueur: {
+      nom: agency.company_name,
+      phone: agency.phone,
+      address: agency.address,
+      email: agency.email,
+      siret: agency.siret,
+      vatNumber: agency.vat_number ?? null,
+    },
     clientNom: `${client?.first_name ?? ''} ${client?.last_name ?? ''}`.trim() || 'Client',
     clientPhone: client?.phone ?? null,
     clientAddress: client?.address ?? null,
+    clientPostalCode: client?.postal_code ?? null,
+    clientCity: client?.city ?? null,
+    clientEmail: client?.email ?? null,
     vehiculeLabel: `${vehicle?.brand ?? ''} ${vehicle?.model ?? ''}`.trim(),
     plate: vehicle?.plate ?? '',
     debut: reservation.start_datetime,

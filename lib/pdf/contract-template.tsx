@@ -423,119 +423,6 @@ function DamagePhotos({ zones }: { zones: DamagedZone[] }) {
   )
 }
 
-// ─── EDL Page ─────────────────────────────────────────────────────────────────
-
-function InspectionPage({ insp, contractNumber, clientName, vehiclePlate, vehicleModel, companyName, logoUrl, cachetUrl, edlImage }: {
-  insp: InspectionPDFData
-  contractNumber: string
-  clientName: string
-  vehiclePlate: string
-  vehicleModel: string
-  companyName: string
-  logoUrl?: string | null
-  cachetUrl?: string | null
-  edlImage?: string
-}) {
-  const isDepart = insp.type === 'depart'
-  const titleColor = isDepart ? '#2563eb' : '#7c3aed'
-
-  return (
-    <Page size="A4" style={s.edlPage}>
-      <View style={[s.edlHeader, { borderBottomColor: titleColor }]}>
-        <View>
-          <Text style={[s.edlTitle, { color: titleColor }]}>
-            État des lieux de {isDepart ? 'DÉPART' : 'RETOUR'}
-          </Text>
-          <Text style={s.edlSubtitle}>
-            {vehicleModel} · {vehiclePlate} · Client : {clientName}
-          </Text>
-        </View>
-        <View style={{ textAlign: 'right' }}>
-          <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 9, color: '#1e293b' }}>{contractNumber}</Text>
-          {insp.signedAt && (
-            <Text style={{ fontSize: 8, color: '#64748b', marginTop: 2 }}>
-              Signé le {fmtDate(insp.signedAt)}
-            </Text>
-          )}
-        </View>
-      </View>
-
-      <View style={s.metricsRow}>
-        <View style={s.metricBox}>
-          <Text style={s.metricValue}>{fmtKm(insp.kmReading)}</Text>
-          <Text style={s.metricLabel}>Kilométrage</Text>
-        </View>
-        <View style={s.metricBox}>
-          <Text style={s.metricValue}>{insp.fuelRangeKm} km</Text>
-          <Text style={s.metricLabel}>Autonomie carburant</Text>
-        </View>
-        <View style={s.metricBox}>
-          <Text style={s.metricValue}>{stars(insp.exteriorCleanliness)}</Text>
-          <Text style={s.metricLabel}>Propreté ext.</Text>
-        </View>
-        <View style={s.metricBox}>
-          <Text style={s.metricValue}>{stars(insp.interiorCleanliness)}</Text>
-          <Text style={s.metricLabel}>Propreté int.</Text>
-        </View>
-        <View style={[s.metricBox, { backgroundColor: insp.damagedZones.length > 0 ? '#fff7ed' : '#f0fdf4' }]}>
-          <Text style={[s.metricValue, { color: insp.damagedZones.length > 0 ? '#ea580c' : '#16a34a' }]}>
-            {insp.damagedZones.length}
-          </Text>
-          <Text style={s.metricLabel}>Dommage(s)</Text>
-        </View>
-      </View>
-
-      <Text style={s.sectionTitle}>Schéma du véhicule & dommages constatés</Text>
-      <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
-        <View>
-          <VehicleSchemaImage damages={insp.damagedZones} bgImage={edlImage} size={250} />
-          <SchemaLegend />
-        </View>
-        <View style={{ flex: 1 }}>
-          <DamageTable zones={insp.damagedZones} />
-        </View>
-      </View>
-
-      <DamagePhotos zones={insp.damagedZones} />
-
-      {insp.photos.length > 0 && (
-        <View style={s.section}>
-          <Text style={s.sectionTitle}>Photos ({insp.photos.length})</Text>
-          <View style={s.photosGrid}>
-            {insp.photos.map((p, i) => (
-              <View key={i} style={s.photoItem}>
-                <Image src={p.url} style={{ width: '100%', borderRadius: 3 }} />
-                <Text style={s.photoLabel}>{p.label.replace(/_/g, ' ')}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-      )}
-
-      {/* Signatures EDL */}
-      <View style={s.edlSigRow}>
-        <View style={s.edlSigBox}>
-          <Text style={s.sigLabel}>Signature du client</Text>
-          {insp.clientSignature ? (
-            <Image src={insp.clientSignature} style={s.sigImage} />
-          ) : (
-            <View style={{ height: 55, backgroundColor: '#f8fafc', borderRadius: 4 }} />
-          )}
-          {insp.signedAt && <Text style={s.sigDate}>{fmtDate(insp.signedAt)}</Text>}
-        </View>
-        <View style={s.edlSigBox}>
-          <Text style={s.sigLabel}>Pour l'agence</Text>
-          <AgencyStamp logoUrl={logoUrl} cachetUrl={cachetUrl} companyName={companyName} />
-        </View>
-      </View>
-
-      <Text fixed style={{ position: 'absolute', bottom: 18, left: 36, right: 36, fontSize: 7, color: '#cbd5e1', textAlign: 'center' }}>
-        {contractNumber} · État des lieux {isDepart ? 'départ' : 'retour'} · LMS Drive
-      </Text>
-    </Page>
-  )
-}
-
 // ─── Comparatif EDL départ / retour (page paysage, lisible sur iPad) ──────────
 
 function EDLCompareColumn({ insp, edlImage }: { insp: InspectionPDFData; edlImage?: string }) {
@@ -582,83 +469,6 @@ function EDLCompareColumn({ insp, edlImage }: { insp: InspectionPDFData; edlImag
   )
 }
 
-function EDLComparePage({ dep, arr, contractNumber, clientName, vehiclePlate, vehicleModel, edlImage }: {
-  dep: InspectionPDFData
-  arr: InspectionPDFData
-  contractNumber: string
-  clientName: string
-  vehiclePlate: string
-  vehicleModel: string
-  edlImage?: string
-}) {
-  const kmDriven = Math.max(0, arr.kmReading - dep.kmReading)
-  const depIds = new Set(dep.damagedZones.map(z => z.id))
-  const newDamages = arr.damagedZones.filter(z => !depIds.has(z.id)).length
-
-  const Delta = ({ label, value, warn }: { label: string; value: string; warn?: boolean }) => (
-    <View style={{ flex: 1, backgroundColor: warn ? '#fff7ed' : '#f1f5f9', borderRadius: 4, paddingVertical: 5, paddingHorizontal: 8 }}>
-      <Text style={{ fontSize: 13, fontFamily: 'Helvetica-Bold', color: warn ? '#ea580c' : '#0f172a' }}>{value}</Text>
-      <Text style={{ fontSize: 7, color: '#64748b' }}>{label}</Text>
-    </View>
-  )
-
-  return (
-    // A4 portrait (comme le reste du document) — on conserve le principe départ/
-    // retour côte à côte, avec des schémas réduits pour tenir sur la largeur A4.
-    <Page size="A4" style={s.edlPage}>
-      <View style={[s.edlHeader, { borderBottomColor: '#0f172a' }]}>
-        <View>
-          <Text style={[s.edlTitle, { color: '#0f172a' }]}>Comparatif état des lieux · Départ / Retour</Text>
-          <Text style={s.edlSubtitle}>{vehicleModel} · {vehiclePlate} · Client : {clientName}</Text>
-        </View>
-        <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 9, color: '#1e293b' }}>{contractNumber}</Text>
-      </View>
-
-      {/* Bandeau des différences départ → retour */}
-      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 10 }}>
-        <Delta label="Kilomètres parcourus" value={`${fmtKm(kmDriven)} km`} />
-        <Delta label="Nouveaux dommages au retour" value={`${newDamages}`} warn={newDamages > 0} />
-        <Delta label="Dommages au départ" value={`${dep.damagedZones.length}`} />
-        <Delta label="Dommages au retour" value={`${arr.damagedZones.length}`} warn={arr.damagedZones.length > dep.damagedZones.length} />
-      </View>
-
-      {/* Deux colonnes côte à côte : départ | retour */}
-      <View style={{ flexDirection: 'row', gap: 14 }}>
-        <EDLCompareColumn insp={dep} edlImage={edlImage} />
-        <View style={{ width: 1, backgroundColor: '#e2e8f0' }} />
-        <EDLCompareColumn insp={arr} edlImage={edlImage} />
-      </View>
-
-      {/* Signatures EDL départ / retour, compactes, sous chaque colonne (wrap=false
-          → jamais coupées, jamais rejetées seules sur une page). */}
-      <View wrap={false} style={{ flexDirection: 'row', gap: 14, marginTop: 8, paddingTop: 6, borderTop: '1px solid #e2e8f0' }}>
-        <View style={{ flex: 1, alignItems: 'center' }}>
-          <Text style={{ fontSize: 6, color: '#94a3b8', marginBottom: 1 }}>Signature client · EDL départ</Text>
-          {dep.clientSignature ? (
-            <Image src={dep.clientSignature} style={{ height: 28, objectFit: 'contain' }} />
-          ) : (
-            <Text style={{ fontSize: 8, color: '#cbd5e1' }}>—</Text>
-          )}
-        </View>
-        <View style={{ width: 1, backgroundColor: '#e2e8f0' }} />
-        <View style={{ flex: 1, alignItems: 'center' }}>
-          <Text style={{ fontSize: 6, color: '#94a3b8', marginBottom: 1 }}>Signature client · EDL retour</Text>
-          {arr.clientSignature ? (
-            <Image src={arr.clientSignature} style={{ height: 28, objectFit: 'contain' }} />
-          ) : (
-            <Text style={{ fontSize: 8, color: '#cbd5e1' }}>—</Text>
-          )}
-        </View>
-      </View>
-
-      <Text fixed style={{ position: 'absolute', bottom: 14, left: 36, right: 36, fontSize: 7, color: '#cbd5e1', textAlign: 'center' }}>
-        {contractNumber} · Comparatif état des lieux départ / retour · LMS Drive
-      </Text>
-    </Page>
-  )
-}
-
-// ─── Comparatif PHOTOS départ / retour (page paysage, même format) ────────────
 
 function EDLPhotosCompareColumn({ insp }: { insp: InspectionPDFData }) {
   const isDepart = insp.type === 'depart'
@@ -705,38 +515,6 @@ function EDLPhotosCompareColumn({ insp }: { insp: InspectionPDFData }) {
   )
 }
 
-function EDLPhotosComparePage({ dep, arr, contractNumber, clientName, vehiclePlate, vehicleModel }: {
-  dep: InspectionPDFData
-  arr: InspectionPDFData
-  contractNumber: string
-  clientName: string
-  vehiclePlate: string
-  vehicleModel: string
-}) {
-  return (
-    // A4 portrait — photos départ / retour côte à côte (tailles réduites pour A4).
-    <Page size="A4" style={s.edlPage}>
-      <View style={[s.edlHeader, { borderBottomColor: '#0f172a' }]}>
-        <View>
-          <Text style={[s.edlTitle, { color: '#0f172a' }]}>Photos · Départ / Retour</Text>
-          <Text style={s.edlSubtitle}>{vehicleModel} · {vehiclePlate} · Client : {clientName}</Text>
-        </View>
-        <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 9, color: '#1e293b' }}>{contractNumber}</Text>
-      </View>
-
-      <View style={{ flexDirection: 'row', gap: 14 }}>
-        <EDLPhotosCompareColumn insp={dep} />
-        <View style={{ width: 1, backgroundColor: '#e2e8f0' }} />
-        <EDLPhotosCompareColumn insp={arr} />
-      </View>
-
-      <Text fixed style={{ position: 'absolute', bottom: 18, left: 36, right: 36, fontSize: 7, color: '#cbd5e1', textAlign: 'center' }}>
-        {contractNumber} · Photos état des lieux départ / retour · LMS Drive
-      </Text>
-    </Page>
-  )
-}
-
 // ─── État des lieux de départ, INTÉGRÉ au corps du contrat ────────────────────
 
 // Propreté en toutes lettres, comme l'aperçu à l'écran (pas d'étoiles ici).
@@ -744,16 +522,19 @@ const CLEANLINESS_LABELS: Record<number, string> = {
   1: 'Sale', 2: 'Moyen', 3: 'Normal', 4: 'Propre', 5: 'Très propre',
 }
 
-// L'état des lieux de départ vit désormais DANS le contrat, juste après la
-// caution, et non plus sur une page séparée en fin de document (gérant,
-// 06/08/2026 : « l'état des lieux doit être en haut, et une seule signature »).
-// Ce bloc n'a donc PAS de signature : la signature unique du contrat, en bas,
-// vaut pour le contrat ET l'état des lieux. Schéma + relevés + dommages + photos,
-// exactement ce que montre l'aperçu.
-function InlineDepartEDL({ insp, edlImage }: { insp: InspectionPDFData; edlImage?: string }) {
+// L'état des lieux vit désormais DANS le contrat, juste après la tarification et
+// la caution, et non plus sur une page séparée en fin de document (gérant,
+// 06/08/2026 : « l'état des lieux en haut, et une seule signature »). Ces blocs
+// n'ont PAS de signature : la signature unique du contrat, en bas, vaut pour le
+// contrat ET l'état des lieux.
+//
+// Un seul EDL (au départ, avant restitution) → le relevé de départ, détaillé.
+function InlineEDL({ insp, edlImage, label }: { insp: InspectionPDFData; edlImage?: string; label: string }) {
   return (
-    <View style={s.section}>
-      <Text style={s.sectionTitle}>État des lieux de départ</Text>
+    // `break` : l'état des lieux démarre en haut d'une nouvelle page, son titre
+    // n'est jamais orphelin en bas de la page précédente (gérant, 06/08/2026).
+    <View break style={s.section}>
+      <Text style={s.sectionTitle}>{label}</Text>
       <View style={s.metricsRow}>
         <View style={s.metricBox}>
           <Text style={s.metricValue}>{fmtKm(insp.kmReading)}</Text>
@@ -799,12 +580,59 @@ function InlineDepartEDL({ insp, edlImage }: { insp: InspectionPDFData; edlImage
   )
 }
 
+// Encart chiffre du bandeau comparatif (km parcourus, dommages…).
+function DeltaBox({ label, value, warn }: { label: string; value: string; warn?: boolean }) {
+  return (
+    <View style={{ flex: 1, backgroundColor: warn ? '#fff7ed' : '#f1f5f9', borderRadius: 4, paddingVertical: 5, paddingHorizontal: 8 }}>
+      <Text style={{ fontSize: 13, fontFamily: 'Helvetica-Bold', color: warn ? '#ea580c' : '#0f172a' }}>{value}</Text>
+      <Text style={{ fontSize: 7, color: '#64748b' }}>{label}</Text>
+    </View>
+  )
+}
+
+// Les DEUX états des lieux existent (le retour a été fait) → la comparaison
+// départ / retour côte à côte, schémas ET photos, remontée dans le corps du
+// contrat (gérant, 06/08/2026). Plus de pages comparatives séparées en fin de
+// document : tout est ici, sous la tarification.
+function InlineEDLCompare({ dep, arr, edlImage }: { dep: InspectionPDFData; arr: InspectionPDFData; edlImage?: string }) {
+  const kmDriven = Math.max(0, arr.kmReading - dep.kmReading)
+  const depIds = new Set(dep.damagedZones.map(z => z.id))
+  const newDamages = arr.damagedZones.filter(z => !depIds.has(z.id)).length
+  const aDesPhotos = [dep, arr].some(
+    ins => ins.photos.length > 0 || ins.damagedZones.some(z => (z.photos?.length ?? 0) > 0),
+  )
+  return (
+    // `break` : la comparaison démarre en HAUT d'une nouvelle page, jamais son
+    // titre orphelin en bas de la page précédente (gérant, 06/08/2026).
+    <View break style={s.section}>
+      <Text style={s.sectionTitle}>État des lieux · Départ / Retour</Text>
+      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 10 }}>
+        <DeltaBox label="Kilomètres parcourus" value={`${fmtKm(kmDriven)} km`} />
+        <DeltaBox label="Nouveaux dommages au retour" value={`${newDamages}`} warn={newDamages > 0} />
+        <DeltaBox label="Dommages au départ" value={`${dep.damagedZones.length}`} />
+        <DeltaBox label="Dommages au retour" value={`${arr.damagedZones.length}`} warn={arr.damagedZones.length > dep.damagedZones.length} />
+      </View>
+      <View style={{ flexDirection: 'row', gap: 14 }}>
+        <EDLCompareColumn insp={dep} edlImage={edlImage} />
+        <View style={{ width: 1, backgroundColor: '#e2e8f0' }} />
+        <EDLCompareColumn insp={arr} edlImage={edlImage} />
+      </View>
+      {aDesPhotos && (
+        <View style={{ flexDirection: 'row', gap: 14, marginTop: 10, paddingTop: 8, borderTop: '1px solid #e2e8f0' }}>
+          <EDLPhotosCompareColumn insp={dep} />
+          <View style={{ width: 1, backgroundColor: '#e2e8f0' }} />
+          <EDLPhotosCompareColumn insp={arr} />
+        </View>
+      )}
+    </View>
+  )
+}
+
 // ─── Main PDF Component ───────────────────────────────────────────────────────
 
 export function ContractPDF({ data }: { data: ContractData }) {
   const depInsp = data.inspections?.find(i => i.type === 'depart')
   const arrInsp = data.inspections?.find(i => i.type === 'arrivee')
-  const hasReturnSig = !!arrInsp?.clientSignature
 
   const isSport = data.vehicleCategory === 'sportif'
   const fees = getFeesTable(data.vehicleCategory ?? 'citadine', data.isSmartFortwo, {
@@ -977,45 +805,10 @@ export function ContractPDF({ data }: { data: ContractData }) {
             </View>
           )}
 
-          {/* Barème du véhicule, les 4 formules des contrats papier 2026.
-              Purement informatif : le montant facturé est le Total TTC ci-dessous. */}
-          {(data.priceDayWeek || data.priceDayWeekend || data.priceWeekendFull || data.priceWeek) && (
-            <View style={[s.box, { marginTop: 4 }]}>
-              <Text style={{ fontSize: 8, color: '#64748b', marginBottom: 3 }}>
-                Barème du véhicule
-              </Text>
-              {data.priceDayWeek != null && (
-                <View style={s.row}>
-                  <Text style={s.label}>Journée en semaine ({data.kmIncluded ?? 200} km inclus)</Text>
-                  <Text style={s.value}>{fmtMoney(data.priceDayWeek)}</Text>
-                </View>
-              )}
-              {data.priceDayWeekend != null && (
-                <View style={s.row}>
-                  <Text style={s.label}>Journée en week-end ({data.kmIncluded ?? 200} km inclus)</Text>
-                  <Text style={s.value}>{fmtMoney(data.priceDayWeekend)}</Text>
-                </View>
-              )}
-              {data.priceWeekendFull != null && (
-                <View style={s.row}>
-                  {/* Libellé volontairement identique au contrat papier, et assez
-                      court pour tenir sur une ligne dans la colonne de gauche. */}
-                  <Text style={s.label}>Week-end complet ({data.kmIncludedWeekend ?? 600} km inclus)</Text>
-                  <Text style={s.value}>{fmtMoney(data.priceWeekendFull)}</Text>
-                </View>
-              )}
-              {data.priceWeek != null && (
-                <View style={s.row}>
-                  <Text style={s.label}>Semaine 7 jours ({data.kmIncludedWeek ?? 1200} km inclus)</Text>
-                  <Text style={s.value}>{fmtMoney(data.priceWeek)}</Text>
-                </View>
-              )}
-              <View style={s.row}>
-                <Text style={s.label}>Mois</Text>
-                <Text style={s.value}>Sur devis (KM sur devis)</Text>
-              </View>
-            </View>
-          )}
+          {/* Le barème du véhicule (jour semaine, week-end, semaine, mois) a été
+              RETIRÉ du contrat le 06/08/2026 : c'est de l'information de grille
+              tarifaire, pas du contrat, et il décalait tout sur une page de plus.
+              Le prix facturé est le détail ci-dessus et le Total TTC ci-dessous. */}
           <View style={s.totalBox}>
             <Text style={s.totalLabel}>Total TTC</Text>
             <Text style={s.totalValue}>{fmtMoney(data.totalPrice)}</Text>
@@ -1070,9 +863,16 @@ export function ContractPDF({ data }: { data: ContractData }) {
           </View>
         )}
 
-        {/* État des lieux de départ, remonté ici (partie la plus importante), avec
-            schéma, relevés, dommages et photos — juste comme l'aperçu à l'écran. */}
-        {depInsp && <InlineDepartEDL insp={depInsp} edlImage={data.edlSchemaImage} />}
+        {/* État des lieux, remonté ici (juste sous la tarification et la caution,
+            partie la plus importante). Les DEUX EDL faits → comparaison départ /
+            retour côte à côte avec les photos ; un seul → le relevé détaillé. */}
+        {depInsp && arrInsp ? (
+          <InlineEDLCompare dep={depInsp} arr={arrInsp} edlImage={data.edlSchemaImage} />
+        ) : depInsp ? (
+          <InlineEDL insp={depInsp} edlImage={data.edlSchemaImage} label="État des lieux de départ" />
+        ) : arrInsp ? (
+          <InlineEDL insp={arrInsp} edlImage={data.edlSchemaImage} label="État des lieux de retour" />
+        ) : null}
 
         {/* Frais complémentaires */}
         {((data.lateFeeAmount ?? 0) > 0 || (data.extraKmCount ?? 0) > 0 || (data.damageFeeAmount ?? 0) > 0) && (
@@ -1166,27 +966,20 @@ export function ContractPDF({ data }: { data: ContractData }) {
         </View>
 
         {/* ══ Signature (contrat + état des lieux) et cachet du loueur ══
-            Une seule signature du locataire vaut pour le contrat ET l'EDL départ,
-            apposée en un geste au départ (d'où le libellé). La signature de l'EDL
-            retour, quand elle existe, garde sa colonne. En face : le cachet du
-            loueur, qui porte son identité et VAUT signature côté agence — pas de
-            logo à côté, il ferait doublon avec le cachet (gérant, 06/08/2026). */}
+            UNE SEULE signature du locataire, qui vaut pour le contrat ET l'état
+            des lieux (départ comme retour) : techniquement c'est elle qui fait
+            foi (gérant, 06/08/2026). Pas de signature d'EDL retour séparée. En
+            face, le cachet du loueur, qui porte son identité et vaut signature
+            côté agence — pas de logo à côté, il ferait doublon avec le cachet. */}
         <View style={s.signaturesRow}>
-          <View style={[s.sigBox, { width: hasReturnSig ? '31%' : '47%' }]}>
+          <View style={[s.sigBox, { width: '47%' }]}>
             <Text style={s.sigLabel}>Signature du contrat de location + état des lieux</Text>
             {data.clientSignature
               ? <Image src={data.clientSignature} style={s.sigImage} />
               : <View style={{ height: 55 }} />}
             {data.signedAt && <Text style={s.sigDate}>Le {fmtDT(data.signedAt)}</Text>}
           </View>
-          {hasReturnSig && (
-            <View style={[s.sigBox, { width: '31%' }]}>
-              <Text style={s.sigLabel}>Signature · État des lieux retour</Text>
-              <Image src={arrInsp!.clientSignature!} style={s.sigImage} />
-              {arrInsp?.signedAt && <Text style={s.sigDate}>Le {fmtDT(arrInsp.signedAt)}</Text>}
-            </View>
-          )}
-          <View style={[s.sigBox, { width: hasReturnSig ? '31%' : '47%' }]}>
+          <View style={[s.sigBox, { width: '47%' }]}>
             <Text style={s.sigLabel}>Cachet du loueur (vaut signature)</Text>
             <AgencyStamp logoUrl={logoUrl} cachetUrl={cachetUrl} companyName={companyName} />
             {data.signedAt && <Text style={s.sigDate}>Le {fmtDT(data.signedAt)}</Text>}
@@ -1197,54 +990,10 @@ export function ContractPDF({ data }: { data: ContractData }) {
           {data.contractNumber} · LMS Drive · Contrat de location de véhicule
         </Text>
       </Page>
-
-      {/* ── Comparatif départ/retour côte à côte (page paysage, format iPad) ── */}
-      {depInsp && arrInsp && (
-        <EDLComparePage
-          dep={depInsp}
-          arr={arrInsp}
-          contractNumber={data.contractNumber}
-          clientName={data.clientName}
-          vehiclePlate={data.vehiclePlate}
-          vehicleModel={`${data.vehicleBrand} ${data.vehicleModel}`}
-          edlImage={data.edlSchemaImage}
-        />
-      )}
-
-      {/* ── Photos départ/retour côte à côte (page paysage) ── */}
-      {depInsp && arrInsp && [depInsp, arrInsp].some(
-        ins => ins.photos.length > 0 || ins.damagedZones.some(z => (z.photos?.length ?? 0) > 0)
-      ) && (
-        <EDLPhotosComparePage
-          dep={depInsp}
-          arr={arrInsp}
-          contractNumber={data.contractNumber}
-          clientName={data.clientName}
-          vehiclePlate={data.vehiclePlate}
-          vehicleModel={`${data.vehicleBrand} ${data.vehicleModel}`}
-        />
-      )}
-
-      {/* ── EDL détaillé ──
-          L'état des lieux de DÉPART est désormais intégré au corps du contrat
-          (InlineDepartEDL), avec une signature unique en bas : on ne le remet donc
-          PAS en page séparée. Quand les deux EDL existent, la vue comparative +
-          photos ci-dessus couvre le retour. Reste seulement le cas d'un retour
-          isolé sans départ (rare), qui garde sa page détaillée. */}
-      {arrInsp && !depInsp && (
-        <InspectionPage
-          insp={arrInsp}
-          contractNumber={data.contractNumber}
-          clientName={data.clientName}
-          vehiclePlate={data.vehiclePlate}
-          vehicleModel={`${data.vehicleBrand} ${data.vehicleModel}`}
-          companyName={companyName}
-          logoUrl={logoUrl}
-          cachetUrl={cachetUrl}
-          edlImage={data.edlSchemaImage}
-        />
-      )}
-
+      {/* Plus aucune page EDL en fin de document : l'état des lieux (relevé de
+          départ, ou comparaison départ/retour + photos) est intégré au corps du
+          contrat, sous la tarification, et la signature unique en bas couvre le
+          tout (gérant, 06/08/2026). */}
     </Document>
   )
 }

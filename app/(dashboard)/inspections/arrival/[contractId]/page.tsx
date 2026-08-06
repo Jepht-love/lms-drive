@@ -7,6 +7,7 @@ import InspectionFlow from '@/components/inspection/InspectionFlow'
 import { calculateRentalDays } from '@/lib/utils'
 import { tarifsDuVehicule } from '@/lib/pricing/resolve'
 import { postesDeLaCategorie, scopeDuVehicule } from '@/lib/contracts/frais-restitution'
+import { getAgencySettings } from '@/lib/contracts/agency'
 
 export default async function ArrivalInspectionPage({ params }: { params: Promise<{ contractId: string }> }) {
   const { contractId } = await params
@@ -30,7 +31,7 @@ export default async function ArrivalInspectionPage({ params }: { params: Promis
         payment_amount,
         deposit_amount,
         vehicle:vehicles(*),
-        client:clients(first_name, last_name, phone, address)
+        client:clients(first_name, last_name, phone, address, postal_code, city, email)
       )
     `)
     .eq('id', contractId)
@@ -56,6 +57,10 @@ export default async function ArrivalInspectionPage({ params }: { params: Promis
   // Le tableau des frais de restitution réglé par le gérant : il fixe le prix
   // proposé pour un dommage et ce qui s'imprime au récapitulatif de signature.
   const { postes: postesFrais } = await postesDeLaCategorie(supabase, scopeDuVehicule(vehicle?.category))
+
+  // Coordonnées de l'agence (le loueur) : le récap de restitution affiche le
+  // même encadré Loueur que l'aperçu et le PDF, jamais « LMS Drive » en dur.
+  const agency = await getAgencySettings(supabase)
 
   // Relevé de bord au départ (km + carburant) pour comparer à l'aller-retour
   const { data: departureInspection } = await supabase
@@ -105,9 +110,20 @@ export default async function ArrivalInspectionPage({ params }: { params: Promis
           // Au retour : en-tête du contrat en prévisualisation (pas de re-signature,
           // le contrat a été signé au départ) — demande gérant, ticket SAV 21/07.
           numero: contract.contract_number ?? '',
+          loueur: {
+            nom: agency.company_name,
+            phone: agency.phone,
+            address: agency.address,
+            email: agency.email,
+            siret: agency.siret,
+            vatNumber: agency.vat_number ?? null,
+          },
           clientNom: `${client?.first_name ?? ''} ${client?.last_name ?? ''}`.trim() || 'Client',
           clientPhone: client?.phone ?? null,
           clientAddress: client?.address ?? null,
+          clientPostalCode: client?.postal_code ?? null,
+          clientCity: client?.city ?? null,
+          clientEmail: client?.email ?? null,
           vehiculeLabel: `${vehicle?.brand ?? ''} ${vehicle?.model ?? ''}`.trim(),
           plate: vehicle?.plate ?? '',
           debut: reservation?.start_datetime ?? '',

@@ -16,12 +16,30 @@ import DamageComparison from '@/components/vehicle-schema/DamageComparison'
 import { VEHICLE_ZONES, graviteLabel, type DamageEntry } from '@/components/vehicle-schema/inspection-types'
 import { getFeesTable, getLegalArticles, VIDEO_CLAUSE, type MontantsContrat } from '@/lib/contracts/legal-articles'
 import type { PosteFrais } from '@/lib/contracts/frais-restitution'
+import { formatPhoneFr, splitAddressFr } from '@/lib/format/coordonnees'
+
+/** Le loueur (l'agence), tel qu'il s'affiche dans l'en-tête du contrat au départ
+ *  ET au retour. Vient de la configuration d'agence, JAMAIS écrit en dur ici
+ *  (règle du socle : aucune valeur propre à un client dans le code). */
+export interface LoueurInfo {
+  nom: string
+  phone?: string | null
+  address?: string | null
+  email?: string | null
+  siret?: string | null
+  vatNumber?: string | null
+}
 
 export interface ContratInfo {
   numero: string
+  /** Coordonnées de l'agence, pour aligner cet en-tête sur l'aperçu et le PDF. */
+  loueur?: LoueurInfo | null
   clientNom: string
   clientPhone?: string | null
   clientAddress?: string | null
+  clientPostalCode?: string | null
+  clientCity?: string | null
+  clientEmail?: string | null
   vehiculeLabel: string
   plate: string
   debut: string
@@ -146,6 +164,10 @@ export default function RecapSignatures({
       })
     : []
 
+  // Adresse de l'agence découpée en rue / code postal / ville pour s'aligner
+  // ligne à ligne sur celle du locataire, comme l'aperçu et le PDF du contrat.
+  const loueurAddr = splitAddressFr(contrat?.loueur?.address)
+
   // La signature contrat n'est exigée qu'au départ avec un contrat locataire
   const needContratSig = isDepart && !!contrat
   const ready = reconnu && !!edlSig
@@ -179,13 +201,23 @@ export default function RecapSignatures({
       <div className="grid grid-cols-2 gap-4 text-sm">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Loueur</p>
-          <p className="font-bold text-gray-900">LMS Drive</p>
+          <p className="font-bold text-gray-900">{contrat.loueur?.nom ?? '—'}</p>
+          {contrat.loueur?.phone && <p className="text-xs text-gray-500">{formatPhoneFr(contrat.loueur.phone)}</p>}
+          {loueurAddr.rue && <p className="text-xs text-gray-500">{loueurAddr.rue}</p>}
+          {loueurAddr.cp && <p className="text-xs text-gray-500">{loueurAddr.cp}</p>}
+          {loueurAddr.ville && <p className="text-xs text-gray-500">{loueurAddr.ville}</p>}
+          {contrat.loueur?.email && <p className="text-xs text-gray-500">{contrat.loueur.email}</p>}
+          {contrat.loueur?.siret && <p className="text-xs text-gray-500 mt-1">SIRET : {contrat.loueur.siret}</p>}
+          {contrat.loueur?.vatNumber && <p className="text-xs text-gray-500">N° TVA : {contrat.loueur.vatNumber}</p>}
         </div>
         <div>
           <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Locataire</p>
           <p className="font-bold text-gray-900">{contrat.clientNom}</p>
-          {contrat.clientPhone && <p className="text-xs text-gray-500">{contrat.clientPhone}</p>}
-          {contrat.clientAddress && <p className="text-xs text-gray-400">{contrat.clientAddress}</p>}
+          {contrat.clientPhone && <p className="text-xs text-gray-500">{formatPhoneFr(contrat.clientPhone)}</p>}
+          {contrat.clientAddress && <p className="text-xs text-gray-500">{contrat.clientAddress}</p>}
+          {contrat.clientPostalCode && <p className="text-xs text-gray-500">{contrat.clientPostalCode}</p>}
+          {contrat.clientCity && <p className="text-xs text-gray-500">{contrat.clientCity}</p>}
+          {contrat.clientEmail && <p className="text-xs text-gray-500">{contrat.clientEmail}</p>}
         </div>
       </div>
       <div className="rounded-xl bg-gray-50 p-3 flex items-center gap-3">
