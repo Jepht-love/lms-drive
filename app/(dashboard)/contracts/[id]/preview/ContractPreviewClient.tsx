@@ -43,6 +43,17 @@ interface Props {
   postesFrais?: PosteFrais[] | null
 }
 
+// ⚠️ RÈGLE (gérant, 06/08/2026) : cet aperçu à l'écran doit rester IDENTIQUE à 100 %
+// au PDF du contrat (`lib/pdf/contract-template.tsx`). Même ordre des blocs, mêmes
+// informations, rien d'un côté qui manque de l'autre. Toute modif ici se reporte
+// sur le PDF, et inversement. L'ordre voulu, de haut en bas :
+//   1. Le contrat (en-tête, loueur/locataire, véhicule, dates, prix, dépôt)
+//   2. L'état des lieux de départ (le plus important : schéma, relevés, dommages, photos)
+//   3. Les conditions générales
+//   4. La clause photo horodatée
+//   5. Le tableau récapitulatif des frais
+//   6. La signature (contrat + EDL) avec le cachet et le logo du loueur
+
 const CLEANLINESS_LABELS: Record<number, string> = {
   1: 'Sale', 2: 'Moyen', 3: 'Normal', 4: 'Propre', 5: 'Très propre',
 }
@@ -60,6 +71,31 @@ function formatDateTime(dt?: string) {
 function formatPrice(n?: number) {
   if (n == null) return '—'
   return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(n)
+}
+
+// Numéro affiché de la même façon pour l'agence et le locataire : sans ça,
+// l'un s'affichait « 06 65 74 40 09 » et l'autre « 0781442311 » (gérant, 05/08/2026).
+// Un numéro français à 10 chiffres est regroupé par deux ; tout autre format
+// (international, incomplet) est laissé tel quel.
+function formatPhoneFr(raw?: string | null): string {
+  if (!raw) return ''
+  const digits = raw.replace(/\D/g, '')
+  if (digits.length === 10 && digits.startsWith('0')) {
+    return digits.replace(/(\d{2})(?=\d)/g, '$1 ').trim()
+  }
+  return raw.trim()
+}
+
+// Le locataire a rue / code postal / ville dans trois colonnes ; l'agence n'a
+// qu'un seul champ adresse. Pour que les deux encadrés s'alignent ligne à ligne
+// (gérant, 05/08/2026), on découpe l'adresse agence autour du code postal
+// français (5 chiffres). Format inattendu (pas de code postal) → tout reste sur
+// la ligne « rue ».
+function splitAddressFr(full?: string | null): { rue: string; cp: string; ville: string } {
+  const s = (full ?? '').trim()
+  const m = s.match(/^(.*?)[\s,]*\b(\d{5})\b[\s,]*(.*)$/)
+  if (!m) return { rue: s, cp: '', ville: '' }
+  return { rue: m[1].replace(/[\s,]+$/, '').trim(), cp: m[2], ville: m[3].trim() }
 }
 
 export default function ContractPreviewClient({ contract, reservation, vehicle, client, agency, chain, departInspection, montantsContrat, postesFrais }: Props) {
@@ -139,9 +175,97 @@ export default function ContractPreviewClient({ contract, reservation, vehicle, 
     caution: reservation?.deposit_amount ?? 0,
   })
 
+  // Adresse de l'agence découpée en rue / code postal / ville pour s'aligner sur
+  // celle du locataire (qui, elle, a déjà ces trois champs séparés en base).
+  const agencyAddr = splitAddressFr(agency?.address)
+
   // La signature (et la génération/l'envoi du PDF) se fait désormais PENDANT
   // l'état des lieux de départ (InspectionFlow) — cette page est une pure
   // prévisualisation : le client y relit le contrat, rien ne s'y signe.
+
+  // Bloc EDL départ, réutilisé (remonté sous le contrat car c'est la partie la
+  // plus importante). Sa SIGNATURE n'est plus ici : elle vit dans le bloc du bas,
+  // regroupée avec le cachet et le logo (gérant, 06/08/2026).
+  const etatDesLieux = departInspection && (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide">
+          État des lieux de départ
+        </h2>
+        {departInspection.signedAt && (
+          <span className="text-xs text-gray-400">le {formatDateTime(departInspection.signedAt)}</span>
+        )}
+      </div>
+
+      {/* Relevés */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+        <div className="bg-gray-50 rounded-xl p-2">
+          <p className="text-xs text-gray-500">Kilométrage</p>
+          <p className="font-bold text-gray-900">{departInspection.kmReading.toLocaleString('fr-FR')} km</p>
+        </div>
+        <div className="bg-gray-50 rounded-xl p-2">
+          <p className="text-xs text-gray-500">Autonomie</p>
+          <p className="font-bold text-gray-900">{departInspection.fuelRangeKm.toLocaleString('fr-FR')} km</p>
+        </div>
+        <div className="bg-gray-50 rounded-xl p-2">
+          <p className="text-xs text-gray-500">Propreté ext.</p>
+          <p className="font-bold text-gray-900">{CLEANLINESS_LABELS[departInspection.exteriorCleanliness] ?? '—'}</p>
+        </div>
+        <div className="bg-gray-50 rounded-xl p-2">
+          <p className="text-xs text-gray-500">Propreté int.</p>
+          <p className="font-bold text-gray-900">{CLEANLINESS_LABELS[departInspection.interiorCleanliness] ?? '—'}</p>
+        </div>
+      </div>
+
+      {/* Schéma des dommages constatés au départ (lecture seule) */}
+      {departDamageCount > 0 ? (
+        <>
+          <VehicleInspectionMap
+            damages={departDamages}
+            onDamageAdd={() => {}}
+            onDamageRemove={() => {}}
+            readonly
+            phase="departure"
+            previousZones={[]}
+          />
+          <div className="space-y-1.5">
+            {departInspection.damagedZones.map((z: any) => (
+              <div key={z.id} className="flex items-center gap-2 text-sm">
+                <span className="text-[11px] px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 font-semibold flex-shrink-0">
+                  {graviteLabel((z.severity ?? 'dommage') as DamageSeverity)}
+                </span>
+                {/* Libellé « Zone sélectionnée » retiré : générique, il n'apprend rien
+                    (gérant, 06/08/2026). On garde la gravité (pastille orange = dommage
+                    au départ) et la description réelle du dommage. */}
+                {z.description
+                  ? <span className="text-gray-800 truncate">{z.description}</span>
+                  : <span className="text-gray-500 truncate">Dommage au départ</span>}
+              </div>
+            ))}
+          </div>
+        </>
+      ) : (
+        <div className="bg-green-50 border border-green-100 rounded-xl px-4 py-3 text-sm text-green-700 font-medium">
+          Aucun dommage constaté au départ.
+        </div>
+      )}
+
+      {/* Photos de l'état des lieux */}
+      {departInspection.photos.length > 0 && (
+        <div className="flex gap-2 flex-wrap">
+          {departInspection.photos.map(p => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              key={p.url}
+              src={p.url}
+              alt={p.label}
+              className="w-20 h-20 object-cover rounded-lg border border-gray-200"
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  )
 
   return (
     <div className="min-h-screen bg-[#F2F2F7]">
@@ -173,19 +297,21 @@ export default function ContractPreviewClient({ contract, reservation, vehicle, 
           </div>
         )}
 
-        {/* ── En-tête contrat ── */}
+        {/* ── 1. En-tête contrat ── (même agencement que le PDF : titre « Contrat de
+             location » centré, logo à gauche, référence à droite. Le SIRET,
+             l'adresse et le téléphone de l'agence vivent dans l'encadré Loueur,
+             pas dans l'en-tête, pour coller au document signé — gérant, 05/08/2026). */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-          <div className="flex items-start justify-between mb-6 pb-4 border-b border-gray-100">
-            <div>
-              <Image src="/logo.png" alt="Logo agence" width={140} height={48} className="object-contain mb-2" />
-              {agency?.siret && <p className="text-xs text-gray-400">SIRET : {agency.siret}</p>}
-              {agency?.address && <p className="text-xs text-gray-400">{agency.address}</p>}
-              {agency?.phone && <p className="text-xs text-gray-400">{agency.phone}</p>}
-            </div>
-            <div className="text-right">
+          <p className="text-center text-xl font-bold uppercase tracking-wide text-gray-700 mb-4">
+            Contrat de location
+          </p>
+          {/* items-end : le bas du logo (le mot « DRIVE ») s'aligne exactement sur
+              le bas du bloc de référence, donc sur la ligne « Réf. » (gérant, 06/08/2026). */}
+          <div className="flex items-end justify-between gap-4 mb-6 pb-4 border-b border-gray-100">
+            <Image src="/logo.png" alt="Logo agence" width={140} height={104} className="w-[140px] h-[104px] object-contain flex-shrink-0" />
+            <div className="text-right flex-shrink-0">
               <p className="font-mono font-bold text-gray-800">{contract.contract_number}</p>
               <p className="text-xs text-gray-400">Réf. {reservation?.reservation_number}</p>
-              <p className="text-xs text-gray-400">Contrat de location de véhicule</p>
             </div>
           </div>
 
@@ -194,14 +320,25 @@ export default function ContractPreviewClient({ contract, reservation, vehicle, 
             <div className="bg-gray-50 rounded-xl p-3">
               <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Loueur</p>
               <p className="font-semibold text-gray-900">{agency?.company_name ?? 'LMS Drive'}</p>
-              {agency?.address && <p className="text-xs text-gray-500 mt-0.5">{agency.address}</p>}
+              {agency?.phone && <p className="text-xs text-gray-500 mt-0.5">{formatPhoneFr(agency.phone)}</p>}
+              {agencyAddr.rue && <p className="text-xs text-gray-500">{agencyAddr.rue}</p>}
+              {agencyAddr.cp && <p className="text-xs text-gray-500">{agencyAddr.cp}</p>}
+              {agencyAddr.ville && <p className="text-xs text-gray-500">{agencyAddr.ville}</p>}
+              {agency?.email && <p className="text-xs text-gray-500">{agency.email}</p>}
+              {/* Espace avant le bloc légal : il détache SIRET / N° TVA du bloc
+                  contact (gérant, 05/08/2026). */}
+              {agency?.siret && <p className="text-xs text-gray-500 mt-2">SIRET : {agency.siret}</p>}
+              {agency?.vat_number && <p className="text-xs text-gray-500">N° TVA : {agency.vat_number}</p>}
             </div>
             <div className="bg-gray-50 rounded-xl p-3">
               <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Locataire</p>
               <p className="font-semibold text-gray-900">{client?.first_name} {client?.last_name}</p>
-              <p className="text-xs text-gray-500">{client?.phone}</p>
-              {client?.email && <p className="text-xs text-gray-400">{client?.email}</p>}
-              {client?.license_number && <p className="text-xs text-gray-400">Permis : {client?.license_number}</p>}
+              <p className="text-xs text-gray-500">{formatPhoneFr(client?.phone)}</p>
+              {client?.address && <p className="text-xs text-gray-500">{client.address}</p>}
+              {client?.postal_code && <p className="text-xs text-gray-500">{client.postal_code}</p>}
+              {client?.city && <p className="text-xs text-gray-500">{client.city}</p>}
+              {client?.email && <p className="text-xs text-gray-500">{client?.email}</p>}
+              {client?.license_number && <p className="text-xs text-gray-500">Permis : {client?.license_number}</p>}
             </div>
           </div>
 
@@ -242,7 +379,9 @@ export default function ContractPreviewClient({ contract, reservation, vehicle, 
             </div>
             <div className="bg-gray-50 rounded-xl p-2">
               <p className="text-xs text-gray-500">KM inclus</p>
-              <p className="font-bold text-gray-900">{reservation?.km_included ?? '∞'}</p>
+              {/* Sous l'option illimité, on l'écrit en toutes lettres : le « ∞ »
+                  passait pour un champ vide (gérant, 05/08/2026). */}
+              <p className="font-bold text-gray-900">{reservation?.unlimited_km ? 'Illimité' : (reservation?.km_included ?? '∞')}</p>
             </div>
             <div className="bg-green-50 rounded-xl p-2">
               <p className="text-xs text-green-700">Total TTC</p>
@@ -276,7 +415,33 @@ export default function ContractPreviewClient({ contract, reservation, vehicle, 
           )}
         </div>
 
-        {/* ── Tableau des frais ── */}
+        {/* ── 2. État des lieux de départ (remonté ici : partie la plus importante) ── */}
+        {etatDesLieux}
+
+        {/* ── 3. Conditions générales · 14 articles ── */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-5">
+            Conditions générales de location
+          </h2>
+          <div className="space-y-5">
+            {articles.map(art => (
+              <div key={art.title}>
+                <h3 className="text-xs font-bold text-gray-800 mb-1.5">Art. {art.title}</h3>
+                <p className="text-xs text-gray-600 leading-relaxed whitespace-pre-line">{art.body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ── 4. Clause photo horodatée ── */}
+        <div className="bg-blue-50 border border-blue-100 rounded-2xl p-5">
+          <h2 className="text-xs font-bold text-blue-800 uppercase tracking-wide mb-2">
+            Clause photo horodatée · État des lieux
+          </h2>
+          <p className="text-xs text-blue-700 leading-relaxed">{VIDEO_CLAUSE}</p>
+        </div>
+
+        {/* ── 5. Tableau récapitulatif des frais (en bas) ── */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
           <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-1">
             Tableau récapitulatif des frais
@@ -301,162 +466,74 @@ export default function ContractPreviewClient({ contract, reservation, vehicle, 
           </p>
         </div>
 
-        {/* ── Conditions générales · 14 articles ── */}
+        {/* ── 6. Signature (contrat + EDL), cachet et logo du loueur (bas de page) ── */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-          <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-5">
-            Conditions générales de location
-          </h2>
-          <div className="space-y-5">
-            {articles.map(art => (
-              <div key={art.title}>
-                <h3 className="text-xs font-bold text-gray-800 mb-1.5">Art. {art.title}</h3>
-                <p className="text-xs text-gray-600 leading-relaxed whitespace-pre-line">{art.body}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* ── Clause photo horodatée ── */}
-        <div className="bg-blue-50 border border-blue-100 rounded-2xl p-5">
-          <h2 className="text-xs font-bold text-blue-800 uppercase tracking-wide mb-2">
-            Clause photo horodatée · État des lieux
-          </h2>
-          <p className="text-xs text-blue-700 leading-relaxed">{VIDEO_CLAUSE}</p>
-        </div>
-
-        {/* ── État des lieux de départ (relu avant signature) ── */}
-        {departInspection && (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide">
-                État des lieux de départ
-              </h2>
-              {departInspection.signedAt && (
-                <span className="text-xs text-gray-400">le {formatDateTime(departInspection.signedAt)}</span>
+          {!isSigned && (
+            <p className="text-sm text-gray-500 text-center mb-5">
+              Ce contrat se signe pendant l&apos;état des lieux de départ : le client relit
+              les conditions puis signe le contrat et l&apos;EDL en une seule fois.
+            </p>
+          )}
+          <div className="flex flex-wrap items-end justify-between gap-6">
+            {/* Signature du locataire : elle vaut pour le contrat ET l'état des lieux,
+                apposée en un seul geste au départ. */}
+            <div className="flex-1 min-w-[180px]">
+              <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1.5">
+                Signature du contrat de location + état des lieux
+              </p>
+              {(contract.client_signature_svg || departInspection?.clientSignature) ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={contract.client_signature_svg || departInspection?.clientSignature}
+                  alt="Signature du locataire"
+                  className="h-16 border border-gray-200 rounded-lg object-contain bg-white px-4"
+                />
+              ) : (
+                <div className="h-16 flex items-center justify-center border border-dashed border-gray-200 rounded-lg text-xs text-gray-400 px-4">
+                  En attente de signature
+                </div>
+              )}
+              {isSigned && contract.signed_at && (
+                <p className="text-xs text-gray-400 mt-1.5">
+                  Signé le {new Date(contract.signed_at).toLocaleString('fr-FR')}
+                </p>
               )}
             </div>
 
-            {/* Relevés */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
-              <div className="bg-gray-50 rounded-xl p-2">
-                <p className="text-xs text-gray-500">Kilométrage</p>
-                <p className="font-bold text-gray-900">{departInspection.kmReading.toLocaleString('fr-FR')} km</p>
-              </div>
-              <div className="bg-gray-50 rounded-xl p-2">
-                <p className="text-xs text-gray-500">Autonomie</p>
-                <p className="font-bold text-gray-900">{departInspection.fuelRangeKm.toLocaleString('fr-FR')} km</p>
-              </div>
-              <div className="bg-gray-50 rounded-xl p-2">
-                <p className="text-xs text-gray-500">Propreté ext.</p>
-                <p className="font-bold text-gray-900">{CLEANLINESS_LABELS[departInspection.exteriorCleanliness] ?? '—'}</p>
-              </div>
-              <div className="bg-gray-50 rounded-xl p-2">
-                <p className="text-xs text-gray-500">Propreté int.</p>
-                <p className="font-bold text-gray-900">{CLEANLINESS_LABELS[departInspection.interiorCleanliness] ?? '—'}</p>
-              </div>
-            </div>
-
-            {/* Schéma des dommages constatés au départ (lecture seule) */}
-            {departDamageCount > 0 ? (
-              <>
-                <VehicleInspectionMap
-                  damages={departDamages}
-                  onDamageAdd={() => {}}
-                  onDamageRemove={() => {}}
-                  readonly
-                  phase="departure"
-                  previousZones={[]}
-                />
-                <div className="space-y-1.5">
-                  {departInspection.damagedZones.map((z: any) => (
-                    <div key={z.id} className="flex items-center gap-2 text-sm">
-                      <span className="text-[11px] px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 font-semibold flex-shrink-0">
-                        {graviteLabel((z.severity ?? 'dommage') as DamageSeverity)}
-                      </span>
-                      <span className="text-gray-800 truncate">{z.label ?? z.id}</span>
-                      {z.description && <span className="text-gray-400 text-xs truncate">· {z.description}</span>}
-                    </div>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <div className="bg-green-50 border border-green-100 rounded-xl px-4 py-3 text-sm text-green-700 font-medium">
-                Aucun dommage constaté au départ.
-              </div>
-            )}
-
-            {/* Photos de l'état des lieux */}
-            {departInspection.photos.length > 0 && (
-              <div className="flex gap-2 flex-wrap">
-                {departInspection.photos.map(p => (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    key={p.url}
-                    src={p.url}
-                    alt={p.label}
-                    className="w-20 h-20 object-cover rounded-lg border border-gray-200"
-                  />
-                ))}
-              </div>
-            )}
-
-            {/* Signature apposée à l'état des lieux */}
-            {departInspection.clientSignature && (
-              <div>
-                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1.5">Signature à l&apos;état des lieux</p>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={departInspection.clientSignature}
-                  alt="Signature EDL départ"
-                  className="h-14 border border-gray-200 rounded-lg object-contain bg-white px-3"
-                />
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ── Signature ── désormais pendant l'EDL départ, plus ici */}
-        {!isSigned ? (
-          <div className="bg-white rounded-2xl border border-amber-200 shadow-sm p-6 text-center">
-            <h2 className="font-semibold text-gray-800 mb-1">Signature pendant l'état des lieux</h2>
-            <p className="text-sm text-gray-500">
-              Ce contrat se signe directement sur la page de l'état des lieux de départ :
-              le client relit les conditions puis signe le contrat et l'EDL en une seule fois.
-            </p>
-
-            {/* Cachet agence, pour information */}
-            <div className="mt-5 pt-4 border-t border-gray-100 flex flex-col items-center">
-              <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-2">Cachet & Visa agence</p>
+            {/* Cachet & Visa de l'agence */}
+            <div className="flex flex-col items-center">
+              <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1.5">Cachet &amp; Visa</p>
               <div className="h-16 w-40 flex items-center justify-center border border-gray-200 rounded-lg bg-gray-50">
                 <Image src="/cachet-lms.png" alt="Cachet agence" width={120} height={48} className="object-contain max-h-full" />
               </div>
             </div>
 
-            {reservation?.id && (
+            {/* Logo du loueur */}
+            <div className="flex flex-col items-center">
+              <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1.5">Loueur</p>
+              <Image src="/logo.png" alt="Logo agence" width={120} height={89} className="w-[120px] h-[89px] object-contain" />
+            </div>
+          </div>
+
+          {!isSigned && reservation?.id && (
+            <div className="mt-6 text-center">
               <Link
                 href={`/inspections/departure/${reservation.id}`}
-                className="mt-5 inline-flex items-center justify-center gap-2 px-5 py-3.5 bg-[#111111] hover:bg-gray-800 text-white font-semibold rounded-xl transition-colors text-sm"
+                className="inline-flex items-center justify-center gap-2 px-5 py-3.5 bg-[#111111] hover:bg-gray-800 text-white font-semibold rounded-xl transition-colors text-sm"
               >
-                Faire l'état des lieux de départ
+                Faire l&apos;état des lieux de départ
               </Link>
-            )}
-          </div>
-        ) : (
-          <div className="bg-green-50 border border-green-200 rounded-2xl p-5 text-center">
-            <CheckCircle2 className="w-10 h-10 text-green-500 mx-auto mb-2" />
-            <p className="font-bold text-green-800">Contrat déjà signé</p>
-            <p className="text-sm text-green-700 mt-1">
-              Signé le {contract.signed_at ? new Date(contract.signed_at).toLocaleString('fr-FR') : '—'}
-            </p>
-            {contract.client_signature_svg && (
-              <img src={contract.client_signature_svg} alt="Signature client" className="h-16 mx-auto mt-3 border border-green-200 rounded-lg object-contain bg-white px-4" />
-            )}
-            <Link href={`/contracts/${contract.id}`} className="mt-4 inline-flex items-center gap-2 text-sm text-green-700 font-medium hover:underline">
-              <FileDown className="w-4 h-4" />
-              Retour au contrat
-            </Link>
-          </div>
-        )}
+            </div>
+          )}
+          {isSigned && (
+            <div className="mt-5 text-center">
+              <Link href={`/contracts/${contract.id}`} className="inline-flex items-center gap-2 text-sm text-gray-600 font-medium hover:underline">
+                <FileDown className="w-4 h-4" />
+                Retour au contrat
+              </Link>
+            </div>
+          )}
+        </div>
 
         <div className="h-6" />
       </div>

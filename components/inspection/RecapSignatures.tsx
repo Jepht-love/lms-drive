@@ -29,6 +29,8 @@ export interface ContratInfo {
   prixJour: number | null
   total: number | null
   kmInclus: number
+  /** Option kilométrage illimité vendue : le récap écrit « Illimité », pas un forfait. */
+  kmIllimite?: boolean
   caution: number
   categorie: string
   isSmartFortwo: boolean
@@ -210,7 +212,7 @@ export default function RecapSignatures({
         </div>
         <div className="rounded-xl bg-gray-50 p-3">
           <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">KM inclus</p>
-          <p className="font-bold text-gray-900">{contrat.kmInclus}</p>
+          <p className="font-bold text-gray-900">{contrat.kmIllimite ? 'Illimité' : contrat.kmInclus}</p>
         </div>
         <div className="rounded-xl bg-green-50 p-3">
           <p className="text-[10px] font-bold uppercase tracking-wide text-green-600">Total</p>

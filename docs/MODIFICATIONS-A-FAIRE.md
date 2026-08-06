@@ -260,3 +260,41 @@ corrections rapides : à cadrer avant de lancer.
   Snapchat, LinkedIn), **interactif** et **restaurant l'état** de l'écran précédent
   (défilement, données). À poser globalement sur toutes les pages compatibles, et
   **retirer le bouton retour** qu'il remplace.
+
+## 9. Remarque du 05/08/2026 (#25)
+
+- **#25 · Prévisu contrat : adresse client + KM illimité** (`/contracts/[id]/preview`).
+  Deux trous **dans la prévisualisation** : le bloc Locataire n'affichait aucune
+  adresse (le PDF, lui, l'a toujours) ; le KM illimité affichait « 200 » (le forfait
+  stocké) au lieu de « Illimité ». **FAIT** : la prévisu montre l'adresse complète
+  (rue, code postal, ville) et écrit « Illimité ». Le PDF rendait déjà les deux
+  correctement (adresse ligne 799, « Illimité » ligne 870) : rien à y changer.
+  **Balayage du même défaut ailleurs** (le forfait affiché au lieu d'« Illimité ») :
+  corrigé aussi sur la **fiche contrat**, la **fiche réservation** (qui masque en
+  plus le « Supplément KM » sous illimité) et le **récap de signature de l'EDL**
+  (via `contratInfo`, pages départ + arrivée, champ `kmIllimite` ajouté à `ContratInfo`).
+  Le **calcul** de l'EDL retour était déjà bon (0 € facturé, « Non facturé »).
+  Adresse confirmée à l'écran ; l'état « Illimité » reste à voir sur un contrat qui
+  porte l'option (aucun des 14 contrats actuels ne l'a). À tester avant de pousser.
+
+## 10. Remarques du 05/08/2026 (#26 à #28)
+
+- **#26 · Recherche client : signaler le téléphone manquant** (recherche client).
+  Aujourd'hui la recherche indique déjà les infos manquantes d'une fiche ; ajouter
+  le **numéro de téléphone** à cette liste. À trancher avant de coder : est-ce un
+  simple avertissement, ou le téléphone absent doit-il **bloquer la location**
+  (comme « dossier incomplet ») ? Toucher `lib/clients/completeness.ts` change les
+  deux à la fois — attention à ne pas re-bloquer des réservations.
+- **#27 · Prix de l'option illimité non détaillé + adresses** (écran à préciser).
+  On voit « prix/jour, km illimité, total 360 € » sans **le prix facturé pour
+  l'option illimité** : il faut l'afficher en ligne. Recoupe #25 pour l'adresse
+  (locataire incomplète = ville + code postal), mais **ajoute** l'adresse du
+  **loueur absente sur un écran**. La prévisu montre déjà le prix illimité dans le
+  détail et l'adresse complète (fait en #25) : **demander à Jeff sur quel écran** il
+  a vu ça (fiche réservation ? confirmation ? PDF ?) avant de corriger.
+- **#28 · Section « Non finalisé ⏳ » : brouillon de réservation auto-enregistré.**
+  Une location commencée doit être **sauvegardée à chaque page** : véhicule, nom,
+  prénom, prix… Si la tablette s'éteint, on reprend aux dernières sélections sans
+  redemander les mêmes infos au client. Une section « Non finalisé » liste ces
+  réservations en cours. **Gros chantier, plan requis** (où stocker le brouillon,
+  quand il expire, comment il se reprend, quand il devient une vraie réservation).

@@ -117,7 +117,7 @@ export default async function ContractPage({ params }: { params: Promise<{ id: s
               </div>
               <div className="bg-gray-50 rounded-xl p-2">
                 <p className="text-xs text-gray-500">KM inclus</p>
-                <p className="font-bold text-gray-900">{reservation?.km_included ?? '∞'}</p>
+                <p className="font-bold text-gray-900">{reservation?.unlimited_km ? 'Illimité' : (reservation?.km_included ?? '∞')}</p>
               </div>
               <div className="bg-green-50 rounded-xl p-2">
                 <p className="text-xs text-green-700">Total</p>

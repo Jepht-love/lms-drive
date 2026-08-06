@@ -89,6 +89,7 @@ export default async function DepartureInspectionPage({ params }: { params: Prom
     prixJour: reservation.daily_price ?? null,
     total: reservation.total_price ?? null,
     kmInclus: reservation.km_included ?? 200,
+    kmIllimite: Boolean(reservation.unlimited_km),
     caution: reservation.deposit_amount ?? 0,
     categorie: vehicle?.category ?? 'citadine',
     isSmartFortwo: Boolean(

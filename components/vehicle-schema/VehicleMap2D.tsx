@@ -365,10 +365,16 @@ export default function VehicleMap2D({ damages, onDamageAdd, onDamageRemove, onD
                 <span style={{ fontSize: '11px', color: '#64748B', fontWeight: 500 }}>Nouveau dommage au retour</span>
               </div>
             )}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <div style={{ width: '16px', height: '16px', borderRadius: '50%', backgroundColor: '#3B82F6', flexShrink: 0 }} />
-              <span style={{ fontSize: '11px', color: '#64748B', fontWeight: 500 }}>Zone sélectionnée</span>
-            </div>
+            {/* « Zone sélectionnée » (bleu) ne concerne QUE la saisie interactive :
+                c'est la partie que l'agent est en train de toucher. En lecture seule
+                (contrat, aperçu), rien n'est sélectionnable, cette légende bleue ne
+                renvoie à rien et embrouille — on la cache (gérant, 06/08/2026). */}
+            {!readonly && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ width: '16px', height: '16px', borderRadius: '50%', backgroundColor: '#3B82F6', flexShrink: 0 }} />
+                <span style={{ fontSize: '11px', color: '#64748B', fontWeight: 500 }}>Zone sélectionnée</span>
+              </div>
+            )}
           </div>
         )}
 

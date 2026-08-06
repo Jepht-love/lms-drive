@@ -396,11 +396,18 @@ export default async function ReservationPage({
               <span className="text-gray-400"> · facturée {billedDays} jour{billedDays > 1 ? 's' : ''}</span>
             )}
           </InfoRow>
-          {reservation.km_included && (
-            <InfoRow label="KM inclus / jour">{reservation.km_included} km</InfoRow>
-          )}
-          {reservation.extra_km_price && (
-            <InfoRow label="Supplément KM">{reservation.extra_km_price}€ / km</InfoRow>
+          {reservation.unlimited_km ? (
+            /* Sous l'option illimité : ni forfait km ni supplément, comme le contrat. */
+            <InfoRow label="KM inclus">Illimité</InfoRow>
+          ) : (
+            <>
+              {reservation.km_included && (
+                <InfoRow label="KM inclus / jour">{reservation.km_included} km</InfoRow>
+              )}
+              {reservation.extra_km_price && (
+                <InfoRow label="Supplément KM">{reservation.extra_km_price}€ / km</InfoRow>
+              )}
+            </>
           )}
           {hasDiscount && (
             <>
