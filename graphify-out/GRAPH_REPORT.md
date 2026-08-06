@@ -1,16 +1,16 @@
-# Graph Report - lms-drive  (2026-07-27)
+# Graph Report - lms-drive  (2026-08-01)
 
 ## Corpus Check
-- 742 files · ~1,721,177 words
+- 759 files · ~1,764,480 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 8700 nodes · 16255 edges · 578 communities (545 shown, 33 thin omitted)
-- Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 63 edges (avg confidence: 0.8)
+- 8885 nodes · 16741 edges · 582 communities (549 shown, 33 thin omitted)
+- Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 70 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `3dc258f1`
+- Built from commit: `6f1cfb2b`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -505,21 +505,26 @@
 - [[_COMMUNITY_Community 534|Community 534]]
 - [[_COMMUNITY_Community 535|Community 535]]
 - [[_COMMUNITY_Community 536|Community 536]]
+- [[_COMMUNITY_Community 537|Community 537]]
 - [[_COMMUNITY_Community 538|Community 538]]
+- [[_COMMUNITY_Community 539|Community 539]]
 - [[_COMMUNITY_Community 540|Community 540]]
 - [[_COMMUNITY_Community 541|Community 541]]
 - [[_COMMUNITY_Community 542|Community 542]]
+- [[_COMMUNITY_Community 543|Community 543]]
 - [[_COMMUNITY_Community 544|Community 544]]
 - [[_COMMUNITY_Community 545|Community 545]]
 - [[_COMMUNITY_Community 546|Community 546]]
 - [[_COMMUNITY_Community 547|Community 547]]
 - [[_COMMUNITY_Community 548|Community 548]]
+- [[_COMMUNITY_Community 549|Community 549]]
 - [[_COMMUNITY_Community 550|Community 550]]
 - [[_COMMUNITY_Community 551|Community 551]]
 - [[_COMMUNITY_Community 552|Community 552]]
 - [[_COMMUNITY_Community 553|Community 553]]
 - [[_COMMUNITY_Community 554|Community 554]]
 - [[_COMMUNITY_Community 555|Community 555]]
+- [[_COMMUNITY_Community 556|Community 556]]
 - [[_COMMUNITY_Community 557|Community 557]]
 - [[_COMMUNITY_Community 558|Community 558]]
 - [[_COMMUNITY_Community 559|Community 559]]
@@ -543,32 +548,31 @@
 - [[_COMMUNITY_Community 578|Community 578]]
 - [[_COMMUNITY_Community 579|Community 579]]
 - [[_COMMUNITY_Community 580|Community 580]]
-- [[_COMMUNITY_Community 581|Community 581]]
-- [[_COMMUNITY_Community 582|Community 582]]
+- [[_COMMUNITY_Community 587|Community 587]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `createClient()` - 123 edges
-2. `formatPrice()` - 66 edges
-3. `files` - 62 edges
+1. `createClient()` - 126 edges
+2. `formatPrice()` - 70 edges
+3. `_()` - 55 edges
 4. `_()` - 55 edges
-5. `_()` - 55 edges
-6. `formatDate()` - 39 edges
-7. `collectBrowserFindings()` - 35 edges
+5. `formatDate()` - 49 edges
+6. `createAdminClient()` - 44 edges
+7. `files` - 38 edges
 8. `collectBrowserFindings()` - 35 edges
-9. `useToast()` - 35 edges
-10. `createAdminClient()` - 35 edges
+9. `collectBrowserFindings()` - 35 edges
+10. `useToast()` - 35 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `updateReservationStatus()` --calls--> `fmtDate()`  [INFERRED]
-  lib/actions/reservations.ts → app/(dashboard)/documents/DocumentsClient.tsx
+- `GET()` --calls--> `enrichEvents()`  [INFERRED]
+  app/api/calendar/events/[id]/route.ts → lib/calendar/enrichEvents.ts
 - `POST()` --calls--> `broadcastPushToManagers()`  [INFERRED]
   app/api/notifications/route.ts → lib/push/broadcastPush.ts
-- `ClientPage()` --calls--> `formatPrice()`  [INFERRED]
-  app/(dashboard)/clients/[id]/page.tsx → lib/utils/index.ts
-- `DashboardPage()` --calls--> `getColumnWindow()`  [INFERRED]
-  app/(dashboard)/page.tsx → lib/calendar/dateUtils.ts
-- `DashboardPage()` --calls--> `fetchActiveInternalTrips()`  [INFERRED]
-  app/(dashboard)/page.tsx → lib/vehicles/internalTrips.ts
+- `OperationDetailPage()` --calls--> `formatDate()`  [INFERRED]
+  app/(dashboard)/partnerships/[id]/page.tsx → lib/utils/index.ts
+- `EventBlockProps` --references--> `CalendarEvent`  [EXTRACTED]
+  components/calendar/EventBlock.tsx → types/calendar.ts
+- `MiniCalendarProps` --references--> `CalendarEvent`  [EXTRACTED]
+  components/calendar/MiniCalendar.tsx → types/calendar.ts
 
 ## Import Cycles
 - None detected.
@@ -577,7 +581,7 @@
 - **GSAP Skill Suite (cross-referencing animation skills)** — gsap_core_skill, gsap_timeline_skill, gsap_scrolltrigger_skill, gsap_react_skill, gsap_frameworks_skill, gsap_plugins_skill, gsap_performance_skill, gsap_utils_skill [EXTRACTED 1.00]
 - **Context Scoping + Cleanup Pattern** — gsap_core_context, gsap_react_usegsap_hook, gsap_frameworks_lifecycle_cleanup, gsap_scrolltrigger_refresh [INFERRED 0.85]
 
-## Communities (578 total, 33 thin omitted)
+## Communities (582 total, 33 thin omitted)
 
 ### Community 0 - "Marketing & Campagnes clients"
 Cohesion: 0.03
@@ -592,8 +596,8 @@ Cohesion: 0.18
 Nodes (10): autoAlpha (fade + visibility), GSAP Easing, immediateRender, gsap.matchMedia() (responsive + reduced-motion), GSAP Stagger, GSAP Core Tween Methods (to/from/fromTo/set), CustomEase Plugin, clamp / mapRange / normalize (+2 more)
 
 ### Community 3 - "Partenariats inter-agences"
-Cohesion: 0.05
-Nodes (24): updateReservationStatus(), TASK_STATUS_LABELS, updateTaskStatus(), confirmPage(), GET(), STATUS_CONFIG, ConventionPage(), updateTask() (+16 more)
+Cohesion: 0.07
+Nodes (35): AccountingLayout(), updateTaskStatus(), DELETE(), PATCH(), logAudit(), isManagerRole(), requireManagerPage(), deleteTask() (+27 more)
 
 ### Community 4 - "Verrou skills (lockfile)"
 Cohesion: 0.05
@@ -608,8 +612,8 @@ Cohesion: 0.16
 Nodes (10): setWeeklyAvailability(), AvailabilityScheduler(), BookSlotModal(), CREATE_TYPES, Ev, fmtMin(), minutesOfDay(), ModalState (+2 more)
 
 ### Community 7 - "Landing FleetAxis"
-Cohesion: 0.18
-Nodes (13): AccountingLayout(), DELETE(), PATCH(), logAudit(), isManagerRole(), requireManagerPage(), deleteTask(), STATUSES (+5 more)
+Cohesion: 0.04
+Nodes (46): addAccidentToVehicle(), closeInfraction(), createAccident(), createInfraction(), deleteAccident(), deleteInfraction(), lookupDriver(), markInfractionPaid() (+38 more)
 
 ### Community 8 - "Panneau alertes & menu création"
 Cohesion: 0.06
@@ -620,8 +624,8 @@ Cohesion: 0.14
 Nodes (11): Any, AppDelegate, Bool, NSUserActivity, UIApplication, UIApplicationDelegate, UIResponder, UIUserActivityRestoring (+3 more)
 
 ### Community 10 - "Écritures & clôtures comptables"
-Cohesion: 0.14
-Nodes (16): DOCUMENT_CATEGORIES, ALL_DOC_KEYS, MemberTabsEditor(), Props, Sidebar(), ALL_TAB_KEYS, APP_TABS, AppTab (+8 more)
+Cohesion: 0.10
+Nodes (12): ToastProvider(), NO_PADDING_ROUTES, PageHeaderProps, SavContext, SavContextValue, SavProvider(), useSavContext(), MODULE_MAP (+4 more)
 
 ### Community 11 - "Pages dashboard (routes)"
 Cohesion: 0.10
@@ -636,24 +640,24 @@ Cohesion: 0.15
 Nodes (14): ActionMeta, ACTIONS, auditActionLabel(), auditActionTone(), auditEntityLabel(), AuditLog, AuditTone, ENTITIES (+6 more)
 
 ### Community 14 - "Auth & navigation (Sidebar/rôles)"
-Cohesion: 0.04
-Nodes (56): files, updatedAt, /Users/j.akpadji/lms-drive/app/api/contracts/send-email/route.ts, /Users/j.akpadji/lms-drive/app/api/sinistres/[id]/pdf/route.ts, /Users/j.akpadji/lms-drive/app/auth/bienvenue/BienvenueForm.tsx, /Users/j.akpadji/lms-drive/app/(dashboard)/equipe/TeamList.tsx, /Users/j.akpadji/lms-drive/app/(dashboard)/reservations/DepositStatusEditor.tsx, /Users/j.akpadji/lms-drive/app/(dashboard)/reservations/ReservationForm.tsx (+48 more)
+Cohesion: 0.05
+Nodes (40): files, updatedAt, /Users/j.akpadji/lms-drive/app/auth/bienvenue/BienvenueForm.tsx, /Users/j.akpadji/lms-drive/app/(auth)/login/page.tsx, /Users/j.akpadji/lms-drive/app/(dashboard)/clients/[id]/page.tsx, /Users/j.akpadji/lms-drive/app/(dashboard)/reservations/CreateReceivableButton.tsx, /Users/j.akpadji/lms-drive/app/(dashboard)/reservations/[id]/page.tsx, /Users/j.akpadji/lms-drive/app/(dashboard)/reservations/PaymentEditor.tsx (+32 more)
 
 ### Community 15 - "Déplacements internes (trajets)"
-Cohesion: 0.03
-Nodes (87): deleteVehicle(), expenseCategoryForDamage(), loadFlags(), NewIssue, reportVehicleIssues(), resolveVehicleIssue(), setVehicleRepairStatus(), createVehicle() (+79 more)
+Cohesion: 0.13
+Nodes (25): assignTrip(), cancelTrip(), CONFLIT_MESSAGES, deleteTrip(), endTrip(), getRole(), isManagerRole(), planTrip() (+17 more)
 
 ### Community 16 - "Maintenance & immobilisés"
 Cohesion: 0.04
-Nodes (75): AccountingPdf(), AccountingPdfData, fmt(), s, aggregate(), buildAnalysisData(), dateLabel(), pctDelta() (+67 more)
+Nodes (70): buildPriceBreakdownRecord(), cancelReservationOnPaymentTimeout(), createReservation(), DIACRITICS_RE, isContactBlacklisted(), isNameBlacklisted(), markReservationNoShow(), normalizeEmail() (+62 more)
 
 ### Community 17 - "Community 17"
 Cohesion: 0.06
 Nodes (65): addBrowserFindings(), addVisualContrastFindings(), addVisualContrastResult(), analyzeVisualContrast(), analyzeVisualContrastCandidate(), blendRgba(), browserDesignSystemConfig(), browserFindingsFromMap() (+57 more)
 
 ### Community 18 - "Community 18"
-Cohesion: 0.10
-Nodes (15): closeCampaign(), createCampaign(), deleteCampaign(), updateCampaignStatus(), Props, CampaignDetailPage(), TRANSITIONS, calcCAC() (+7 more)
+Cohesion: 0.05
+Nodes (44): ClientCompletenessInput, getMissingClientFields(), isClientComplete(), parse(), Client, Props, Vehicle, Badge() (+36 more)
 
 ### Community 19 - "Types de base de données"
 Cohesion: 0.09
@@ -661,7 +665,7 @@ Nodes (72): abortSvelteComponentInjection(), applySavedSessionMeta(), cancelEdit
 
 ### Community 20 - "Documents & expiration"
 Cohesion: 0.08
-Nodes (17): isExpiringSoon(), ActiveTab, Client, CLIENT_DOC_SHORT, DocStatus, Document, ExpiryBadge(), fmtDate() (+9 more)
+Nodes (17): DrawerProps, isExpiringSoon(), ActiveTab, Client, CLIENT_DOC_SHORT, DocStatus, Document, ExpiryBadge() (+9 more)
 
 ### Community 21 - "Config TypeScript"
 Cohesion: 0.10
@@ -672,8 +676,8 @@ Cohesion: 0.05
 Nodes (40): 0.1 — L'application n'est PAS multi-tenant, 0.2 — Le module EDL a 40 zones dans un repère unique, pas 5 repères de 32 zones, 0.3 — L'éditeur de polygones de P4 existe déjà à 80 %, 0.4 — L'intégration Google Agenda est déjà entièrement retirée, 0. Quatre corrections au brief de campagne, 1.1 — Pages et route handlers, 1.2 — Server actions, 1. Routes (+32 more)
 
 ### Community 23 - "Création réservation & blacklist"
-Cohesion: 0.10
-Nodes (25): AccountingTransactions(), matchesQuery(), normalize(), Tx, vehicleName(), VehicleRef, assertPeriodOpen(), SB (+17 more)
+Cohesion: 0.04
+Nodes (90): AccountingTransactions(), matchesQuery(), normalize(), Tx, vehicleName(), VehicleRef, aggregate(), buildAnalysisData() (+82 more)
 
 ### Community 24 - "Prolongation & édition dates résa"
 Cohesion: 0.07
@@ -684,8 +688,8 @@ Cohesion: 0.07
 Nodes (64): addClampEndpoints(), addColorObject(), addDesignColor(), addFontSizeStep(), addRoundedScale(), addRoundedToken(), addSidecarColors(), addSidecarRadii() (+56 more)
 
 ### Community 26 - "EDL — zones & lightbox photos"
-Cohesion: 0.04
-Nodes (51): markReservationDeparted(), NotificationsPage(), GET(), businessNow(), enrichEvents(), generateAlertsForEvent(), syncAlertsToCalendar(), STATUS_MAP (+43 more)
+Cohesion: 0.29
+Nodes (3): Props, ROLE_CONFIG, TeamMember
 
 ### Community 27 - "Toasts & notifications UI"
 Cohesion: 0.08
@@ -700,32 +704,32 @@ Cohesion: 0.19
 Nodes (7): conventionClauses(), ConventionPreviewClient(), formatDateTime(), formatPrice(), Props, SignatureCanvasProps, Props
 
 ### Community 30 - "Calendrier — barre basse & mini"
-Cohesion: 0.24
-Nodes (9): getMonthDates(), isSameDay(), DAY_HEADERS, MiniCalendar(), MiniCalendarProps, DAY_HEADERS, MonthView(), MonthViewProps (+1 more)
+Cohesion: 0.16
+Nodes (15): rangeFor(), detectOverlaps(), formatDateHeader(), getColumnWindow(), getEventPosition(), getMonthDates(), isSameDay(), DAY_HEADERS (+7 more)
 
 ### Community 31 - "Santé maintenance véhicule"
-Cohesion: 0.05
-Nodes (39): applyCommercialPerks(), applyDiscount(), buildBasePayload(), CLIENT_PHOTO_SLOTS, collectPhotoPaths(), createClientAction(), createClientQuick(), parseDiscount() (+31 more)
+Cohesion: 0.03
+Nodes (55): updateClientStatus(), deleteAgency(), createVehicle(), updateVehicle(), updateVehicleStatus(), DeleteAgencyButton(), COLORS, ICONS (+47 more)
 
 ### Community 32 - "Primitives UI (badge/button/input)"
-Cohesion: 0.04
-Nodes (51): createReceivable(), ClientCompletenessInput, getMissingClientFields(), isClientComplete(), parse(), Echeance, Props, Client (+43 more)
+Cohesion: 0.05
+Nodes (39): deleteClient(), deleteContract(), deleteReservation(), deleteVehicle(), resetInspection(), updateDepositDeducted(), updateDepositInfo(), updateDepositStatus() (+31 more)
 
 ### Community 33 - "Login & éditeur KPI"
-Cohesion: 0.07
-Nodes (21): bookOperationTransaction(), createAgency(), createOperation(), deleteOperation(), num(), parseExternalVehicle(), recordReturn(), startEntrantRental() (+13 more)
+Cohesion: 0.15
+Nodes (15): DOCUMENT_CATEGORIES, ALL_DOC_KEYS, MemberTabsEditor(), Props, ALL_TAB_KEYS, APP_TABS, AppTab, LEGACY_TAB_KEYS (+7 more)
 
 ### Community 34 - "Actions incidents (accidents/infractions)"
-Cohesion: 0.07
-Nodes (16): COLORS, Member, ROLES, MemberProfilePage(), ROLE_CONFIG, STATUS_BADGE, STATUS_LABEL, SETTINGS_DEFAULTS (+8 more)
+Cohesion: 0.12
+Nodes (18): calculateExtraKm(), calculateLateFee(), CLEANLINESS_LEVELS, ComputedFees, InspectionFlow(), Props, Step, ContratInfo (+10 more)
 
 ### Community 35 - "Échéancier (dueDates)"
 Cohesion: 0.09
 Nodes (22): Best practices, CustomBounce, CustomEase, CustomWiggle, Development, Do Not, EasePack, Easing (+14 more)
 
 ### Community 36 - "Community 36"
-Cohesion: 0.18
-Nodes (7): EmailLog, TYPE_CONTENT, TYPE_LABELS, EmailsPage(), pill(), TYPE_LABELS, TYPES
+Cohesion: 0.06
+Nodes (24): completeOnboarding(), logout(), Vehicle, Props, managerItems, navItems, Sidebar(), SidebarProps (+16 more)
 
 ### Community 37 - "Info caution réservation"
 Cohesion: 0.05
@@ -740,36 +744,36 @@ Cohesion: 0.05
 Nodes (26): applyStaticDeclaration(), buildBorderOverrideMap(), collectStaticCssText(), compareStaticPriority(), cssPropToCamel(), expandStaticBoxValues(), expandStaticDeclaration(), extractStaticColor() (+18 more)
 
 ### Community 40 - "Community 40"
-Cohesion: 0.07
-Nodes (30): completeOnboarding(), logout(), updateSavStatus(), VALID, managerItems, navItems, SidebarProps, ROLE_LABELS (+22 more)
+Cohesion: 0.20
+Nodes (4): COLORS, Member, ROLES, ToggleProps
 
 ### Community 41 - "Community 41"
-Cohesion: 0.10
-Nodes (22): PhotoLightbox(), PhotoLightboxProps, VIEW_BOXES, EDL_ZONES, Zone2D, zoneBox(), DAMAGE_TYPE_PRICES, DAMAGE_TYPES (+14 more)
+Cohesion: 0.07
+Nodes (32): PhotoLightbox(), PhotoLightboxProps, compressImageToBase64(), DamageComparisonProps, VIEW_BOXES, DamageDrawerProps, SEVERITY_ACTIVE, SEVERITY_STYLES (+24 more)
 
 ### Community 42 - "Layout racine & PWA (SW/push)"
 Cohesion: 0.13
 Nodes (3): inter, metadata, viewport
 
 ### Community 43 - "Calendrier mobile"
-Cohesion: 0.15
-Nodes (11): CalendarGridProps, SlotContext, CalendarSidebarProps, RESOURCE_PALETTE, MobileCalendarProps, MobileCalendarPanelProps, ResourceListProps, ROLE_LABELS (+3 more)
+Cohesion: 0.17
+Nodes (14): CalendarBottomBarProps, CalendarGrid(), CalendarGridProps, CalendarSidebarProps, CalendarToolbar(), CalendarToolbarProps, rangeLabel(), RESOURCE_PALETTE (+6 more)
 
 ### Community 44 - "Community 44"
-Cohesion: 0.04
-Nodes (47): deleteClient(), addAccidentToVehicle(), closeInfraction(), createAccident(), createInfraction(), deleteAccident(), deleteInfraction(), lookupDriver() (+39 more)
+Cohesion: 0.06
+Nodes (44): STATUS_CONFIG, IMMOBILISES_STATUSES, ImmobilisesPage(), OpenAccident, RecentMaintenance, STATUS_LABEL, buildLastByType(), Candidate (+36 more)
 
 ### Community 45 - "Fiche client & photos docs"
 Cohesion: 0.05
 Nodes (26): applyStaticDeclaration(), buildBorderOverrideMap(), collectStaticCssText(), compareStaticPriority(), cssPropToCamel(), expandStaticBoxValues(), expandStaticDeclaration(), extractStaticColor() (+18 more)
 
 ### Community 46 - "Community 46"
-Cohesion: 0.05
-Nodes (58): cancelReservationOnPaymentTimeout(), createReservation(), DIACRITICS_RE, isContactBlacklisted(), isNameBlacklisted(), markReservationNoShow(), normalizeEmail(), normalizeName() (+50 more)
+Cohesion: 0.08
+Nodes (18): bookOperationTransaction(), createAgency(), createOperation(), deleteOperation(), num(), parseExternalVehicle(), recordReturn(), startEntrantRental() (+10 more)
 
 ### Community 47 - "Frais EDL & flow inspection"
 Cohesion: 0.06
-Nodes (54): updateAgencySettings(), cancelInvoice(), generateInvoiceDraft(), markRestitutionInvoiceSent(), nextInvoiceNumber(), renderContractInvoiceAttachment(), sendInvoice(), SupabaseServer (+46 more)
+Nodes (48): createMaintenanceRecord(), deleteMaintenanceRecord(), expenseCategoryFor(), GARAGE_TYPES, markMaintenancePaid(), settleIntervention(), expenseCategoryForDamage(), loadFlags() (+40 more)
 
 ### Community 48 - "Config shadcn (components.json)"
 Cohesion: 0.17
@@ -792,7 +796,7 @@ Cohesion: 0.06
 Nodes (41): acknowledgePendingEvent(), agentPollingConnected(), annotRoot, args, broadcast(), broadcastAgentPollingIfChanged(), cancelQueuedAnonymousExitEvents(), cleanupSvelteComponentSessionsBeforeExit() (+33 more)
 
 ### Community 53 - "Signalements véhicule (issues)"
-Cohesion: 0.17
+Cohesion: 0.15
 Nodes (3): ASSIGNABLE, DEFAULT_META, TYPE_META
 
 ### Community 54 - "Fiche véhicule & statut"
@@ -808,8 +812,8 @@ Cohesion: 0.20
 Nodes (9): lunette-arriere, label, points, lunette-avant, label, points, toit, label (+1 more)
 
 ### Community 57 - "Community 57"
-Cohesion: 0.08
-Nodes (17): deleteContract(), deleteReservation(), resetInspection(), updateDepositDeducted(), updateDepositInfo(), updateDepositStatus(), removeReservationFromCalendar(), METHOD_LABELS (+9 more)
+Cohesion: 0.11
+Nodes (20): addDays(), formatAmount(), GET(), jourCourt(), localDateStr(), SETTINGS_DEFAULTS, ALERT_TYPE_TO_NOTIF, NOTIFICATION_DEFAULTS (+12 more)
 
 ### Community 58 - "Dépendances dev"
 Cohesion: 0.18
@@ -844,8 +848,8 @@ Cohesion: 0.17
 Nodes (11): name, private, scripts, build, dev, doctor, edl:editor, edl:editor:open (+3 more)
 
 ### Community 66 - "Community 66"
-Cohesion: 0.22
-Nodes (8): assignClientDocuments(), ClientLite, ImportTriageClient(), isImage(), StagedDoc, UploadedFile, uploadFileToSupabase(), compressImageFile()
+Cohesion: 0.04
+Nodes (64): AccountingPdf(), AccountingPdfData, fmt(), s, archiveInfractionDocument(), NotificationsPage(), GET(), libelleCreneau() (+56 more)
 
 ### Community 67 - "Community 67"
 Cohesion: 0.09
@@ -865,7 +869,7 @@ Nodes (20): Best practices, clamp(min, max, value?), Clamping and Ranges, distri
 
 ### Community 71 - "Email restitution & pièces"
 Cohesion: 0.10
-Nodes (12): ContractPDF(), DamagedZone, EDLCompareColumn(), EDLComparePage(), fmtDate(), fmtDT(), fmtKm(), fmtMoney() (+4 more)
+Nodes (13): DamagedZone, EDLCompareColumn(), EDLComparePage(), fmtDate(), fmtDT(), fmtKm(), fmtMoney(), heureLocale() (+5 more)
 
 ### Community 72 - "Info paiement réservation"
 Cohesion: 0.09
@@ -892,16 +896,16 @@ Cohesion: 0.15
 Nodes (13): GSAP Transform Aliases, gsap.quickTo() (frequently updated properties), Batch Reads and Writes, Best practices, Do Not, Frequently updated properties (e.g. mouse followers), GSAP Performance, Many Elements (Stagger, Lists) (+5 more)
 
 ### Community 78 - "Community 78"
-Cohesion: 0.12
-Nodes (14): Props, DamageComparisonProps, DamageEntry, VehicleInspectionMapProps, PreviousZone, Props, BODY_OUTLINE, LABEL (+6 more)
+Cohesion: 0.25
+Nodes (5): AlertPanelProps, ALERT_RULES, AlertType, CalendarAlert, CalendarTeam
 
 ### Community 79 - "Layout-guards rôle (accounting/partnerships)"
 Cohesion: 0.09
 Nodes (43): _(), ae(), be(), bt(), Ce(), Ct(), de(), dt() (+35 more)
 
 ### Community 80 - "Layout FleetAxis"
-Cohesion: 0.29
-Nodes (3): Props, ROLE_CONFIG, TeamMember
+Cohesion: 0.04
+Nodes (52): files, updatedAt, /Users/j.akpadji/lms-drive/app/(dashboard)/accounting/close/daily/page.tsx, /Users/j.akpadji/lms-drive/app/(dashboard)/accounting/close/DayPicker.tsx, /Users/j.akpadji/lms-drive/app/(dashboard)/accounting/export/excel/route.ts, /Users/j.akpadji/lms-drive/app/(dashboard)/accounting/export/pdf/route.ts, /Users/j.akpadji/lms-drive/app/(dashboard)/accounting/new/page.tsx, /Users/j.akpadji/lms-drive/app/(dashboard)/accounting/page.tsx (+44 more)
 
 ### Community 81 - "Compteur alertes & nav basse"
 Cohesion: 0.18
@@ -916,8 +920,8 @@ Cohesion: 0.17
 Nodes (12): Do Not, GSAP with Vue, Svelte, and Other Frameworks, Learn More, Nuxt 4, Principles (All Frameworks), Scoping Selectors, ScrollTrigger Cleanup, Svelte (+4 more)
 
 ### Community 84 - "Community 84"
-Cohesion: 0.10
-Nodes (29): assignTrip(), cancelTrip(), deleteTrip(), endTrip(), getRole(), isManagerRole(), planTrip(), startPlannedTrip() (+21 more)
+Cohesion: 0.11
+Nodes (22): averageRgb01(), captureChromeNodes(), captureElementFromRenderedAncestor(), captureElementToBlob(), collectFontCssText(), compileShader(), cssColorToRgb01(), dominantRgb01() (+14 more)
 
 ### Community 85 - "Variants d'animation (framer)"
 Cohesion: 0.33
@@ -971,6 +975,10 @@ Nodes (36): acceptCli(), acceptReceiptPath(), argVal(), buildAcceptedWrappedSour
 Cohesion: 0.09
 Nodes (40): actionLabel(), applyConfigureBarChrome(), bindConfigureCountPillTooltip(), bindConfigureInlineControlHover(), buildConfigureActionControl(), buildConfigureCountControl(), buildConfigureRow(), buildConfigureSubmitButton() (+32 more)
 
+### Community 101 - "Community 101"
+Cohesion: 0.17
+Nodes (12): applyCommercialPerks(), applyDiscount(), buildBasePayload(), CLIENT_PHOTO_SLOTS, collectPhotoPaths(), createClientAction(), createClientQuick(), parseDiscount() (+4 more)
+
 ### Community 102 - "Community 102"
 Cohesion: 0.11
 Nodes (36): acceptCli(), acceptReceiptPath(), argVal(), buildAcceptedWrappedSource(), buildCarbonizeReplacement(), decodeHtmlAttr(), deindentContent(), detectCommentSyntax() (+28 more)
@@ -980,12 +988,12 @@ Cohesion: 1.00
 Nodes (3): EDL Zones Verification Page, Vehicle Blueprint v3 (EDL zone image), EDL Zone Polygons (Dessus/Avant/Arrière)
 
 ### Community 137 - "Community 137"
-Cohesion: 0.19
-Nodes (14): getFeesTable(), getLegalArticles(), LegalArticlesParams, fmtDate(), fmtPrix(), PhotoJointe, RecapEdl, RecapRetour (+6 more)
+Cohesion: 0.16
+Nodes (17): getFeesTable(), getLegalArticles(), LegalArticlesParams, fmtDate(), fmtPrix(), PhotoJointe, Props, RecapEdl (+9 more)
 
 ### Community 139 - "Community 139"
-Cohesion: 0.09
-Nodes (21): 10. Repères de code, 11. Pièges connus, 12. graphify, 1. Ce que c'est, 2. Le cahier des charges — la référence, 3. Ce dépôt ne porte plus qu'une chose : LMS Drive, 4. Le socle sert à équiper d'autres clients — et c'est voulu, 5. Qui s'en sert (+13 more)
+Cohesion: 0.07
+Nodes (29): 10. Repères de code, 11. Pièges connus, 12. graphify, 1. Ce que c'est, 2. Le cahier des charges — la référence, 3. Ce dépôt ne porte plus rien de commercial, 4. Un seul code, plusieurs clients — décidé le 28/07/2026, 5. Qui s'en sert — LMS Drive (+21 more)
 
 ### Community 140 - "Community 140"
 Cohesion: 0.22
@@ -996,32 +1004,32 @@ Cohesion: 0.13
 Nodes (35): ACTIONS, addIgnoreFile(), addIgnoreRule(), addIgnoreValue(), DETECTOR_CONFIG_KEYS, detectorSection(), fileHasImpeccableHookMarker(), HOOK_MANIFEST_TARGETS (+27 more)
 
 ### Community 142 - "Community 142"
-Cohesion: 0.19
-Nodes (11): calculateExtraKm(), calculateLateFee(), CLEANLINESS_LEVELS, ComputedFees, InspectionFlow(), Props, Step, ContratInfo (+3 more)
+Cohesion: 0.16
+Nodes (17): updateSavStatus(), VALID, adminModules, MenuPage(), modules, ROLE_LABELS, allowedHrefSet(), isSavAdmin() (+9 more)
 
 ### Community 143 - "Community 143"
 Cohesion: 0.50
 Nodes (3): info, author, version
 
 ### Community 144 - "Community 144"
-Cohesion: 0.11
-Nodes (22): averageRgb01(), captureChromeNodes(), captureElementFromRenderedAncestor(), captureElementToBlob(), collectFontCssText(), compileShader(), cssColorToRgb01(), dominantRgb01() (+14 more)
+Cohesion: 0.06
+Nodes (57): updateAgencySettings(), sendDocumentByEmail(), transmitInfractionToClient(), cancelInvoice(), generateInvoiceDraft(), markRestitutionInvoiceSent(), nextInvoiceNumber(), renderContractInvoiceAttachment() (+49 more)
 
 ### Community 145 - "Community 145"
 Cohesion: 0.09
 Nodes (37): agentHasWorkInFlight(), agentStatusText(), attachSteerFocusGuard(), barPaletteForTheme(), brandMarkSvg(), buildDesignHeader(), buildParamsPanel(), buildSteerProcessingDots() (+29 more)
 
 ### Community 146 - "Community 146"
-Cohesion: 0.22
-Nodes (6): AlertPanelProps, ALERT_RULES, AlertType, CalendarAlert, CalendarTeam, EventStatus
+Cohesion: 0.09
+Nodes (20): barreSel, cadre, champFichiers, choisis, cible, compte, lire(), liste (+12 more)
 
 ### Community 147 - "Community 147"
 Cohesion: 0.13
 Nodes (35): ACTIONS, addIgnoreFile(), addIgnoreRule(), addIgnoreValue(), DETECTOR_CONFIG_KEYS, detectorSection(), fileHasImpeccableHookMarker(), HOOK_MANIFEST_TARGETS (+27 more)
 
 ### Community 148 - "Community 148"
-Cohesion: 0.14
-Nodes (16): bulkCreateClientDocuments(), deleteClientDocument(), deleteDocument(), replaceDocument(), sendDocumentByEmail(), stageClientDocuments(), uploadDocument(), DOCUMENT_SUBCATEGORIES (+8 more)
+Cohesion: 0.24
+Nodes (5): AlertCountContext, AlertRefreshContext, useAlertCount(), BottomNav(), TABS
 
 ### Community 149 - "Community 149"
 Cohesion: 0.09
@@ -1032,8 +1040,8 @@ Cohesion: 0.33
 Nodes (6): checkLayout(), checkPageLayout(), isCardLike(), isCardLikeDOM(), isCardLikeFromProps(), isRepeatedTextContainer()
 
 ### Community 152 - "Community 152"
-Cohesion: 0.16
-Nodes (16): createMaintenanceRecord(), deleteMaintenanceRecord(), expenseCategoryFor(), GARAGE_TYPES, markMaintenancePaid(), ANGLE_OF_TYPE, angleOfType(), SERVICE_INTERVALS (+8 more)
+Cohesion: 0.13
+Nodes (11): ClientForm(), ClientFormProps, DISCOUNT_PRESETS, DOC_TYPES, PAYMENT_METHODS, PHOTO_SLOTS, PhotoSlot, UploadedFile (+3 more)
 
 ### Community 153 - "Community 153"
 Cohesion: 0.08
@@ -1048,8 +1056,8 @@ Cohesion: 0.15
 Nodes (33): buildColor(), CANONICAL_SECTIONS, collectBullets(), collectColorValues(), collectParagraphs(), detectFormat(), extractColors(), extractComponents() (+25 more)
 
 ### Community 162 - "Community 162"
-Cohesion: 0.04
-Nodes (50): files, updatedAt, /private/tmp/claude-501/-Users-j-akpadji/09bb35c3-b442-4a3e-a410-e171acb04461/scratchpad/check-sync2.js, /private/tmp/claude-501/-Users-j-akpadji/09bb35c3-b442-4a3e-a410-e171acb04461/scratchpad/check-sync.js, /private/tmp/claude-501/-Users-j-akpadji/09bb35c3-b442-4a3e-a410-e171acb04461/scratchpad/check-trip.js, /Users/j.akpadji/lms-drive/app/api/calendar/events/route.ts, /Users/j.akpadji/lms-drive/app/(dashboard)/internal-trips/InternalTripsClient.tsx, /Users/j.akpadji/lms-drive/app/(dashboard)/page.tsx (+42 more)
+Cohesion: 0.21
+Nodes (13): configureVoiceContext(), finishVoiceSession(), isEmbeddedPreviewBrowser(), releaseVoiceEngine(), startVoice(), steerSpeechRecognitionCtor(), steerVoiceContext(), steerVoiceErrorMessage() (+5 more)
 
 ### Community 163 - "Community 163"
 Cohesion: 0.15
@@ -1252,8 +1260,8 @@ Cohesion: 0.16
 Nodes (18): firstExisting(), getCritiqueDir(), getDesignSidecarCandidates(), getDesignSidecarPath(), getImpeccableDir(), getLegacyLiveConfigPath(), getLegacyLiveServerPath(), getLiveAnnotationsDir() (+10 more)
 
 ### Community 213 - "Community 213"
-Cohesion: 0.21
-Nodes (12): CalendarGrid(), rangeFor(), CalendarToolbar(), CalendarToolbarProps, rangeLabel(), DAY_ABBR, detectOverlaps(), formatDateHeader() (+4 more)
+Cohesion: 0.18
+Nodes (10): Base de données (migration 073), Ce qu'il ne faut pas casser, Ce qui existe déjà, à ne pas refaire, Décisions de cadrage (Jeff, 01/08/2026), Le problème en une phrase, Lot 2 — L'intervention porte ses dégâts, Lot 3 — La rubrique de comptabilité, Ordre d'exécution (+2 more)
 
 ### Community 214 - "Community 214"
 Cohesion: 0.13
@@ -1408,8 +1416,8 @@ Cohesion: 0.15
 Nodes (14): applyConfigSource(), applyDetectorConfigSource(), cloneDefaultConfig(), detectorSection(), getConfigPath(), getLocalConfigPath(), hookSection(), ignoreValueFilesKey() (+6 more)
 
 ### Community 252 - "Community 252"
-Cohesion: 0.14
-Nodes (16): EVENT_COLORS, EVENT_STATUS_LABELS, EVENT_TYPE_LABELS, STATUS_COLORS, CreateMenuProps, OPTIONS, ClientOption, CreatePrefill (+8 more)
+Cohesion: 0.12
+Nodes (17): EVENT_COLORS, EVENT_STATUS_LABELS, EVENT_TYPE_LABELS, STATUS_COLORS, CreateMenuProps, OPTIONS, ASSIGNABLE, ClientOption (+9 more)
 
 ### Community 253 - "Community 253"
 Cohesion: 0.14
@@ -1456,8 +1464,8 @@ Cohesion: 0.26
 Nodes (10): applyFixes(), cli(), collect(), parseArgs(), readProjectRootPatterns(), rel(), renderText(), SCRIPTS_DIR (+2 more)
 
 ### Community 264 - "Community 264"
-Cohesion: 0.36
-Nodes (6): Props, ZONE_COLORS, DamagedZone, MANDATORY_PHOTOS, VEHICLE_ZONES, ZoneId
+Cohesion: 0.22
+Nodes (4): VehicleInspection3DProps, ZoneDef, ZoneMeshProps, ZONES
 
 ### Community 265 - "Community 265"
 Cohesion: 0.21
@@ -1648,8 +1656,8 @@ Cohesion: 0.27
 Nodes (8): extensionCache, LIVE_TEMPLATE_EXTENSIONS, matchConfiguredExtension(), mergeExtensions(), normalizeExtensionEntries(), readLiveTemplateExtensions(), resolveLiveTemplateExtensions(), safeReadJson()
 
 ### Community 312 - "Community 312"
-Cohesion: 0.22
-Nodes (7): CalendarBottomBarProps, Props, EventBlockProps, STATUS_ICON, Positioned, ResourceColumnProps, CalendarEvent
+Cohesion: 0.18
+Nodes (9): SlotContext, Props, SlotContext, MobileCalendarPanelProps, ResourceColumnProps, ResourceListProps, ROLE_LABELS, CalendarResource (+1 more)
 
 ### Community 313 - "Community 313"
 Cohesion: 0.35
@@ -1696,8 +1704,8 @@ Cohesion: 0.29
 Nodes (8): appendStyleToLiveUiRoot(), appendToLiveUiRoot(), escapeCssIdent(), getLiveUiElementById(), LIVE_CHROME_MOUNT_CONTRACT, LIVE_UI_COMPONENT_IDS, LIVE_UI_SURFACES, resolveLiveUiRoot()
 
 ### Community 324 - "Community 324"
-Cohesion: 0.47
-Nodes (6): directChildDirs(), discoverRootsForPattern(), discoverTargetCandidates(), expandSimplePattern(), isIgnoredWorkspaceDiscoveryDir(), walkDirs()
+Cohesion: 0.20
+Nodes (11): cursorForInsertAxis(), ensureInsertLine(), handleMouseMove(), hideHighlightTagTooltip(), hideInsertLine(), layoutFlowChildren(), setPageInteractionCursor(), shouldShowHighlightTagTooltip() (+3 more)
 
 ### Community 325 - "Community 325"
 Cohesion: 0.40
@@ -1756,8 +1764,8 @@ Cohesion: 0.22
 Nodes (8): Cadence, Confirm and stop, Phase 1: Discovery interview, Phase 2: Resolve the design direction, Phase 3: Write the brief, Round 1: purpose, people, and outcome, Round 2: material, behavior, and boundaries, Shape
 
 ### Community 339 - "Community 339"
-Cohesion: 0.07
-Nodes (17): ToastProvider(), NO_PADDING_ROUTES, AlertCountContext, AlertRefreshContext, useAlertCount(), BottomNav(), TABS, PageHeaderProps (+9 more)
+Cohesion: 0.31
+Nodes (9): bindEditBadgeProxy(), editBadgeProxyTargets(), initEditBadge(), initEditBadgeHitProxies(), positionEditBadge(), setImportantStyle(), styleEditBadgeProxy(), syncEditBadgeHitProxies() (+1 more)
 
 ### Community 340 - "Community 340"
 Cohesion: 0.28
@@ -1768,8 +1776,8 @@ Cohesion: 0.39
 Nodes (7): cachePath(), filterFreshFindings(), pruneCache(), readCache(), readJson(), stalenessCheckDisabled(), writeCache()
 
 ### Community 342 - "Community 342"
-Cohesion: 0.31
-Nodes (8): DAY_LETTERS, dayBounds(), getVisibleIds(), layoutEvents(), MobileCalendar(), NowLine(), sameDay(), toMin()
+Cohesion: 0.21
+Nodes (14): couleurEvenement(), EventBlock(), EventBlockProps, STATUS_ICON, DAY_LETTERS, dayBounds(), eventColor(), getVisibleIds() (+6 more)
 
 ### Community 343 - "Community 343"
 Cohesion: 0.42
@@ -2000,8 +2008,8 @@ Cohesion: 0.33
 Nodes (5): Generate three compositional options, Inventory implementation fidelity, One approval point, Produce only the assets the build needs, Visualize: Direction Comps & Asset Production
 
 ### Community 400 - "Community 400"
-Cohesion: 0.47
-Nodes (6): directChildDirs(), discoverRootsForPattern(), discoverTargetCandidates(), expandSimplePattern(), isIgnoredWorkspaceDiscoveryDir(), walkDirs()
+Cohesion: 0.21
+Nodes (13): configureVoiceContext(), finishVoiceSession(), isEmbeddedPreviewBrowser(), releaseVoiceEngine(), startVoice(), steerSpeechRecognitionCtor(), steerVoiceContext(), steerVoiceErrorMessage() (+5 more)
 
 ### Community 401 - "Community 401"
 Cohesion: 0.33
@@ -2032,12 +2040,12 @@ Cohesion: 0.33
 Nodes (5): Generate three compositional options, Inventory implementation fidelity, One approval point, Produce only the assets the build needs, Visualize: Direction Comps & Asset Production
 
 ### Community 409 - "Community 409"
-Cohesion: 0.22
-Nodes (3): Props, MONTHS, VehicleSchedule
+Cohesion: 0.18
+Nodes (8): BODY_OUTLINE, LABEL, LAYOUT, Props, VIEW_VB, VIEWS, ZONE_COORDS, ZoneCoord
 
 ### Community 410 - "Community 410"
-Cohesion: 0.50
-Nodes (4): /Users/j.akpadji/lms-drive/app/(dashboard)/calendrier/disponibilites/AvailabilityClient.tsx, cleanAcked, editCount, findings
+Cohesion: 0.05
+Nodes (40): files, updatedAt, /Users/j.akpadji/lms-drive/app/(dashboard)/accounting/due-dates/DueDatesClient.tsx, /Users/j.akpadji/lms-drive/app/(dashboard)/calendrier/disponibilites/AvailabilityClient.tsx, /Users/j.akpadji/lms-drive/app/(dashboard)/clients/AssignStatusButton.tsx, /Users/j.akpadji/lms-drive/app/(dashboard)/documents/DocumentsClient.tsx, /Users/j.akpadji/lms-drive/app/(dashboard)/reservations/ReservationStatusButtons.tsx, /Users/j.akpadji/lms-drive/components/calendar/CreateMenu.tsx (+32 more)
 
 ### Community 411 - "Community 411"
 Cohesion: 0.47
@@ -2052,12 +2060,12 @@ Cohesion: 0.33
 Nodes (6): DOM / UI, Draggable, Flip, Inertia (InertiaPlugin), More information, Observer
 
 ### Community 415 - "Community 415"
-Cohesion: 0.22
-Nodes (4): VehicleInspection3DProps, ZoneDef, ZoneMeshProps, ZONES
+Cohesion: 0.12
+Nodes (16): Après la réinitialisation du quota, dimanche 2 août, Ce qui reste hors de ce plan, Ce qui reste à faire jusqu'au dimanche 2 août 2026, Le rythme et le modèle, Les quatre questions, toutes tranchées le 31/07, Où on en est, Étape 10. Les campagnes e-mail, Étape 1. Vérifier les tâches du jour et les alertes (+8 more)
 
 ### Community 416 - "Community 416"
-Cohesion: 0.40
-Nodes (4): DamageDrawerProps, SEVERITY_ACTIVE, SEVERITY_STYLES, DamageZone
+Cohesion: 0.17
+Nodes (12): files, updatedAt, /Users/j.akpadji/fleetlive/lib/calculateur.ts, /Users/j.akpadji/fleetlive/lib/content.ts, /Users/j.akpadji/fleetlive/lib/whatsapp.ts, ea0ce2e4-c03a-4bd2-847c-41b5fa9b2e3c, editCount, findings (+4 more)
 
 ### Community 418 - "Community 418"
 Cohesion: 0.50
@@ -2176,8 +2184,8 @@ Cohesion: 0.50
 Nodes (3): hooks, PostToolUse, Stop
 
 ### Community 452 - "Community 452"
-Cohesion: 0.21
-Nodes (13): configureVoiceContext(), finishVoiceSession(), isEmbeddedPreviewBrowser(), releaseVoiceEngine(), startVoice(), steerSpeechRecognitionCtor(), steerVoiceContext(), steerVoiceErrorMessage() (+5 more)
+Cohesion: 0.22
+Nodes (3): Props, MONTHS, VehicleSchedule
 
 ### Community 453 - "Community 453"
 Cohesion: 0.67
@@ -2356,64 +2364,72 @@ Cohesion: 0.67
 Nodes (3): typeset, argumentHint, description
 
 ### Community 507 - "Community 507"
-Cohesion: 0.50
-Nodes (4): /Users/j.akpadji/lms-drive/app/(dashboard)/clients/AssignStatusButton.tsx, cleanAcked, editCount, findings
+Cohesion: 0.22
+Nodes (8): files, updatedAt, /Users/j.akpadji/lms-drive/proxy.ts, sessions, edd9c670-9388-422e-b209-fee518a1c4e3, editCount, findings, version
 
 ### Community 524 - "Community 524"
 Cohesion: 0.50
-Nodes (4): /Users/j.akpadji/lms-drive/app/(dashboard)/clients/ClientForm.tsx, cleanAcked, editCount, findings
+Nodes (4): /private/tmp/claude-501/-Users-j-akpadji-lms-drive/ea0ce2e4-c03a-4bd2-847c-41b5fa9b2e3c/scratchpad/editeur-template.html, cleanAcked, editCount, findings
 
 ### Community 525 - "Community 525"
-Cohesion: 0.21
-Nodes (13): configureVoiceContext(), finishVoiceSession(), isEmbeddedPreviewBrowser(), releaseVoiceEngine(), startVoice(), steerSpeechRecognitionCtor(), steerVoiceContext(), steerVoiceErrorMessage() (+5 more)
+Cohesion: 0.47
+Nodes (6): directChildDirs(), discoverRootsForPattern(), discoverTargetCandidates(), expandSimplePattern(), isIgnoredWorkspaceDiscoveryDir(), walkDirs()
 
 ### Community 526 - "Community 526"
 Cohesion: 0.50
-Nodes (4): /private/tmp/claude-501/-Users-j-akpadji-lms-drive/4946f9e5-b14c-4ef0-bbb5-dd4c1579480f/scratchpad/render-3-contrats.tsx, cleanAcked, editCount, findings
+Nodes (4): /private/tmp/claude-501/-Users-j-akpadji-lms-drive/ea0ce2e4-c03a-4bd2-847c-41b5fa9b2e3c/scratchpad/fleet-snapshot-commerciale.html, cleanAcked, editCount, findings
 
 ### Community 527 - "Community 527"
-Cohesion: 0.50
-Nodes (4): /Users/j.akpadji/lms-drive/app/(dashboard)/documents/import/ImportTriageClient.tsx, cleanAcked, editCount, findings
+Cohesion: 0.08
+Nodes (24): files, updatedAt, /Users/j.akpadji/lms-drive/app/(dashboard)/documents/import/ImportTriageClient.tsx, /Users/j.akpadji/lms-drive/app/(dashboard)/page.tsx, /Users/j.akpadji/lms-drive/components/dashboard/DashboardCalendar.tsx, /Users/j.akpadji/lms-drive/components/ui/DelaiPastille.tsx, /Users/j.akpadji/lms-drive/lib/calendar/enrichEvents.ts, /Users/j.akpadji/lms-drive/types/calendar.ts (+16 more)
 
 ### Community 528 - "Community 528"
 Cohesion: 0.25
 Nodes (7): After making React code changes:, Command, Configuring or explaining rules, /doctor — full local triage workflow, For a focused UI design audit:, For general cleanup or code improvement:, React Doctor
 
 ### Community 529 - "Community 529"
-Cohesion: 0.20
-Nodes (11): cursorForInsertAxis(), ensureInsertLine(), handleMouseMove(), hideHighlightTagTooltip(), hideInsertLine(), layoutFlowChildren(), setPageInteractionCursor(), shouldShowHighlightTagTooltip() (+3 more)
+Cohesion: 0.47
+Nodes (6): directChildDirs(), discoverRootsForPattern(), discoverTargetCandidates(), expandSimplePattern(), isIgnoredWorkspaceDiscoveryDir(), walkDirs()
 
 ### Community 530 - "Community 530"
 Cohesion: 0.50
-Nodes (4): /Users/j.akpadji/lms-drive/app/(dashboard)/equipe/[id]/edit/EditMemberForm.tsx, cleanAcked, editCount, findings
+Nodes (4): /private/tmp/claude-501/-Users-j-akpadji-lms-drive/ea0ce2e4-c03a-4bd2-847c-41b5fa9b2e3c/scratchpad/fleet-snapshot.html, cleanAcked, editCount, findings
 
 ### Community 531 - "Community 531"
 Cohesion: 0.29
 Nodes (6): Commands, Config shape, Decision guide, Educating the user, Explaining and configuring rules, Workflow
 
 ### Community 532 - "Community 532"
-Cohesion: 0.03
-Nodes (60): files, updatedAt, /private/tmp/claude-501/-Users-j-akpadji-lms-drive/361d6ca1-b3ac-4317-84d2-9f558cb19aac/scratchpad/count.js, /Users/j.akpadji/lms-drive/app/(dashboard)/accounting/AccountingTransactions.tsx, /Users/j.akpadji/lms-drive/app/(dashboard)/clients/[id]/ClientStatusActions.tsx, /Users/j.akpadji/lms-drive/app/(dashboard)/equipe/new/page.tsx, /Users/j.akpadji/lms-drive/app/(dashboard)/incidents/IncidentsClient.tsx, /Users/j.akpadji/lms-drive/app/(dashboard)/incidents/infractions/[id]/InfractionActions.tsx (+52 more)
+Cohesion: 0.50
+Nodes (4): /private/tmp/claude-501/-Users-j-akpadji-lms-drive/ea0ce2e4-c03a-4bd2-847c-41b5fa9b2e3c/scratchpad/jlf-demo.html, cleanAcked, editCount, findings
 
 ### Community 533 - "Community 533"
 Cohesion: 0.50
-Nodes (4): /Users/j.akpadji/lms-drive/app/(dashboard)/accounting/analysis/postes/page.tsx, cleanAcked, editCount, findings
+Nodes (4): /private/tmp/claude-501/-Users-j-akpadji-lms-drive/ea0ce2e4-c03a-4bd2-847c-41b5fa9b2e3c/scratchpad/jlf-dossier.html, cleanAcked, editCount, findings
 
 ### Community 534 - "Community 534"
-Cohesion: 0.50
-Nodes (4): /Users/j.akpadji/lms-drive/app/(dashboard)/calendar/tasks/new/page.tsx, cleanAcked, editCount, findings
+Cohesion: 0.04
+Nodes (50): files, updatedAt, /Users/j.akpadji/Documents/lms-simulateur.js, /Users/j.akpadji/lms-drive/app/api/calendar/events/[id]/route.ts, /Users/j.akpadji/lms-drive/app/api/calendar/events/[id]/status/route.ts, /Users/j.akpadji/lms-drive/app/api/calendar/events/route.ts, /Users/j.akpadji/lms-drive/app/api/cron/due-dates/route.ts, /Users/j.akpadji/lms-drive/app/api/notifications/route.ts (+42 more)
 
 ### Community 535 - "Community 535"
 Cohesion: 0.31
 Nodes (9): bindEditBadgeProxy(), editBadgeProxyTargets(), initEditBadge(), initEditBadgeHitProxies(), positionEditBadge(), setImportantStyle(), styleEditBadgeProxy(), syncEditBadgeHitProxies() (+1 more)
 
 ### Community 536 - "Community 536"
-Cohesion: 0.31
-Nodes (9): bindEditBadgeProxy(), editBadgeProxyTargets(), initEditBadge(), initEditBadgeHitProxies(), positionEditBadge(), setImportantStyle(), styleEditBadgeProxy(), syncEditBadgeHitProxies() (+1 more)
+Cohesion: 0.50
+Nodes (4): /Users/j.akpadji/lms-drive/app/(dashboard)/accounting/kpi/page.tsx, cleanAcked, editCount, findings
+
+### Community 537 - "Community 537"
+Cohesion: 0.50
+Nodes (4): /private/tmp/claude-501/-Users-j-akpadji-lms-drive/ea0ce2e4-c03a-4bd2-847c-41b5fa9b2e3c/scratchpad/jlf-groupe.html, cleanAcked, editCount, findings
 
 ### Community 538 - "Community 538"
 Cohesion: 0.50
-Nodes (4): /Users/j.akpadji/lms-drive/app/(dashboard)/documents/DocumentsClient.tsx, cleanAcked, editCount, findings
+Nodes (4): /Users/j.akpadji/fleetlive/app/layout.tsx, cleanAcked, editCount, findings
+
+### Community 539 - "Community 539"
+Cohesion: 0.16
+Nodes (14): bulkCreateClientDocuments(), deleteClientDocument(), deleteDocument(), replaceDocument(), uploadDocument(), DOCUMENT_SUBCATEGORIES, DocumentCategory, EXPIRING_SUBCATEGORIES (+6 more)
 
 ### Community 540 - "Community 540"
 Cohesion: 0.40
@@ -2421,19 +2437,23 @@ Nodes (4): detector, ignoreFiles, ignoreRules, ignoreValues
 
 ### Community 541 - "Community 541"
 Cohesion: 0.50
-Nodes (4): /Users/j.akpadji/lms-drive/app/(dashboard)/incidents/infractions/new/page.tsx, cleanAcked, editCount, findings
+Nodes (4): /Users/j.akpadji/fleetlive/app/outils/page.tsx, cleanAcked, editCount, findings
 
 ### Community 542 - "Community 542"
 Cohesion: 0.22
 Nodes (9): checkClippedOverflow(), checkElementClippedOverflow(), checkElementClippedOverflowDOM(), clippingContainerIsIntentionalViewport(), elementRect(), positionedChildEscapesClip(), positionedChildHasSubstantiveContent(), positionedChildIsDecorative() (+1 more)
 
+### Community 543 - "Community 543"
+Cohesion: 0.04
+Nodes (25): closeCampaign(), createCampaign(), deleteCampaign(), updateCampaignStatus(), AnimatedList(), AnimatedListItem(), AnimatedTabsProps, Tab (+17 more)
+
 ### Community 544 - "Community 544"
 Cohesion: 0.50
-Nodes (4): /Users/j.akpadji/lms-drive/app/(dashboard)/incidents/sinistres/[id]/SinistreActions.tsx, cleanAcked, editCount, findings
+Nodes (4): /Users/j.akpadji/fleetlive/app/page.tsx, cleanAcked, editCount, findings
 
 ### Community 545 - "Community 545"
 Cohesion: 0.50
-Nodes (4): /Users/j.akpadji/lms-drive/app/(dashboard)/partnerships/page.tsx, cleanAcked, editCount, findings
+Nodes (4): /Users/j.akpadji/fleetlive/app/plateforme/page.tsx, cleanAcked, editCount, findings
 
 ### Community 546 - "Community 546"
 Cohesion: 0.20
@@ -2441,35 +2461,43 @@ Nodes (14): beginEditPin(), cancelEditingPin(), canCreateInsert(), finalizeEditi
 
 ### Community 547 - "Community 547"
 Cohesion: 0.50
-Nodes (4): /Users/j.akpadji/lms-drive/app/(dashboard)/marketing/analytics/page.tsx, cleanAcked, editCount, findings
+Nodes (4): /Users/j.akpadji/fleetlive/app/plateforme/solutions/page.tsx, cleanAcked, editCount, findings
 
 ### Community 548 - "Community 548"
 Cohesion: 0.50
-Nodes (4): /Users/j.akpadji/lms-drive/app/(dashboard)/marketing/new/page.tsx, cleanAcked, editCount, findings
+Nodes (4): /Users/j.akpadji/fleetlive/app/tarifs/page.tsx, cleanAcked, editCount, findings
+
+### Community 549 - "Community 549"
+Cohesion: 0.18
+Nodes (7): EmailLog, TYPE_CONTENT, TYPE_LABELS, EmailsPage(), pill(), TYPE_LABELS, TYPES
 
 ### Community 550 - "Community 550"
 Cohesion: 0.50
-Nodes (4): /Users/j.akpadji/lms-drive/app/(dashboard)/reservations/new/page.tsx, cleanAcked, editCount, findings
+Nodes (4): /Users/j.akpadji/fleetlive/components/appareils.tsx, cleanAcked, editCount, findings
 
 ### Community 551 - "Community 551"
 Cohesion: 0.50
-Nodes (4): /Users/j.akpadji/lms-drive/components/calendar/EventDrawer.tsx, cleanAcked, editCount, findings
+Nodes (4): /Users/j.akpadji/fleetlive/components/BlocAppareils.tsx, cleanAcked, editCount, findings
 
 ### Community 552 - "Community 552"
-Cohesion: 0.03
-Nodes (65): files, updatedAt, /private/tmp/claude-501/-Users-j-akpadji/05ee2a90-31ca-4217-a422-cdf976ca2187/scratchpad/dedup-docs.js, /Users/j.akpadji/lms-drive/app/api/team/resend-invite/route.ts, /Users/j.akpadji/lms-drive/app/(dashboard)/alerts/page.tsx, /Users/j.akpadji/lms-drive/app/(dashboard)/clients/[id]/ClientDocuments.tsx, /Users/j.akpadji/lms-drive/app/(dashboard)/clients/[id]/page.tsx, /Users/j.akpadji/lms-drive/app/(dashboard)/clients/page.tsx (+57 more)
+Cohesion: 0.05
+Nodes (41): files, updatedAt, /Users/j.akpadji/lms-drive/app/api/vehicles/availability/route.ts, /Users/j.akpadji/lms-drive/app/(dashboard)/documents/import/page.tsx, /Users/j.akpadji/lms-drive/app/(dashboard)/documents/page.tsx, /Users/j.akpadji/lms-drive/app/(dashboard)/internal-trips/InternalTripsClient.tsx, /Users/j.akpadji/lms-drive/app/(dashboard)/reservations/ReservationForm.tsx, /Users/j.akpadji/lms-drive/app/globals.css (+33 more)
 
 ### Community 553 - "Community 553"
 Cohesion: 0.50
-Nodes (4): /Users/j.akpadji/lms-drive/components/pwa/ServiceWorkerRegistration.tsx, cleanAcked, editCount, findings
+Nodes (4): /Users/j.akpadji/fleetlive/components/Calculateur.tsx, cleanAcked, editCount, findings
 
 ### Community 554 - "Community 554"
 Cohesion: 0.50
-Nodes (4): /Users/j.akpadji/lms-drive/components/sav/SavButton.tsx, cleanAcked, editCount, findings
+Nodes (4): /Users/j.akpadji/fleetlive/components/langue.tsx, cleanAcked, editCount, findings
 
 ### Community 555 - "Community 555"
 Cohesion: 0.50
-Nodes (4): /Users/j.akpadji/lms-drive/app/(dashboard)/reservations/PaymentCountdown.tsx, cleanAcked, editCount, findings
+Nodes (4): /Users/j.akpadji/fleetlive/components/PlanInspection.tsx, cleanAcked, editCount, findings
+
+### Community 556 - "Community 556"
+Cohesion: 0.50
+Nodes (4): /Users/j.akpadji/fleetlive/components/SceneLogiciel.tsx, cleanAcked, editCount, findings
 
 ### Community 557 - "Community 557"
 Cohesion: 0.60
@@ -2477,98 +2505,90 @@ Nodes (5): checkBorders(), checkElementBorders(), checkElementBordersDOM(), isSt
 
 ### Community 558 - "Community 558"
 Cohesion: 0.50
-Nodes (4): /Users/j.akpadji/lms-drive/app/(dashboard)/reservations/ProlongReservation.tsx, cleanAcked, editCount, findings
+Nodes (4): /Users/j.akpadji/fleetlive/components/sections.tsx, cleanAcked, editCount, findings
 
 ### Community 559 - "Community 559"
 Cohesion: 0.50
-Nodes (4): /Users/j.akpadji/lms-drive/components/suivi/EntretienSection.tsx, cleanAcked, editCount, findings
+Nodes (4): /Users/j.akpadji/fleetlive/components/SiteChrome.tsx, cleanAcked, editCount, findings
 
 ### Community 560 - "Community 560"
 Cohesion: 0.50
-Nodes (4): /Users/j.akpadji/lms-drive/app/(dashboard)/vehicles/VehicleStatusButton.tsx, cleanAcked, editCount, findings
+Nodes (4): /Users/j.akpadji/fleetlive/components/ThemeToggle.tsx, cleanAcked, editCount, findings
 
 ### Community 561 - "Community 561"
 Cohesion: 0.50
-Nodes (4): /private/tmp/claude-501/-Users-j-akpadji-lms-drive/4946f9e5-b14c-4ef0-bbb5-dd4c1579480f/scratchpad/render-contract.tsx, cleanAcked, editCount, findings
+Nodes (4): /Users/j.akpadji/fleetlive/components/ui/accordion.tsx, cleanAcked, editCount, findings
 
 ### Community 562 - "Community 562"
 Cohesion: 0.50
-Nodes (4): /Users/j.akpadji/lms-drive/app/(auth)/login/page.tsx, cleanAcked, editCount, findings
+Nodes (4): /Users/j.akpadji/fleetlive/components/ui/button.tsx, cleanAcked, editCount, findings
 
 ### Community 563 - "Community 563"
 Cohesion: 0.50
-Nodes (4): /Users/j.akpadji/lms-drive/lib/pdf/convention-template.tsx, cleanAcked, editCount, findings
+Nodes (4): /Users/j.akpadji/fleetlive/components/ui/card.tsx, cleanAcked, editCount, findings
 
 ### Community 564 - "Community 564"
 Cohesion: 0.50
-Nodes (4): /Users/j.akpadji/lms-drive/components/layout/Sidebar.tsx, cleanAcked, editCount, findings
+Nodes (4): /Users/j.akpadji/fleetlive/components/ui/tabs.tsx, cleanAcked, editCount, findings
 
 ### Community 566 - "Community 566"
 Cohesion: 0.50
-Nodes (4): /Users/j.akpadji/lms-drive/lib/pdf/sinistre-template.tsx, cleanAcked, editCount, findings
+Nodes (4): /Users/j.akpadji/fleetlive/styles/globals.css, cleanAcked, editCount, findings
 
 ### Community 567 - "Community 567"
 Cohesion: 0.50
-Nodes (4): /Users/j.akpadji/lms-drive/components/suivi/InfractionsSection.tsx, cleanAcked, editCount, findings
+Nodes (4): /Users/j.akpadji/lms-drive/app/(dashboard)/accounting/report/page.tsx, cleanAcked, editCount, findings
 
 ### Community 568 - "Community 568"
 Cohesion: 0.50
-Nodes (4): /Users/j.akpadji/lms-drive/app/(dashboard)/clients/ClientsListSwipeable.tsx, cleanAcked, editCount, findings
+Nodes (4): /Users/j.akpadji/lms-drive/app/(dashboard)/accounting/close/monthly/page.tsx, cleanAcked, editCount, findings
 
 ### Community 569 - "Community 569"
 Cohesion: 0.50
-Nodes (4): /Users/j.akpadji/lms-drive/app/(dashboard)/contracts/[id]/ContractSigningPanel.tsx, cleanAcked, editCount, findings
+Nodes (4): /Users/j.akpadji/lms-drive/app/(dashboard)/accounting/creances/page.tsx, cleanAcked, editCount, findings
 
 ### Community 570 - "Community 570"
 Cohesion: 0.50
-Nodes (4): /Users/j.akpadji/lms-drive/app/(dashboard)/documents/page.tsx, cleanAcked, editCount, findings
+Nodes (4): /Users/j.akpadji/lms-drive/app/(dashboard)/alerts/NotificationsList.tsx, cleanAcked, editCount, findings
 
 ### Community 571 - "Community 571"
 Cohesion: 0.50
-Nodes (4): /Users/j.akpadji/lms-drive/app/(dashboard)/incidents/sinistres/new/page.tsx, cleanAcked, editCount, findings
+Nodes (4): /Users/j.akpadji/lms-drive/app/(dashboard)/ContentWrapper.tsx, cleanAcked, editCount, findings
 
 ### Community 573 - "Community 573"
 Cohesion: 0.50
-Nodes (4): /Users/j.akpadji/lms-drive/app/(dashboard)/partnerships/new/page.tsx, cleanAcked, editCount, findings
+Nodes (4): /Users/j.akpadji/lms-drive/app/(dashboard)/equipe/[id]/page.tsx, cleanAcked, editCount, findings
 
 ### Community 574 - "Community 574"
 Cohesion: 0.50
-Nodes (4): /Users/j.akpadji/lms-drive/app/(dashboard)/reservations/DepositInfoEditor.tsx, cleanAcked, editCount, findings
+Nodes (4): /Users/j.akpadji/lms-drive/app/(dashboard)/alerts/page.tsx, cleanAcked, editCount, findings
 
 ### Community 575 - "Community 575"
 Cohesion: 0.50
-Nodes (4): /Users/j.akpadji/lms-drive/app/(dashboard)/reservations/DepositSettlement.tsx, cleanAcked, editCount, findings
+Nodes (4): /Users/j.akpadji/lms-drive/app/(dashboard)/vehicles/page.tsx, cleanAcked, editCount, findings
 
 ### Community 576 - "Community 576"
 Cohesion: 0.50
-Nodes (4): /Users/j.akpadji/lms-drive/lib/pdf/contract-template.tsx, cleanAcked, editCount, findings
+Nodes (4): /Users/j.akpadji/lms-drive/components/suivi/InfractionsSection.tsx, cleanAcked, editCount, findings
 
 ### Community 577 - "Community 577"
 Cohesion: 0.50
-Nodes (4): /Users/j.akpadji/lms-drive/app/(dashboard)/reservations/ReservationStatusButtons.tsx, cleanAcked, editCount, findings
+Nodes (4): /Users/j.akpadji/lms-drive/lib/pdf/contract-template.tsx, cleanAcked, editCount, findings
 
 ### Community 578 - "Community 578"
 Cohesion: 0.50
-Nodes (4): /Users/j.akpadji/lms-drive/components/dashboard/DashboardCalendar.tsx, cleanAcked, editCount, findings
+Nodes (4): /Users/j.akpadji/lms-drive/public/simulateur.html, cleanAcked, editCount, findings
 
 ### Community 579 - "Community 579"
-Cohesion: 0.50
-Nodes (4): /Users/j.akpadji/lms-drive/app/(dashboard)/vehicles/VehicleForm.tsx, cleanAcked, editCount, findings
+Cohesion: 0.67
+Nodes (3): /Users/j.akpadji/fleetlive/lib/utils.ts, editCount, findings
 
 ### Community 580 - "Community 580"
-Cohesion: 0.50
-Nodes (4): /Users/j.akpadji/lms-drive/components/suivi/SinistresSection.tsx, cleanAcked, editCount, findings
-
-### Community 581 - "Community 581"
-Cohesion: 0.50
-Nodes (4): /Users/j.akpadji/lms-drive/components/InlineEditField.tsx, cleanAcked, editCount, findings
-
-### Community 582 - "Community 582"
-Cohesion: 0.50
-Nodes (4): /Users/j.akpadji/lms-drive/lib/pdf/invoice-template.tsx, cleanAcked, editCount, findings
+Cohesion: 0.17
+Nodes (18): assignTriageDocuments(), moveTriageDocuments(), stageTriageDocuments(), getSubcategoryLabel(), subcategoryExpires(), buildTriageDocName(), getTriageFamily(), isPendingDoc() (+10 more)
 
 ## Knowledge Gaps
-- **2311 isolated node(s):** `STATUS_RES`, `STATUS_LABELS`, `PAYMENT_LABELS`, `TASK_STATUS_BADGE`, `TASK_STATUS_LABEL` (+2306 more)
+- **2392 isolated node(s):** `ASSIGNABLE`, `STATUS_ICON`, `DAY_HEADERS`, `DAY_LETTERS`, `DAY_HEADERS` (+2387 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **33 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -2576,16 +2596,16 @@ Nodes (4): /Users/j.akpadji/lms-drive/lib/pdf/invoice-template.tsx, cleanAcked, 
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `isVisible()` connect `Community 270` to `Community 308`, `Community 197`, `Community 342`, `Community 199`?**
-  _High betweenness centrality (0.052) - this node is a cross-community bridge._
+  _High betweenness centrality (0.060) - this node is a cross-community bridge._
+- **Why does `collectRepeatedContainerTextFindings()` connect `Community 308` to `Community 232`, `Community 270`, `Graphique échéances`?**
+  _High betweenness centrality (0.019) - this node is a cross-community bridge._
 - **Why does `collectRepeatedContainerTextFindings()` connect `Community 197` to `Analyse financière (agrégats)`, `Community 150`, `Community 270`?**
-  _High betweenness centrality (0.020) - this node is a cross-community bridge._
-- **Why does `collectRepeatedContainerTextFindings()` connect `Community 270` to `Community 210`, `Fiche véhicule & statut`?**
-  _High betweenness centrality (0.016) - this node is a cross-community bridge._
+  _High betweenness centrality (0.019) - this node is a cross-community bridge._
 - **Are the 3 inferred relationships involving `formatPrice()` (e.g. with `ClientPage()` and `ReservationPage()`) actually correct?**
   _`formatPrice()` has 3 INFERRED edges - model-reasoned connections that need verification._
-- **What connects `STATUS_RES`, `STATUS_LABELS`, `PAYMENT_LABELS` to the rest of the system?**
-  _2319 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Are the 5 inferred relationships involving `formatDate()` (e.g. with `CampaignDetailPage()` and `ClientPage()`) actually correct?**
+  _`formatDate()` has 5 INFERRED edges - model-reasoned connections that need verification._
+- **What connects `ASSIGNABLE`, `STATUS_ICON`, `DAY_HEADERS` to the rest of the system?**
+  _2400 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Marketing & Campagnes clients` be split into smaller, more focused modules?**
   _Cohesion score 0.026312880044223327 - nodes in this community are weakly interconnected._
-- **Should `Alertes & Notifications` be split into smaller, more focused modules?**
-  _Cohesion score 0.028 - nodes in this community are weakly interconnected._
