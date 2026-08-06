@@ -348,6 +348,7 @@ export async function buildContractPdfData(
     agency: {
       companyName: agency.company_name,
       siret: agency.siret,
+      vatNumber: agency.vat_number ?? null,
       address: agency.address,
       phone: agency.phone,
       email: agency.email,

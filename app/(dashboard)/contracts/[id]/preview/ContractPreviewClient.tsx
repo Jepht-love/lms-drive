@@ -10,6 +10,7 @@ import { graviteLabel, type DamageEntry, type DamageSeverity } from '@/component
 import { getLegalArticles, getFeesTable, VIDEO_CLAUSE, type MontantsContrat } from '@/lib/contracts/legal-articles'
 import type { PosteFrais } from '@/lib/contracts/frais-restitution'
 import { calculateRentalDays, rentalPriceBreakdown, ratesFor, formatDate } from '@/lib/utils'
+import { formatPhoneFr, splitAddressFr } from '@/lib/format/coordonnees'
 
 // État des lieux de départ assemblé côté serveur (page.tsx) pour être relu dans
 // la prévisualisation du contrat, juste avant la signature.
@@ -71,31 +72,6 @@ function formatDateTime(dt?: string) {
 function formatPrice(n?: number) {
   if (n == null) return '—'
   return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(n)
-}
-
-// Numéro affiché de la même façon pour l'agence et le locataire : sans ça,
-// l'un s'affichait « 06 65 74 40 09 » et l'autre « 0781442311 » (gérant, 05/08/2026).
-// Un numéro français à 10 chiffres est regroupé par deux ; tout autre format
-// (international, incomplet) est laissé tel quel.
-function formatPhoneFr(raw?: string | null): string {
-  if (!raw) return ''
-  const digits = raw.replace(/\D/g, '')
-  if (digits.length === 10 && digits.startsWith('0')) {
-    return digits.replace(/(\d{2})(?=\d)/g, '$1 ').trim()
-  }
-  return raw.trim()
-}
-
-// Le locataire a rue / code postal / ville dans trois colonnes ; l'agence n'a
-// qu'un seul champ adresse. Pour que les deux encadrés s'alignent ligne à ligne
-// (gérant, 05/08/2026), on découpe l'adresse agence autour du code postal
-// français (5 chiffres). Format inattendu (pas de code postal) → tout reste sur
-// la ligne « rue ».
-function splitAddressFr(full?: string | null): { rue: string; cp: string; ville: string } {
-  const s = (full ?? '').trim()
-  const m = s.match(/^(.*?)[\s,]*\b(\d{5})\b[\s,]*(.*)$/)
-  if (!m) return { rue: s, cp: '', ville: '' }
-  return { rue: m[1].replace(/[\s,]+$/, '').trim(), cp: m[2], ville: m[3].trim() }
 }
 
 export default function ContractPreviewClient({ contract, reservation, vehicle, client, agency, chain, departInspection, montantsContrat, postesFrais }: Props) {
@@ -500,18 +476,13 @@ export default function ContractPreviewClient({ contract, reservation, vehicle, 
               )}
             </div>
 
-            {/* Cachet & Visa de l'agence */}
+            {/* Cachet du loueur : il porte l'identité de l'agence et vaut signature
+                côté loueur. Pas de logo à côté, il ferait doublon (gérant, 06/08/2026). */}
             <div className="flex flex-col items-center">
-              <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1.5">Cachet &amp; Visa</p>
+              <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1.5">Cachet du loueur (vaut signature)</p>
               <div className="h-16 w-40 flex items-center justify-center border border-gray-200 rounded-lg bg-gray-50">
-                <Image src="/cachet-lms.png" alt="Cachet agence" width={120} height={48} className="object-contain max-h-full" />
+                <Image src="/cachet-lms.png" alt="Cachet du loueur" width={120} height={48} className="object-contain max-h-full" />
               </div>
-            </div>
-
-            {/* Logo du loueur */}
-            <div className="flex flex-col items-center">
-              <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1.5">Loueur</p>
-              <Image src="/logo.png" alt="Logo agence" width={120} height={89} className="w-[120px] h-[89px] object-contain" />
             </div>
           </div>
 

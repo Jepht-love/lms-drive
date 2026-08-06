@@ -8,6 +8,7 @@ import { BUSINESS_TZ } from '@/lib/calendar/constants'
 import { fr } from 'date-fns/locale'
 import { getLegalArticles, getFeesTable, VIDEO_CLAUSE } from '@/lib/contracts/legal-articles'
 import type { PosteFrais } from '@/lib/contracts/frais-restitution'
+import { formatPhoneFr, splitAddressFr } from '@/lib/format/coordonnees'
 import { fmtEntier } from './nombres'
 import { EDL_ZONES, zoneBox, EDL_IMG } from '@/components/vehicle-schema/edl-zones'
 
@@ -107,6 +108,7 @@ export interface ContractData {
   agency?: {
     companyName: string
     siret?: string | null
+    vatNumber?: string | null   // N° TVA intracommunautaire (encart Loueur)
     address?: string | null
     phone?: string | null
     email?: string | null
@@ -735,6 +737,68 @@ function EDLPhotosComparePage({ dep, arr, contractNumber, clientName, vehiclePla
   )
 }
 
+// ─── État des lieux de départ, INTÉGRÉ au corps du contrat ────────────────────
+
+// Propreté en toutes lettres, comme l'aperçu à l'écran (pas d'étoiles ici).
+const CLEANLINESS_LABELS: Record<number, string> = {
+  1: 'Sale', 2: 'Moyen', 3: 'Normal', 4: 'Propre', 5: 'Très propre',
+}
+
+// L'état des lieux de départ vit désormais DANS le contrat, juste après la
+// caution, et non plus sur une page séparée en fin de document (gérant,
+// 06/08/2026 : « l'état des lieux doit être en haut, et une seule signature »).
+// Ce bloc n'a donc PAS de signature : la signature unique du contrat, en bas,
+// vaut pour le contrat ET l'état des lieux. Schéma + relevés + dommages + photos,
+// exactement ce que montre l'aperçu.
+function InlineDepartEDL({ insp, edlImage }: { insp: InspectionPDFData; edlImage?: string }) {
+  return (
+    <View style={s.section}>
+      <Text style={s.sectionTitle}>État des lieux de départ</Text>
+      <View style={s.metricsRow}>
+        <View style={s.metricBox}>
+          <Text style={s.metricValue}>{fmtKm(insp.kmReading)}</Text>
+          <Text style={s.metricLabel}>Kilométrage</Text>
+        </View>
+        <View style={s.metricBox}>
+          <Text style={s.metricValue}>{insp.fuelRangeKm} km</Text>
+          <Text style={s.metricLabel}>Autonomie</Text>
+        </View>
+        <View style={s.metricBox}>
+          <Text style={[s.metricValue, { fontSize: 10 }]}>{CLEANLINESS_LABELS[insp.exteriorCleanliness] ?? '—'}</Text>
+          <Text style={s.metricLabel}>Propreté ext.</Text>
+        </View>
+        <View style={s.metricBox}>
+          <Text style={[s.metricValue, { fontSize: 10 }]}>{CLEANLINESS_LABELS[insp.interiorCleanliness] ?? '—'}</Text>
+          <Text style={s.metricLabel}>Propreté int.</Text>
+        </View>
+      </View>
+      <View style={{ flexDirection: 'row', gap: 12, marginBottom: 8 }}>
+        <View>
+          <VehicleSchemaImage damages={insp.damagedZones} bgImage={edlImage} size={200} />
+          <SchemaLegend />
+        </View>
+        <View style={{ flex: 1 }}>
+          <DamageTable zones={insp.damagedZones} />
+        </View>
+      </View>
+      <DamagePhotos zones={insp.damagedZones} />
+      {insp.photos.length > 0 && (
+        <View>
+          <Text style={{ fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#64748b', marginBottom: 3 }}>Photos ({insp.photos.length})</Text>
+          <View style={s.photosGrid}>
+            {insp.photos.map((p, i) => (
+              <View key={i} style={s.photoItem}>
+                <Image src={p.url} style={{ width: '100%', borderRadius: 3 }} />
+                <Text style={s.photoLabel}>{p.label.replace(/_/g, ' ')}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
+    </View>
+  )
+}
+
 // ─── Main PDF Component ───────────────────────────────────────────────────────
 
 export function ContractPDF({ data }: { data: ContractData }) {
@@ -756,6 +820,14 @@ export function ContractPDF({ data }: { data: ContractData }) {
   const companyName = data.agency?.companyName ?? 'LMS Drive'
   const logoUrl = data.agency?.logoUrl
   const cachetUrl = data.agency?.cachetUrl
+
+  // Coordonnées mises en forme comme dans l'aperçu à l'écran : téléphone groupé
+  // par deux, adresse découpée en rue / code postal / ville pour que les encadrés
+  // Loueur et Locataire s'alignent ligne à ligne (règle prévisu = PDF, 06/08/2026).
+  const agencyPhone = formatPhoneFr(data.agency?.phone)
+  const agencyAddr = splitAddressFr(data.agency?.address)
+  const clientPhoneFmt = formatPhoneFr(data.clientPhone)
+  const clientAddr = splitAddressFr(data.clientAddress)
 
   return (
     <Document title={`Contrat ${data.contractNumber}`}>
@@ -782,21 +854,29 @@ export function ContractPDF({ data }: { data: ContractData }) {
           </View>
         </View>
 
-        {/* Parties */}
+        {/* Parties — encadrés Loueur / Locataire alignés ligne à ligne, dans le
+            même ordre que l'aperçu : nom, téléphone, rue, code postal, ville,
+            email, puis (pour le loueur) SIRET et N° TVA détachés. */}
         <View style={[s.section, { flexDirection: 'row', justifyContent: 'space-between' }]}>
           <View style={[s.box, { width: '47%' }]}>
             <Text style={s.sectionTitle}>Loueur</Text>
             <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 10 }}>{companyName}</Text>
-            {data.agency?.siret && <Text style={{ fontSize: 8, color: '#64748b' }}>SIRET : {data.agency.siret}</Text>}
-            {data.agency?.address && <Text style={{ fontSize: 8, color: '#64748b' }}>{data.agency.address}</Text>}
-            {data.agency?.phone && <Text style={{ fontSize: 8, color: '#64748b' }}>{data.agency.phone}</Text>}
+            {agencyPhone ? <Text style={{ fontSize: 8, color: '#64748b' }}>{agencyPhone}</Text> : null}
+            {agencyAddr.rue ? <Text style={{ fontSize: 8, color: '#64748b' }}>{agencyAddr.rue}</Text> : null}
+            {agencyAddr.cp ? <Text style={{ fontSize: 8, color: '#64748b' }}>{agencyAddr.cp}</Text> : null}
+            {agencyAddr.ville ? <Text style={{ fontSize: 8, color: '#64748b' }}>{agencyAddr.ville}</Text> : null}
+            {data.agency?.email && <Text style={{ fontSize: 8, color: '#64748b' }}>{data.agency.email}</Text>}
+            {data.agency?.siret && <Text style={{ fontSize: 8, color: '#64748b', marginTop: 4 }}>SIRET : {data.agency.siret}</Text>}
+            {data.agency?.vatNumber && <Text style={{ fontSize: 8, color: '#64748b' }}>N° TVA : {data.agency.vatNumber}</Text>}
           </View>
           <View style={[s.box, { width: '47%' }]}>
             <Text style={s.sectionTitle}>Locataire</Text>
             <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 10 }}>{data.clientName}</Text>
-            <Text style={{ fontSize: 9, color: '#64748b' }}>{data.clientPhone}</Text>
+            {clientPhoneFmt ? <Text style={{ fontSize: 8, color: '#64748b' }}>{clientPhoneFmt}</Text> : null}
+            {clientAddr.rue ? <Text style={{ fontSize: 8, color: '#64748b' }}>{clientAddr.rue}</Text> : null}
+            {clientAddr.cp ? <Text style={{ fontSize: 8, color: '#64748b' }}>{clientAddr.cp}</Text> : null}
+            {clientAddr.ville ? <Text style={{ fontSize: 8, color: '#64748b' }}>{clientAddr.ville}</Text> : null}
             {data.clientEmail && <Text style={{ fontSize: 8, color: '#64748b' }}>{data.clientEmail}</Text>}
-            {data.clientAddress && <Text style={{ fontSize: 8, color: '#64748b' }}>{data.clientAddress}</Text>}
             {data.clientLicense && <Text style={{ fontSize: 8, color: '#64748b' }}>Permis : {data.clientLicense}</Text>}
           </View>
         </View>
@@ -990,6 +1070,10 @@ export function ContractPDF({ data }: { data: ContractData }) {
           </View>
         )}
 
+        {/* État des lieux de départ, remonté ici (partie la plus importante), avec
+            schéma, relevés, dommages et photos — juste comme l'aperçu à l'écran. */}
+        {depInsp && <InlineDepartEDL insp={depInsp} edlImage={data.edlSchemaImage} />}
+
         {/* Frais complémentaires */}
         {((data.lateFeeAmount ?? 0) > 0 || (data.extraKmCount ?? 0) > 0 || (data.damageFeeAmount ?? 0) > 0) && (
           <View style={[s.section, { backgroundColor: '#fff7ed', borderRadius: 4, padding: 8 }]}>
@@ -1027,44 +1111,29 @@ export function ContractPDF({ data }: { data: ContractData }) {
           </View>
         )}
 
-        {/* Récapitulatif EDL */}
-        {(depInsp || arrInsp) && (
-          <View style={[s.section, { backgroundColor: '#f8fafc', borderRadius: 4, padding: 8 }]}>
-            <Text style={[s.sectionTitle, { marginBottom: 4 }]}>Récapitulatif des états des lieux</Text>
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              {depInsp && (
-                <View style={{ flex: 1, backgroundColor: '#eff6ff', borderRadius: 3, padding: 6 }}>
-                  <Text style={{ fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#2563eb', marginBottom: 3 }}>ÉTAT DES LIEUX DÉPART</Text>
-                  <Text style={{ fontSize: 8 }}>KM : {fmtKm(depInsp.kmReading)}</Text>
-                  <Text style={{ fontSize: 8 }}>Carburant : {depInsp.fuelRangeKm} km</Text>
-                  <Text style={{ fontSize: 8, color: depInsp.damagedZones.length > 0 ? '#ea580c' : '#16a34a' }}>
-                    {depInsp.damagedZones.length > 0 ? `${depInsp.damagedZones.length} dommage(s) constaté(s)` : '✓ Aucun dommage'}
-                  </Text>
-                </View>
-              )}
-              {arrInsp && (
-                <View style={{ flex: 1, backgroundColor: '#f5f3ff', borderRadius: 3, padding: 6 }}>
-                  <Text style={{ fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#7c3aed', marginBottom: 3 }}>ÉTAT DES LIEUX RETOUR</Text>
-                  <Text style={{ fontSize: 8 }}>KM : {fmtKm(arrInsp.kmReading)}</Text>
-                  <Text style={{ fontSize: 8 }}>Carburant : {arrInsp.fuelRangeKm} km</Text>
-                  <Text style={{ fontSize: 8, color: arrInsp.damagedZones.length > 0 ? '#ea580c' : '#16a34a' }}>
-                    {arrInsp.damagedZones.length > 0 ? `${arrInsp.damagedZones.length} dommage(s) constaté(s)` : '✓ Aucun dommage'}
-                  </Text>
-                </View>
-              )}
-              {!arrInsp && (
-                <View style={{ flex: 1, backgroundColor: '#fefce8', borderRadius: 3, padding: 6 }}>
-                  <Text style={{ fontSize: 8, color: '#92400e' }}>ÉTAT DES LIEUX RETOUR · En attente</Text>
-                </View>
-              )}
+        {/* ══ Conditions générales · 14 articles ══ */}
+        <View style={s.section}>
+          <Text style={s.sectionTitle}>Conditions générales de location</Text>
+          {articles.map((art, i) => (
+            <View key={i} style={s.articleBlock}>
+              <Text style={s.articleTitle}>Art. {art.title}</Text>
+              <Text style={s.articleBody}>{art.body}</Text>
             </View>
-            <Text style={{ fontSize: 7, color: '#94a3b8', marginTop: 4 }}>
-              Les détails complets figurent dans les pages suivantes de ce document.
-            </Text>
-          </View>
-        )}
+          ))}
+        </View>
 
-        {/* ══ Tableau des frais applicables ══ */}
+        {/* ══ Clause photo horodatée ══ */}
+        <View style={{ backgroundColor: '#eff6ff', borderRadius: 4, padding: 8, marginBottom: 12 }}>
+          <Text style={{ fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#1d4ed8', marginBottom: 3 }}>
+            Clause photo horodatée · État des lieux
+          </Text>
+          <Text style={{ fontSize: 7.5, color: '#1e40af', lineHeight: 1.4 }}>
+            {VIDEO_CLAUSE}
+          </Text>
+        </View>
+
+        {/* ══ Tableau des frais applicables (placé en bas, juste avant la
+            signature, comme l'aperçu : conditions → clause → tableau → signature) ══ */}
         <View style={s.section}>
           <Text style={s.sectionTitle}>Tableau récapitulatif des frais facturables</Text>
           <Text style={{ fontSize: 7, color: '#64748b', marginBottom: 4 }}>
@@ -1096,31 +1165,15 @@ export function ContractPDF({ data }: { data: ContractData }) {
           </Text>
         </View>
 
-        {/* ══ Conditions générales · 14 articles ══ */}
-        <View style={s.section}>
-          <Text style={s.sectionTitle}>Conditions générales de location</Text>
-          {articles.map((art, i) => (
-            <View key={i} style={s.articleBlock}>
-              <Text style={s.articleTitle}>Art. {art.title}</Text>
-              <Text style={s.articleBody}>{art.body}</Text>
-            </View>
-          ))}
-        </View>
-
-        {/* ══ Clause photo horodatée ══ */}
-        <View style={{ backgroundColor: '#eff6ff', borderRadius: 4, padding: 8, marginBottom: 12 }}>
-          <Text style={{ fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#1d4ed8', marginBottom: 3 }}>
-            Clause photo horodatée · État des lieux
-          </Text>
-          <Text style={{ fontSize: 7.5, color: '#1e40af', lineHeight: 1.4 }}>
-            {VIDEO_CLAUSE}
-          </Text>
-        </View>
-
-        {/* ══ Signatures contrat, départ + retour ══ */}
+        {/* ══ Signature (contrat + état des lieux) et cachet du loueur ══
+            Une seule signature du locataire vaut pour le contrat ET l'EDL départ,
+            apposée en un geste au départ (d'où le libellé). La signature de l'EDL
+            retour, quand elle existe, garde sa colonne. En face : le cachet du
+            loueur, qui porte son identité et VAUT signature côté agence — pas de
+            logo à côté, il ferait doublon avec le cachet (gérant, 06/08/2026). */}
         <View style={s.signaturesRow}>
-          <View style={[s.sigBox, hasReturnSig ? { width: '31%' } : {}]}>
-            <Text style={s.sigLabel}>Signature locataire · Départ</Text>
+          <View style={[s.sigBox, { width: hasReturnSig ? '31%' : '47%' }]}>
+            <Text style={s.sigLabel}>Signature du contrat de location + état des lieux</Text>
             {data.clientSignature
               ? <Image src={data.clientSignature} style={s.sigImage} />
               : <View style={{ height: 55 }} />}
@@ -1128,13 +1181,13 @@ export function ContractPDF({ data }: { data: ContractData }) {
           </View>
           {hasReturnSig && (
             <View style={[s.sigBox, { width: '31%' }]}>
-              <Text style={s.sigLabel}>Signature locataire · Retour</Text>
+              <Text style={s.sigLabel}>Signature · État des lieux retour</Text>
               <Image src={arrInsp!.clientSignature!} style={s.sigImage} />
               {arrInsp?.signedAt && <Text style={s.sigDate}>Le {fmtDT(arrInsp.signedAt)}</Text>}
             </View>
           )}
-          <View style={[s.sigBox, hasReturnSig ? { width: '31%' } : {}]}>
-            <Text style={s.sigLabel}>Cachet & Visa agence</Text>
+          <View style={[s.sigBox, { width: hasReturnSig ? '31%' : '47%' }]}>
+            <Text style={s.sigLabel}>Cachet du loueur (vaut signature)</Text>
             <AgencyStamp logoUrl={logoUrl} cachetUrl={cachetUrl} companyName={companyName} />
             {data.signedAt && <Text style={s.sigDate}>Le {fmtDT(data.signedAt)}</Text>}
           </View>
@@ -1172,22 +1225,12 @@ export function ContractPDF({ data }: { data: ContractData }) {
         />
       )}
 
-      {/* ── EDL unique (l'autre pas encore fait) : page détaillée complète ──
-          Quand les deux EDL existent, la vue comparative + photos ci-dessus les
-          couvre ; on n'ajoute donc PAS de pages détaillées (zéro page en trop). */}
-      {depInsp && !arrInsp && (
-        <InspectionPage
-          insp={depInsp}
-          contractNumber={data.contractNumber}
-          clientName={data.clientName}
-          vehiclePlate={data.vehiclePlate}
-          vehicleModel={`${data.vehicleBrand} ${data.vehicleModel}`}
-          companyName={companyName}
-          logoUrl={logoUrl}
-          cachetUrl={cachetUrl}
-          edlImage={data.edlSchemaImage}
-        />
-      )}
+      {/* ── EDL détaillé ──
+          L'état des lieux de DÉPART est désormais intégré au corps du contrat
+          (InlineDepartEDL), avec une signature unique en bas : on ne le remet donc
+          PAS en page séparée. Quand les deux EDL existent, la vue comparative +
+          photos ci-dessus couvre le retour. Reste seulement le cas d'un retour
+          isolé sans départ (rare), qui garde sa page détaillée. */}
       {arrInsp && !depInsp && (
         <InspectionPage
           insp={arrInsp}

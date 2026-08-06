@@ -5,6 +5,13 @@
 export interface AgencySettings {
   company_name: string
   siret: string | null
+  /**
+   * N° de TVA intracommunautaire, affiché dans l'encart Loueur du contrat et de
+   * l'aperçu. Optionnel tant que la colonne `vat_number` n'existe pas en base :
+   * `getAgencySettings` fait `select('*')`, la valeur remonte dès qu'elle est
+   * saisie côté Paramètres. Aucune valeur en dur ici (règle du socle).
+   */
+  vat_number?: string | null
   address: string | null
   phone: string | null
   email: string | null
