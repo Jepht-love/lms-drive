@@ -83,6 +83,13 @@ export type DisponibiliteFine = {
    * cours non clôturé. L'écran doit alors dire « retour non fait », pas une heure.
    */
   retourInconnu: boolean
+  /**
+   * Première réservation confirmée ou en option qui commence APRÈS le début de la
+   * période demandée — utile uniquement quand le véhicule est libre sur la période.
+   * `null` = aucune réservation à venir. La date est brute (ISO) : la mise en forme
+   * se fait dans la route API avec `jourHeureAgence`, comme le reste.
+   */
+  prochaineResa: string | null
 }
 
 type IntervalleBloquant = {
@@ -291,6 +298,11 @@ export async function vehiculesIndisponibles(
  * `busy` reprend exactement ce que renvoie `vehiculesIndisponibles` — mêmes
  * intervalles, mêmes règles — pour que l'ancien affichage (choix du véhicule dans
  * le formulaire de réservation) ne change pas de comportement.
+ *
+ * Depuis le 08/08/2026 : `fine[id].prochaineResa` porte la date de début de la
+ * première réservation à venir après la période demandée. Sert à afficher
+ * « réservé dès le X » sur les véhicules libres, pour aider le gérant à choisir
+ * sans aller ouvrir la Flotte dans un autre onglet.
  */
 export async function analyserDisponibilite(
   supabase: SupabaseClient,
@@ -301,6 +313,29 @@ export async function analyserDisponibilite(
   const { vehicules, parVehicule } = await collecterIntervalles(
     supabase, debutInstant, finInstant, { ...options, signalerRetards: true },
   )
+
+  // Prochaine réservation par véhicule — une seule requête pour tous. On cherche
+  // la première réservation confirmée ou en option qui commence APRÈS le début de
+  // la période, en excluant éventuellement la réservation en cours de modification.
+  // `order` + `limit` ne fonctionnent pas par `vehicle_id` dans Supabase : on trie
+  // après réception, c'est le plus simple et la liste est petite (nombre de véhicules).
+  const cibles = options?.vehicleIds?.length ? options.vehicleIds : vehicules
+  let qProchaines = supabase
+    .from('reservations')
+    .select('vehicle_id, start_datetime')
+    .not('status', 'in', '("annulee","terminee","non_presente")')
+    .gt('start_datetime', debutInstant)
+    .order('start_datetime', { ascending: true })
+  if (cibles.length) qProchaines = qProchaines.in('vehicle_id', cibles)
+  if (options?.ignorerReservationId) qProchaines = qProchaines.neq('id', options.ignorerReservationId)
+  const { data: prochaines } = await qProchaines
+
+  // On garde seulement la première par véhicule (la liste est déjà triée par date).
+  const prochaineParVehicule = new Map<string, string>()
+  for (const r of prochaines ?? []) {
+    if (!r.vehicle_id || prochaineParVehicule.has(r.vehicle_id)) continue
+    prochaineParVehicule.set(r.vehicle_id, r.start_datetime)
+  }
 
   const busy = new Map<string, Indisponibilite>()
   const fine = new Map<string, DisponibiliteFine>()
@@ -317,6 +352,7 @@ export async function analyserDisponibilite(
       jusqua: complet?.jusqua ?? null,
       creneaux: creneauxLibres(intervalles, debutInstant, finInstant),
       retourInconnu: intervalles.some(i => i.fin === null),
+      prochaineResa: prochaineParVehicule.get(vid) ?? null,
     })
   }
 

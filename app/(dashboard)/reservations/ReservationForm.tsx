@@ -143,15 +143,19 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
   // garage, déplacement interne) : recopier ces règles ici finirait par annoncer
   // « libre » là où l'enregistrement refuse. Ticket SAV du 27/07/2026.
   const [busy, setBusy] = useState<Record<string, { raison: string; jusqua: string | null }>>({})
+  // Prochaine réservation par véhicule libre, ajout du 08/08/2026. Permet
+  // d'afficher « réservé dès le X » sur les véhicules libres sur la période
+  // choisie mais qui ont une réservation dans les jours suivants.
+  const [prochaineResa, setProchaineResa] = useState<Record<string, string | null>>({})
   // « Pas encore su » n'est pas « libre ». Sans cet état, une session expirée ou
   // une coupure réseau renvoyait une liste vide, indistinguable de « tout est
   // libre » : l'écran annonçait en vert un véhicule que l'enregistrement allait
   // refuser. C'est exactement ce que cette fonctionnalité doit éviter.
   const [dispoEtat, setDispoEtat] = useState<'vide' | 'chargement' | 'ok' | 'echec'>('vide')
   useEffect(() => {
-    if (!startDatetime || !endDatetime) { setBusy({}); setDispoEtat('vide'); return }
+    if (!startDatetime || !endDatetime) { setBusy({}); setProchaineResa({}); setDispoEtat('vide'); return }
     if (!(new Date(startDatetime).getTime() < new Date(endDatetime).getTime())) {
-      setBusy({}); setDispoEtat('vide'); return
+      setBusy({}); setProchaineResa({}); setDispoEtat('vide'); return
     }
     let annule = false
     setDispoEtat('chargement')
@@ -161,8 +165,19 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
         if (!r.ok) throw new Error('indisponible')
         return r.json()
       })
-      .then(d => { if (!annule) { setBusy(d.busy ?? {}); setDispoEtat('ok') } })
-      .catch(() => { if (!annule) { setBusy({}); setDispoEtat('echec') } })
+      .then(d => {
+        if (!annule) {
+          setBusy(d.busy ?? {})
+          // Extraire prochaineResa depuis dispo : { [id]: { prochaineResa: string | null, ... } }
+          const prochaines: Record<string, string | null> = {}
+          for (const [id, val] of Object.entries(d.dispo ?? {})) {
+            prochaines[id] = (val as { prochaineResa?: string | null }).prochaineResa ?? null
+          }
+          setProchaineResa(prochaines)
+          setDispoEtat('ok')
+        }
+      })
+      .catch(() => { if (!annule) { setBusy({}); setProchaineResa({}); setDispoEtat('echec') } })
     return () => { annule = true }
   }, [startDatetime, endDatetime])
 
@@ -249,11 +264,15 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
                       ? `${RAISON[pris.raison] ?? 'indisponible'} jusqu'au ${pris.jusqua}`
                       : `${RAISON[pris.raison] ?? 'indisponible'} · retour inconnu`
                     : ''
+                  // Prochaine réservation affichée uniquement sur les véhicules libres,
+                  // pour que le gérant sache jusqu'à quand il peut louer sans empiéter.
+                  const prochaine = !pris && datesSaisies ? prochaineResa[v.id] : null
                   return (
                     <option key={v.id} value={v.id}>
                       {pris ? '● ' : datesSaisies ? '○ ' : ''}
                       {v.brand} {v.model} · {v.plate} {v.daily_price ? `(${v.daily_price}€/j)` : ''}
                       {detail ? ` · ${detail}` : ''}
+                      {prochaine ? ` · réservé dès le ${prochaine}` : ''}
                     </option>
                   )
                 })}
@@ -282,9 +301,16 @@ export default function ReservationForm({ action, vehicles, clients, defaultClie
                     : ', date de retour inconnue'}.
                 </p>
               ) : selectedVehicleId ? (
-                <p className="mt-1.5 text-xs font-semibold text-emerald-600">
-                  Libre sur toute la période.
-                </p>
+                <>
+                  <p className="mt-1.5 text-xs font-semibold text-emerald-600">
+                    Libre sur toute la période.
+                  </p>
+                  {prochaineResa[selectedVehicleId] && (
+                    <p className="mt-0.5 text-xs text-amber-600">
+                      Prochaine réservation le {prochaineResa[selectedVehicleId]}.
+                    </p>
+                  )}
+                </>
               ) : (
                 <p className="mt-1.5 text-xs text-muted-foreground">
                   ○ libre · ● pris sur la période choisie.

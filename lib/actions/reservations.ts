@@ -574,6 +574,14 @@ export async function createReservation(formData: FormData) {
   revalidatePath('/')
   revalidatePath('/reservations')
   revalidatePath('/calendrier')
+
+  // Flux Départ : enchaîner directement sur l'état des lieux de départ (arbitrage
+  // Jeff du 08/08/2026, remarque #15). Le champ caché `depart_flow=1` est posé par
+  // la page /depart ; le parcours normal (Réservations) ne le pose pas.
+  if (formData.get('depart_flow') === '1') {
+    redirect(`/inspections/departure/${data.id}`)
+  }
+
   redirect(`/reservations/${data.id}`)
 }
 

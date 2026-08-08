@@ -129,8 +129,9 @@ export default function SavButton() {
         style={{
           // En bas à GAUCHE : les boutons d'action des pages (recherche, création…)
           // sont alignés à droite, donc ce coin reste libre et évite tout chevauchement.
-          // Toujours au-dessus de la barre de navigation basse (60px + zone sécurisée).
-          bottom: 'calc(84px + env(safe-area-inset-bottom))',
+          // Depuis le 08/08/2026 la barre de navigation basse a été retirée : le bouton
+          // se cale directement au-dessus de la zone sécurisée, sans la réserve des 60px.
+          bottom: 'calc(16px + env(safe-area-inset-bottom))',
           background: 'linear-gradient(135deg, #C4A35A, #D4B870)',
         }}
       >

@@ -18,6 +18,9 @@ import { analyserDisponibilite } from '@/lib/reservations/disponibilite'
  *    créneaux réellement libres à l'intérieur de la période. Une voiture rendue à
  *    13h et reprise à 15h n'était annoncée que « prise jusqu'à 15h », le trou de
  *    deux heures restait invisible.
+ *  - `dispo[id].prochaineResa` (08/08/2026) : date de début de la prochaine
+ *    réservation à venir pour ce véhicule, même s'il est libre sur la période
+ *    demandée. Permet d'afficher « réservé dès le X » dans le sélecteur.
  *
  * Les dates arrivent telles qu'elles ont été saisies (heure murale) et passent
  * par `instantDepuisSaisie` : Vercel tourne en temps universel, une conversion
@@ -67,6 +70,9 @@ export async function GET(request: NextRequest) {
         fin: c.fin,
         libelle: libelleCreneau(c.debut, c.fin),
       })),
+      // Date mise en forme à l'heure de l'agence (même règle que `jusqua`).
+      // Null = aucune réservation à venir pour ce véhicule.
+      prochaineResa: v.prochaineResa ? jourHeureAgence(v.prochaineResa) : null,
     }]),
   )
 

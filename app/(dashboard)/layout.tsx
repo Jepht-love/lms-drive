@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/server'
-import BottomNav from '@/components/layout/BottomNav'
 import PageHeader from '@/components/layout/PageHeader'
 import ClientRedirect from '@/components/layout/ClientRedirect'
 import PageTransition from '@/components/layout/PageTransition'
@@ -51,17 +50,19 @@ export default async function DashboardLayout({ children }: { children: React.Re
               position: 'fixed',
               inset: 0,
               display: 'grid',
-              gridTemplateRows: 'auto 1fr auto',
+              // Deux rangées depuis le 08/08/2026 : bandeau puis contenu. La barre
+              // d'onglets du bas (3e rangée « auto ») a été retirée, la navigation
+              // passe par le hamburger du bandeau.
+              gridTemplateRows: 'auto 1fr',
               overflow: 'hidden',
             }}
           >
-            <PageHeader />
+            <PageHeader allowedTabs={allowedTabs} />
             <main style={{ overflowY: 'auto', overscrollBehavior: 'none', WebkitOverflowScrolling: 'touch', minHeight: 0 } as React.CSSProperties}>
               <PageTransition>
                 <ContentWrapper>{children}</ContentWrapper>
               </PageTransition>
             </main>
-            <BottomNav allowedTabs={allowedTabs} />
           </div>
           <SavButton />
         </SavProvider>

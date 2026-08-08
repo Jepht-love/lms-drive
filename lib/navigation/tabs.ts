@@ -15,6 +15,7 @@ export const APP_TABS: AppTab[] = [
   { key: 'dashboard',      href: '/',               label: 'Tableau de bord' },
   { key: 'calendrier',     href: '/calendrier',     label: 'Calendrier' },
   { key: 'reservations',   href: '/reservations',   label: 'Réservations' },
+  { key: 'depart',         href: '/depart',         label: 'Départ' },
   { key: 'clients',        href: '/clients',        label: 'Clients' },
   { key: 'vehicles',       href: '/vehicles',       label: 'Véhicules' },
   { key: 'suivi',          href: '/suivi',          label: 'Suivi véhicule' },

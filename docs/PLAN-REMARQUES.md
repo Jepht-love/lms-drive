@@ -15,16 +15,46 @@ Chaque ligne dit ce qui est demandé, l'état vérifié dans le code au 02/08, e
 
 ---
 
-## L'ordre de travail
+## L'ordre de travail — onglet par onglet (ordre fixé par Jeff le 07/08/2026)
 
-| Quand | Quoi | Source |
-|---|---|---|
-| **En premier** | Le véhicule en déplacement affiché disponible | J · 40 |
-| **Ensuite** | Les 27 demandes du gérant, onglet par onglet | G |
-| **Enfin** | Les remarques de Jeff restantes | J |
+On traite **un onglet entièrement avant de passer au suivant**, dans cet ordre. La liste
+ci-dessous fait foi pour l'ordre ; les fiches détaillées plus bas gardent leur ancienne
+numérotation.
 
-**Pourquoi le véhicule en déplacement passe avant tout** : c'est le seul point de toute la
-liste qui fait mentir un chiffre montré au gérant, et il coûte trois heures.
+**Type** : `méca` = correction mécanique, exécutable sans plan (candidate sous-agent isolé) ·
+`struct` = structurel ou neuf, **plan validé par Jeff avant tout code** · `fait` = déjà livré,
+à revérifier à l'écran seulement.
+
+| # | Onglet | Ce qui reste | Type |
+|---|---|---|---|
+| 1 | **Tableau de bord** | Bascule d'une tâche dépassée vers Alertes (G) → *fait 06/08* · « À assigner » toujours en 3e ligne, textes alignés (J·45) | `fait` + `méca` |
+| 2 | **Véhicules** | **Case « Grille tarifaire » dans la fiche Flotte** + renommer « Ajouter » de Tarifs en « Ranger une voiture » (NEW) · créer une immobilisation depuis l'onglet (J·39) | `struct` léger + `méca` |
+| 3 | **Réservation & EDL** | Kilométrage illimité : case résa + calcul + contrat (G) — *socle km posé 06/08, reste le branchement* · reste à payer affiché + acompte non redemandé (J·42) · acompte bloque la voiture, alerte gérant (J·8) · trace facturation retour → *fait, à revérifier* | `struct` + `méca` |
+| 4 | **Calendrier** | Écran disponibilités : marge du titre + bande de dates de l'accueil (J·44, reprendre l'existant) | `méca` |
+| 5 | **Alertes** | Prendre une tâche libre prévient les autres (G) · tâches en retard coupées urgent/important à 24 h · revérifier les 35 notifications une par une (J·41) | `méca` + `struct` léger |
+| 6 | **Menu** | Rien de précis remonté · emplacement pressenti de l'**accès admin aux espaces** (item transversal en fin de liste) | — |
+| 7 | **Clients** | Rien (sauf case consentement commercial si module E-mails) | — |
+| 8 | **Suivi entretien** | **LE gros bloc** : urgence, date limite, assigné, 6 statuts, prise en charge, entrée en alertes, pièces + main d'œuvre à la clôture (G+J·38) · RDV garage partagé, heure du RDV, intervention modifiable, multi-véhicules, contrôle des montants (J·38/43) | `struct` |
+| 9 | **Contrats** | Rien à coder · reformuler le libellé « frais de retard » du PDF (point ouvert 06/08) | `méca` |
+| 10 | **Déplacements** | ⚠️ Véhicule en déplacement affiché disponible sur sa fiche (J·40.1) · choix du véhicule avec créneaux, libellé, modifier + date de fin, droit du super-admin (J·40.2-40.5) | `méca` + `struct` léger |
+| 11 | **Partenariats** | Rien | — |
+| 12 | **Comptabilité** | Rien | — |
+| 13 | **Marketing** | Rattaché au module E-mails | — |
+| 14 | **Équipe** | Rien | — |
+| 15 | **Documents** | Bug « document inaccessible » (coffre privé, adresse publique) — touche aussi les infractions | `struct` léger |
+| 16 | **E-mails** | Module de campagnes, chantier neuf (préalable bloquant : expéditeur en dur, `CLIENT_EMAILS_LIVE=false`) | `struct` |
+| 17 | **Paramètres** | Grilles tarifaires par catégorie → **DÉJÀ construit 06/08** (ne pas re-planifier) · reste : brancher la facturation sur la grille · afficher le prix illimité où il manque · sécurité prix plus tard | `fait` + `struct` léger |
+| — | **Transversal · Accès admin aux espaces** (NEW) | L'admin ouvre l'interface de n'importe quel profil sans se reconnecter, pour voir un bug remonté par le SAV du point de vue de l'utilisateur | `struct` + **sécurité** |
+
+**Le véhicule en déplacement (10) reste le seul point qui fait mentir un chiffre montré au
+gérant** : à traiter dès qu'on arrive à l'onglet Déplacements, sans le laisser traîner.
+
+**Réconciliation avec le chantier du 06/08** (à ne pas re-planifier) : la grille tarifaire est
+construite (table `pricing_grids`, `vehicles.pricing_grid_id`, écran `settings/tarifs`,
+résolution `lib/pricing/resolve.ts`), le kilomètre illimité est posé en base
+(`vehicles.unlimited_km_price`, migr. 079), et l'écriture des véhicules est réservée au gérant
+et au super-admin (migr. 080). Ce qui reste sur ces sujets est du branchement, pas de la
+reconstruction.
 
 ---
 
@@ -199,6 +229,30 @@ jamais utilisés ».
 **Ce qui existe déjà.** L'écran `/vehicles/immobilises` connaît les six types, et le bouton
 de changement de statut existe sur la fiche véhicule (`VehicleStatusButton`). **Il manque le
 raccourci depuis l'onglet lui-même.**
+
+## NEW · La grille tarifaire se choisit depuis la fiche Flotte
+
+**D'où ça vient.** Le 07/08, Jeff constate qu'il faut aller à deux endroits pour finaliser un
+véhicule : le créer dans Flotte, puis aller dans Paramètres › Tarifs pour le ranger dans une
+grille. Trop de friction.
+
+**Le geste.** Ajouter **une seule case « Grille tarifaire »** (un menu déroulant) dans le
+formulaire de création et de modification du véhicule (`VehicleForm.tsx`). Elle écrit
+`vehicles.pricing_grid_id`, le même champ que le rattachement fait aujourd'hui depuis l'écran
+des grilles. Finaliser un véhicule se fait alors en un seul écran.
+
+**Ce que ça ne change pas** : la case choisit **quelle** grille, elle ne modifie **aucun
+prix**. La règle « un seul endroit pour changer un prix » (l'écran des grilles) tient : le
+formulaire pose l'appartenance, pas les valeurs. La grille fournit toujours ses quatre valeurs
+communes, le véhicule garde les siennes.
+
+**Lever l'ambiguïté sur l'écran des grilles** : le bouton « Ajouter » sous une grille (qui
+range une voiture **existante**) se renomme **« Ranger une voiture »**. C'est lui qui a fait
+croire à Jeff qu'on créait un véhicule depuis Tarifs.
+
+**Type** : structurel léger. `VehicleForm` reçoit la liste des grilles (lecture
+`pricing_grids`), la case écrit `pricing_grid_id` dans `createVehicle`/`updateVehicle`. Plan
+court à valider avant d'écrire.
 
 ---
 
@@ -790,6 +844,43 @@ vérité de facturation actuelle, la grille ne doit pas les remplacer.
 
 ---
 
+# TRANSVERSAL · L'ACCÈS ADMIN AUX ESPACES · CHANTIER NEUF
+
+**Demandé par Jeff le 07/08/2026.** Fonctionnalité à construire, **cadrage dédié avant tout
+code** (nouveau + sensible).
+
+## Ce qu'il veut
+
+En tant qu'administrateur qui a créé les comptes, ouvrir **l'interface de n'importe quel
+profil** (associé, employé, gérant) **sans se reconnecter**, pour voir l'application telle que
+cette personne la voit. Usage : un bug remonté par le SAV sur une fonctionnalité qui dépend du
+rôle ou des onglets autorisés se reproduit directement depuis l'espace de la personne, au lieu
+de deviner.
+
+## Ce qui existe déjà, à vérifier
+
+- Le rôle et `is_admin` sont sur `profiles`, les permissions par onglet sur
+  `profiles.allowed_tabs`, appliquées au démarrage (`layout.tsx`) et dans `lib/navigation/tabs.ts`.
+- L'écran Équipe liste déjà tous les profils.
+
+## Les questions de cadrage (à trancher avec Jeff)
+
+- **Voir ou agir ?** Un mode « vu par ses yeux » en **lecture seule** (le plus sûr, couvre le
+  besoin SAV) ou une vraie prise de main qui écrit sous son identité ?
+- **Le mécanisme** : afficher l'application avec le rôle et les `allowed_tabs` du profil choisi
+  (pas de vraie session de l'autre), ou une session déléguée ? La première évite de manipuler
+  les jetons d'authentification et reste entièrement traçable.
+- **La trace** : toute entrée dans un espace tiers est écrite au journal d'audit (qui, quel
+  profil, quand). Non négociable.
+- **L'accès** : réservé à `is_admin` **strict**, jamais au simple gérant.
+- **La sortie** : un bandeau permanent « Vous regardez l'espace de X » + un bouton pour revenir
+  à soi, pour ne jamais oublier dans quel espace on est.
+
+**Type** : structurel + sécurité. Passe par la revue de sécurité avant livraison (touche
+l'authentification et les permissions).
+
+---
+
 # LES ARBITRAGES DÉJÀ TRANCHÉS
 
 Ils ne se rouvrent pas.
@@ -813,6 +904,38 @@ Ils ne se rouvrent pas.
     seulement.
 11. **Les grilles tarifaires se branchent par catégorie de véhicule.**
 12. **La liste du gérant passe devant les remarques de Jeff.**
+
+**Du 08/08 — la refonte accueil (grappe #16/#19/#20/#21), arbitrages de Jeff**
+
+13. **Le menu passe dans un hamburger en haut à gauche.** Les 3 traits en haut à gauche
+    ouvrent un volet depuis la gauche qui prend la moitié de l'écran : Accueil, Véhicule,
+    Réservation, Calendrier, Alerte, Menu. *Reste à préciser au moment de construire le
+    menu : la barre d'onglets du bas reste-t-elle, ou disparaît-elle au profit du volet ?*
+14. **Le « ? » du SAV reste permanent et passe en bas à droite** (il était en bas à gauche),
+    parce que le volet du menu s'ouvre depuis le haut à gauche. Il change de position, pas de
+    comportement.
+15. **Après création d'un départ, on enchaîne directement sur l'état des lieux de départ**, sans
+    repasser par la fiche réservation.
+16. **L'onglet Départ montre la disponibilité du véhicule.** On clique « Véhicule », on voit la
+    liste, et pour chaque voiture si elle est libre tout de suite et quand elle repart ou revient
+    (exemple : libre du 8 au 22 août). Info rapide sur les locations en cours et à venir.
+17. **Dans Réservations, aucun départ immédiat** : locations futures seulement. Le départ imminent
+    se fait dans l'onglet Départ.
+18. **La rubrique « En cours » montre les tâches de tout le monde**, pour que chacun voie si
+    quelqu'un est déjà dessus.
+19. **Le pop-up sert à démarrer et clôturer une tâche.** Pour une intervention garage dont la
+    clôture est lourde (garage, coût, facture), renvoi vers l'écran de clôture, car l'accueil
+    ne montre aucun montant (règle du cahier des charges). Ouvert à d'autres pop-up si utiles.
+20. **Smart Loc reçoit la refonte telle quelle, instantanément.** Pas d'interrupteur.
+21. **L'ancienne barre verticale `Sidebar.tsx` (code mort) est supprimée** par la corbeille
+    pendant le chantier du menu.
+22. **Démarrer/clôturer une tâche prévient toute l'équipe par notification** (précision de
+    Jeff du 08/08). « [Personne] a commencé [tâche] » au démarrage, « [Personne] a terminé
+    [tâche] » à la clôture. But visé : chacun sait en permanence qui fait quoi, ce qui règle
+    aussi le décalage où une personne ne voit pas en direct ce qu'une autre fait. Le circuit
+    existe déjà (`/api/calendar/events/[id]/status` prévient l'équipe) : Démarrer/Clôturer
+    doivent passer par lui, pas écrire en direct. **C'est la clôture de la tâche qui rend le
+    véhicule disponible ; le démarrage le met occupé.**
 
 ---
 

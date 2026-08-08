@@ -29,7 +29,7 @@ export default function CalendarBottomBar({ events, onCreateNew, onPickEvent }: 
       {searchOpen && (
         <div className="fixed inset-0 z-50">
           <button type="button" aria-label="Fermer" onClick={() => setSearchOpen(false)} className="absolute inset-0 bg-black/10" />
-          <div className="absolute left-3 right-3 bg-white rounded-2xl border border-gray-100 shadow-sm p-3 max-h-[60vh] overflow-y-auto" style={{ bottom: 'calc(60px + env(safe-area-inset-bottom) + 76px)' }}>
+          <div className="absolute left-3 right-3 bg-white rounded-2xl border border-gray-100 shadow-sm p-3 max-h-[60vh] overflow-y-auto" style={{ bottom: 'calc(env(safe-area-inset-bottom) + 76px)' }}>
             <div className="flex items-center justify-between mb-2">
               <label htmlFor="calendar-event-search" className="text-[13px] font-semibold">Rechercher un événement</label>
               <button type="button" aria-label="Fermer la recherche" onClick={() => setSearchOpen(false)}><X size={14} className="text-gray-400" /></button>
@@ -70,7 +70,7 @@ export default function CalendarBottomBar({ events, onCreateNew, onPickEvent }: 
         onClick={() => setSearchOpen(true)}
         aria-label="Rechercher un événement"
         className="fixed right-[68px] z-40 w-[44px] h-[44px] rounded-full bg-white text-[#111111] border border-gray-200 flex items-center justify-center shadow-lg"
-        style={{ bottom: 'calc(60px + env(safe-area-inset-bottom) + 12px)' }}
+        style={{ bottom: 'calc(env(safe-area-inset-bottom) + 12px)' }}
       >
         <Search size={18} />
       </button>
@@ -80,7 +80,7 @@ export default function CalendarBottomBar({ events, onCreateNew, onPickEvent }: 
         onClick={onCreateNew}
         aria-label="Créer un événement"
         className="fixed right-4 z-40 w-[48px] h-[48px] rounded-full bg-[#111111] text-white flex items-center justify-center shadow-lg"
-        style={{ bottom: 'calc(60px + env(safe-area-inset-bottom) + 10px)' }}
+        style={{ bottom: 'calc(env(safe-area-inset-bottom) + 10px)' }}
       >
         <Plus size={22} />
       </button>

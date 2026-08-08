@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import {
   BarChart3, CalendarDays, ClipboardList, Users, Car,
-  FileText, Navigation, Settings,
+  FileText, Navigation, Settings, Timer,
   ChevronRight, LogOut, UsersRound, Wrench, Repeat, Wallet, Megaphone, FolderArchive, Mail,
 } from 'lucide-react'
 import { logout } from '@/lib/actions/auth'
@@ -30,6 +30,7 @@ const modules = [
   { href: '/',               label: 'Tableau de bord',  icon: BarChart3,     desc: 'Vue d\'ensemble & alertes' },
   { href: '/calendrier',     label: 'Calendrier',        icon: CalendarDays,  desc: 'Planning de la flotte' },
   { href: '/reservations',   label: 'Réservations',      icon: ClipboardList, desc: 'Gérer les locations' },
+  { href: '/depart',         label: 'Départ',             icon: Timer,         desc: 'Démarrer une location maintenant' },
   { href: '/clients',        label: 'Clients',            icon: Users,         desc: 'Base clients & dossiers' },
   { href: '/vehicles',       label: 'Véhicules',          icon: Car,           desc: 'Parc automobile' },
   { href: '/suivi',          label: 'Suivi véhicule',     icon: Wrench,        desc: 'Entretien, sinistres & infractions' },
